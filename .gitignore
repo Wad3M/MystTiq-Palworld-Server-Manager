@@ -1,0 +1,48 @@
+# Visual Studio / .NET
+.vs/
+.vscode/
+.idea/
+**/bin/
+**/obj/
+TestResults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build and publish output
+artifacts/
+publish/
+release/
+*.nupkg
+*.snupkg
+
+# Local application data and server content
+Data/
+Logs/
+Backups/
+Cache/
+Config/local.*
+*.log
+*.sav
+*.sav.bak
+*.sav~RF*.TMP
+*.json.tmp
+
+# Credentials / secrets
+.env
+.env.*
+!.env.example
+secrets.json
+appsettings.Local.json
+*.pfx
+*.p12
+*.key
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Installer output
+installer/Output/

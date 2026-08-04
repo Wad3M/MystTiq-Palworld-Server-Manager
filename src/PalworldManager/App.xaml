@@ -1,0 +1,21 @@
+<Application x:Class="PalworldManager.App"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <Application.Resources>
+  <SolidColorBrush x:Key="Bg" Color="#0A0D12"/>
+  <SolidColorBrush x:Key="Side" Color="#0E141D"/>
+  <SolidColorBrush x:Key="Card" Color="#151C26"/>
+  <SolidColorBrush x:Key="Border" Color="#293648"/>
+  <SolidColorBrush x:Key="Accent" Color="#178CFF"/>
+  <SolidColorBrush x:Key="Text" Color="#F4F7FB"/>
+  <SolidColorBrush x:Key="Muted" Color="#9BAABC"/>
+  <Style TargetType="Window"><Setter Property="Background" Value="{StaticResource Bg}"/><Setter Property="Foreground" Value="{StaticResource Text}"/><Setter Property="FontFamily" Value="Segoe UI"/></Style>
+  <Style TargetType="Button">
+   <Setter Property="Foreground" Value="White"/><Setter Property="Background" Value="{StaticResource Accent}"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="14,8"/><Setter Property="Margin" Value="4"/><Setter Property="Cursor" Value="Hand"/>
+  </Style>
+  <Style TargetType="TextBox"><Setter Property="Background" Value="#0D131B"/><Setter Property="Foreground" Value="{StaticResource Text}"/><Setter Property="BorderBrush" Value="{StaticResource Border}"/><Setter Property="Padding" Value="7"/></Style>
+  <Style TargetType="DataGrid"><Setter Property="Background" Value="{StaticResource Card}"/><Setter Property="Foreground" Value="{StaticResource Text}"/><Setter Property="BorderBrush" Value="{StaticResource Border}"/><Setter Property="RowBackground" Value="{StaticResource Card}"/><Setter Property="AlternatingRowBackground" Value="#1A2330"/><Setter Property="AutoGenerateColumns" Value="True"/></Style>
+  <Style TargetType="TabControl"><Setter Property="Background" Value="{StaticResource Bg}"/><Setter Property="BorderThickness" Value="0"/></Style>
+  <Style TargetType="TabItem"><Setter Property="Foreground" Value="{StaticResource Muted}"/><Setter Property="Background" Value="Transparent"/><Setter Property="Padding" Value="15,11"/><Setter Property="Margin" Value="4"/><Setter Property="FontSize" Value="14"/></Style>
+ </Application.Resources>
+</Application>

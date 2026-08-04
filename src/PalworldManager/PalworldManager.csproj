@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>14.0</LangVersion>
+    <AssemblyName>MystTiqPalworldServer</AssemblyName>
+    <RootNamespace>PalworldManager</RootNamespace>
+    <Version>0.2.12</Version>
+    <FileVersion>0.2.12.0</FileVersion>
+    <AssemblyVersion>0.2.12.0</AssemblyVersion>
+    <ApplicationIcon>Assets\PalworldServerManager.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <InformationalVersion>0.2.12</InformationalVersion>
+    <Authors>MystTiq Contributors</Authors>
+    <Product>MystTiq Palworld Server Manager</Product>
+    <Description>Free and open-source Windows manager for Palworld dedicated servers.</Description>
+    <RepositoryUrl>https://github.com/Wad3M/MystTiq-Palworld-Server-Manager</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\PalworldServerManager.png" />
+    <Resource Include="Assets\PalworldServerManager.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="0.50.1" />
+  </ItemGroup>
+</Project>
