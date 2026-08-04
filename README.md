@@ -1,74 +1,214 @@
 # MystTiq Palworld Server Manager
 
-A free and open-source Windows application for installing, operating, backing up, inspecting, and maintaining a Palworld dedicated server.
+> **Professional Windows management software for Palworld Dedicated Servers.**
 
-> **Current release:** v0.2.12  
-> **Platform:** Windows x64  
-> **License:** MIT
+MystTiq Palworld Server Manager is a free and open-source Windows application designed to simplify hosting and maintaining Palworld dedicated servers. It provides a modern dashboard for monitoring server health, managing worlds, creating backups, inspecting save data, and maintaining server installations—all from a single desktop application.
 
-## Highlights
+---
 
-- One-page server operations dashboard
-- Start, stop, restart, update, and backup controls
-- CPU and RAM history monitoring
-- Operational state and overall health reporting
-- Backup center with restore workflows
-- Player, guild, base, world, and save inspection tools
-- MOD inventory, validation, and UE4SS support
-- Activity and notification center
-- Dark MystTiq interface with standardized buttons and tooltips
+## Features
 
-## Download
+### 🖥️ Server Management
 
-Download the latest portable ZIP or installer from the repository's **Releases** page. The portable build is self-contained and does not require a separate .NET installation.
+- Start, Stop, and Restart your server
+- Server update management
+- Live operational status
+- Overall server health monitoring
+- Real-time CPU and RAM history
+- Activity timeline
+- Notification center
 
-## Requirements
+### 🌍 World Management
 
-- Windows 10 or Windows 11, 64-bit
-- A Palworld Dedicated Server installation
-- Administrator privileges may be required for server folders, firewall rules, services, or protected installation locations
+- World Explorer
+- Player Inspector
+- Guild Manager
+- Base Inspector
+- Save inspection utilities
 
-## Build from source
+### 💾 Backup & Recovery
 
-1. Install the .NET 10 SDK and Visual Studio with the **.NET desktop development** workload.
-2. Clone or download this repository.
-3. Open `PalworldServerManager.slnx`.
-4. Build `Release | x64`.
+- One-click backups
+- Restore workflow
+- Backup history
+- Backup validation
 
-PowerShell build:
+### 🧩 Mod Management
+
+- Steam Workshop integration
+- UE4SS support
+- Installed MOD inventory
+- Runtime validation
+- Crossplay verification
+
+### 🎨 Modern User Interface
+
+- Responsive one-page dashboard
+- Professional dark MystTiq theme
+- Standardized buttons and tooltips
+- Live activity feed
+- Consistent status indicators
+
+---
+
+# Screenshots
+
+> Screenshots will be added as the project continues to evolve.
+
+---
+
+# Downloads
+
+Download the latest version from the **Releases** section of this repository.
+
+Available packages include:
+
+- Portable Windows x64 ZIP
+- Windows Installer
+- Source Code
+
+---
+
+# Requirements
+
+- Windows 10 or Windows 11 (64-bit)
+- Palworld Dedicated Server
+- Administrator privileges may be required for:
+  - Windows Services
+  - Firewall configuration
+  - Protected installation folders
+
+---
+
+# Building From Source
+
+## Prerequisites
+
+- Visual Studio 2022
+- .NET 10 SDK
+- .NET Desktop Development workload
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Wad3M/MystTiq-Palworld-Server-Manager.git
+```
+
+Open:
+
+```text
+PalworldServerManager.slnx
+```
+
+Build:
+
+```text
+Release | x64
+```
+
+Or use PowerShell:
 
 ```powershell
 ./scripts/Build.ps1
 ```
 
-Create the portable package:
+Create a portable package:
 
 ```powershell
 ./scripts/Package-Portable.ps1
 ```
 
-## Safety
+---
 
-World and save editing can carry risk. Keep tested backups, stop the server before performing destructive operations, and verify the selected world before applying changes.
+# Safety
 
-Do not publish server passwords, REST credentials, Steam credentials, private player saves, logs, or backup archives in issues.
+Working directly with Palworld save data always carries some risk.
 
-## Project status
+Before performing repairs or maintenance:
 
-v0.2.12 is the first public open-source baseline. New architecture and repair features will be developed after the repository, release, and packaging process has been validated.
+- Stop the server
+- Create a backup
+- Verify the selected world
+- Test restore procedures
 
-## Contributing
+Never publish:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports and focused pull requests are welcome.
+- Server passwords
+- REST credentials
+- Steam credentials
+- Player save files
+- Backup archives
+- Sensitive log files
 
-## Security
+---
 
-See [SECURITY.md](SECURITY.md) before reporting a vulnerability or suspected credential exposure.
+# Roadmap
 
-## License
+## Current Release
 
-Released under the [MIT License](LICENSE).
+**v0.2.12**
 
-## Disclaimer
+## Planned
 
-MystTiq Palworld Server Manager is an independent community project. It is not affiliated with, endorsed by, or sponsored by Pocketpair, Inc. Palworld and related names are trademarks of their respective owners.
+### v0.2.13
+- Portable packaging improvements
+- Windows installer
+- Release automation
+
+### v0.2.14
+- Documentation expansion
+- GitHub Pages website
+- User guides
+
+### v0.3.0
+- Transaction Engine
+- Repair Queue
+- Preview Engine
+- Rollback Framework
+
+---
+
+# Contributing
+
+Contributions are welcome!
+
+Please read:
+
+- CONTRIBUTING.md
+- CODE_OF_CONDUCT.md
+
+before submitting issues or pull requests.
+
+---
+
+# Security
+
+If you discover a security issue or accidentally expose credentials, please follow the instructions in:
+
+**SECURITY.md**
+
+---
+
+# License
+
+This project is licensed under the **MIT License**.
+
+See **LICENSE** for details.
+
+---
+
+# Disclaimer
+
+MystTiq Palworld Server Manager is an independent community project.
+
+It is **not affiliated with, endorsed by, or sponsored by Pocketpair, Inc.**
+
+Palworld and all related trademarks are the property of their respective owners.
+
+---
+
+# About MystTiq
+
+MystTiq is an open-source project focused on building modern, easy-to-use server management tools for self-hosted game servers.
+
+The long-term vision is to provide a consistent management experience across multiple dedicated server platforms while remaining completely free and open source.
