@@ -1,10 +1,12 @@
+using PalworldManager.Services;
+
 namespace PalworldManager.Models;
 
 public sealed class AppSettings
 {
-    public string ServerRoot { get; set; } = @"C:\GameServers\Palworld\Server";
-    public string SteamCmdPath { get; set; } = @"C:\GameServers\Palworld\SteamCMD\steamcmd.exe";
-    public string BackupRoot { get; set; } = @"C:\GameServers\Palworld\Backups";
+    public string ServerRoot { get; set; } = ApplicationPathService.Current.DefaultServerRoot;
+    public string SteamCmdPath { get; set; } = ApplicationPathService.Current.DefaultSteamCmdPath;
+    public string BackupRoot { get; set; } = ApplicationPathService.Current.BackupsRoot;
     public string ApiBaseUrl { get; set; } = "http://127.0.0.1:8212/v1/api";
     public string ApiUser { get; set; } = "admin";
     public string ProtectedPassword { get; set; } = "";

@@ -4,23 +4,35 @@ namespace PalworldManager.Services;
 public sealed class SettingsStore
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
-    public string Root { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), BrandingMigrationService.ProductFolder);
-    public string FilePath => Path.Combine(Root, "settings-v2.1.json");
+    private readonly ApplicationPathService paths = ApplicationPathService.Current;
+    public string Root => paths.DataRoot;
+    public string FilePath => Path.Combine(paths.SettingsRoot, "settings-v2.1.json");
 
     public AppSettings Load()
     {
-        Directory.CreateDirectory(Root);
+        paths.EnsureApplicationDirectories();
         if (!File.Exists(FilePath))
         {
-            var defaults = new AppSettings(); Save(defaults); return defaults;
+            var defaults = new AppSettings(); paths.ApplyWorkspaceDefaults(defaults); Save(defaults); return defaults;
         }
-        try { return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), Options) ?? new AppSettings(); }
-        catch { return new AppSettings(); }
+        try
+        {
+            var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), Options) ?? new AppSettings();
+            paths.ApplyWorkspaceDefaults(settings);
+            if (paths.IsPortable) Save(settings);
+            return settings;
+        }
+        catch
+        {
+            var defaults = new AppSettings();
+            paths.ApplyWorkspaceDefaults(defaults);
+            return defaults;
+        }
     }
 
     public void Save(AppSettings settings)
     {
-        Directory.CreateDirectory(Root);
+        paths.EnsureApplicationDirectories();
         AtomicFile.Write(FilePath, JsonSerializer.Serialize(settings, Options));
     }
 }

@@ -6,6 +6,7 @@ public static class BrandingMigrationService
 
     public static void MigrateLegacyApplicationData()
     {
+        if (ApplicationPathService.Current.IsPortable) return;
         TryMigrate(
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "PalworldServerManager"),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), ProductFolder));

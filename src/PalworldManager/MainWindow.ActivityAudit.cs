@@ -10,9 +10,7 @@ public partial class MainWindow
 {
     private readonly ObservableCollection<AuditEntry> auditEntries = new();
     private ICollectionView? auditView;
-    private static readonly string AuditFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        BrandingMigrationService.ProductFolder, "activity-audit.json");
+    private static readonly string AuditFilePath = Path.Combine(ApplicationPathService.Current.ActivityRoot, "activity-audit.json");
 
     private void InitializeActivityAudit()
     {

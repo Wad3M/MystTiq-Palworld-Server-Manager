@@ -2,18 +2,9 @@ namespace PalworldManager;
 
 public partial class App : Application
 {
-    private static string CrashLogPath
-    {
-        get
-        {
-            var directory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                Services.BrandingMigrationService.ProductFolder,
-                "Logs");
-            Directory.CreateDirectory(directory);
-            return Path.Combine(directory, $"startup-{DateTime.Now:yyyyMMdd}.log");
-        }
-    }
+    private static string CrashLogPath => Path.Combine(
+        Services.ApplicationPathService.Current.LogsRoot,
+        $"startup-{DateTime.Now:yyyyMMdd}.log");
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -36,6 +27,7 @@ public partial class App : Application
 
         try
         {
+            Services.ApplicationPathService.Current.EnsureApplicationDirectories();
             base.OnStartup(e);
             var window = new MainWindow();
             MainWindow = window;
@@ -58,6 +50,7 @@ public partial class App : Application
     {
         try
         {
+            Directory.CreateDirectory(Path.GetDirectoryName(CrashLogPath)!);
             File.AppendAllText(
                 CrashLogPath,
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {heading}{Environment.NewLine}" +

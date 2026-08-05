@@ -1,3 +1,4 @@
+using PalworldManager.Services.Infrastructure;
 using System.IO.Compression;
 using System.Text.Json.Nodes;
 using PalworldManager.Models;
@@ -323,7 +324,7 @@ public sealed class OwnershipEngineService
     private static string WriteReport(OwnershipPreview preview, OwnershipTransactionResult result, string working)
     {
         var path = Path.Combine(working, "ownership-transaction-report.json");
-        File.WriteAllText(path, JsonSerializer.Serialize(new { product = "MystTiq Palworld Server", version = "0.2.12", preview, result }, JsonOptions), new UTF8Encoding(false));
+        File.WriteAllText(path, JsonSerializer.Serialize(new { product = "MystTiq Palworld Server", version = ApplicationVersion.Version, preview, result }, JsonOptions), new UTF8Encoding(false));
         var permanentRoot = Path.Combine(Path.GetDirectoryName(result.BackupPath)!, "Reports");
         Directory.CreateDirectory(permanentRoot);
         var permanent = Path.Combine(permanentRoot, Path.GetFileNameWithoutExtension(result.BackupPath) + ".json");

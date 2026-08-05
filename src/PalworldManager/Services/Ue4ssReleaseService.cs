@@ -1,4 +1,5 @@
 using PalworldManager.Models;
+using PalworldManager.Services.Infrastructure;
 
 namespace PalworldManager.Services;
 
@@ -14,9 +15,9 @@ public sealed class Ue4ssReleaseService : IDisposable
     public Ue4ssReleaseService()
     {
         client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("MystTiq-Palworld-Server/2.11.7.0");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(ApplicationVersion.UserAgent);
         client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
-        cacheRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MystTiqPalworldServer", "Cache", "UE4SS");
+        cacheRoot = Path.Combine(ApplicationPathService.Current.CacheRoot, "UE4SS");
     }
 
     /// <summary>

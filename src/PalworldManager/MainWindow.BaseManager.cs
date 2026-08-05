@@ -1,5 +1,6 @@
 using PalworldManager.Models;
 using PalworldManager.Services;
+using PalworldManager.Services.Infrastructure;
 
 namespace PalworldManager;
 
@@ -29,7 +30,7 @@ public partial class MainWindow
             ApplyBaseManagerFilter();
             BaseManagerStatusText.Text = currentBaseManagerSummary.Bases.Count == 0
                 ? currentBaseManagerSummary.Warnings.LastOrDefault() ?? "No bases were discovered."
-                : $"Discovered {currentBaseManagerSummary.Bases.Count} base(s). Ownership changes are preview-first and transactional in v0.2.12.";
+                : $"Discovered {currentBaseManagerSummary.Bases.Count} base(s). Ownership changes are preview-first and transactional in {ApplicationVersion.DisplayVersion}.";
             BaseManagerStatusText.Foreground = currentBaseManagerSummary.OrphanedCount > 0 ? Brushes.Gold : Brushes.LightGreen;
         }
         catch (Exception ex) { BaseManagerStatusText.Text = ex.Message; BaseManagerStatusText.Foreground = Brushes.OrangeRed; }

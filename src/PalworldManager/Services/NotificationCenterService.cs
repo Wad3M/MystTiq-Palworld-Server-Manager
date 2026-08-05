@@ -10,10 +10,7 @@ public sealed class NotificationCenterService
 
     public NotificationCenterService()
     {
-        filePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            BrandingMigrationService.ProductFolder,
-            "notifications.json");
+        filePath = Path.Combine(ApplicationPathService.Current.ActivityRoot, "notifications.json");
     }
 
     public List<NotificationEntry> Load()

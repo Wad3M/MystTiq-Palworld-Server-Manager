@@ -1,3 +1,4 @@
+using PalworldManager.Services.Infrastructure;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
@@ -154,7 +155,7 @@ public sealed class BaseManagerService
         var path = Path.Combine(root, $"base-ownership-{DateTime.Now:yyyyMMdd_HHmmss}-{Short(row.BaseId)}.json");
         var payload = new
         {
-            Version = "0.2.12", CreatedUtc = DateTime.UtcNow, summary.WorldPath, summary.SourceHash,
+            Version = ApplicationVersion.Version, CreatedUtc = DateTime.UtcNow, summary.WorldPath, summary.SourceHash,
             Base = new { row.BaseId, row.Name, CurrentGuildId = row.GuildId, row.GuildName, row.PalboxId, row.X, row.Y, row.Z },
             ProposedGuildId = targetGuildId,
             SafetyBoundary = "Preview only. Apply through Guild & Base Recovery after full backup and round-trip validation."

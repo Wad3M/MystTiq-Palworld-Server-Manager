@@ -18,11 +18,15 @@ jobs:
           dotnet-version: 10.0.x
       - name: Package portable build
         shell: pwsh
-        run: ./scripts/Package-Portable.ps1 -Version "${{ github.ref_name }}".TrimStart('v')
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $projectVersion = ./scripts/Get-ProjectVersion.ps1
+          if ($version -ne $projectVersion) { throw "Tag version $version does not match project version $projectVersion." }
+          ./scripts/Package-Portable.ps1 -Version $version
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          body_path: release-notes/v0.2.12.md
+          body_path: release-notes/${{ github.ref_name }}.md
           files: |
             artifacts/*.zip
             artifacts/SHA256SUMS.txt

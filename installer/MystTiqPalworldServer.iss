@@ -1,9 +1,9 @@
 #ifndef MyAppVersion
-  #define MyAppVersion "0.2.12"
+  #define MyAppVersion "0.0.0-dev"
 #endif
 #define MyAppName "MystTiq Palworld Server Manager"
 #define MyAppExeName "MystTiqPalworldServer.exe"
-#define SourceDir "..\artifacts\MystTiqPalworldServer-v" + MyAppVersion + "-win-x64-portable"
+#define SourceDir "..\artifacts\publish\win-x64"
 
 [Setup]
 AppId={{5E01900A-7A21-4CD8-8ABF-76E413BDA7D7}

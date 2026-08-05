@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="PalworldManager.MainWindow" Title="MystTiq Palworld Server Manager v0.2.12" Width="1680" Height="1000" MinWidth="1280" MinHeight="800" WindowStartupLocation="CenterScreen" Icon="/Assets/PalworldServerManager.ico">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="PalworldManager.MainWindow" Title="MystTiq Palworld Server Manager" Width="1680" Height="1000" MinWidth="1280" MinHeight="800" WindowStartupLocation="CenterScreen" Icon="/Assets/PalworldServerManager.ico">
 
     <Window.Resources>
         <!-- v2.10.6: standard icon treatment for buttons whose labels are supplied by data binding. -->
@@ -697,7 +697,7 @@
                         <TextBlock Text="PALWORLD SERVER" Foreground="#2C9BFF" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
 
                         <Border Background="#152332" CornerRadius="10" Padding="9,3" HorizontalAlignment="Center" Margin="0,7,0,0">
-                            <TextBlock Text="v0.2.12" Foreground="#AFC9E8" FontSize="11" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="ApplicationVersionText" Text="v0.0.0" Foreground="#AFC9E8" FontSize="11" FontWeight="SemiBold"/>
                         </Border>
                     </StackPanel>
                 </Border>

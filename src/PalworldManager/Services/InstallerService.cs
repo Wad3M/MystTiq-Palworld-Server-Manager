@@ -1,3 +1,4 @@
+using PalworldManager.Services.Infrastructure;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using PalworldManager.Models;
@@ -22,7 +23,7 @@ public sealed class InstallerService
     {
         this.settings = settings;
         http = new HttpClient();
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("MystTiqPalworldServer/0.2.12");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd(ApplicationVersion.UserAgent);
     }
 
 

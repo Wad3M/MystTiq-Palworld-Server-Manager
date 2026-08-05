@@ -70,10 +70,7 @@ public partial class MainWindow : Window
     private ObservableCollection<EnvironmentComponentRow> environmentRows = [];
     private ObservableCollection<LocalModRow> localModRows = [];
     private ObservableCollection<ModDashboardRow> modDashboardRows = [];
-    private static readonly string ModScanResultsPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        BrandingMigrationService.ProductFolder,
-        "mod-scan-results.json");
+    private static readonly string ModScanResultsPath = Path.Combine(ApplicationPathService.Current.ActivityRoot, "mod-scan-results.json");
 
     private readonly DispatcherTimer monitorTimer = new() { Interval = TimeSpan.FromSeconds(10) };
     private volatile bool restPollingSuspended = true;
@@ -102,16 +99,15 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer automationTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private DateTime lastScheduledRestartDate = DateTime.MinValue;
     private readonly Queue<DateTime> crashRecoveryAttempts = new();
-    private static readonly string WindowPlacementPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        BrandingMigrationService.ProductFolder,
-        "window-placement.json");
+    private static readonly string WindowPlacementPath = Path.Combine(ApplicationPathService.Current.ActivityRoot, "window-placement.json");
 
 
     public MainWindow()
     {
         BrandingMigrationService.MigrateLegacyApplicationData();
         InitializeComponent();
+        Title = ApplicationVersion.WindowTitle;
+        ApplicationVersionText.Text = ApplicationVersion.DisplayVersion;
         navigation = new NavigationCoordinator(this, Tabs);
         InitializeNotificationCenter();
         infrastructureNotifications.Published += HandleInfrastructureNotification;
@@ -119,6 +115,11 @@ public partial class MainWindow : Window
         InitializeActivityAudit();
         RestoreWindowPlacement();
         settings=store.Load();
+        sessionLog = new SessionLogService(settings.LogsRoot);
+        var applicationPaths = ApplicationPathService.Current;
+        Log(applicationPaths.IsPortable
+            ? $"[WORKSPACE] Portable mode enabled. Workspace: {applicationPaths.WorkspaceRoot}"
+            : $"[WORKSPACE] Installed mode. Application data: {applicationPaths.DataRoot}");
         activeWorldContext = new ActiveWorldContextService(settings);
         worldDiscovery = new WorldDiscoverySnapshotService(settings, activeWorldContext);
         activeWorldContext.Changed += ActiveWorldContext_Changed;
@@ -139,7 +140,6 @@ public partial class MainWindow : Window
         environment=new(settings);
         modInventory = new ModInventorySnapshotService(mods, environment);
         installer=new(settings);
-        sessionLog = new SessionLogService(settings.LogsRoot);
         crashAnalyzer = new CrashAnalyzerService(settings);
         serverDoctor = new ServerDoctorService(settings);
         guilds = new GuildService(settings, activeWorldContext, worldDiscovery);
@@ -3287,7 +3287,7 @@ public partial class MainWindow : Window
 
     private async Task<WorkshopMetadata> GetWorkshopMetadataAsync(string workshopId, bool forceRefresh)
     {
-        var cacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), BrandingMigrationService.ProductFolder, "Cache", "Mods");
+        var cacheDirectory = Path.Combine(ApplicationPathService.Current.CacheRoot, "Mods");
         Directory.CreateDirectory(cacheDirectory);
         var cachePath = Path.Combine(cacheDirectory, workshopId + ".json");
         if (!forceRefresh && File.Exists(cachePath))
@@ -5428,7 +5428,7 @@ public partial class MainWindow : Window
     private async Task ApplyInstallerAwareUpdateChecksAsync(List<UpdateCenterRow> rows)
     {
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("MystTiq-Palworld-Server-Manager/0.2.12");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(ApplicationVersion.UserAgent);
 
         await CheckPythonRuntimeAsync(rows.First(r => r.Component == "Python Runtime"), client);
         await CheckPipAsync(rows.First(r => r.Component == "pip"), client);
@@ -5645,7 +5645,7 @@ public partial class MainWindow : Window
     }
 
 
-    private static string UpdateInventoryMetadataPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MystTiqPalworldServer", "update-inventory.json");
+    private static string UpdateInventoryMetadataPath => Path.Combine(ApplicationPathService.Current.ActivityRoot, "update-inventory.json");
 
     private static bool RestoreUpdateInventoryMetadata(List<UpdateCenterRow> rows)
     {
@@ -5827,7 +5827,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MystTiqPalworldServer");
+            var folder = ApplicationPathService.Current.ActivityRoot;
             Directory.CreateDirectory(folder);
             var payload = new { lastChecked = checkedAt, components = rows.Select(row => new { row.Group, row.Component, row.Installed, latestVersion = row.Available, row.LastChecked, row.LastUpdated, row.Status, row.Source }).ToArray() };
             AtomicFile.Write(Path.Combine(folder, "update-inventory.json"), JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
@@ -5889,7 +5889,7 @@ public partial class MainWindow : Window
         var stdout = await stdoutTask;
         var stderr = await stderrTask;
         var output = stdout + Environment.NewLine + stderr;
-        var diagnosticRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MystTiqPalworldServer", "Diagnostics");
+        var diagnosticRoot = ApplicationPathService.Current.DiagnosticsRoot;
         Directory.CreateDirectory(diagnosticRoot);
         AtomicFile.Write(Path.Combine(diagnosticRoot, "SteamCMD_Palworld_AppInfo_Last.txt"), output);
 

@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!-- Single authoritative application version. Update this value for each build. -->
+    <VersionPrefix>0.2.13.2</VersionPrefix>
+    <Version>$(VersionPrefix)</Version>
+    <FileVersion>$(VersionPrefix)</FileVersion>
+    <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+    <InformationalVersion>$(VersionPrefix)</InformationalVersion>
+  </PropertyGroup>
+</Project>

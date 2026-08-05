@@ -8,9 +8,6 @@
     <LangVersion>14.0</LangVersion>
     <AssemblyName>MystTiqPalworldServer</AssemblyName>
     <RootNamespace>PalworldManager</RootNamespace>
-    <Version>0.2.12</Version>
-    <FileVersion>0.2.12.0</FileVersion>
-    <AssemblyVersion>0.2.12.0</AssemblyVersion>
     <ApplicationIcon>Assets\PalworldServerManager.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -18,7 +15,6 @@
     <PublishSingleFile>true</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <InformationalVersion>0.2.12</InformationalVersion>
     <Authors>MystTiq Contributors</Authors>
     <Product>MystTiq Palworld Server Manager</Product>
     <Description>Free and open-source Windows manager for Palworld dedicated servers.</Description>
