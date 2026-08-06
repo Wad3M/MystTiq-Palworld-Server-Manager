@@ -1,77 +1,222 @@
-# MystTiq Palworld Server Manager
+<p align="center">
+    <img src="docs/images/github-banner.png" alt="MystTiq Palworld Server Manager">
+</p>
 
-> **Professional Windows management software for Palworld Dedicated Servers.**
+<h1 align="center">
+MystTiq Palworld Server Manager
+</h1>
 
-MystTiq Palworld Server Manager is a free and open-source Windows application designed to simplify hosting and maintaining Palworld dedicated servers. It provides a modern dashboard for monitoring server health, managing worlds, creating backups, inspecting save data, and maintaining server installations—all from a single desktop application.
+<p align="center">
+<b>The Open-Source Administration Suite for Palworld Dedicated Servers</b>
+</p>
+
+<p align="center">
+
+![GitHub release](https://img.shields.io/github/v/release/Wad3M/MystTiq-Palworld-Server-Manager?style=for-the-badge)
+![License](https://img.shields.io/github/license/Wad3M/MystTiq-Palworld-Server-Manager?style=for-the-badge)
+![Platform](https://img.shields.io/badge/Platform-Windows_10/11-blue?style=for-the-badge)
+![.NET](https://img.shields.io/badge/.NET-10-purple?style=for-the-badge)
+![Open Source](https://img.shields.io/badge/Open_Source-MIT-success?style=for-the-badge)
+
+</p>
+
+<p align="center">
+
+[Download Latest Release](../../releases) •
+[Documentation](docs/) •
+[Report a Bug](../../issues) •
+[Request a Feature](../../issues)
+
+</p>
 
 ---
 
-## Features
+# Powerful. Modern. Open Source.
 
-### 🖥️ Server Management
+MystTiq Palworld Server Manager is a free and open-source Windows application designed to simplify hosting, monitoring, maintaining, and repairing **Palworld Dedicated Servers**.
 
-- Start, Stop, and Restart your server
-- Server update management
-- Live operational status
-- Overall server health monitoring
-- Real-time CPU and RAM history
-- Activity timeline
-- Notification center
+Instead of juggling configuration files, command-line tools, backups, mods, and save editors, MystTiq brings everything together into a single modern desktop application built for both first-time server owners and experienced administrators.
 
-### 🌍 World Management
+---
+
+# Dashboard
+
+<p align="center">
+<img src="docs/images/01-dashboard.png" width="100%">
+</p>
+
+---
+
+# Highlights
+
+| Feature | Description |
+|----------|-------------|
+| 🖥️ Modern Dashboard | Live server health, CPU, RAM and activity monitoring |
+| 🌍 World Explorer | Inspect players, guilds, bases and world data |
+| 👥 Player Management | Browse connected players and server information |
+| 🏰 Guild & Base Tools | Inspect guild ownership and base information |
+| 💾 Backup Center | One-click backups and restore workflows |
+| 🧩 Workshop & UE4SS | Built-in mod management and validation |
+| 🔎 World Validator | Detect issues before they become problems |
+| ❤️ Open Source | MIT licensed and community driven |
+
+---
+
+# Why MystTiq?
+
+MystTiq was built around one simple idea:
+
+> **Managing a dedicated server should be easy.**
+
+Whether you're hosting a family server for a few friends or managing a larger community, MystTiq provides the tools needed to monitor, maintain, and troubleshoot your server through a clean and intuitive Windows interface.
+
+No subscriptions.
+
+No telemetry.
+
+No unnecessary complexity.
+
+Just reliable tools built for the community.
+
+---
+
+# Features
+
+## 🖥️ Server Administration
+
+- Start, Stop & Restart
+- Live Status Monitoring
+- CPU & RAM History
+- Health Monitoring
+- Notification Center
+- Activity Timeline
+- Update Management
+
+---
+
+## 🌍 World Management
 
 - World Explorer
 - Player Inspector
 - Guild Manager
 - Base Inspector
-- Save inspection utilities
-
-### 💾 Backup & Recovery
-
-- One-click backups
-- Restore workflow
-- Backup history
-- Backup validation
-
-### 🧩 Mod Management
-
-- Steam Workshop integration
-- UE4SS support
-- Installed MOD inventory
-- Runtime validation
-- Crossplay verification
-
-### 🎨 Modern User Interface
-
-- Responsive one-page dashboard
-- Professional dark MystTiq theme
-- Standardized buttons and tooltips
-- Live activity feed
-- Consistent status indicators
+- Save Data Inspection
 
 ---
 
-# Screenshots
+## 💾 Backup & Recovery
 
-> Screenshots will be added as the project continues to evolve.
+- One-click Backups
+- Restore Workflow
+- Backup Validation
+- Backup History
 
 ---
 
-# Downloads
+## 🧩 Mod Platform
 
-Download the latest version from the **Releases** section of this repository.
+- Steam Workshop Integration
+- UE4SS Support
+- Runtime Validation
+- Crossplay Verification
+- Installed Mod Inventory
 
-Available packages include:
+---
 
-- Portable Windows x64 ZIP
-- Windows Installer
-- Source Code
+## 🔧 Validation & Repair
+
+- World Validation
+- Repair Planning
+- Safe Maintenance Workflow
+- Future Transaction Engine Support
+
+---
+
+# Screenshot Gallery
+
+## Dashboard
+
+<img src="docs/images/01-dashboard.png" width="100%">
+
+---
+
+## Server Settings
+
+<img src="docs/images/02-settings.png" width="100%">
+
+---
+
+## Player Manager
+
+<img src="docs/images/03-players.png" width="100%">
+
+---
+
+## Guild Manager
+
+<img src="docs/images/04-guilds.png" width="100%">
+
+---
+
+## World Explorer
+
+<img src="docs/images/05-world-explorer.png" width="100%">
+
+---
+
+## Backup Manager
+
+<img src="docs/images/06-backups.png" width="100%">
+
+---
+
+## Mod Management
+
+<img src="docs/images/07-mods.png" width="100%">
+
+---
+
+## Notifications
+
+<img src="docs/images/08-notifications.png" width="100%">
+
+---
+
+# Feature Matrix
+
+| Feature | Included |
+|:---------|:---------:|
+| Live Dashboard | ✅ |
+| Resource Monitoring | ✅ |
+| Server Health | ✅ |
+| World Explorer | ✅ |
+| Player Inspector | ✅ |
+| Guild Manager | ✅ |
+| Base Inspector | ✅ |
+| Backup Manager | ✅ |
+| Restore Workflow | ✅ |
+| Steam Workshop | ✅ |
+| UE4SS Support | ✅ |
+| World Validation | ✅ |
+| Portable Version | ✅ |
+| Open Source | ✅ |
+| MIT License | ✅ |
+
+---
+
+# Quick Start
+
+1. Download the latest release.
+2. Extract the portable ZIP.
+3. Launch **MystTiq.exe**.
+4. Select your Palworld Dedicated Server installation.
+5. Start managing your server.
 
 ---
 
 # Requirements
 
-- Windows 10 or Windows 11 (64-bit)
+- Windows 10 / Windows 11 (64-bit)
 - Palworld Dedicated Server
 - Administrator privileges may be required for:
   - Windows Services
@@ -80,65 +225,41 @@ Available packages include:
 
 ---
 
+# Download
+
+The latest builds are available from the GitHub **Releases** page.
+
+Available packages include:
+
+- Portable Windows ZIP
+- Windows Installer *(Coming Soon)*
+- Source Code
+
+---
+
 # Building From Source
-
-## Prerequisites
-
-- Visual Studio 2022
-- .NET 10 SDK
-- .NET Desktop Development workload
-
-Clone the repository:
 
 ```bash
 git clone https://github.com/Wad3M/MystTiq-Palworld-Server-Manager.git
 ```
 
-Open:
+Open
 
 ```text
 PalworldServerManager.slnx
 ```
 
-Build:
+Build
 
 ```text
 Release | x64
 ```
 
-Or use PowerShell:
+or
 
 ```powershell
 ./scripts/Build.ps1
 ```
-
-Create a portable package:
-
-```powershell
-./scripts/Package-Portable.ps1
-```
-
----
-
-# Safety
-
-Working directly with Palworld save data always carries some risk.
-
-Before performing repairs or maintenance:
-
-- Stop the server
-- Create a backup
-- Verify the selected world
-- Test restore procedures
-
-Never publish:
-
-- Server passwords
-- REST credentials
-- Steam credentials
-- Player save files
-- Backup archives
-- Sensitive log files
 
 ---
 
@@ -150,16 +271,6 @@ Never publish:
 
 ## Planned
 
-### v0.2.13
-- Portable packaging improvements
-- Windows installer
-- Release automation
-
-### v0.2.14
-- Documentation expansion
-- GitHub Pages website
-- User guides
-
 ### v0.3.0
 - Transaction Engine
 - Repair Queue
@@ -170,30 +281,30 @@ Never publish:
 
 # Contributing
 
-Contributions are welcome!
+Contributions are always welcome.
+
+Whether you're reporting bugs, suggesting new ideas, improving documentation, or submitting pull requests, your help is appreciated.
 
 Please read:
 
 - CONTRIBUTING.md
 - CODE_OF_CONDUCT.md
 
-before submitting issues or pull requests.
+before opening issues or submitting pull requests.
 
 ---
 
 # Security
 
-If you discover a security issue or accidentally expose credentials, please follow the instructions in:
-
-**SECURITY.md**
+If you discover a security issue or accidentally expose credentials, please follow the instructions provided in **SECURITY.md**.
 
 ---
 
 # License
 
-This project is licensed under the **MIT License**.
+Released under the **MIT License**.
 
-See **LICENSE** for details.
+See **LICENSE** for complete details.
 
 ---
 
@@ -209,6 +320,16 @@ Palworld and all related trademarks are the property of their respective owners.
 
 # About MystTiq
 
-MystTiq is an open-source project focused on building modern, easy-to-use server management tools for self-hosted game servers.
+MystTiq is an open-source initiative focused on building modern, approachable management tools for self-hosted game servers.
 
 The long-term vision is to provide a consistent management experience across multiple dedicated server platforms while remaining completely free and open source.
+
+---
+
+<p align="center">
+
+### ⭐ If MystTiq has been helpful, consider giving the repository a Star!
+
+It helps others discover the project and supports future development.
+
+</p>
