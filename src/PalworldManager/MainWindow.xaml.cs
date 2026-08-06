@@ -172,6 +172,7 @@ public partial class MainWindow : Window
                 StartSessionLogTail();
             }
             await MonitorTickAsync();
+            await InitializeWorldDataOnStartupAsync();
             await LoadUe4ssReleasesAsync();
         };
         Closing += MainWindow_Closing;
@@ -407,6 +408,9 @@ public partial class MainWindow : Window
                 break;
             case MainPageIndex.WorldValidator:
                 RefreshWorldValidator(forceRefresh: true);
+                break;
+            case MainPageIndex.Workspace:
+                RefreshWorkspaceManager();
                 break;
         }
     }
@@ -1840,6 +1844,52 @@ public partial class MainWindow : Window
                 BackupsStatusText.Text = "Backup cancelled. No backup files were changed.";
                 Log("Backup cancelled by the administrator after the REST save warning.");
             }
+            catch (BackupSourceLockedException ex) when (server.IsRunning())
+            {
+                var choice = MessageBox.Show(
+                    "Palworld is holding an active save file open, so Windows cannot create a consistent live snapshot.\n\n" +
+                    $"Locked file: {ex.RelativePath}\n\n" +
+                    "MystTiq can temporarily stop the server, create and verify the backup, then start the server again. " +
+                    "Connected players will be disconnected during this maintenance backup.\n\n" +
+                    "Continue with the coordinated stop-backup-start workflow?",
+                    "Live Backup Requires Maintenance Stop",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning,
+                    MessageBoxResult.No);
+
+                if (choice != MessageBoxResult.Yes)
+                {
+                    BackupsStatusText.Foreground = Brushes.Gold;
+                    BackupsStatusText.Text = "Backup cancelled because the active save file is locked.";
+                    Log($"Live backup cancelled. Palworld kept '{ex.RelativePath}' locked after {ex.Attempts} attempts.");
+                    return;
+                }
+
+                try
+                {
+                    var path = await CreateCoordinatedMaintenanceBackupAsync(ct);
+                    BackupsStatusText.Foreground = Brushes.LightGreen;
+                    BackupsStatusText.Text = $"Maintenance backup completed successfully: {Path.GetFileName(path)}";
+                    MessageBox.Show(
+                        $"Backup completed and the Palworld server was started again.\n\n{path}",
+                        "Maintenance Backup Complete",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                catch (Exception maintenanceError)
+                {
+                    BackupsStatusText.Foreground = Brushes.IndianRed;
+                    BackupsStatusText.Text = "Maintenance backup failed: " + maintenanceError.Message;
+                    Log("Maintenance backup failed: " + maintenanceError.Message);
+                    MessageBox.Show(
+                        "MystTiq could not complete the coordinated maintenance backup.\n\n" +
+                        maintenanceError.Message +
+                        "\n\nCheck the Dashboard before manually starting the server.",
+                        "Maintenance Backup Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
             catch (Exception ex)
             {
                 BackupsStatusText.Foreground = Brushes.IndianRed;
@@ -1852,6 +1902,90 @@ public partial class MainWindow : Window
                     MessageBoxImage.Error);
             }
         });
+
+    private async Task<string> CreateCoordinatedMaintenanceBackupAsync(CancellationToken ct)
+    {
+        SuspendRestPolling("coordinated maintenance backup");
+        Log("Live snapshot was blocked by an active Palworld save lock. Beginning coordinated stop-backup-start workflow.");
+
+        if (!server.HasActiveSession && await Task.Run(server.IsRunning, ct))
+        {
+            Log("[SESSION] Maintenance backup is adopting the discovered PalServer process before shutdown.");
+            await Task.Run(server.TryAdoptRunningServer, ct);
+        }
+
+        server.MarkStopping();
+        UpdateStatusText.Text = "Current operation: Maintenance backup — saving world";
+        try
+        {
+            using var api = Api();
+            await api.SaveAsync(ct);
+            Log("World save requested before maintenance backup shutdown.");
+        }
+        catch (Exception saveError)
+        {
+            Log($"World save request failed before maintenance backup shutdown: {saveError.Message}. Continuing with controlled stop.");
+        }
+
+        UpdateStatusText.Text = "Current operation: Maintenance backup — stopping server";
+        await StopSessionLogTailAsync(TimeSpan.FromSeconds(1));
+        await server.ForceStopAsync();
+
+        var cleanup = await server.CleanupSessionAfterShutdownAsync(ct);
+        if (!cleanup.Clean)
+        {
+            UpdateStatusText.Text = "Current operation: Maintenance backup blocked — cleanup needs attention";
+            throw new InvalidOperationException(
+                "The server stopped, but Session Guardian found remaining processes or guarded ports. " +
+                $"Review the cleanup report before restarting: {cleanup.ReportPath}");
+        }
+
+        string? backupPath = null;
+        Exception? backupFailure = null;
+        try
+        {
+            UpdateStatusText.Text = "Current operation: Maintenance backup — creating verified archive";
+            backupPath = await CreateBackupAsync(saveFirst: false, ct);
+            return backupPath;
+        }
+        catch (Exception ex)
+        {
+            backupFailure = ex;
+            throw;
+        }
+        finally
+        {
+            try
+            {
+                UpdateStatusText.Text = "Current operation: Maintenance backup — starting server";
+                await ResetRconForServerSessionAsync("maintenance backup restart");
+                await PrepareForNewServerSessionAsync(ct);
+                ReconcileModStateBeforeStart();
+                BeginModLoadTracking();
+                server.Start();
+                StartSessionLogTail();
+                ScheduleRestPollingResume();
+                UpdateStatusText.Text = backupFailure is null
+                    ? "Current operation: Maintenance backup complete — server started"
+                    : "Current operation: Backup failed — server restarted";
+                Log(backupFailure is null
+                    ? "Coordinated maintenance backup completed and the server was started again."
+                    : "The maintenance backup failed, but MystTiq started the server again successfully.");
+            }
+            catch (Exception restartError)
+            {
+                UpdateStatusText.Text = "Current operation: Maintenance backup — server restart failed";
+                Log("Server restart failed after maintenance backup: " + restartError.Message);
+                if (backupFailure is null)
+                {
+                    throw new InvalidOperationException(
+                        $"The backup was created successfully at '{backupPath}', but the server could not be restarted automatically. " +
+                        restartError.Message,
+                        restartError);
+                }
+            }
+        }
+    }
 
     private static bool IsRestAuthenticationFailure(Exception exception)
     {

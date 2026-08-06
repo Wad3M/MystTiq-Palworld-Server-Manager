@@ -459,6 +459,44 @@
             </Setter>
         </Style>
 
+        <!-- Compact Workspace Manager actions. Keep semantic MystTiq colors while
+             reducing control density for the workspace operations page. -->
+        <Style x:Key="WorkspaceRefreshButton" TargetType="Button" BasedOn="{StaticResource RefreshButton}">
+            <Setter Property="MinWidth" Value="96"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="5,2,0,2"/>
+            <Setter Property="FontSize" Value="11.5"/>
+        </Style>
+        <Style x:Key="WorkspaceSuccessButton" TargetType="Button" BasedOn="{StaticResource SuccessButton}">
+            <Setter Property="MinWidth" Value="104"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="5,2,0,2"/>
+            <Setter Property="FontSize" Value="11.5"/>
+        </Style>
+        <Style x:Key="WorkspaceInfoButton" TargetType="Button" BasedOn="{StaticResource InfoButton}">
+            <Setter Property="MinWidth" Value="82"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="9,6"/>
+            <Setter Property="Margin" Value="5,2,0,2"/>
+            <Setter Property="FontSize" Value="11.5"/>
+        </Style>
+        <Style x:Key="WorkspaceSecondaryButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+            <Setter Property="MinWidth" Value="92"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="9,6"/>
+            <Setter Property="Margin" Value="5,2,0,2"/>
+            <Setter Property="FontSize" Value="11.5"/>
+        </Style>
+        <Style x:Key="WorkspaceSaveButton" TargetType="Button" BasedOn="{StaticResource SuccessButton}">
+            <Setter Property="MinWidth" Value="108"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="5,2,0,2"/>
+            <Setter Property="FontSize" Value="11.5"/>
+        </Style>
+
         <!-- Compact MODS/UE4SS/Server Doctor actions. These preserve the semantic
              button colors while allowing dense action rows to wrap cleanly at
              smaller window sizes and common Windows DPI scaling levels. -->
@@ -717,6 +755,7 @@
                                 <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="2" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="⚒" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Configuration" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
                                 <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="6" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="▣" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Backups" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
                                 <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="3" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="▤" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Console" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
+                                <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="21" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="▦" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Workspace" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
                             </StackPanel>
                         </Expander>
 
@@ -1116,7 +1155,7 @@
    </Grid>
   </TabItem>
   <TabItem Header="Configuration">
-   <DockPanel Margin="20">
+   <DockPanel Margin="14">
     <StackPanel DockPanel.Dock="Top">
      <Border Style="{StaticResource SectionBanner}">
       <Grid>
@@ -1125,8 +1164,8 @@
         <ColumnDefinition Width="Auto"/>
        </Grid.ColumnDefinitions>
        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-        <TextBlock x:Name="ConfigTitleText" Text="Server Configuration" Foreground="White" FontSize="28" FontWeight="Bold"/>
-        <TextBlock Text="Use Simple Settings for common quality-of-life options, or Advanced Settings for every Palworld value." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/>
+        <TextBlock x:Name="ConfigTitleText" Text="Server Configuration" Foreground="White" FontSize="24" FontWeight="Bold"/>
+        <TextBlock Text="Use Simple Settings for common quality-of-life options, or Advanced Settings for every Palworld value." Foreground="#9FC4EA" FontSize="13" Margin="0,3,16,0" TextWrapping="Wrap"/>
        </StackPanel>
        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
         <Button Content="↻  LOAD ACTIVE" Style="{StaticResource WarningButton}" Click="LoadActive_Click" ToolTip="Reload settings from PalWorldSettings.ini"/>
@@ -1135,7 +1174,7 @@
        </StackPanel>
       </Grid>
      </Border>
-     <Border Background="#0D151E" BorderBrush="#263A50" BorderThickness="1" CornerRadius="7" Padding="10" Margin="0,0,0,8">
+     <Border Background="#0D151E" BorderBrush="#263A50" BorderThickness="1" CornerRadius="7" Padding="7" Margin="0,0,0,6">
       <Grid>
        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <StackPanel Orientation="Horizontal">
@@ -1143,8 +1182,8 @@
         <Button x:Name="AdvancedConfigViewButton" Content="⚙  ADVANCED SETTINGS" Style="{StaticResource ConfigViewButton}" Click="ShowAdvancedConfig_Click" ToolTip="Shows the full advanced Palworld configuration table."/>
        </StackPanel>
        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-        <Grid Width="240" Height="34" Margin="8,0">
-         <TextBox x:Name="ConfigSearchBox" Height="34" Padding="30,5,9,5" TextChanged="ConfigFilter_Changed" ToolTip="Search setting name or description"/>
+        <Grid Width="220" Height="30" Margin="6,0">
+         <TextBox x:Name="ConfigSearchBox" Height="30" Padding="28,3,8,3" TextChanged="ConfigFilter_Changed" ToolTip="Search setting name or description"/>
          <TextBlock Text="⌕  Search settings..." Foreground="#71869A" Margin="10,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
           <TextBlock.Style>
            <Style TargetType="TextBlock">
@@ -1156,17 +1195,17 @@
           </TextBlock.Style>
          </TextBlock>
         </Grid>
-        <ComboBox x:Name="ConfigCategoryCombo" Width="145" Height="34" SelectionChanged="ConfigFilter_Changed">
+        <ComboBox x:Name="ConfigCategoryCombo" Width="135" Height="30" SelectionChanged="ConfigFilter_Changed">
          <ComboBoxItem Content="All Categories" IsSelected="True"/><ComboBoxItem Content="Gameplay"/><ComboBoxItem Content="World"/><ComboBoxItem Content="Players"/><ComboBoxItem Content="Performance"/><ComboBoxItem Content="Network"/><ComboBoxItem Content="Remote Admin"/><ComboBoxItem Content="Security"/><ComboBoxItem Content="Mods"/><ComboBoxItem Content="Other"/>
         </ComboBox>
        </StackPanel>
        <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,0,0,0">
-        <Button Style="{StaticResource SuccessButton}" Width="135" Height="44" Padding="12,4" Click="ImportConfig_Click" ToolTip="Imports Palworld settings from a configuration file."><TextBlock Text="IMPORT&#10;SETTINGS" TextAlignment="Center" LineHeight="15"/></Button>
-        <Button Style="{StaticResource ConfigPrimaryButton}" Width="135" Height="44" Padding="12,4" Click="ExportConfig_Click" ToolTip="Exports the current configuration to a file for backup or reuse."><TextBlock Text="⇧  EXPORT&#10;SETTINGS" TextAlignment="Center" LineHeight="15"/></Button>
+        <Button Style="{StaticResource SuccessButton}" Width="116" Height="34" Padding="9,3" Click="ImportConfig_Click" ToolTip="Imports Palworld settings from a configuration file."><TextBlock Text="IMPORT SETTINGS" TextAlignment="Center"/></Button>
+        <Button Style="{StaticResource ConfigPrimaryButton}" Width="116" Height="34" Padding="9,3" Click="ExportConfig_Click" ToolTip="Exports the current configuration to a file for backup or reuse."><TextBlock Text="⇧  EXPORT" TextAlignment="Center"/></Button>
        </StackPanel>
       </Grid>
      </Border>
-     <Border Background="#0D151E" BorderBrush="#263A50" BorderThickness="1" CornerRadius="6" Padding="10,7" Margin="0,0,0,10">
+     <Border Background="#0D151E" BorderBrush="#263A50" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,7">
       <TextBlock x:Name="ConfigStatusText" Text="Simple and Advanced views edit the same active configuration. Changes are not written until Save Changes is clicked." Foreground="#9FC4EA" FontSize="13" TextWrapping="Wrap"/>
      </Border>
     </StackPanel>
@@ -1177,64 +1216,64 @@
       <ScrollViewer.Resources>
        <Style TargetType="ScrollBar" BasedOn="{StaticResource DarkVerticalScrollBar}"/>
        <DataTemplate x:Key="QolOptionTemplate">
-        <Border Background="#101A25" BorderBrush="#2A4865" BorderThickness="1" CornerRadius="7" Padding="12" Margin="0,0,0,8">
+        <Border Background="#101A25" BorderBrush="#2A4865" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,0,0,5">
          <Grid>
           <Grid.ColumnDefinitions>
            <ColumnDefinition Width="Auto"/>
            <ColumnDefinition Width="*"/>
-           <ColumnDefinition Width="210"/>
-           <ColumnDefinition Width="105"/>
-           <ColumnDefinition Width="185"/>
+           <ColumnDefinition Width="180"/>
+           <ColumnDefinition Width="88"/>
+           <ColumnDefinition Width="150"/>
           </Grid.ColumnDefinitions>
-          <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled, Mode=TwoWay}" Click="QolOption_Changed" VerticalAlignment="Center" Margin="0,0,12,0" ToolTip="Enable this quality-of-life adjustment"/>
+          <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled, Mode=TwoWay}" Click="QolOption_Changed" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="Enable this quality-of-life adjustment"/>
           <StackPanel Grid.Column="1" VerticalAlignment="Center">
-           <TextBlock Text="{Binding Label}" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
-           <TextBlock Text="{Binding Description}" Foreground="#91A9C0" FontSize="12" TextWrapping="Wrap" Margin="0,3,12,0"/>
+           <TextBlock Text="{Binding Label}" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
+           <TextBlock Text="{Binding Description}" Foreground="#91A9C0" FontSize="11" TextWrapping="Wrap" Margin="0,1,8,0"/>
           </StackPanel>
-          <Slider Grid.Column="2" Value="{Binding Percentage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" TickFrequency="{Binding TickFrequency}" IsSnapToTickEnabled="True" IsEnabled="{Binding IsEnabled}" ValueChanged="QolSlider_Changed" VerticalAlignment="Center" Margin="8,0,12,0"/>
+          <Slider Grid.Column="2" Value="{Binding Percentage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" TickFrequency="{Binding TickFrequency}" IsSnapToTickEnabled="True" IsEnabled="{Binding IsEnabled}" ValueChanged="QolSlider_Changed" VerticalAlignment="Center" Margin="6,0,8,0"/>
           <Grid Grid.Column="3" Margin="0,0,10,0">
-           <TextBox Text="{Binding Percentage, UpdateSourceTrigger=LostFocus, StringFormat=0.##}" IsEnabled="{Binding IsEnabled}" LostFocus="QolOption_Changed" VerticalContentAlignment="Center" HorizontalContentAlignment="Right" Padding="8,5,28,5"/>
+           <TextBox Text="{Binding Percentage, UpdateSourceTrigger=LostFocus, StringFormat=0.##}" IsEnabled="{Binding IsEnabled}" LostFocus="QolOption_Changed" VerticalContentAlignment="Center" HorizontalContentAlignment="Right" Padding="6,3,24,3"/>
            <TextBlock Text="{Binding ValueSuffix}" Foreground="#9FC4EA" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0" IsHitTestVisible="False"/>
           </Grid>
-          <TextBlock Grid.Column="4" Text="{Binding ResultText}" Foreground="#5FD39A" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right" TextWrapping="Wrap"/>
+          <TextBlock Grid.Column="4" Text="{Binding ResultText}" Foreground="#5FD39A" FontWeight="SemiBold" FontSize="11.5" VerticalAlignment="Center" TextAlignment="Right" TextWrapping="Wrap"/>
          </Grid>
         </Border>
        </DataTemplate>
       </ScrollViewer.Resources>
       <StackPanel Margin="0,0,8,0">
-       <Border Background="#101A25" BorderBrush="#C69A3A" BorderThickness="2" CornerRadius="8" Padding="18" Margin="0,0,0,12">
+       <Border Background="#101A25" BorderBrush="#C69A3A" BorderThickness="2" CornerRadius="8" Padding="12" Margin="0,0,0,8">
         <StackPanel>
-         <TextBlock Text="🖥  SERVER IDENTITY" Foreground="#F0C96B" FontSize="19" FontWeight="Bold" Margin="0,0,0,4"/>
-         <TextBlock Text="These values identify your server and are never changed when a QoL preset is applied." Foreground="#9FC4EA" Margin="0,0,0,12" TextWrapping="Wrap"/>
+         <TextBlock Text="🖥  SERVER IDENTITY" Foreground="#F0C96B" FontSize="17" FontWeight="Bold" Margin="0,0,0,2"/>
+         <TextBlock Text="These values identify your server and are never changed when a QoL preset is applied." Foreground="#9FC4EA" Margin="0,0,0,7" TextWrapping="Wrap"/>
          <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <StackPanel Grid.Column="0">
            <TextBlock Text="Server Name" Foreground="White" FontWeight="Bold" FontSize="15" Margin="0,0,0,5" ToolTip="This is the name players see in the Palworld server browser."/>
            <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBox x:Name="SimpleServerNameTextBox" Height="42" Padding="11,7" VerticalContentAlignment="Center" TextChanged="SimpleServerIdentity_Changed" ToolTip="This is the name players see in the Palworld server browser."/>
+            <TextBox x:Name="SimpleServerNameTextBox" Height="34" Padding="9,4" VerticalContentAlignment="Center" TextChanged="SimpleServerIdentity_Changed" ToolTip="This is the name players see in the Palworld server browser."/>
             <Button Grid.Column="1" Content="🎲  GENERATE" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Click="GenerateServerName_Click" ToolTip="Generate a new random server name. The name is not saved until Save Changes is clicked."/>
            </Grid>
           </StackPanel>
           <StackPanel Grid.Column="2">
            <TextBlock Text="Server Description" Foreground="#DCEBFA" FontWeight="SemiBold" Margin="0,0,0,5"/>
-           <TextBox x:Name="SimpleServerDescriptionTextBox" Height="38" Padding="10,6" VerticalContentAlignment="Center" TextChanged="SimpleServerIdentity_Changed"/>
+           <TextBox x:Name="SimpleServerDescriptionTextBox" Height="34" Padding="9,4" VerticalContentAlignment="Center" TextChanged="SimpleServerIdentity_Changed"/>
           </StackPanel>
          </Grid>
         </StackPanel>
        </Border>
 
-       <Border Background="#101A25" BorderBrush="#2A4865" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+       <Border Background="#101A25" BorderBrush="#2A4865" BorderThickness="1" CornerRadius="8" Padding="11" Margin="0,0,0,8">
         <Grid>
          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
          <StackPanel>
-          <TextBlock Text="Quality of Life Presets" Foreground="White" FontSize="20" FontWeight="SemiBold"/>
+          <TextBlock Text="Quality of Life Presets" Foreground="White" FontSize="17" FontWeight="SemiBold"/>
           <TextBlock Text="Choose a starting profile, then fine-tune any enabled option. Manual changes are identified as a Custom Configuration." Foreground="#9FC4EA" Margin="0,5,20,0" TextWrapping="Wrap"/>
           <TextBlock x:Name="QolPresetDescriptionText" Text="Balanced quality-of-life improvements that reduce grind while preserving progression." Foreground="#B8C9DB" FontStyle="Italic" Margin="0,8,20,0" TextWrapping="Wrap"/>
           <TextBlock x:Name="QolCustomProfileText" Text="Current Profile: Custom Configuration" Foreground="#8FA4B8" FontStyle="Italic" Margin="0,6,20,0" Visibility="Collapsed"/>
          </StackPanel>
          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-          <ComboBox x:Name="QolPresetCombo" Width="205" Height="40" Margin="0,0,10,0" SelectedIndex="2" Style="{StaticResource QolComboBox}" SelectionChanged="QolPresetCombo_SelectionChanged">
+          <ComboBox x:Name="QolPresetCombo" Width="190" Height="34" Margin="0,0,10,0" SelectedIndex="2" Style="{StaticResource QolComboBox}" SelectionChanged="QolPresetCombo_SelectionChanged">
            <ComboBoxItem Content="Official / Vanilla" Tag="Official"/>
            <ComboBoxItem Content="Balanced QoL" Tag="Balanced"/>
            <ComboBoxItem Content="Relaxed" Tag="Relaxed"/>
@@ -1243,17 +1282,17 @@
         </Grid>
        </Border>
 
-       <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+       <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="9" Margin="0,0,0,7">
         <StackPanel>
-         <TextBlock Text="🌍  WORLD" Foreground="#64B5F6" FontSize="18" FontWeight="Bold" Margin="0,0,0,9"/>
-         <Border Background="#101A25" BorderBrush="#2A4865" BorderThickness="1" CornerRadius="7" Padding="12" Margin="0,0,0,8">
+         <TextBlock Text="🌍  WORLD" Foreground="#64B5F6" FontSize="16" FontWeight="Bold" Margin="0,0,0,5"/>
+         <Border Background="#101A25" BorderBrush="#2A4865" BorderThickness="1" CornerRadius="7" Padding="8" Margin="0,0,0,5">
           <Grid>
-           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions>
+           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="230"/></Grid.ColumnDefinitions>
            <StackPanel VerticalAlignment="Center">
-            <TextBlock Text="Death Penalty" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
-            <TextBlock Text="Choose what a player drops on death. This setting is available here without requiring Advanced Settings." Foreground="#91A9C0" FontSize="12" TextWrapping="Wrap" Margin="0,3,12,0"/>
+            <TextBlock Text="Death Penalty" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
+            <TextBlock Text="Choose what a player drops on death. This setting is available here without requiring Advanced Settings." Foreground="#91A9C0" FontSize="11" TextWrapping="Wrap" Margin="0,1,8,0"/>
            </StackPanel>
-           <ComboBox x:Name="SimpleDeathPenaltyCombo" Grid.Column="1" Height="38" VerticalAlignment="Center" SelectionChanged="SimpleDeathPenalty_Changed">
+           <ComboBox x:Name="SimpleDeathPenaltyCombo" Grid.Column="1" Height="32" VerticalAlignment="Center" SelectionChanged="SimpleDeathPenalty_Changed">
             <ComboBoxItem Content="None — keep everything" Tag="None"/>
             <ComboBoxItem Content="Items only" Tag="Item"/>
             <ComboBoxItem Content="Items and equipment" Tag="ItemAndEquipment"/>
@@ -1264,21 +1303,21 @@
          <ItemsControl x:Name="WorldQolItems" ItemTemplate="{StaticResource QolOptionTemplate}"/>
         </StackPanel>
        </Border>
-       <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+       <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="9" Margin="0,0,0,7">
         <StackPanel>
-         <TextBlock Text="❤  PLAYER &amp; PAL" Foreground="#64B5F6" FontSize="18" FontWeight="Bold" Margin="0,0,0,9"/>
+         <TextBlock Text="❤  PLAYER &amp; PAL" Foreground="#64B5F6" FontSize="16" FontWeight="Bold" Margin="0,0,0,5"/>
          <ItemsControl x:Name="PlayerPalQolItems" ItemTemplate="{StaticResource QolOptionTemplate}"/>
         </StackPanel>
        </Border>
-       <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+       <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="9" Margin="0,0,0,7">
         <StackPanel>
-         <TextBlock Text="⚒  GAMEPLAY" Foreground="#64B5F6" FontSize="18" FontWeight="Bold" Margin="0,0,0,9"/>
+         <TextBlock Text="⚒  GAMEPLAY" Foreground="#64B5F6" FontSize="16" FontWeight="Bold" Margin="0,0,0,5"/>
          <ItemsControl x:Name="GameplayQolItems" ItemTemplate="{StaticResource QolOptionTemplate}"/>
         </StackPanel>
        </Border>
-       <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+       <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="9" Margin="0,0,0,7">
         <StackPanel>
-         <TextBlock Text="⌂  BASES" Foreground="#64B5F6" FontSize="18" FontWeight="Bold" Margin="0,0,0,9"/>
+         <TextBlock Text="⌂  BASES" Foreground="#64B5F6" FontSize="16" FontWeight="Bold" Margin="0,0,0,5"/>
          <ItemsControl x:Name="BaseQolItems" ItemTemplate="{StaticResource QolOptionTemplate}"/>
         </StackPanel>
        </Border>
@@ -2549,6 +2588,8 @@
        <Button Content="ℹ  MARK ALL READ" Style="{StaticResource SecondaryButton}" Click="NotificationMarkAllRead_Click" ToolTip="Mark All Read."/>
        <Button Content="ℹ  DISMISS READ" Style="{StaticResource NeutralButton}" Click="NotificationDismissRead_Click" ToolTip="Dismiss Read."/>
        <Button Content="⇧  EXPORT" Style="{StaticResource DiagnosticButton}" Click="NotificationExport_Click" ToolTip="Export."/>
+       <Button Content="✓  RUN SELF-TEST" Style="{StaticResource RefreshButton}" Click="NotificationRunSelfTest_Click" ToolTip="Publishes information, success, warning, critical, and pinned test notifications through the real notification service, then opens the flyout."/>
+       <Button Content="✖  CLEAR TESTS" Style="{StaticResource NeutralButton}" Click="NotificationClearTests_Click" ToolTip="Removes only notifications generated by the notification diagnostics self-test."/>
       </WrapPanel>
      </Grid>
     </Border>
@@ -2630,6 +2671,56 @@
     </Grid>
     <TextBlock Grid.Row="3" x:Name="WorldValidatorStatusText" Text="Open World Validator to scan the active world." Foreground="#9FC4EA" Margin="2,10,0,0" TextWrapping="Wrap"/>
    </Grid>
+  </TabItem>
+
+  <TabItem Header="Workspace">
+   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer.Resources><Style TargetType="ScrollBar" BasedOn="{StaticResource DarkVerticalScrollBar}"/></ScrollViewer.Resources>
+    <StackPanel Margin="18">
+     <Border Style="{StaticResource SectionBanner}">
+      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <StackPanel>
+        <TextBlock Text="Workspace Manager" FontSize="24" FontWeight="Bold" Foreground="White"/>
+        <TextBlock Text="Review, validate, and open every MystTiq working location from one place. Portable mode keeps the workspace beside the application; installed mode preserves normal Windows application-data locations." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/>
+       </StackPanel>
+       <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+        <Button Content="↻  REFRESH" Style="{StaticResource WorkspaceRefreshButton}" Click="WorkspaceRefresh_Click" ToolTip="Refresh workspace paths and validation results."/>
+        <Button Content="✓  VALIDATE ALL" Style="{StaticResource WorkspaceSuccessButton}" Click="WorkspaceValidate_Click" ToolTip="Validate required folders, server files, SteamCMD, and write access without changing server data."/>
+       </WrapPanel>
+      </Grid>
+     </Border>
+
+     <UniformGrid Columns="3" Margin="0,0,0,12">
+      <Border Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="9" Margin="0,0,8,0"><StackPanel><TextBlock Text="DEPLOYMENT MODE" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorkspaceModeText" Text="Checking..." Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,2,0,1"/><TextBlock x:Name="WorkspaceModeDetailText" Text="—" Foreground="#9FC4EA" TextWrapping="Wrap"/></StackPanel></Border>
+      <Border Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="9" Margin="0,0,8,0"><StackPanel><TextBlock Text="WORKSPACE HEALTH" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorkspaceHealthText" Text="Not validated" Foreground="#F0B246" FontSize="18" FontWeight="Bold" Margin="0,2,0,1"/><TextBlock x:Name="WorkspaceHealthDetailText" Text="Run validation to inspect all paths." Foreground="#9FC4EA" TextWrapping="Wrap"/></StackPanel></Border>
+      <Border Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="9"><StackPanel><TextBlock Text="SERVER DISCOVERY" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorkspaceDiscoveryText" Text="Checking..." Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,2,0,1"/><TextBlock x:Name="WorkspaceDiscoveryDetailText" Text="—" Foreground="#9FC4EA" TextWrapping="Wrap"/></StackPanel></Border>
+     </UniformGrid>
+
+     <Border Background="#101A24" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+      <Grid>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+       </Grid.RowDefinitions>
+       <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="WORKSPACE LOCATIONS" Foreground="#7FC8FF" FontWeight="Bold" FontSize="13" Margin="0,0,0,10"/>
+
+       <TextBlock Grid.Row="1" Text="Executable root" VerticalAlignment="Center" Margin="0,2"/><TextBox x:Name="WorkspaceExecutableRootBox" Grid.Row="1" Grid.Column="1" IsReadOnly="True" Margin="0,2"/><Button Grid.Row="1" Grid.Column="2" Content="📂  OPEN" Style="{StaticResource WorkspaceInfoButton}" Click="WorkspaceOpenExecutable_Click" ToolTip="Open the application folder."/>
+       <TextBlock Grid.Row="2" Text="Workspace root" VerticalAlignment="Center" Margin="0,2"/><TextBox x:Name="WorkspaceRootBox" Grid.Row="2" Grid.Column="1" IsReadOnly="True" Margin="0,2"/><Button Grid.Row="2" Grid.Column="2" Content="📂  OPEN" Style="{StaticResource WorkspaceInfoButton}" Click="WorkspaceOpenRoot_Click" ToolTip="Open the active workspace root."/>
+       <TextBlock Grid.Row="3" Text="Application data" VerticalAlignment="Center" Margin="0,2"/><TextBox x:Name="WorkspaceDataRootBox" Grid.Row="3" Grid.Column="1" IsReadOnly="True" Margin="0,2"/><Button Grid.Row="3" Grid.Column="2" Content="📂  OPEN" Style="{StaticResource WorkspaceInfoButton}" Click="WorkspaceOpenData_Click" ToolTip="Open MystTiq application data."/>
+       <TextBlock Grid.Row="4" Text="Palworld server" VerticalAlignment="Center" Margin="0,2"/><TextBox x:Name="WorkspaceServerRootBox" Grid.Row="4" Grid.Column="1" Margin="0,2"/><StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal"><Button Content="…  BROWSE" Style="{StaticResource WorkspaceSecondaryButton}" Click="WorkspaceBrowseServer_Click" ToolTip="Select the folder containing PalServer.exe."/><Button Content="📂  OPEN" Style="{StaticResource WorkspaceInfoButton}" Click="WorkspaceOpenServer_Click" ToolTip="Open the configured Palworld server folder."/></StackPanel>
+       <TextBlock Grid.Row="5" Text="SteamCMD" VerticalAlignment="Center" Margin="0,2"/><TextBox x:Name="WorkspaceSteamCmdBox" Grid.Row="5" Grid.Column="1" Margin="0,2"/><StackPanel Grid.Row="5" Grid.Column="2" Orientation="Horizontal"><Button Content="…  BROWSE" Style="{StaticResource WorkspaceSecondaryButton}" Click="WorkspaceBrowseSteamCmd_Click" ToolTip="Select steamcmd.exe."/><Button Content="📂  OPEN" Style="{StaticResource WorkspaceInfoButton}" Click="WorkspaceOpenSteamCmd_Click" ToolTip="Open the SteamCMD folder."/></StackPanel>
+       <TextBlock Grid.Row="6" Text="Backups" VerticalAlignment="Center" Margin="0,2"/><TextBox x:Name="WorkspaceBackupsBox" Grid.Row="6" Grid.Column="1" Margin="0,2"/><StackPanel Grid.Row="6" Grid.Column="2" Orientation="Horizontal"><Button Content="…  BROWSE" Style="{StaticResource WorkspaceSecondaryButton}" Click="WorkspaceBrowseBackups_Click" ToolTip="Select the backup destination."/><Button Content="📂  OPEN" Style="{StaticResource WorkspaceInfoButton}" Click="WorkspaceOpenBackups_Click" ToolTip="Open the backup folder."/></StackPanel>
+       <TextBlock Grid.Row="7" Text="Downloads" VerticalAlignment="Center" Margin="0,2"/><TextBox x:Name="WorkspaceDownloadsBox" Grid.Row="7" Grid.Column="1" IsReadOnly="True" Margin="0,2"/><Button Grid.Row="7" Grid.Column="2" Content="📂  OPEN" Style="{StaticResource WorkspaceInfoButton}" Click="WorkspaceOpenDownloads_Click" ToolTip="Open workspace downloads."/>
+       <TextBlock Grid.Row="8" Text="Exports" VerticalAlignment="Center" Margin="0,2"/><TextBox x:Name="WorkspaceExportsBox" Grid.Row="8" Grid.Column="1" IsReadOnly="True" Margin="0,2"/><Button Grid.Row="8" Grid.Column="2" Content="📂  OPEN" Style="{StaticResource WorkspaceInfoButton}" Click="WorkspaceOpenExports_Click" ToolTip="Open exported plans and reports."/>
+       <TextBlock Grid.Row="9" Text="Logs" VerticalAlignment="Center" Margin="0,2"/><TextBox x:Name="WorkspaceLogsBox" Grid.Row="9" Grid.Column="1" IsReadOnly="True" Margin="0,2"/><StackPanel Grid.Row="9" Grid.Column="2" Orientation="Horizontal"><Button Content="📂  OPEN" Style="{StaticResource WorkspaceInfoButton}" Click="WorkspaceOpenLogs_Click" ToolTip="Open MystTiq logs."/><Button Content="✓  SAVE PATHS" Style="{StaticResource WorkspaceSaveButton}" Click="WorkspaceSave_Click" ToolTip="Save the server, SteamCMD, and backup paths shown on this page."/></StackPanel>
+      </Grid>
+     </Border>
+
+     <Border Background="#0D1822" BorderBrush="#263A50" BorderThickness="1" CornerRadius="7" Padding="12,9">
+      <TextBlock x:Name="WorkspaceStatusText" Text="Workspace information is ready." Foreground="#9FC4EA" FontSize="13" TextWrapping="Wrap"/>
+     </Border>
+    </StackPanel>
+   </ScrollViewer>
   </TabItem>
         </TabControl>
     </Grid>

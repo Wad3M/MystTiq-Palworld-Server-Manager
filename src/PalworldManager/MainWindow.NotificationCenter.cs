@@ -294,6 +294,80 @@ public partial class MainWindow
         NavigateToPage(entry.PageIndex.Value);
     }
 
+
+    private const string NotificationDiagnosticCategory = "Diagnostics";
+    private const string NotificationDiagnosticPrefix = "[TEST]";
+
+    private void NotificationRunSelfTest_Click(object sender, RoutedEventArgs e)
+    {
+        var started = DateTime.Now;
+
+        infrastructureNotifications.Publish(
+            NotificationLevel.Information,
+            "This informational notification confirms normal notification delivery.",
+            NotificationDiagnosticCategory,
+            $"{NotificationDiagnosticPrefix} Information");
+        infrastructureNotifications.Publish(
+            NotificationLevel.Success,
+            "This success notification confirms successful-operation styling and unread counting.",
+            NotificationDiagnosticCategory,
+            $"{NotificationDiagnosticPrefix} Success");
+        infrastructureNotifications.Publish(
+            NotificationLevel.Warning,
+            "This warning notification confirms warning styling and bell highlighting.",
+            NotificationDiagnosticCategory,
+            $"{NotificationDiagnosticPrefix} Warning");
+        infrastructureNotifications.Publish(
+            NotificationLevel.Error,
+            "This critical notification confirms error delivery and critical unread highlighting.",
+            NotificationDiagnosticCategory,
+            $"{NotificationDiagnosticPrefix} Critical");
+        infrastructureNotifications.Publish(
+            NotificationLevel.Information,
+            "This pinned diagnostic notification should survive Clear and Dismiss Read operations until it is explicitly unpinned or removed.",
+            NotificationDiagnosticCategory,
+            $"{NotificationDiagnosticPrefix} Pinned");
+
+        var pinned = notifications.FirstOrDefault(x =>
+            x.Category.Equals(NotificationDiagnosticCategory, StringComparison.OrdinalIgnoreCase) &&
+            x.Title.Equals($"{NotificationDiagnosticPrefix} Pinned", StringComparison.Ordinal));
+        if (pinned is not null)
+        {
+            pinned.IsPinned = true;
+            ReorderNotifications();
+            PersistNotifications();
+            notificationView?.Refresh();
+            RefreshNotificationCenterSummary();
+        }
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            OpenNotificationFlyout();
+            NotificationStatusText.Text =
+                $"Notification self-test published 5 items at {started:T}. Verify the bell, unread badge, severity rows, flyout toggle, pinned retention, and final auto-hide.";
+        }), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private void NotificationClearTests_Click(object sender, RoutedEventArgs e)
+    {
+        var testItems = notifications.Where(x =>
+            x.Category.Equals(NotificationDiagnosticCategory, StringComparison.OrdinalIgnoreCase) &&
+            x.Title.StartsWith(NotificationDiagnosticPrefix, StringComparison.Ordinal)).ToList();
+
+        foreach (var entry in testItems)
+            notifications.Remove(entry);
+
+        PersistNotifications();
+        notificationView?.Refresh();
+        RefreshNotificationCenterSummary();
+
+        if (notifications.Count == 0)
+            CloseNotificationFlyout();
+
+        NotificationDetailText.Text = "Notification diagnostic items cleared.";
+        NotificationStatusText.Text = $"Cleared {testItems.Count} notification diagnostic item(s).";
+    }
+
     private void NotificationExport_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new SaveFileDialog

@@ -16,8 +16,12 @@ public sealed class PlayerHistoryService
         var serverKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(settings.ServerRoot.Trim().ToUpperInvariant())))[..12];
         filePath = Path.Combine(dataRoot, $"players-{serverKey}.json");
         records = Load();
+        // Remove stale false-positive imports created by older discovery logic.
+        var removedInvalidImports = records.RemoveAll(record => record.Source.Equals("Imported save", StringComparison.OrdinalIgnoreCase)
+            && !IsValidPlayerSaveId(record.PlayerId));
         foreach (var record in records)
             record.IsOnline = false;
+        if (removedInvalidImports > 0) SaveLocked();
     }
 
     public string FilePath => filePath;
@@ -46,7 +50,7 @@ public sealed class PlayerHistoryService
                 {
                     if (!IsStablePlayerSave(path)) continue;
                     var id = Path.GetFileNameWithoutExtension(path).Trim();
-                    if (string.IsNullOrWhiteSpace(id) || id.EndsWith("_dps", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!IsValidPlayerSaveId(id)) continue;
                     if (records.Any(r => IdentifiersEqual(r.PlayerId, id))) continue;
 
                     DateTime stamp;
@@ -251,10 +255,27 @@ public sealed class PlayerHistoryService
 
     private static bool IsStablePlayerSave(string path)
     {
-        var name = Path.GetFileName(path);
-        return name.EndsWith(".sav", StringComparison.OrdinalIgnoreCase)
-            && !name.Contains(".TMP", StringComparison.OrdinalIgnoreCase)
-            && !name.Contains('~');
+        try
+        {
+            var name = Path.GetFileName(path);
+            if (!name.EndsWith(".sav", StringComparison.OrdinalIgnoreCase)
+                || name.Contains(".TMP", StringComparison.OrdinalIgnoreCase)
+                || name.Contains('~')
+                || !IsValidPlayerSaveId(Path.GetFileNameWithoutExtension(path)))
+                return false;
+
+            var info = new FileInfo(path);
+            return info.Exists && info.Length > 0;
+        }
+        catch (IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
+    }
+
+    private static bool IsValidPlayerSaveId(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        var id = value.Trim();
+        return id.Length == 32 && id.All(Uri.IsHexDigit);
     }
 
 }

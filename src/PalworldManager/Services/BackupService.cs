@@ -2,6 +2,18 @@ using PalworldManager.Models;
 
 namespace PalworldManager.Services;
 
+public sealed class BackupSourceLockedException(
+    string relativePath,
+    int attempts,
+    Exception? innerException)
+    : IOException(
+        $"The save file '{relativePath}' remained locked after {attempts} attempts.",
+        innerException)
+{
+    public string RelativePath { get; } = relativePath;
+    public int Attempts { get; } = attempts;
+}
+
 public sealed class BackupService(AppSettings settings)
 {
     private const int CopyAttempts = 12;
@@ -454,10 +466,9 @@ public sealed class BackupService(AppSettings settings)
 
         TryDeleteFile(destinationFile);
 
-        throw new IOException(
-            $"The save file '{relativePath}' remained locked after " +
-            $"{CopyAttempts} attempts. Close any antivirus, sync, or backup " +
-            "software that may be scanning the Palworld save folder and try again.",
+        throw new BackupSourceLockedException(
+            relativePath,
+            CopyAttempts,
             lastError);
     }
 

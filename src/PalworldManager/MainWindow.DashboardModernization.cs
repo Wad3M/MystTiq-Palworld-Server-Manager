@@ -8,7 +8,39 @@ public partial class MainWindow
 {
     private readonly DashboardIntelligenceService dashboardIntelligence = new();
     private bool dashboardRefreshInProgress;
+    private bool startupWorldDataInitialized;
     private ServerLifecycleState dashboardLifecycleState = ServerLifecycleState.Stopped;
+
+    private async Task InitializeWorldDataOnStartupAsync()
+    {
+        if (startupWorldDataInitialized) return;
+        startupWorldDataInitialized = true;
+
+        DashboardRefreshStatusText.Text = "Loading world data...";
+        activeWorldContext.Invalidate();
+
+        await RefreshPlayersAsync(silent: true);
+        RunStartupWorldDataStage("guilds", RefreshGuilds);
+        RunStartupWorldDataStage("bases", RefreshBaseManager);
+        RunStartupWorldDataStage("guild/base recovery", RefreshGuildBaseRecovery);
+        RefreshDashboardIntelligence();
+
+        DashboardRefreshStatusText.Text = $"World data loaded {DateTime.Now:HH:mm:ss}";
+        Log($"[STARTUP] World data initialized: {guildRows.Count} guild(s), {currentBaseManagerSummary?.Bases.Count ?? 0} base(s), {playerHistory.Snapshot().Count} known player(s).");
+    }
+
+    private void RunStartupWorldDataStage(string stage, Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (Exception ex)
+        {
+            Log($"[STARTUP] {stage} initialization was unavailable: {ex.Message}");
+        }
+    }
+
     private void DashboardOpenWorld_Click(object sender, RoutedEventArgs e)
     {
         NavigateToPage(14);

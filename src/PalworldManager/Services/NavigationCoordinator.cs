@@ -104,4 +104,5 @@ public static class MainPageIndex
     public const int Notifications = 18;
     public const int SaveTools = 19;
     public const int WorldValidator = 20;
+    public const int Workspace = 21;
 }

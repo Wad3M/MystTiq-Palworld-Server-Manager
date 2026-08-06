@@ -146,7 +146,7 @@ Never publish:
 
 ## Current Release
 
-**v0.2.13.2**
+**v0.2.14.1**
 
 ## Planned
 
