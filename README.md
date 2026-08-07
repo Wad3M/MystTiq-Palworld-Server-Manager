@@ -144,31 +144,83 @@ Never publish:
 
 ---
 
+# Project Status
+
+**Project Status:** Active Development
+
+**Current Stable Release**  
+**v0.2.14.11 — Update Center & UI Reliability**
+
+**Official Baseline**  
+v0.2.14.11
+
+**Current Development Branch**  
+v0.2.15.0
+
+---
+
 # Roadmap
 
-## Current Release
+## Current Stable Release
 
-**v0.2.14.11**
+### v0.2.14.11 — Update Center & UI Reliability
 
-## Planned
+**Completed**
 
-### v0.2.13
-- Portable packaging improvements
-- Windows installer
-- Release automation
+### Build & Release Modernization
+- Modernized Build.ps1
+- Added Build-Release.ps1
+- Added Build-Checksums.ps1
+- Modernized Build-Installer.ps1
+- Automatic Inno Setup 6/7 detection
+- SHA-256 checksum generation and verification
+- Improved build validation
+- Improved release automation
 
-### v0.2.14
-- Documentation expansion
-- GitHub Pages website
-- User guides
+### Update Center & UI Reliability
+- Polished Update Center interface
+- Standardized semantic button colors
+- Improved Admin Commands refresh reliability
+- Scroll routing improvements
+- Updated validation logic
+- Documentation synchronization
 
-### v0.3.0
+---
+
+## Next Planned Release
+
+### v0.2.15.0 — World Management Expansion
+
+**Planned**
+
+- Expanded World Validator
+- World Repair Center
+- World Import & Migration
+- Character Repair tools
+- Guild repair improvements
+- World validation enhancements
+- Additional save inspection improvements
+
+---
+
+## Future Releases
+
+### v0.3.x — Transaction & Recovery Framework
+
+**Planned**
+
 - Transaction Engine
 - Repair Queue
 - Preview Engine
 - Rollback Framework
+- Advanced world recovery
+- Expanded repair diagnostics
 
 ---
+
+## Long-Term Vision
+
+The long-term goal is to provide a modern, reliable, and free management platform for self-hosted Palworld dedicated servers while continuing to expand world management, repair automation, backup safety, and overall usability.
 
 # Contributing
 
