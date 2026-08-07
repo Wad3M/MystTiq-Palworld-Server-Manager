@@ -155,7 +155,7 @@ public partial class MainWindow
     {
         if (currentOwnershipPreview is null || !currentOwnershipPreview.CanApply)
         {
-            MessageBox.Show("Create a valid ownership preview first.", "Ownership Engine", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Create a valid ownership preview first.", "Ownership Engine", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -168,7 +168,7 @@ public partial class MainWindow
             "MystTiq will create a complete rollback ZIP, stage the edit, re-encode Level.sav, " +
             "independently verify it, and restore the original save if any stage fails.";
 
-        if (MessageBox.Show(
+        if (AppDialog.Show(
                 confirmationMessage,
                 "Ownership Engine — Confirm Transaction",
                 MessageBoxButton.YesNo,
@@ -190,7 +190,7 @@ public partial class MainWindow
                 "Rollback backup:\n" + result.BackupPath + "\n\n" +
                 "Report:\n" + result.ReportPath;
 
-            MessageBox.Show(
+            AppDialog.Show(
                 completionMessage,
                 "Ownership Engine Complete",
                 MessageBoxButton.OK,
@@ -207,7 +207,7 @@ public partial class MainWindow
                 "The ownership transaction failed. MystTiq attempted to restore the original Level.sav. " +
                 "Review the rollback package and logs before starting PalServer.\n\n" +
                 ex.Message;
-            MessageBox.Show(failureMessage, "Ownership Engine Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(failureMessage, "Ownership Engine Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { Mouse.OverrideCursor = null; }
     }

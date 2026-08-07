@@ -136,7 +136,7 @@ public partial class MainWindow
         {
             WorkspaceStatusText.Text = "Save failed: " + exception.Message;
             Log("[WORKSPACE ERROR] Save failed: " + exception.Message);
-            MessageBox.Show(
+            AppDialog.Show(
                 "Workspace paths could not be saved." + Environment.NewLine + Environment.NewLine + exception.Message,
                 "Workspace Save Failed",
                 MessageBoxButton.OK,
@@ -217,7 +217,7 @@ public partial class MainWindow
         catch (Exception exception)
         {
             WorkspaceStatusText.Text = $"Could not open {description}: {exception.Message}";
-            MessageBox.Show(
+            AppDialog.Show(
                 $"MystTiq could not open the {description}." + Environment.NewLine + Environment.NewLine + exception.Message,
                 "Open Folder Failed",
                 MessageBoxButton.OK,

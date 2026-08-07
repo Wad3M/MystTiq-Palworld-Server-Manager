@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="PalworldManager.MainWindow" Title="MystTiq Palworld Server Manager" Width="1680" Height="1000" MinWidth="1280" MinHeight="800" WindowStartupLocation="CenterScreen" Icon="/Assets/PalworldServerManager.ico">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="PalworldManager.MainWindow" Title="MystTiq Palworld Server Manager" Width="1680" Height="1000" MinWidth="1280" MinHeight="800" WindowStartupLocation="CenterScreen" Icon="/Assets/PalworldServerManager.ico" PreviewMouseWheel="MainWindow_PreviewMouseWheel">
 
     <Window.Resources>
         <!-- v2.10.6: standard icon treatment for buttons whose labels are supplied by data binding. -->
@@ -343,6 +343,45 @@
         </Style>
 
         <Style TargetType="Button" BasedOn="{StaticResource AppButton}"/>
+
+        <!-- Shared density variants. Semantic colors remain defined by the
+             Success/Warning/Danger/Info/Refresh/Diagnostic styles below. -->
+        <Style x:Key="MystTiqStandardButton" TargetType="Button" BasedOn="{StaticResource AppButton}"/>
+        <Style x:Key="MystTiqCompactButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
+            <Setter Property="MinWidth" Value="88"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="5,2,0,2"/>
+            <Setter Property="FontSize" Value="11.5"/>
+        </Style>
+        <Style x:Key="MystTiqToolbarButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
+            <Setter Property="MinWidth" Value="104"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Margin" Value="6,2,0,2"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style x:Key="MystTiqWideActionButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style x:Key="MystTiqIconButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="4,2"/>
+        </Style>
+        <Style x:Key="MystTiqDataGridActionButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
+            <Setter Property="MinWidth" Value="84"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
 
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
             <Setter Property="BorderBrush" Value="#F05B57"/>
@@ -765,7 +804,6 @@
                                 <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="4" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="♟" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Players" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
                                 <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="16" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="⌂" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Bases" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
                                 <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="5" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="♜" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Guilds" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
-                                <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="20" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="✓" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="World Validator" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
                             </StackPanel>
                         </Expander>
 
@@ -783,6 +821,7 @@
                                 <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="10" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="✚" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Server Doctor" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
                                 <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="11" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="⚠" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Crash Analyzer" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
                                 <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="19" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="🐍" FontSize="16" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Palworld Save Tools" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
+                                <RadioButton GroupName="MainNavigation" Style="{StaticResource SidebarNavigationButton}" Tag="22" Click="Nav_Click"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="◈" FontSize="18" HorizontalAlignment="Center"/><TextBlock Grid.Column="1" Text="Diagnostics Center" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid></RadioButton>
                             </StackPanel>
                         </Expander>
 
@@ -1094,7 +1133,7 @@
      <TextBlock Text="SERVER ENVIRONMENT" Foreground="White" FontWeight="Bold" FontSize="16" Margin="4,0,0,6"/>
      <DataGrid x:Name="EnvironmentGrid" Grid.Row="1" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single" MinHeight="250">
       <DataGrid.Columns>
-       <DataGridTemplateColumn Header="ACTION" Width="120"><DataGridTemplateColumn.CellTemplate><DataTemplate><Button Content="{Binding Action}" Padding="9,3" Margin="2" Click="EnvironmentAction_Click" ToolTip="Runs the recommended setup or repair action for this environment item." ContentTemplate="{StaticResource DynamicActionButtonTemplate}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+       <DataGridTemplateColumn Header="ACTION" Width="120"><DataGridTemplateColumn.CellTemplate><DataTemplate><Button Content="{Binding Action}" Style="{StaticResource MystTiqDataGridActionButton}" Click="EnvironmentAction_Click" ToolTip="Runs the recommended setup or repair action for this environment item." ContentTemplate="{StaticResource DynamicActionButtonTemplate}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
        <DataGridTextColumn Header="COMPONENT" Binding="{Binding Component}" Width="210"/>
        <DataGridTemplateColumn Header="STATUS" Width="115"><DataGridTemplateColumn.CellTemplate><DataTemplate><Border x:Name="StatusBadge" CornerRadius="4" Padding="8,3" HorizontalAlignment="Stretch" Background="#465568"><TextBlock Text="{Binding Status}" Foreground="White" FontWeight="Bold" FontSize="10" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><DataTemplate.Triggers><DataTrigger Binding="{Binding Status}" Value="READY"><Setter TargetName="StatusBadge" Property="Background" Value="#1F8B4C"/></DataTrigger><DataTrigger Binding="{Binding Status}" Value="MISSING"><Setter TargetName="StatusBadge" Property="Background" Value="#B53B3B"/></DataTrigger><DataTrigger Binding="{Binding Status}" Value="DISABLED"><Setter TargetName="StatusBadge" Property="Background" Value="#B37A18"/></DataTrigger><DataTrigger Binding="{Binding Status}" Value="OPTIONAL"><Setter TargetName="StatusBadge" Property="Background" Value="#B37A18"/></DataTrigger></DataTemplate.Triggers></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
        <DataGridTextColumn Header="LOCATION" Binding="{Binding Location}" Width="2*"/>
@@ -1419,7 +1458,10 @@
     <Border Grid.Row="4" Background="#101A24" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,8,0,0">
      <DockPanel>
       <StackPanel DockPanel.Dock="Left"><TextBlock Text="ADMIN COMMANDS MOD" FontSize="15" FontWeight="Bold" Foreground="White"/><TextBlock Text="In-game command extension — MystTiq monitors runtime load state but does not forward !commands over RCON." Foreground="#8299AF" FontSize="11" Margin="0,4,10,0" TextWrapping="Wrap"/></StackPanel>
-      <TextBlock x:Name="AdminCommandsStatusText" Text="Not loaded — enable Admin Commands and start the server" Foreground="Gold" DockPanel.Dock="Right" VerticalAlignment="Center"/>
+      <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+       <TextBlock x:Name="AdminCommandsStatusText" Text="Not loaded — enable Admin Commands and start the server" Foreground="Gold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+       <Button Content="↻  REFRESH STATUS" Style="{StaticResource RefreshButton}" Click="RefreshAdminCommandsStatus_Click" ToolTip="Re-evaluates retained server-session log evidence for the Admin Commands runtime without restarting the server."/>
+      </WrapPanel>
      </DockPanel>
     </Border>
    </Grid>
@@ -2082,7 +2124,7 @@
     <Border Style="{StaticResource SectionBanner}">
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel><TextBlock Text="Update Center" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Review update readiness for the Palworld server, SteamCMD, UE4SS, and locally available Workshop mods from one place." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel>
-      <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button x:Name="UpdateCheckAllButton" Content="↻  CHECK ALL UPDATES" Style="{StaticResource SecondaryButton}" Click="RefreshUpdateCenter_Click" ToolTip="Checks Core Server, Dependencies, and Installed MODs for available updates."/><Button x:Name="UpdateAllAvailableButton" Content="⬇  UPDATE ALL AVAILABLE" Style="{StaticResource UpdateButton}" Click="UpdateAllAvailable_Click" ToolTip="Updates every component with a confirmed available update." IsEnabled="False"/></WrapPanel>
+      <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button x:Name="UpdateCheckAllButton" Content="↻  CHECK ALL UPDATES" Style="{StaticResource RefreshButton}" Click="RefreshUpdateCenter_Click" ToolTip="Refreshes update information for Core Server, Dependencies, and Installed MODs."/><Button x:Name="UpdateAllAvailableButton" Content="⬇  UPDATE ALL AVAILABLE" Style="{StaticResource UpdateButton}" Click="UpdateAllAvailable_Click" ToolTip="Updates every component with a confirmed available update." IsEnabled="False"/></WrapPanel>
      </Grid>
     </Border>
     <Border Grid.Row="1" x:Name="UpdateCenterSummaryBorder" Background="#0D1822" BorderBrush="#263A50" BorderThickness="1" CornerRadius="7" Padding="12,9" Margin="0,0,0,12">
@@ -2155,9 +2197,34 @@
         <TextBlock Text="{Binding Source}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Source}" Margin="4,0"/>
        </DataTemplate></DataGridTemplateColumn.CellTemplate>
       </DataGridTemplateColumn>
-      <DataGridTemplateColumn Header="ACTION" Width="104">
+      <DataGridTemplateColumn Header="ACTION" Width="92">
        <DataGridTemplateColumn.CellTemplate><DataTemplate>
-        <Button Content="{Binding Action}" Click="UpdateCenterRowAction_Click" Style="{StaticResource SecondaryButton}" Width="82" Height="28" Padding="4,2" Margin="3" FontSize="10.5"/>
+        <Button x:Name="UpdateCenterActionButton" Content="{Binding Action}" Click="UpdateCenterRowAction_Click" Width="72" Height="24" MinWidth="0" MinHeight="0" Padding="3,1" Margin="2" FontSize="9.5" ToolTip="{Binding Recommendation}">
+         <Button.Style>
+          <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+           <Setter Property="Width" Value="72"/>
+           <Setter Property="Height" Value="24"/>
+           <Setter Property="MinWidth" Value="0"/>
+           <Setter Property="MinHeight" Value="0"/>
+           <Setter Property="Padding" Value="3,1"/>
+           <Setter Property="Margin" Value="2"/>
+           <Setter Property="FontSize" Value="9.5"/>
+           <Style.Triggers>
+            <DataTrigger Binding="{Binding Action}" Value="UPDATE"><Setter Property="Background" Value="#B87816"/><Setter Property="BorderBrush" Value="#D99A32"/></DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="VERIFY"><Setter Property="Background" Value="#176B3A"/><Setter Property="BorderBrush" Value="#2DA866"/></DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="SOURCE"><Setter Property="Background" Value="#205F91"/><Setter Property="BorderBrush" Value="#3F8BC3"/></DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="INSTALL"><Setter Property="Background" Value="#176B3A"/><Setter Property="BorderBrush" Value="#2DA866"/></DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="RETRY"><Setter Property="Background" Value="#245F96"/><Setter Property="BorderBrush" Value="#438DCA"/></DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="CHECK"><Setter Property="Background" Value="#245F96"/><Setter Property="BorderBrush" Value="#438DCA"/></DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="CHECKING"><Setter Property="Background" Value="#465568"/><Setter Property="BorderBrush" Value="#66788E"/></DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="ENABLE"><Setter Property="Background" Value="#176B3A"/><Setter Property="BorderBrush" Value="#2DA866"/></DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="DISABLE"><Setter Property="Background" Value="#8C5A13"/><Setter Property="BorderBrush" Value="#C48926"/></DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="MANAGE"><Setter Property="Background" Value="#205F91"/><Setter Property="BorderBrush" Value="#3F8BC3"/></DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="CREATE"><Setter Property="Background" Value="#176B3A"/><Setter Property="BorderBrush" Value="#2DA866"/></DataTrigger>
+           </Style.Triggers>
+          </Style>
+         </Button.Style>
+        </Button>
        </DataTemplate></DataGridTemplateColumn.CellTemplate>
       </DataGridTemplateColumn>
       <DataGridTemplateColumn Header="DETAILS" Width="3*">
@@ -2235,11 +2302,12 @@
 
     <Border Grid.Row="4" Background="#0D1822" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,12,0,0">
      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>
-      <TextBlock Text="RUNTIME COMPATIBILITY" Foreground="#7FB9F2" FontSize="12" FontWeight="Bold"/>
+      <DockPanel LastChildFill="True">
+       <TextBlock Text="RUNTIME &amp; MOD COMPATIBILITY" Foreground="#7FB9F2" FontSize="12" FontWeight="Bold" DockPanel.Dock="Left"/>
+       <TextBlock x:Name="ModRuntimeCompatibilityUpdatedText" Text="Not scanned" Foreground="#91A3B8" FontSize="11" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
+      </DockPanel>
       <TextBlock x:Name="ModRuntimeCompatibilityText" Foreground="#D7E4F2" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="22"/>
-      <Border Background="#161B20" BorderBrush="#8A6B28" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,14,0,0">
-       <TextBlock Foreground="#E6C56B" TextWrapping="Wrap" Text="Admin Commands compatibility note: the current mod author requires an experimental UE4SS-compatible runtime. If Admin Commands hangs the server merely by loading, test a different runtime package here before replacing the mod. Keep PalServer stopped whenever the runtime is changed."/>
-      </Border>
+      <TextBlock Foreground="#91A3B8" TextWrapping="Wrap" Margin="0,10,0,0" Text="This status is recalculated whenever the MOD inventory changes, a MOD is installed, enabled, disabled, deleted, repaired, or compatibility is scanned."/>
      </StackPanel></ScrollViewer>
     </Border>
    </Grid>
@@ -2290,7 +2358,7 @@
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Border Grid.Row="0" Style="{StaticResource SectionBanner}">
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-      <StackPanel><TextBlock Text="World Inspector" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Inspect the active Palworld world from one read-only workspace. Review the overview, save information, statistics, files, hierarchy, health, integrity findings and safe repair previews without modifying the save." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel>
+      <StackPanel><TextBlock Text="World Inspector" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Inspect, validate, migrate, and plan repairs for the active Palworld world from one dark-themed management workspace. Player, guild, base, save, validator, migration, repair, and transaction areas are organized as tabs." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel>
       <WrapPanel Grid.Column="1"><Button Content="◎  INSPECT ACTIVE WORLD" Style="{StaticResource InfoButton}" Click="InspectActiveWorld_Click" ToolTip="Inspect Active World."/><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshSaveInspector_Click" ToolTip="Refresh."/><Button Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="ExportSaveDiagnostics_Click" ToolTip="Export Report."/><Button Content="📂  OPEN WORLD FOLDER" Style="{StaticResource InfoButton}" Click="OpenInspectedWorldFolder_Click" ToolTip="Open World Folder."/></WrapPanel>
      </Grid>
     </Border>
@@ -2317,7 +2385,7 @@
     </Border>
 
     <Border Grid.Row="4" Background="#0D1822" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,12,0,0">
-     <TabControl>
+     <TabControl x:Name="WorldInspectorSectionTabs">
       <TabItem Header="OVERVIEW">
        <Grid Margin="12" Background="#08111A"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <UniformGrid Columns="4">
@@ -2333,7 +2401,20 @@
         <Border Grid.Row="2" Background="#101A24" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="14"><TextBlock Text="World Inspector 2.0 provides a read-only inventory of the world, file-role classification, save-container details, health findings, and repair previews. Select Files to search the payload or World Explorer to inspect the hierarchy." Foreground="#C9D9E8" TextWrapping="Wrap"/></Border>
        </Grid>
       </TabItem>
-      <TabItem Header="SAVE INFORMATION">
+      <TabItem Header="PLAYERS">
+       <Grid Margin="12" Background="#08111A">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Border Style="{StaticResource SectionBanner}"><StackPanel><TextBlock Text="World Players" Foreground="White" FontSize="22" FontWeight="Bold"/><TextBlock Text="Review the selected world's discovered player-save count, then open the full Players manager for identity history, online state, backups, exports, cloning, and reset actions." Foreground="#9FC4EA" Margin="0,5,0,0" TextWrapping="Wrap"/></StackPanel></Border>
+        <Border Grid.Row="1" Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,12,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="PLAYER SAVE SUMMARY" Foreground="#7FC8FF" FontWeight="Bold"/><TextBlock Text="The World Inspector uses the shared player-save discovery service, so its player total matches Dashboard, Players, Guilds, imports, and validators." Foreground="#DCE8F5" Margin="0,7,20,0" TextWrapping="Wrap"/><TextBlock Text="Use the full Players manager for actions that change player history or character data." Foreground="#E6C56B" Margin="0,7,20,0" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="♟  OPEN PLAYERS MANAGER" Style="{StaticResource InfoButton}" Click="OpenPlayersManager_Click" ToolTip="Open the full Players manager."/></Grid></Border>
+       </Grid>
+      </TabItem>
+      <TabItem Header="GUILDS">
+       <Grid Margin="12" Background="#08111A"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><Border Style="{StaticResource SectionBanner}"><StackPanel><TextBlock Text="World Guilds" Foreground="White" FontSize="22" FontWeight="Bold"/><TextBlock Text="Inspect guild membership and ownership context for the selected world, then open the full Guilds manager for detailed records and recovery workflows." Foreground="#9FC4EA" Margin="0,5,0,0" TextWrapping="Wrap"/></StackPanel></Border><Border Grid.Row="1" Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,12,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="GUILD DATA" Foreground="#7FC8FF" FontWeight="Bold"/><TextBlock Text="Guild information is loaded through the shared startup snapshot and refreshed after world imports, repairs, and server operations." Foreground="#DCE8F5" Margin="0,7,20,0" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="♜  OPEN GUILDS MANAGER" Style="{StaticResource InfoButton}" Click="OpenGuildsManager_Click" ToolTip="Open the full Guilds manager."/></Grid></Border></Grid>
+      </TabItem>
+      <TabItem Header="BASES">
+       <Grid Margin="12" Background="#08111A"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><Border Style="{StaticResource SectionBanner}"><StackPanel><TextBlock Text="World Bases" Foreground="White" FontSize="22" FontWeight="Bold"/><TextBlock Text="Review base ownership context for the selected world, then open Base Manager for detailed ownership, orphan detection, and recovery planning." Foreground="#9FC4EA" Margin="0,5,0,0" TextWrapping="Wrap"/></StackPanel></Border><Border Grid.Row="1" Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,12,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="BASE DATA" Foreground="#7FC8FF" FontWeight="Bold"/><TextBlock Text="Base totals and ownership findings share the same decoded-world snapshot used by Dashboard, Guilds, recovery, and validation." Foreground="#DCE8F5" Margin="0,7,20,0" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="⌂  OPEN BASE MANAGER" Style="{StaticResource InfoButton}" Click="OpenBasesManager_Click" ToolTip="Open Base Manager."/></Grid></Border></Grid>
+      </TabItem>
+      <TabItem Header="SAVES">
        <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid Margin="12" Background="#08111A">
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -2401,7 +2482,206 @@
        </Grid>
       </TabItem>
       <TabItem Header="INTEGRITY"><DataGrid x:Name="SaveInspectorIntegrityGrid" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"><DataGrid.Columns><DataGridTextColumn Header="SEVERITY" Binding="{Binding Severity}" Width="100"/><DataGridTextColumn Header="AREA" Binding="{Binding Area}" Width="130"/><DataGridTextColumn Header="FINDING" Binding="{Binding Finding}" Width="2*"/><DataGridTextColumn Header="RECOMMENDATION" Binding="{Binding Recommendation}" Width="3*"/></DataGrid.Columns></DataGrid></TabItem>
-      <TabItem Header="REPAIR CONSOLE"><Grid Margin="8"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><DataGrid x:Name="SaveInspectorRepairGrid" AutoGenerateColumns="False" CanUserAddRows="False"><DataGrid.Columns><DataGridCheckBoxColumn Header="SELECT" Binding="{Binding Selected}" Width="70"/><DataGridTextColumn Header="ACTION" Binding="{Binding Action}" Width="180"/><DataGridTextColumn Header="TARGET" Binding="{Binding Target}" Width="170"/><DataGridTextColumn Header="REASON" Binding="{Binding Reason}" Width="3*"/><DataGridTextColumn Header="RISK" Binding="{Binding Risk}" Width="80"/><DataGridTextColumn Header="STATE" Binding="{Binding State}" Width="110"/></DataGrid.Columns></DataGrid><StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0"><Button Content="👁  PREVIEW SELECTED REPAIRS" Style="{StaticResource InfoButton}" Click="PreviewSelectedRepairs_Click" ToolTip="Preview Selected Repairs."/><TextBlock x:Name="SaveInspectorRepairStatusText" Text="Preview only. No save changes are made." Foreground="#E6C56B" VerticalAlignment="Center" Margin="12,0,0,0"/></StackPanel></Grid></TabItem>
+    <TabItem Header="WORLD VALIDATOR" x:Name="WorldValidatorInspectorTab">
+     <Grid Margin="18" Background="#08111A">
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Border Grid.Row="0" Style="{StaticResource SectionBanner}">
+       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="World Validator" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Validate players, guilds, bases and ownership relationships against the active decoded world. Findings are read-only until opened through the repair transaction workflow." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/><TextBlock x:Name="WorldValidatorWorldText" Text="No active world scanned" Foreground="#7FA8CE" FontSize="12" Margin="0,5,20,0" TextTrimming="CharacterEllipsis"/></StackPanel>
+        <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button Content="↻  VALIDATE ACTIVE WORLD" Style="{StaticResource RefreshButton}" Click="WorldValidatorRefresh_Click" ToolTip="Decode and validate the active world."/><Button Content="📂  OPEN REPAIRS" Style="{StaticResource WarningButton}" Click="WorldValidatorOpenRepair_Click" ToolTip="Open the recovery and repair transaction tools for repairable findings."/><Button Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="WorldValidatorExport_Click" ToolTip="Export the current validation report."/></WrapPanel>
+       </Grid>
+      </Border>
+      <UniformGrid Grid.Row="1" Columns="7" Margin="0,12,0,12">
+       <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="WORLD HEALTH" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorScoreText" Text="—" Foreground="White" FontSize="25" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorOverallText" Text="Not scanned" Foreground="#91A3B8"/></StackPanel></Border>
+       <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="PLAYERS" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorPlayersText" Text="—" Foreground="White" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
+       <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="GUILDS" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorGuildsText" Text="—" Foreground="White" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
+       <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="BASES" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorBasesText" Text="—" Foreground="White" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
+       <Border Background="#111922" BorderBrush="#7A2F35" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="CRITICAL" Foreground="#F08A86" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorCriticalText" Text="—" Foreground="#F05B57" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
+       <Border Background="#111922" BorderBrush="#6A5424" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="WARNINGS" Foreground="#E6C56B" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorWarningsText" Text="—" Foreground="#E6C56B" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
+       <Border Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12"><StackPanel><TextBlock Text="REPAIRABLE" Foreground="#7FC8FF" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorRepairableText" Text="—" Foreground="#7FC8FF" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
+      </UniformGrid>
+      <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="3*"/><ColumnDefinition Width="2*"/></Grid.ColumnDefinitions>
+       <DataGrid x:Name="WorldValidatorFindingsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionChanged="WorldValidatorSelection_Changed">
+        <DataGrid.Columns><DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="95"/><DataGridTextColumn Header="CATEGORY" Binding="{Binding Category}" Width="105"/><DataGridTextColumn Header="CHECK" Binding="{Binding Check}" Width="145"/><DataGridTextColumn Header="FINDING" Binding="{Binding Message}" Width="*"/><DataGridTextColumn Header="REPAIR" Binding="{Binding RepairAvailable}" Width="70"/></DataGrid.Columns>
+       </DataGrid>
+       <Border Grid.Column="1" Background="#0E1A25" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="14" Margin="12,0,0,0"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><TextBlock Text="VALIDATION DETAILS" Foreground="#7FC8FF" FontWeight="Bold"/><ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,10,0,0"><TextBlock x:Name="WorldValidatorDetailText" Text="Select a validation finding to review its evidence and recommended action." Foreground="#DCE8F5" TextWrapping="Wrap"/></ScrollViewer></Grid></Border>
+      </Grid>
+      <TextBlock Grid.Row="3" x:Name="WorldValidatorStatusText" Text="Open World Validator to scan the active world." Foreground="#9FC4EA" Margin="2,10,0,0" TextWrapping="Wrap"/>
+     </Grid>
+    </TabItem>
+    
+      <TabItem Header="WORLD MANAGEMENT">
+       <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="10" Background="#08111A">
+         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+
+         <Border Grid.Row="0" Background="#101A24" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+          <StackPanel>
+           <TextBlock Text="WORLD MANAGEMENT — MIGRATION WIZARD" Foreground="White" FontSize="18" FontWeight="Bold"/>
+           <TextBlock Text="Import a Palworld world archive through a guarded, step-by-step workflow. Later sections remain disabled until the required earlier choices are complete." Foreground="#9FC4EA" TextWrapping="Wrap" Margin="0,5,0,0"/>
+           <TextBlock x:Name="WorldImportStatusBannerText" Text="Status: Waiting for a source archive.  Next step: Select a ZIP archive to begin." Foreground="#7FC8FF" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,8,0,0"/>
+           <TextBlock Text="PalServer must be stopped before the final import and activation step." Foreground="#E6C56B" TextWrapping="Wrap" Margin="0,5,0,0"/>
+          </StackPanel>
+         </Border>
+
+         <Border Grid.Row="1" x:Name="WorldImportStep1Card" Background="#111922" BorderBrush="#4A7AA2" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+           <Border Width="26" Height="26" CornerRadius="13" Background="#244C70" VerticalAlignment="Top"><TextBlock Text="1" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+           <StackPanel Grid.Column="1" Margin="8,0,12,0"><TextBlock Text="Select Archive" Foreground="White" FontWeight="Bold" FontSize="15"/><TextBlock x:Name="WorldImportArchiveText" Text="Choose a .zip archive containing Level.sav and optional Players data." Foreground="#AFC9E8" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel>
+           <Button Grid.Column="2" Content="📦  SELECT ARCHIVE" Style="{StaticResource InfoButton}" Click="WorldImportSelectArchive_Click" ToolTip="Choose a Palworld world ZIP archive."/>
+          </Grid>
+         </Border>
+
+         <Border Grid.Row="2" x:Name="WorldImportStep2Card" Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8" Opacity="0.45" IsEnabled="False" ToolTipService.ShowOnDisabled="True" ToolTip="Complete the previous migration step to unlock this section.">
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+           <Border Width="26" Height="26" CornerRadius="13" Background="#263A50" VerticalAlignment="Top"><TextBlock Text="2" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+           <StackPanel Grid.Column="1" Margin="8,0,12,0"><TextBlock Text="Analyze Archive" Foreground="White" FontWeight="Bold" FontSize="15"/><TextBlock x:Name="WorldImportAnalysisText" Text="Archive layout, required files, player saves, blocked entries, and warnings will appear here." Foreground="#AFC9E8" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel>
+           <Button Grid.Column="2" Content="⌕  ANALYZE" Style="{StaticResource DiagnosticButton}" Click="WorldImportAnalyze_Click" ToolTip="Read and validate the selected archive without changing the server."/>
+          </Grid>
+         </Border>
+
+         <Border Grid.Row="3" x:Name="WorldImportStep3Card" Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8" Opacity="0.45" IsEnabled="False" ToolTipService.ShowOnDisabled="True" ToolTip="Complete the previous migration step to unlock this section.">
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+           <Border Width="26" Height="26" CornerRadius="13" Background="#263A50" VerticalAlignment="Top"><TextBlock Text="3" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+           <StackPanel Grid.Column="1" Margin="8,0,12,0">
+            <TextBlock Text="Choose Import Options" Foreground="White" FontWeight="Bold" FontSize="15"/>
+            <Grid Margin="0,7,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="220"/><ColumnDefinition Width="150"/><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+             <TextBlock Text="Destination World ID" Foreground="#9FC4EA" VerticalAlignment="Center"/>
+             <TextBox Grid.Column="1" x:Name="WorldImportDestinationIdBox" ToolTip="Leave blank to generate a new world ID."/>
+             <TextBlock Grid.Column="2" Text="WorldOption.sav" Foreground="#9FC4EA" VerticalAlignment="Center" Margin="14,0,0,0"/>
+             <ComboBox Grid.Column="3" x:Name="WorldImportWorldOptionModeBox" SelectedIndex="0"><ComboBoxItem Content="Quarantine"/><ComboBoxItem Content="Preserve"/><ComboBoxItem Content="Exclude"/></ComboBox>
+             <CheckBox Grid.Column="4" x:Name="WorldImportBackupCheck" Content="Create pre-import backup" IsChecked="True" Foreground="#DCE8F5" VerticalAlignment="Center" Margin="14,0,0,0"/>
+            </Grid>
+           </StackPanel>
+           <Button Grid.Column="2" Content="✓  ACCEPT OPTIONS" Style="{StaticResource SuccessButton}" Click="WorldImportAcceptOptions_Click" ToolTip="Lock in the destination and safety options."/>
+          </Grid>
+         </Border>
+
+         <Border Grid.Row="4" x:Name="WorldImportStep4Card" Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8" Opacity="0.45" IsEnabled="False" ToolTipService.ShowOnDisabled="True" ToolTip="Complete the previous migration step to unlock this section.">
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+           <Border Width="26" Height="26" CornerRadius="13" Background="#263A50" VerticalAlignment="Top"><TextBlock Text="4" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+           <StackPanel Grid.Column="1" Margin="8,0,12,0"><TextBlock Text="Review Migration Plan" Foreground="White" FontWeight="Bold" FontSize="15"/><TextBlock x:Name="WorldImportPlanText" Text="Review the source, destination, player-save count, backup choice, and WorldOption handling." Foreground="#AFC9E8" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel>
+           <Button Grid.Column="2" Content="👁  REVIEW PLAN" Style="{StaticResource InfoButton}" Click="WorldImportReviewPlan_Click" ToolTip="Review the planned import before validation."/>
+          </Grid>
+         </Border>
+
+         <Border Grid.Row="5" x:Name="WorldImportStep5Card" Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8" Opacity="0.45" IsEnabled="False" ToolTipService.ShowOnDisabled="True" ToolTip="Complete the previous migration step to unlock this section.">
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+           <Border Width="26" Height="26" CornerRadius="13" Background="#263A50" VerticalAlignment="Top"><TextBlock Text="5" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+           <StackPanel Grid.Column="1" Margin="8,0,12,0"><TextBlock Text="Safety Validation" Foreground="White" FontWeight="Bold" FontSize="15"/><TextBlock x:Name="WorldImportValidationText" Text="MystTiq will verify the archive, destination, server state, save root, and backup location." Foreground="#AFC9E8" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel>
+           <Button Grid.Column="2" Content="✓  VALIDATE" Style="{StaticResource SuccessButton}" Click="WorldImportValidate_Click" ToolTip="Run the final safety checks. No files are changed."/>
+          </Grid>
+         </Border>
+
+         <Border Grid.Row="6" x:Name="WorldImportStep6Card" Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8" Opacity="0.45" IsEnabled="False" ToolTipService.ShowOnDisabled="True" ToolTip="Complete the previous migration step to unlock this section.">
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+           <Border Width="26" Height="26" CornerRadius="13" Background="#263A50" VerticalAlignment="Top"><TextBlock Text="6" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+           <StackPanel Grid.Column="1" Margin="8,0,12,0"><TextBlock Text="Import &amp; Activate" Foreground="White" FontWeight="Bold" FontSize="15"/><TextBlock Text="This step creates the backup, stages and validates the archive, installs the new world, and updates the active-world configuration." Foreground="#E6C56B" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel>
+           <Button Grid.Column="2" Content="⚠  IMPORT &amp; ACTIVATE" Style="{StaticResource DangerButton}" Click="WorldImportApply_Click" ToolTip="Import and activate the validated world. PalServer must be stopped."/>
+          </Grid>
+         </Border>
+
+         <Border Grid.Row="7" x:Name="WorldImportStep7Card" Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Opacity="0.45" IsEnabled="False" ToolTipService.ShowOnDisabled="True" ToolTip="Complete the previous migration step to unlock this section.">
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+           <Border Width="26" Height="26" CornerRadius="13" Background="#263A50" VerticalAlignment="Top"><TextBlock Text="7" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+           <StackPanel Grid.Column="1" Margin="8,0,12,0"><TextBlock Text="Complete &amp; Verify" Foreground="White" FontWeight="Bold" FontSize="15"/><TextBlock x:Name="WorldImportResultText" Text="Import results, backup path, manifest, and destination will appear here." Foreground="#AFC9E8" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel>
+           <Button Grid.Column="2" Content="📂  OPEN IMPORTED WORLD" Style="{StaticResource InfoButton}" Click="WorldImportOpenResult_Click" ToolTip="Open the imported world folder."/>
+          </Grid>
+         </Border>
+        </Grid>
+       </ScrollViewer>
+      </TabItem>
+      <TabItem Header="REPAIR CENTER">
+       <Grid Margin="12" Background="#08111A">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Border Style="{StaticResource SectionBanner}">
+         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <StackPanel>
+           <TextBlock Text="Repair Center" Foreground="White" FontSize="22" FontWeight="Bold"/>
+           <TextBlock Text="Scan the active world, review detected repair candidates, and build a safe preview plan. This release remains preview-only: no world data is modified." Foreground="#9FC4EA" Margin="0,5,18,0" TextWrapping="Wrap"/>
+           <TextBlock x:Name="RepairCenterGuidanceText" Text="Next step: scan the active world to identify repair candidates." Foreground="#7FC8FF" Margin="0,7,18,0" TextWrapping="Wrap"/>
+          </StackPanel>
+          <Button Grid.Column="1" Content="↻  SCAN WORLD" Style="{StaticResource RefreshButton}" Click="RepairCenterScan_Click" ToolTip="Inspect the active world and refresh all repair candidates."/>
+         </Grid>
+        </Border>
+        <UniformGrid Grid.Row="1" Columns="4" Margin="0,12,0,12">
+         <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="CANDIDATES" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="RepairCenterCandidateCountText" Text="—" Foreground="White" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
+         <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="SELECTED" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="RepairCenterSelectedCountText" Text="0" Foreground="#7FC8FF" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
+         <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="HIGH RISK" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="RepairCenterHighRiskCountText" Text="—" Foreground="#FFB36B" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
+         <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12"><StackPanel><TextBlock Text="MODE" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock Text="PREVIEW ONLY" Foreground="#E6C56B" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+        </UniformGrid>
+        <DataGrid Grid.Row="2" x:Name="SaveInspectorRepairGrid" AutoGenerateColumns="False" CanUserAddRows="False" SelectionChanged="RepairCenterSelectionChanged">
+         <DataGrid.Columns>
+          <DataGridCheckBoxColumn Header="SELECT" Binding="{Binding Selected, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
+          <DataGridTextColumn Header="ACTION" Binding="{Binding Action}" Width="180"/>
+          <DataGridTextColumn Header="TARGET" Binding="{Binding Target}" Width="170"/>
+          <DataGridTextColumn Header="REASON" Binding="{Binding Reason}" Width="3*"/>
+          <DataGridTextColumn Header="RISK" Binding="{Binding Risk}" Width="80"/>
+          <DataGridTextColumn Header="STATE" Binding="{Binding State}" Width="110"/>
+         </DataGrid.Columns>
+        </DataGrid>
+        <Grid Grid.Row="3" Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+         <WrapPanel>
+          <Button Content="👁  PREVIEW SELECTED" Style="{StaticResource InfoButton}" Click="PreviewSelectedRepairs_Click" ToolTip="Build a read-only preview for the selected repair candidates."/>
+          <Button Content="☐  CLEAR SELECTION" Style="{StaticResource SecondaryButton}" Click="RepairCenterClearSelection_Click" ToolTip="Clear all selected repair candidates."/>
+         </WrapPanel>
+         <TextBlock Grid.Column="1" x:Name="SaveInspectorRepairStatusText" Text="Preview only. No save changes are made." Foreground="#E6C56B" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"/>
+        </Grid>
+       </Grid>
+      </TabItem>
+      <TabItem Header="TRANSACTION CENTER">
+       <Grid Margin="12" Background="#08111A">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Border Style="{StaticResource SectionBanner}">
+         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <StackPanel>
+           <TextBlock Text="Transaction Center" Foreground="White" FontSize="22" FontWeight="Bold"/>
+           <TextBlock Text="Review durable world-change journals, import transactions, validation stages, backup references, failures, and rollback availability." Foreground="#9FC4EA" Margin="0,5,18,0" TextWrapping="Wrap"/>
+           <TextBlock x:Name="TransactionStatusText" Text="Loading transaction history..." Foreground="#7FC8FF" Margin="0,7,18,0" TextWrapping="Wrap"/>
+          </StackPanel>
+          <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+           <Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshTransactionHistory_Click" ToolTip="Reload durable transaction journals and reports."/>
+           <Button Content="📂  OPEN JOURNALS" Style="{StaticResource InfoButton}" Click="OpenTransactionFolder_Click" ToolTip="Open the transaction journal folder."/>
+          </WrapPanel>
+         </Grid>
+        </Border>
+        <UniformGrid Grid.Row="1" Columns="4" Margin="0,12,0,12">
+         <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="VISIBLE" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="TransactionTotalCountText" Text="0" Foreground="White" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
+         <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="SUCCESSFUL" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="TransactionSuccessCountText" Text="0" Foreground="#72D08C" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
+         <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="FAILED" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="TransactionFailedCountText" Text="0" Foreground="#FF8A8A" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
+         <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12"><StackPanel><TextBlock Text="ROLLBACK AVAILABLE" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="TransactionRollbackCountText" Text="0" Foreground="#E6C56B" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
+        </UniformGrid>
+        <Grid Grid.Row="2" Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
+         <TextBox x:Name="TransactionSearchBox" TextChanged="TransactionFilter_Changed" ToolTip="Search transaction ID, operation, state, or target."/>
+         <ComboBox Grid.Column="1" x:Name="TransactionStateFilter" Margin="8,0,0,0" SelectionChanged="TransactionFilter_Changed" ToolTip="Filter by final transaction state."><ComboBoxItem Content="All states"/><ComboBoxItem Content="Prepared"/><ComboBoxItem Content="Verified"/><ComboBoxItem Content="Committed"/><ComboBoxItem Content="Activated"/><ComboBoxItem Content="Failed"/><ComboBoxItem Content="RolledBack"/></ComboBox>
+         <ComboBox Grid.Column="2" x:Name="TransactionOperationFilter" Margin="8,0,0,0" SelectionChanged="TransactionFilter_Changed" ToolTip="Filter by operation type."><ComboBoxItem Content="All operations"/><ComboBoxItem Content="World Import"/><ComboBoxItem Content="Character Reset"/><ComboBoxItem Content="Character Clone"/><ComboBoxItem Content="Ownership Transaction"/></ComboBox>
+        </Grid>
+        <Grid Grid.Row="3"><Grid.ColumnDefinitions><ColumnDefinition Width="3*"/><ColumnDefinition Width="2*"/></Grid.ColumnDefinitions>
+         <DataGrid x:Name="TransactionHistoryGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" SelectionChanged="TransactionHistoryGrid_SelectionChanged">
+          <DataGrid.Columns>
+           <DataGridTextColumn Header="TIME" Binding="{Binding TimestampDisplay}" Width="145"/>
+           <DataGridTextColumn Header="OPERATION" Binding="{Binding Operation}" Width="155"/>
+           <DataGridTextColumn Header="STATE" Binding="{Binding State}" Width="105"/>
+           <DataGridTextColumn Header="TARGET" Binding="{Binding Target}" Width="*"/>
+           <DataGridTextColumn Header="DURATION" Binding="{Binding DurationDisplay}" Width="90"/>
+           <DataGridTextColumn Header="WARNINGS" Binding="{Binding WarningCount}" Width="80"/>
+           <DataGridTextColumn Header="ROLLBACK" Binding="{Binding RollbackDisplay}" Width="105"/>
+          </DataGrid.Columns>
+         </DataGrid>
+         <Border Grid.Column="1" Background="#101A24" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12" Margin="10,0,0,0">
+          <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+           <TextBlock Text="TRANSACTION DETAILS" Foreground="#7FC8FF" FontWeight="Bold"/>
+           <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,8,0,8"><TextBlock x:Name="TransactionDetailText" Text="Select a transaction to inspect its details." Foreground="#DCE8F5" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"/></ScrollViewer>
+           <WrapPanel Grid.Row="2">
+            <Button x:Name="OpenTransactionBackupButton" Content="📦  OPEN BACKUP" Style="{StaticResource InfoButton}" Click="OpenTransactionBackup_Click" IsEnabled="False" ToolTip="Open or select the recorded rollback backup."/>
+            <Button x:Name="OpenTransactionReportButton" Content="📄  OPEN REPORT" Style="{StaticResource SecondaryButton}" Click="OpenTransactionReport_Click" IsEnabled="False" ToolTip="Open or select the transaction report."/>
+           </WrapPanel>
+          </Grid>
+         </Border>
+        </Grid>
+        <TextBlock Grid.Row="4" Text="Read-only in this release. Rollback execution is intentionally deferred until the rollback framework is fully validated." Foreground="#E6C56B" Margin="2,10,0,0" TextWrapping="Wrap"/>
+       </Grid>
+      </TabItem>
      </TabControl>
     </Border>
 
@@ -2645,33 +2925,7 @@
    </ScrollViewer>
   </TabItem>
 
-  <TabItem Header="World Validator">
-   <Grid Margin="18" Background="#08111A">
-    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-    <Border Grid.Row="0" Style="{StaticResource SectionBanner}">
-     <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-      <StackPanel><TextBlock Text="World Validator" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Validate players, guilds, bases and ownership relationships against the active decoded world. Findings are read-only until opened through the repair transaction workflow." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/><TextBlock x:Name="WorldValidatorWorldText" Text="No active world scanned" Foreground="#7FA8CE" FontSize="12" Margin="0,5,20,0" TextTrimming="CharacterEllipsis"/></StackPanel>
-      <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button Content="↻  VALIDATE ACTIVE WORLD" Style="{StaticResource RefreshButton}" Click="WorldValidatorRefresh_Click" ToolTip="Decode and validate the active world."/><Button Content="📂  OPEN REPAIRS" Style="{StaticResource WarningButton}" Click="WorldValidatorOpenRepair_Click" ToolTip="Open the recovery and repair transaction tools for repairable findings."/><Button Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="WorldValidatorExport_Click" ToolTip="Export the current validation report."/></WrapPanel>
-     </Grid>
-    </Border>
-    <UniformGrid Grid.Row="1" Columns="7" Margin="0,12,0,12">
-     <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="WORLD HEALTH" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorScoreText" Text="—" Foreground="White" FontSize="25" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorOverallText" Text="Not scanned" Foreground="#91A3B8"/></StackPanel></Border>
-     <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="PLAYERS" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorPlayersText" Text="—" Foreground="White" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
-     <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="GUILDS" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorGuildsText" Text="—" Foreground="White" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
-     <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="BASES" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorBasesText" Text="—" Foreground="White" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
-     <Border Background="#111922" BorderBrush="#7A2F35" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="CRITICAL" Foreground="#F08A86" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorCriticalText" Text="—" Foreground="#F05B57" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
-     <Border Background="#111922" BorderBrush="#6A5424" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="WARNINGS" Foreground="#E6C56B" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorWarningsText" Text="—" Foreground="#E6C56B" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
-     <Border Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12"><StackPanel><TextBlock Text="REPAIRABLE" Foreground="#7FC8FF" FontWeight="Bold"/><TextBlock x:Name="WorldValidatorRepairableText" Text="—" Foreground="#7FC8FF" FontSize="25" FontWeight="Bold"/></StackPanel></Border>
-    </UniformGrid>
-    <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="3*"/><ColumnDefinition Width="2*"/></Grid.ColumnDefinitions>
-     <DataGrid x:Name="WorldValidatorFindingsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionChanged="WorldValidatorSelection_Changed">
-      <DataGrid.Columns><DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="95"/><DataGridTextColumn Header="CATEGORY" Binding="{Binding Category}" Width="105"/><DataGridTextColumn Header="CHECK" Binding="{Binding Check}" Width="145"/><DataGridTextColumn Header="FINDING" Binding="{Binding Message}" Width="*"/><DataGridTextColumn Header="REPAIR" Binding="{Binding RepairAvailable}" Width="70"/></DataGrid.Columns>
-     </DataGrid>
-     <Border Grid.Column="1" Background="#0E1A25" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="14" Margin="12,0,0,0"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><TextBlock Text="VALIDATION DETAILS" Foreground="#7FC8FF" FontWeight="Bold"/><ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,10,0,0"><TextBlock x:Name="WorldValidatorDetailText" Text="Select a validation finding to review its evidence and recommended action." Foreground="#DCE8F5" TextWrapping="Wrap"/></ScrollViewer></Grid></Border>
-    </Grid>
-    <TextBlock Grid.Row="3" x:Name="WorldValidatorStatusText" Text="Open World Validator to scan the active world." Foreground="#9FC4EA" Margin="2,10,0,0" TextWrapping="Wrap"/>
-   </Grid>
-  </TabItem>
+  <TabItem Header="World Validator Redirect"/>
 
   <TabItem Header="Workspace">
    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -2718,6 +2972,63 @@
 
      <Border Background="#0D1822" BorderBrush="#263A50" BorderThickness="1" CornerRadius="7" Padding="12,9">
       <TextBlock x:Name="WorkspaceStatusText" Text="Workspace information is ready." Foreground="#9FC4EA" FontSize="13" TextWrapping="Wrap"/>
+     </Border>
+    </StackPanel>
+   </ScrollViewer>
+  </TabItem>
+
+  <TabItem Header="Diagnostics Center">
+   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer.Resources><Style TargetType="ScrollBar" BasedOn="{StaticResource DarkVerticalScrollBar}"/></ScrollViewer.Resources>
+    <StackPanel Margin="18">
+     <Border Style="{StaticResource SectionBanner}">
+      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <StackPanel>
+        <TextBlock Text="Diagnostics Center" FontSize="28" FontWeight="Bold" Foreground="White"/>
+        <TextBlock Text="Run a read-only health audit across MystTiq, the workspace, PalServer, the active world, backups, MODs, transaction journals, and notification storage." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/>
+       </StackPanel>
+       <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+        <Button x:Name="DiagnosticsRunButton" Content="✓  RUN FULL DIAGNOSTICS" Style="{StaticResource RefreshButton}" Click="RunFullDiagnostics_Click" ToolTip="Run all registered diagnostic providers without modifying server or world data."/>
+        <Button x:Name="DiagnosticsExportButton" Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="ExportDiagnostics_Click" IsEnabled="False" ToolTip="Export the latest diagnostics as JSON and text."/>
+        <Button x:Name="DiagnosticsSupportButton" Content="▣  SUPPORT PACKAGE" Style="{StaticResource WarningButton}" Click="CreateSupportPackage_Click" IsEnabled="False" ToolTip="Create a redacted ZIP containing diagnostics, configuration metadata, and recent size-limited logs."/>
+       </WrapPanel>
+      </Grid>
+     </Border>
+
+     <UniformGrid Columns="5" Margin="0,0,0,12">
+      <Border Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="HEALTH SCORE" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="DiagnosticsScoreText" Text="—" Foreground="White" FontSize="24" FontWeight="Bold"/><TextBlock x:Name="DiagnosticsHealthText" Text="Not Run" Foreground="#9FC4EA" TextWrapping="Wrap"/></StackPanel></Border>
+      <Border Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="PASSED" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="DiagnosticsPassedText" Text="0" Foreground="#61D095" FontSize="24" FontWeight="Bold"/></StackPanel></Border>
+      <Border Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="WARNINGS" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="DiagnosticsWarningText" Text="0" Foreground="#F0B246" FontSize="24" FontWeight="Bold"/></StackPanel></Border>
+      <Border Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="FAILED" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="DiagnosticsFailedText" Text="0" Foreground="#F05B57" FontSize="24" FontWeight="Bold"/></StackPanel></Border>
+      <Border Background="#111922" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12"><StackPanel><TextBlock Text="VERSION" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock Text="{Binding ElementName=ApplicationVersionText, Path=Text}" Foreground="White" FontSize="18" FontWeight="Bold"/><TextBlock Text="Read-only system audit" Foreground="#9FC4EA"/></StackPanel></Border>
+     </UniformGrid>
+
+     <Border Background="#0D1822" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+      <StackPanel>
+       <TextBlock x:Name="DiagnosticsLastRunText" Text="Run full diagnostics to inspect the application." Foreground="#DCE8F5" TextWrapping="Wrap"/>
+       <ProgressBar x:Name="DiagnosticsProgressBar" Height="8" Margin="0,10,0,0" Minimum="0" Maximum="100"/>
+       <TextBlock x:Name="DiagnosticsStatusText" Text="Diagnostics are ready." Foreground="#9FC4EA" Margin="0,7,0,0" TextWrapping="Wrap"/>
+      </StackPanel>
+     </Border>
+
+     <DataGrid x:Name="DiagnosticsGrid" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" MinHeight="360" SelectionMode="Single">
+      <DataGrid.Columns>
+       <DataGridTextColumn Header="CATEGORY" Binding="{Binding Category}" Width="130"/>
+       <DataGridTextColumn Header="CHECK" Binding="{Binding Check}" Width="180"/>
+       <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="100"/>
+       <DataGridTextColumn Header="DETAIL" Binding="{Binding Detail}" Width="2*"/>
+       <DataGridTextColumn Header="RECOMMENDATION" Binding="{Binding Recommendation}" Width="2*"/>
+      </DataGrid.Columns>
+     </DataGrid>
+
+     <Border Background="#101A24" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <TextBlock Text="Support packages redact the protected password value. Review the ZIP before attaching it to a public GitHub issue because logs can still contain server paths, player IDs, or other environment details." Foreground="#E6C56B" TextWrapping="Wrap" Margin="0,0,18,0"/>
+       <WrapPanel Grid.Column="1">
+        <Button Content="ℹ  COPY SUMMARY" Style="{StaticResource SecondaryButton}" Click="CopyDiagnosticsSummary_Click" ToolTip="Copy the latest diagnostics summary to the clipboard."/>
+        <Button Content="📂  OPEN DIAGNOSTICS" Style="{StaticResource InfoButton}" Click="OpenDiagnosticsCenterFolder_Click" ToolTip="Open the diagnostics and support-package folder."/>
+       </WrapPanel>
+      </Grid>
      </Border>
     </StackPanel>
    </ScrollViewer>

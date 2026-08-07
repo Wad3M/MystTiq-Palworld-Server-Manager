@@ -77,7 +77,9 @@ public sealed class GuildJsonMapper
     }
     private static void ResolvePlayerSaves(GuildWorldSnapshot snap)
     {
-        var dir=Path.Combine(snap.WorldPath,"Players"); var files=Directory.Exists(dir)?Directory.EnumerateFiles(dir,"*.sav").ToDictionary(x=>Path.GetFileNameWithoutExtension(x),StringComparer.OrdinalIgnoreCase):new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+        var dir=Path.Combine(snap.WorldPath,"Players");
+        var files=new PlayerSaveDiscoveryService().DiscoverFromPlayersDirectory(dir).Accepted
+            .ToDictionary(x=>x.PlayerId,x=>x.Path,StringComparer.OrdinalIgnoreCase);
         foreach(var g in snap.Guilds) foreach(var m in g.Members){ var compact=m.PlayerUid.Replace("-",""); m.PlayerSaveExists=files.ContainsKey(m.PlayerUid)||files.ContainsKey(compact); snap.Players.Add(new GuildWorldPlayerRow{PlayerUid=m.PlayerUid,PlayerName=m.PlayerName,GuildName=g.Name,Role=m.Role,PlayerSaveExists=m.PlayerSaveExists,SavePath=files.GetValueOrDefault(m.PlayerUid,files.GetValueOrDefault(compact,"")),Source="Level.sav guild"}); }
         foreach(var kv in files) if(!snap.Players.Any(p=>p.PlayerUid.Replace("-","").Equals(kv.Key,StringComparison.OrdinalIgnoreCase))) snap.Players.Add(new GuildWorldPlayerRow{PlayerUid=kv.Key,PlayerName="Unknown Player",GuildName="Unassigned",Role="Unassigned",PlayerSaveExists=true,SavePath=kv.Value,Source="Player save"});
     }

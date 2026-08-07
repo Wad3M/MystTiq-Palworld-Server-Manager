@@ -12,7 +12,8 @@ $releaseNotes=Join-Path $root "release-notes\v$Version.md"
 if(-not (Test-Path $releaseNotes)){ throw "Release notes not found for v${Version}: $releaseNotes" }
 Remove-Item $publish,$stage,$zip -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $publish,$stage -Force | Out-Null
-dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $publish
+& dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $publish
+if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE." }
 Copy-Item "$publish\*" $stage -Recurse -Force
 Copy-Item (Join-Path $root 'LICENSE') (Join-Path $stage 'LICENSE.txt')
 Copy-Item $releaseNotes (Join-Path $stage 'README.txt')
@@ -56,7 +57,5 @@ cd /d "%~dp0"
 start "" "MystTiqPalworldServer.exe"
 '@ | Set-Content (Join-Path $stage 'Start-MystTiq.cmd') -Encoding ascii
 Compress-Archive -Path "$stage\*" -DestinationPath $zip -CompressionLevel Optimal
-$hash=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-"$hash  $(Split-Path $zip -Leaf)" | Set-Content (Join-Path $artifacts 'SHA256SUMS.txt') -Encoding ascii
 Write-Host "Version: $Version"
 Write-Host "Portable package: $zip"

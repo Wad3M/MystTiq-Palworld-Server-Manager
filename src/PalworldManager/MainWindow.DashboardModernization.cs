@@ -7,6 +7,7 @@ namespace PalworldManager;
 public partial class MainWindow
 {
     private readonly DashboardIntelligenceService dashboardIntelligence = new();
+    private readonly StartupCoordinator startupCoordinator = new();
     private bool dashboardRefreshInProgress;
     private bool startupWorldDataInitialized;
     private ServerLifecycleState dashboardLifecycleState = ServerLifecycleState.Stopped;
@@ -19,26 +20,20 @@ public partial class MainWindow
         DashboardRefreshStatusText.Text = "Loading world data...";
         activeWorldContext.Invalidate();
 
-        await RefreshPlayersAsync(silent: true);
-        RunStartupWorldDataStage("guilds", RefreshGuilds);
-        RunStartupWorldDataStage("bases", RefreshBaseManager);
-        RunStartupWorldDataStage("guild/base recovery", RefreshGuildBaseRecovery);
-        RefreshDashboardIntelligence();
+        var results = await startupCoordinator.RunAsync(
+        [
+            ("players", async () => await RefreshPlayersAsync(silent: true)),
+            ("guilds", () => { RefreshGuilds(); return Task.CompletedTask; }),
+            ("bases", () => { RefreshBaseManager(); return Task.CompletedTask; }),
+            ("guild/base recovery", () => { RefreshGuildBaseRecovery(); return Task.CompletedTask; }),
+            ("dashboard intelligence", () => { RefreshDashboardIntelligence(); return Task.CompletedTask; })
+        ], Log);
 
-        DashboardRefreshStatusText.Text = $"World data loaded {DateTime.Now:HH:mm:ss}";
-        Log($"[STARTUP] World data initialized: {guildRows.Count} guild(s), {currentBaseManagerSummary?.Bases.Count ?? 0} base(s), {playerHistory.Snapshot().Count} known player(s).");
-    }
-
-    private void RunStartupWorldDataStage(string stage, Action action)
-    {
-        try
-        {
-            action();
-        }
-        catch (Exception ex)
-        {
-            Log($"[STARTUP] {stage} initialization was unavailable: {ex.Message}");
-        }
+        var failed = results.Count(x => !x.Success);
+        DashboardRefreshStatusText.Text = failed == 0
+            ? $"World data loaded {DateTime.Now:HH:mm:ss}"
+            : $"World data loaded with {failed} unavailable stage(s)";
+        Log($"[STARTUP] World data initialized: {guildRows.Count} guild(s), {currentBaseManagerSummary?.Bases.Count ?? 0} base(s), {playerHistory.Snapshot().Count} known player(s). Failed stages: {failed}.");
     }
 
     private void DashboardOpenWorld_Click(object sender, RoutedEventArgs e)

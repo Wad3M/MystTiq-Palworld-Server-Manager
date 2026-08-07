@@ -17,7 +17,7 @@ public partial class App : Application
         DispatcherUnhandledException += (_, args) =>
         {
             WriteCrashLog("WPF dispatcher exception", args.Exception);
-            MessageBox.Show(
+            AppDialog.Show(
                 args.Exception.Message + "\n\nDiagnostic log:\n" + CrashLogPath,
                 "MystTiq Palworld Server",
                 MessageBoxButton.OK,
@@ -36,7 +36,7 @@ public partial class App : Application
         catch (Exception exception)
         {
             WriteCrashLog("Fatal startup exception", exception);
-            MessageBox.Show(
+            AppDialog.Show(
                 "MystTiq Palworld Server could not start.\n\n" + exception +
                 "\n\nDiagnostic log:\n" + CrashLogPath,
                 "Startup Error",

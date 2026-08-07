@@ -12,6 +12,7 @@ namespace PalworldManager.Services;
 /// </summary>
 public sealed class WorldDiscoverySnapshotService : IDisposable
 {
+    private readonly PlayerSaveDiscoveryService playerSaveDiscovery = new();
     private readonly AppSettings settings;
     private readonly ActiveWorldContextService contextService;
     private readonly PalworldSaveCodec codec;
@@ -188,12 +189,11 @@ public sealed class WorldDiscoverySnapshotService : IDisposable
         {
             hash = PalworldSaveCodec.HashFile(context.LevelSavePath);
             var playersDirectory = Path.Combine(context.WorldPath, "Players");
-            playerPaths = Directory.Exists(playersDirectory)
-                ? Directory.EnumerateFiles(playersDirectory, "*.sav", SearchOption.TopDirectoryOnly)
-                    .Where(path => !path.EndsWith("_dps.sav", StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray()
-                : [];
+            var playerDiscovery = playerSaveDiscovery.DiscoverFromPlayersDirectory(playersDirectory);
+            playerPaths = playerDiscovery.Accepted.OrderBy(x => x.Path, StringComparer.OrdinalIgnoreCase).Select(x => x.Path).ToArray();
             diagnostics.Add($"Player saves discovered: {playerPaths.Length}");
+            foreach (var rejected in playerDiscovery.Rejected.Take(25))
+                diagnostics.Add($"Rejected player save: {Path.GetFileName(rejected.Path)} — {rejected.Reason}");
 
             decoded = context.LevelSavePath + ".json";
             if (!File.Exists(decoded) || File.GetLastWriteTimeUtc(decoded) < context.LevelLastWriteUtc)

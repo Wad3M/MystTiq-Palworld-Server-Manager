@@ -92,7 +92,7 @@ public partial class MainWindow
     }
     private void AuditClear_Click(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show("Clear the complete local activity and audit history?", "Clear audit history", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        if (AppDialog.Show("Clear the complete local activity and audit history?", "Clear audit history", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         auditEntries.Clear(); PersistAudit(); RefreshNotificationSummary(); if (AuditStatusText is not null) AuditStatusText.Text = "Audit history cleared.";
     }
     private void AuditExport_Click(object sender, RoutedEventArgs e)

@@ -83,7 +83,9 @@ public partial class MainWindow
             SaveInspectorHealthCountsText.Text = $"Healthy checks: {health.HealthyCount}   Warnings: {health.WarningCount}   Errors: {health.ErrorCount}";
             SaveInspectorHealthFindings.ItemsSource = health.Findings;
             SaveInspectorIntegrityGrid.ItemsSource = SaveInspector.AnalyzeIntegrity(currentSaveInspection);
-            SaveInspectorRepairGrid.ItemsSource = SaveInspector.BuildRepairSuggestions(currentSaveInspection);
+            var repairSuggestions = SaveInspector.BuildRepairSuggestions(currentSaveInspection);
+            SaveInspectorRepairGrid.ItemsSource = repairSuggestions;
+            UpdateRepairCenterSummary(repairSuggestions);
             SaveInspectorWarningText.Text = currentSaveInspection.Warnings.Count == 0
                 ? "No file-level warnings were detected. The world passed file-level checks. Decoded entity inspection remains available when a codec is configured."
                 : string.Join(Environment.NewLine, currentSaveInspection.Warnings.Select(w => "• " + w));
@@ -196,11 +198,57 @@ public partial class MainWindow
         catch (Exception ex) { ShowSaveInspectorError(ex); }
     }
 
+
+    private void RepairCenterScan_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(SaveInspectorPathBox.Text))
+            InspectActiveWorld_Click(sender, e);
+        else
+            InspectSelectedSave();
+
+        if (currentSaveInspection is not null)
+            RepairCenterGuidanceText.Text = "Scan complete. Select one or more candidates, then preview the proposed repair plan.";
+    }
+
+    private void RepairCenterSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (SaveInspectorRepairGrid?.ItemsSource is IEnumerable<SaveRepairSuggestion> items)
+            UpdateRepairCenterSummary(items);
+    }
+
+    private void RepairCenterClearSelection_Click(object sender, RoutedEventArgs e)
+    {
+        if (SaveInspectorRepairGrid?.ItemsSource is not IEnumerable<SaveRepairSuggestion> items) return;
+        foreach (var item in items) item.Selected = false;
+        SaveInspectorRepairGrid.Items.Refresh();
+        UpdateRepairCenterSummary(items);
+        SaveInspectorRepairStatusText.Text = "Selection cleared. No save changes are made.";
+    }
+
+    private void UpdateRepairCenterSummary(IEnumerable<SaveRepairSuggestion> items)
+    {
+        var list = items.ToList();
+        var selected = list.Count(x => x.Selected);
+        var highRisk = list.Count(x => string.Equals(x.Risk, "High", StringComparison.OrdinalIgnoreCase) || string.Equals(x.Risk, "Critical", StringComparison.OrdinalIgnoreCase));
+        if (RepairCenterCandidateCountText is not null) RepairCenterCandidateCountText.Text = list.Count.ToString();
+        if (RepairCenterSelectedCountText is not null) RepairCenterSelectedCountText.Text = selected.ToString();
+        if (RepairCenterHighRiskCountText is not null) RepairCenterHighRiskCountText.Text = highRisk.ToString();
+        if (RepairCenterGuidanceText is not null)
+            RepairCenterGuidanceText.Text = list.Count == 0
+                ? "No repair candidates were detected for the inspected world."
+                : selected == 0
+                    ? "Repair candidates detected. Select one or more rows to prepare a preview."
+                    : $"{selected} candidate(s) selected. Preview the plan before any future apply workflow is enabled.";
+    }
+
     private void PreviewSelectedRepairs_Click(object sender, RoutedEventArgs e)
     {
         if (currentSaveInspection is null) { ShowSaveInspectorError(new InvalidOperationException("Inspect a world first.")); return; }
         var selected = SaveInspectorRepairGrid.Items.Cast<SaveRepairSuggestion>().Where(x => x.Selected).ToList();
-        SaveInspectorRepairStatusText.Text = selected.Count == 0 ? "No repair suggestions selected. Nothing will be changed." : $"Preview ready for {selected.Count} selected action(s). This release does not write save data.";
+        UpdateRepairCenterSummary(SaveInspectorRepairGrid.Items.Cast<SaveRepairSuggestion>());
+        SaveInspectorRepairStatusText.Text = selected.Count == 0
+            ? "No repair suggestions selected. Nothing will be changed."
+            : $"Preview ready for {selected.Count} selected action(s). This release does not write save data.";
     }
 
     private void OpenInspectedWorldFolder_Click(object sender, RoutedEventArgs e)
@@ -218,7 +266,7 @@ public partial class MainWindow
     {
         SaveInspectorStatusText.Text = ex.Message;
         SaveInspectorStatusText.Foreground = Brushes.OrangeRed;
-        MessageBox.Show(ex.Message, "World Inspector", MessageBoxButton.OK, MessageBoxImage.Error);
+        AppDialog.Show(ex.Message, "World Inspector", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 }
 

@@ -9,14 +9,19 @@
 AppId={{5E01900A-7A21-4CD8-8ABF-76E413BDA7D7}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+VersionInfoVersion={#MyAppVersion}
 AppPublisher=MystTiq Contributors
-DefaultDirName={autopf}\MystTiq Palworld Server Manager
+AppPublisherURL=https://github.com/Wad3M/MystTiq-Palworld-Server-Manager
+AppSupportURL=https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues
+AppUpdatesURL=https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/releases
+DefaultDirName={localappdata}\Programs\MystTiq Palworld Server Manager
 DefaultGroupName={#MyAppName}
+DisableProgramGroupPage=yes
 AllowNoIcons=yes
-OutputDir=Output
 OutputBaseFilename=MystTiqPalworldServer-v{#MyAppVersion}-win-x64-setup
 SetupIconFile=..\src\PalworldManager\Assets\PalworldServerManager.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
+UninstallDisplayName={#MyAppName}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -24,9 +29,13 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 LicenseFile=..\LICENSE
+CloseApplications=yes
+RestartApplications=no
+UsePreviousAppDir=yes
+SetupLogging=yes
 
 [Files]
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "portable.mode,Data\*,Workspace\*"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

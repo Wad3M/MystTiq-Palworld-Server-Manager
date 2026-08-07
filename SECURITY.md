@@ -19,3 +19,6 @@ Include:
 ## Credential exposure
 
 If a credential was committed or uploaded, revoke or rotate it immediately. Removing it from a later commit does not remove it from Git history.
+
+
+_Last reviewed for v0.2.14.11._

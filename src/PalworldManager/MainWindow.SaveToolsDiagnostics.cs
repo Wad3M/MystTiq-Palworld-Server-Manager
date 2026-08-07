@@ -48,7 +48,7 @@ public partial class MainWindow
     private void SaveToolsCopyDiagnostics_Click(object sender, RoutedEventArgs e)
     {
         Clipboard.SetText(saveToolsLastDiagnostics);
-        MessageBox.Show("Palworld Save Tools diagnostics copied to the clipboard.", "Diagnostics Copied", MessageBoxButton.OK, MessageBoxImage.Information);
+        AppDialog.Show("Palworld Save Tools diagnostics copied to the clipboard.", "Diagnostics Copied", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void SaveToolsOpenFolder_Click(object sender, RoutedEventArgs e)
@@ -61,7 +61,7 @@ public partial class MainWindow
 
     private async void SaveToolsRepair_Click(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show("Install or repair Python packages and Palworld Save Tools?", "Install / Repair Save Tools", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (AppDialog.Show("Install or repair Python packages and Palworld Save Tools?", "Install / Repair Save Tools", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         await RunExclusive(async ct => await installer.InstallComponentAsync("Palworld Save Tools", CreateInstallProgress(), ct));
         SaveToolsTestConverter_Click(sender, e);
     }

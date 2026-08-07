@@ -13,6 +13,8 @@ namespace PalworldManager.Services;
 public sealed class WorldToolsService
 {
     private readonly AppSettings settings;
+    private readonly SafeFileSystemService fileSystem = new();
+    private readonly PlayerSaveDiscoveryService playerSaveDiscovery = new();
     public WorldToolsService(AppSettings settings) => this.settings = settings;
 
     public IReadOnlyList<WorldToolsWorldRow> DiscoverWorlds()
@@ -20,7 +22,7 @@ public sealed class WorldToolsService
         var root = Path.Combine(settings.SaveRoot, "0");
         if (!Directory.Exists(root)) return [];
         var active = FindConfiguredWorldId();
-        return Directory.EnumerateDirectories(root)
+        return fileSystem.EnumerateDirectories(root)
             .Select(path => BuildRow(path, active))
             .OrderByDescending(x => x.IsActive)
             .ThenByDescending(x => x.LastWriteTimeUtc)
@@ -37,7 +39,7 @@ public sealed class WorldToolsService
             var path = Path.Combine(root, configured);
             if (File.Exists(Path.Combine(path, "Level.sav"))) return path;
         }
-        return Directory.EnumerateDirectories(root)
+        return fileSystem.EnumerateDirectories(root)
             .Where(p => File.Exists(Path.Combine(p, "Level.sav")))
             .OrderByDescending(p => File.GetLastWriteTimeUtc(Path.Combine(p, "Level.sav")))
             .FirstOrDefault();
@@ -48,11 +50,9 @@ public sealed class WorldToolsService
         EnsureWorld(worldPath);
         var level = Path.Combine(worldPath, "Level.sav");
         var meta = Path.Combine(worldPath, "LevelMeta.sav");
-        var files = Directory.EnumerateFiles(worldPath, "*", SearchOption.AllDirectories).ToList();
+        var files = fileSystem.EnumerateFiles(worldPath, "*", SearchOption.AllDirectories).ToList();
         var playerDir = Path.Combine(worldPath, "Players");
-        var playerCount = Directory.Exists(playerDir)
-            ? Directory.EnumerateFiles(playerDir, "*.sav", SearchOption.TopDirectoryOnly).Count(p => !p.EndsWith("_dps.sav", StringComparison.OrdinalIgnoreCase))
-            : 0;
+        var playerCount = playerSaveDiscovery.DiscoverFromPlayersDirectory(playerDir).Accepted.Count;
         var missing = new List<string>();
         if (!File.Exists(level)) missing.Add("Level.sav");
         if (!File.Exists(meta)) missing.Add("LevelMeta.sav");
@@ -136,11 +136,11 @@ public sealed class WorldToolsService
         EnsureWorld(worldPath);
         var backup = Path.Combine(worldPath, "backup");
         if (!Directory.Exists(backup)) return new WorldToolsCleanupPreview { WorldPath = worldPath };
-        var files = Directory.EnumerateFiles(backup, "*", SearchOption.AllDirectories).ToList();
+        var files = fileSystem.EnumerateFiles(backup, "*", SearchOption.AllDirectories).ToList();
         return new WorldToolsCleanupPreview
         {
             WorldPath = worldPath,
-            FolderCount = Directory.EnumerateDirectories(backup, "*", SearchOption.AllDirectories).Count() + 1,
+            FolderCount = fileSystem.EnumerateDirectories(backup, "*", SearchOption.AllDirectories).Count + 1,
             FileCount = files.Count,
             SizeBytes = files.Sum(f => new FileInfo(f).Length)
         };
@@ -156,9 +156,9 @@ public sealed class WorldToolsService
     private WorldToolsWorldRow BuildRow(string path, string? active)
     {
         var id = Path.GetFileName(path);
-        var files = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).ToList();
+        var files = fileSystem.EnumerateFiles(path, "*", SearchOption.AllDirectories).ToList();
         var playerDir = Path.Combine(path, "Players");
-        var players = Directory.Exists(playerDir) ? Directory.EnumerateFiles(playerDir, "*.sav").Count(p => !p.EndsWith("_dps.sav", StringComparison.OrdinalIgnoreCase)) : 0;
+        var players = playerSaveDiscovery.DiscoverFromPlayersDirectory(playerDir).Accepted.Count;
         var level = Path.Combine(path, "Level.sav");
         return new WorldToolsWorldRow
         {

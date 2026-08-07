@@ -26,7 +26,7 @@ public partial class MainWindow
     {
         if (PlayersGrid.SelectedItem is not PlayerRow selected)
         {
-            MessageBox.Show("Select a player first.", "Administration Center", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a player first.", "Administration Center", MessageBoxButton.OK, MessageBoxImage.Information);
             player = default!;
             key = string.Empty;
             return false;
@@ -35,7 +35,7 @@ public partial class MainWindow
         key = PlayerKey(selected);
         if (string.IsNullOrWhiteSpace(key))
         {
-            MessageBox.Show("The selected player does not have a stable identifier yet.", "Administration Center", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("The selected player does not have a stable identifier yet.", "Administration Center", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
         return true;
@@ -48,7 +48,7 @@ public partial class MainWindow
         RecordAudit("Success", "Players", "Player promoted in Administration Center", player.Name, 4);
         Log($"[ADMIN] {player.Name} marked as an administrator in MystTiq.");
         RefreshPlayerAdministrationSummary(player);
-        MessageBox.Show(
+        AppDialog.Show(
             "MystTiq now records this player as an administrator.\n\n" +
             "Vanilla Palworld does not expose a persistent remote promotion command. The player must still authenticate in game with /AdminPassword, or be configured through a compatible permissions mod.",
             "Promote Admin",
@@ -120,13 +120,13 @@ public partial class MainWindow
         var count = playerAdministration.ClearActiveWarnings(key, Environment.UserName);
         RecordAudit("Information", "Players", "Player warnings cleared", player.Name + " • " + count + " warning(s)", 4);
         RefreshPlayerAdministrationSummary(player);
-        MessageBox.Show($"Cleared {count} active warning(s).", "Warnings", MessageBoxButton.OK, MessageBoxImage.Information);
+        AppDialog.Show($"Cleared {count} active warning(s).", "Warnings", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private async void TemporaryBan_Click(object sender, RoutedEventArgs e)
     {
         if (!TryGetAdministrationPlayer(out var player, out var key)) return;
-        var choice = MessageBox.Show(
+        var choice = AppDialog.Show(
             "Apply a 24-hour temporary ban to this player?\n\n" +
             "MystTiq will record the expiration and attempt to unban the player after the period expires while the manager and RCON are available.",
             "Temporary Ban",
@@ -138,7 +138,7 @@ public partial class MainWindow
         var id = string.IsNullOrWhiteSpace(player.UserId) ? player.SteamId : player.UserId;
         if (string.IsNullOrWhiteSpace(id))
         {
-            MessageBox.Show("The selected player has no UserID or SteamID.", "Temporary Ban", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("The selected player has no UserID or SteamID.", "Temporary Ban", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -163,7 +163,7 @@ public partial class MainWindow
         catch (Exception ex)
         {
             Log("Temporary ban failed: " + ex.Message);
-            MessageBox.Show(ex.Message, "Temporary Ban", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "Temporary Ban", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

@@ -46,24 +46,24 @@ public partial class MainWindow
 
     private void BackupSelectedPlayer_Click(object sender, RoutedEventArgs e)
     {
-        if (PlayersGrid.SelectedItem is not PlayerRow player) { MessageBox.Show("Select a player first.", "Player Backup", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (PlayersGrid.SelectedItem is not PlayerRow player) { AppDialog.Show("Select a player first.", "Player Backup", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         var path = ResolvePlayerSavePath(player);
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) { MessageBox.Show("No player save was found. Run Discover Saves first.", "Player Backup", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) { AppDialog.Show("No player save was found. Run Discover Saves first.", "Player Backup", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         try
         {
             var output = CreatePlayerBackupPackage(player, path, "ManualBackup");
             RecordAudit("Success", "Players", "Player backup created", $"{player.Name} • {output}", 4);
             RefreshSelectedPlayerTimeline();
-            MessageBox.Show($"Player backup created:\n\n{output}", "Player Backup", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show($"Player backup created:\n\n{output}", "Player Backup", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-        catch (Exception ex) { RecordAudit("Critical", "Players", "Player backup failed", $"{player.Name}: {ex.Message}", 4); MessageBox.Show(ex.Message, "Player Backup", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { RecordAudit("Critical", "Players", "Player backup failed", $"{player.Name}: {ex.Message}", 4); AppDialog.Show(ex.Message, "Player Backup", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void ExportSelectedPlayer_Click(object sender, RoutedEventArgs e)
     {
-        if (PlayersGrid.SelectedItem is not PlayerRow player) { MessageBox.Show("Select a player first.", "Export Player", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (PlayersGrid.SelectedItem is not PlayerRow player) { AppDialog.Show("Select a player first.", "Export Player", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         var path = ResolvePlayerSavePath(player);
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) { MessageBox.Show("No player save was found.", "Export Player", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) { AppDialog.Show("No player save was found.", "Export Player", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         var dlg = new Microsoft.Win32.SaveFileDialog { Filter = "ZIP archive (*.zip)|*.zip", FileName = $"Myst_Player_{SafePlayerFileName(player.Name)}_{DateTime.Now:yyyyMMdd_HHmmss}.zip" };
         if (dlg.ShowDialog(this) != true) return;
         try
@@ -73,7 +73,7 @@ public partial class MainWindow
             RecordAudit("Success", "Players", "Player exported", $"{player.Name} • {dlg.FileName}", 4);
             RefreshSelectedPlayerTimeline();
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Export Player", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { AppDialog.Show(ex.Message, "Export Player", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private string CreatePlayerBackupPackage(PlayerRow player, string primaryPath, string purpose)
@@ -101,17 +101,17 @@ public partial class MainWindow
     private static string Sha256(string path) { using var stream = File.OpenRead(path); return Convert.ToHexString(SHA256.HashData(stream)); }
     private static string SafePlayerFileName(string value) => string.Concat((string.IsNullOrWhiteSpace(value) ? "Player" : value).Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch));
 
-    private void PlayerRestoreComingSoon_Click(object sender, RoutedEventArgs e) => MessageBox.Show("Transactional character restore remains planned for a later Player Toolkit release. v2.11.7.0 adds the transactional Character Clone Engine; full character restore remains planned for the Complete Player Toolkit.", "Restore Character", MessageBoxButton.OK, MessageBoxImage.Information);
+    private void PlayerRestoreComingSoon_Click(object sender, RoutedEventArgs e) => AppDialog.Show("Transactional character restore remains planned for a later Player Toolkit release. v2.11.7.0 adds the transactional Character Clone Engine; full character restore remains planned for the Complete Player Toolkit.", "Restore Character", MessageBoxButton.OK, MessageBoxImage.Information);
     private void ResetCharacter_Click(object sender, RoutedEventArgs e)
     {
         if (PlayersGrid.SelectedItem is not PlayerRow player)
         {
-            MessageBox.Show("Select a player first.", "Reset Character", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a player first.", "Reset Character", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         if (player.Status.Equals("ONLINE", StringComparison.OrdinalIgnoreCase))
         {
-            MessageBox.Show("The selected player is online. Kick or disconnect the player before resetting the character.", "Reset Character", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("The selected player is online. Kick or disconnect the player before resetting the character.", "Reset Character", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -127,15 +127,15 @@ public partial class MainWindow
 
             if (!preview.CanApply)
             {
-                MessageBox.Show(summary + "\n\nThe reset cannot be applied until every blocking finding is resolved.", "Reset Character — Preview", MessageBoxButton.OK, MessageBoxImage.Warning);
+                AppDialog.Show(summary + "\n\nThe reset cannot be applied until every blocking finding is resolved.", "Reset Character — Preview", MessageBoxButton.OK, MessageBoxImage.Warning);
                 RecordAudit("Warning", "Players", "Character reset blocked", $"{player.Name} • {string.Join("; ", preview.Findings)}", 4);
                 return;
             }
 
-            if (MessageBox.Show(summary + "\n\nApply this reset now?", "Reset Character — Confirm Transaction", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
+            if (AppDialog.Show(summary + "\n\nApply this reset now?", "Reset Character — Confirm Transaction", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
                 return;
 
-            if (MessageBox.Show(
+            if (AppDialog.Show(
                     $"FINAL CONFIRMATION\n\nReset {player.Name} and force character creation on the next login?\n\n" +
                     "A rollback package has not been created yet; it will be created as the first transaction step.",
                     "Reset Character — Final Confirmation",
@@ -150,13 +150,13 @@ public partial class MainWindow
             RefreshPlayerHistoryGrid();
             RecordAudit("Warning", "Players", "Character reset completed", $"{player.Name} • transaction {result.TransactionId} • backup {result.BackupPath}", 5);
             Log($"[CHARACTER RESET] Completed for {player.Name}. References removed: {result.ReferencesRemoved}. Backup: {result.BackupPath}");
-            MessageBox.Show($"Character reset completed successfully.\n\nReferences removed: {result.ReferencesRemoved}\nPlayer save removed: {result.PlayerSaveRemoved}\nVerification: {(result.VerificationPassed ? "PASS" : "FAIL")}\n\nRollback backup:\n{result.BackupPath}\n\nReport:\n{result.ReportPath}\n\nThe player should receive Create New Character on the next login.", "Reset Character Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show($"Character reset completed successfully.\n\nReferences removed: {result.ReferencesRemoved}\nPlayer save removed: {result.PlayerSaveRemoved}\nVerification: {(result.VerificationPassed ? "PASS" : "FAIL")}\n\nRollback backup:\n{result.BackupPath}\n\nReport:\n{result.ReportPath}\n\nThe player should receive Create New Character on the next login.", "Reset Character Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             RecordAudit("Critical", "Players", "Character reset failed", $"{player.Name}: {ex.Message}", 5);
             Log("[CHARACTER RESET] Failed: " + ex);
-            MessageBox.Show("The character reset failed. MystTiq attempted to restore the original world and player files. Review the rollback ZIP and logs before starting PalServer.\n\n" + ex.Message, "Reset Character Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show("The character reset failed. MystTiq attempted to restore the original world and player files. Review the rollback ZIP and logs before starting PalServer.\n\n" + ex.Message, "Reset Character Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { Mouse.OverrideCursor = null; }
     }
@@ -168,12 +168,12 @@ public partial class MainWindow
     {
         if (PlayersGrid.SelectedItem is not PlayerRow source)
         {
-            MessageBox.Show("Select the source player first.", "Character Clone", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select the source player first.", "Character Clone", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         if (source.Status.Equals("ONLINE", StringComparison.OrdinalIgnoreCase))
         {
-            MessageBox.Show("The source player is online. Disconnect the player before cloning character data.", "Character Clone", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("The source player is online. Disconnect the player before cloning character data.", "Character Clone", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -184,7 +184,7 @@ public partial class MainWindow
             .ToList();
         if (candidates.Count == 0)
         {
-            MessageBox.Show("No other known player is available as a clone destination. Refresh players or run Discover Saves first.", "Character Clone", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("No other known player is available as a clone destination. Refresh players or run Discover Saves first.", "Character Clone", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -265,7 +265,7 @@ public partial class MainWindow
 
         if (destination.Status.Equals("ONLINE", StringComparison.OrdinalIgnoreCase))
         {
-            MessageBox.Show("The destination player is online. Disconnect the player before cloning character data.", "Character Clone", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("The destination player is online. Disconnect the player before cloning character data.", "Character Clone", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -283,7 +283,7 @@ public partial class MainWindow
         };
         if (options.SelectedCategories().Count == 0)
         {
-            MessageBox.Show("Select at least one character category to clone.", "Character Clone", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select at least one character category to clone.", "Character Clone", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -315,14 +315,14 @@ public partial class MainWindow
 
             if (!preview.CanApply)
             {
-                MessageBox.Show(message + "\n\nThe clone cannot be applied until every blocking finding is resolved.", "Character Clone — Preview", MessageBoxButton.OK, MessageBoxImage.Warning);
+                AppDialog.Show(message + "\n\nThe clone cannot be applied until every blocking finding is resolved.", "Character Clone — Preview", MessageBoxButton.OK, MessageBoxImage.Warning);
                 RecordAudit("Warning", "Players", "Character clone blocked", source.Name + " to " + destination.Name + " • " + string.Join("; ", preview.Findings), 4);
                 return;
             }
 
-            if (MessageBox.Show(message + "\n\nApply this character clone now?", "Character Clone — Confirm Transaction", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
+            if (AppDialog.Show(message + "\n\nApply this character clone now?", "Character Clone — Confirm Transaction", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
                 return;
-            if (MessageBox.Show(
+            if (AppDialog.Show(
                     "FINAL CONFIRMATION\n\n" +
                     "Copy selected data from " + source.Name + " into " + destination.Name + "?\n\n" +
                     "The destination character data in the selected categories will be replaced. A rollback package will be created first.",
@@ -345,13 +345,13 @@ public partial class MainWindow
                 "Verification: " + (result.VerificationPassed ? "PASS" : "FAIL") + "\n\n" +
                 "Rollback backup:\n" + result.BackupPath + "\n\n" +
                 "Report:\n" + result.ReportPath;
-            MessageBox.Show(complete, "Character Clone Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show(complete, "Character Clone Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             RecordAudit("Critical", "Players", "Character clone failed", source.Name + " to " + destination.Name + ": " + ex.Message, 5);
             Log("[CHARACTER CLONE] Failed: " + ex);
-            MessageBox.Show(
+            AppDialog.Show(
                 "The character clone failed. MystTiq attempted to restore the original destination save. Review the rollback ZIP and logs before starting PalServer.\n\n" + ex.Message,
                 "Character Clone Failed",
                 MessageBoxButton.OK,

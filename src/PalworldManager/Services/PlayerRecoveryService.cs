@@ -8,6 +8,7 @@ public sealed class PlayerRecoveryService
     private readonly AppSettings settings;
     private readonly PlayerHistoryService history;
     private readonly ProcessPalworldSaveCodec codec;
+    private readonly PlayerSaveDiscoveryService playerSaveDiscovery = new();
 
     public PlayerRecoveryService(AppSettings settings, PlayerHistoryService history)
     {
@@ -28,13 +29,11 @@ public sealed class PlayerRecoveryService
         if (!Directory.Exists(playersPath)) return summary;
 
         var historyRows = history.Snapshot();
-        foreach (var savePath in Directory.EnumerateFiles(playersPath, "*.sav", SearchOption.TopDirectoryOnly)
-                     .Where(path => !Path.GetFileNameWithoutExtension(path).EndsWith("_dps", StringComparison.OrdinalIgnoreCase))
-                     .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        var discovery = playerSaveDiscovery.DiscoverFromPlayersDirectory(playersPath);
+        foreach (var candidate in discovery.Accepted.OrderBy(x => x.Path, StringComparer.OrdinalIgnoreCase))
         {
-            var guid = Path.GetFileNameWithoutExtension(savePath).Trim();
-            if (!IsGuidToken(guid)) continue;
-            var info = new FileInfo(savePath);
+            var savePath = candidate.Path;
+            var guid = candidate.PlayerId;
             var match = historyRows.FirstOrDefault(row =>
                 row.PlayerId.Equals(guid, StringComparison.OrdinalIgnoreCase) ||
                 row.UserId.Equals(guid, StringComparison.OrdinalIgnoreCase));
@@ -47,8 +46,8 @@ public sealed class PlayerRecoveryService
                 PlatformId = match?.SteamId ?? match?.UserId ?? "",
                 SavePath = savePath,
                 CompanionPath = File.Exists(companion) ? companion : "",
-                SizeBytes = info.Length,
-                LastWriteUtc = info.LastWriteTimeUtc,
+                SizeBytes = candidate.SizeBytes,
+                LastWriteUtc = candidate.LastWriteTimeUtc,
                 IsHostCandidate = isHost,
                 HasCompanion = File.Exists(companion),
                 HasHistoryMatch = match is not null,

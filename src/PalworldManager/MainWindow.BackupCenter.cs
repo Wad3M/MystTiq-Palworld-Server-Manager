@@ -57,13 +57,13 @@ public partial class MainWindow
         backupRetentionPreview = backups.PreviewRetention();
         if (backupRetentionPreview.Count == 0)
         {
-            MessageBox.Show("No managed server backups exceed the current retention policy.",
+            AppDialog.Show("No managed server backups exceed the current retention policy.",
                 "Backup Retention", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
         var totalMb = backupRetentionPreview.Sum(row => row.SizeMb);
-        var choice = MessageBox.Show(
+        var choice = AppDialog.Show(
             $"Delete {backupRetentionPreview.Count} old managed server backup(s)?\n\n" +
             $"Space to reclaim: {totalMb:N2} MB\n" +
             $"Newest {Math.Max(1, settings.BackupRetention)} backup(s) will be preserved.\n\n" +
@@ -89,7 +89,7 @@ public partial class MainWindow
         var rows = backups.List();
         if (rows.Count == 0)
         {
-            MessageBox.Show("No managed server backups are available to verify.",
+            AppDialog.Show("No managed server backups are available to verify.",
                 "Verify Backups", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -125,7 +125,7 @@ public partial class MainWindow
             {
                 BackupsStatusText.Foreground = Brushes.Gold;
                 BackupsStatusText.Text = $"Verification completed: {passed} passed, {failed.Count} failed.";
-                MessageBox.Show(string.Join("\n\n", failed.Take(8)),
+                AppDialog.Show(string.Join("\n\n", failed.Take(8)),
                     "Backup Verification Results", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         });

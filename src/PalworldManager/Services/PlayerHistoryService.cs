@@ -8,6 +8,7 @@ public sealed class PlayerHistoryService
     private readonly AppSettings settings;
     private readonly string filePath;
     private readonly object gate = new();
+    private readonly PlayerSaveDiscoveryService playerSaveDiscovery = new();
     private List<PlayerHistoryRecord> records;
 
     public PlayerHistoryService(string dataRoot, AppSettings settings)
@@ -16,12 +17,14 @@ public sealed class PlayerHistoryService
         var serverKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(settings.ServerRoot.Trim().ToUpperInvariant())))[..12];
         filePath = Path.Combine(dataRoot, $"players-{serverKey}.json");
         records = Load();
-        // Remove stale false-positive imports created by older discovery logic.
+        // Remove stale false-positive imports created by older discovery logic and collapse
+        // historical duplicates that resolve to the same Palworld identity.
         var removedInvalidImports = records.RemoveAll(record => record.Source.Equals("Imported save", StringComparison.OrdinalIgnoreCase)
             && !IsValidPlayerSaveId(record.PlayerId));
         foreach (var record in records)
             record.IsOnline = false;
-        if (removedInvalidImports > 0) SaveLocked();
+        var mergedDuplicates = ConsolidateDuplicateIdentitiesLocked();
+        if (removedInvalidImports > 0 || mergedDuplicates > 0) SaveLocked();
     }
 
     public string FilePath => filePath;
@@ -42,41 +45,27 @@ public sealed class PlayerHistoryService
 
         lock (gate)
         {
-            // Palworld replaces save files and folders while writing. Snapshot the paths
-            // and tolerate entries that disappear between enumeration and inspection.
-            foreach (var playersDir in SafeEnumerateDirectories(searchRoot, "Players"))
+            foreach (var playersDir in new SafeFileSystemService().EnumerateDirectories(searchRoot, "Players", SearchOption.AllDirectories))
             {
-                foreach (var path in SafeEnumerateFiles(playersDir, "*.sav"))
+                var result = playerSaveDiscovery.DiscoverFromPlayersDirectory(playersDir);
+                foreach (var candidate in result.Accepted)
                 {
-                    if (!IsStablePlayerSave(path)) continue;
-                    var id = Path.GetFileNameWithoutExtension(path).Trim();
-                    if (!IsValidPlayerSaveId(id)) continue;
-                    if (records.Any(r => IdentifiersEqual(r.PlayerId, id))) continue;
-
-                    DateTime stamp;
-                    try
-                    {
-                        var info = new FileInfo(path);
-                        if (!info.Exists) continue;
-                        stamp = info.LastWriteTimeUtc > DateTime.UnixEpoch ? info.LastWriteTimeUtc : DateTime.UtcNow;
-                    }
-                    catch (IOException) { continue; }
-                    catch (UnauthorizedAccessException) { continue; }
-
+                    if (records.Any(r => IdentifiersEqual(r.PlayerId, candidate.PlayerId))) continue;
                     records.Add(new PlayerHistoryRecord
                     {
-                        Key = "player:" + id.ToLowerInvariant(),
+                        Key = "player:" + candidate.PlayerId.ToLowerInvariant(),
                         Name = "Unknown imported player",
-                        PlayerId = id,
-                        FirstSeenUtc = stamp,
-                        LastSeenUtc = stamp,
+                        PlayerId = candidate.PlayerId,
+                        FirstSeenUtc = candidate.LastWriteTimeUtc > DateTime.UnixEpoch ? candidate.LastWriteTimeUtc : DateTime.UtcNow,
+                        LastSeenUtc = candidate.LastWriteTimeUtc > DateTime.UnixEpoch ? candidate.LastWriteTimeUtc : DateTime.UtcNow,
                         Platform = "Unknown",
                         Source = "Imported save"
                     });
                     discovered++;
                 }
             }
-            if (discovered > 0) SaveLocked();
+            var mergedDuplicates = ConsolidateDuplicateIdentitiesLocked();
+            if (discovered > 0 || mergedDuplicates > 0) SaveLocked();
         }
         return discovered;
     }
@@ -123,6 +112,7 @@ public sealed class PlayerHistoryService
                 record.IsOnline = true;
                 record.Key = BuildKey(live, record);
             }
+            ConsolidateDuplicateIdentitiesLocked();
             SaveLocked();
         }
     }
@@ -175,6 +165,95 @@ public sealed class PlayerHistoryService
             return removed;
         }
     }
+
+
+    /// <summary>
+    /// Collapses records that share any authoritative identity token. Older builds could
+    /// retain one REST record and one imported-save record for the same Player ID, which
+    /// made the Players page and Dashboard count a single person more than once.
+    /// </summary>
+    private int ConsolidateDuplicateIdentitiesLocked()
+    {
+        if (records.Count < 2) return 0;
+
+        var groups = new List<List<PlayerHistoryRecord>>();
+        foreach (var record in records)
+        {
+            var matchingGroups = groups.Where(group => group.Any(existing => SameIdentity(existing, record))).ToList();
+            if (matchingGroups.Count == 0)
+            {
+                groups.Add([record]);
+                continue;
+            }
+
+            var target = matchingGroups[0];
+            target.Add(record);
+            foreach (var extra in matchingGroups.Skip(1))
+            {
+                target.AddRange(extra);
+                groups.Remove(extra);
+            }
+        }
+
+        var consolidated = groups.Select(MergeIdentityGroup).ToList();
+        var removed = records.Count - consolidated.Count;
+        if (removed > 0) records = consolidated;
+        return removed;
+    }
+
+    private static bool SameIdentity(PlayerHistoryRecord left, PlayerHistoryRecord right)
+    {
+        return IdentifiersEqual(left.UserId, right.UserId)
+            || IdentifiersEqual(left.SteamId, right.SteamId)
+            || IdentifiersEqual(left.PlayerId, right.PlayerId);
+    }
+
+    private static PlayerHistoryRecord MergeIdentityGroup(List<PlayerHistoryRecord> group)
+    {
+        var ordered = group
+            .OrderByDescending(record => record.IsOnline)
+            .ThenByDescending(record => !record.Source.Equals("Imported save", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(record => !IsPlaceholderName(record.Name))
+            .ThenByDescending(record => record.LastSeenUtc)
+            .ToList();
+
+        var canonical = Clone(ordered[0]);
+        canonical.UserId = FirstValue(ordered.Select(record => record.UserId));
+        canonical.SteamId = FirstValue(ordered.Select(record => record.SteamId));
+        canonical.PlayerId = FirstValue(ordered.Select(record => record.PlayerId));
+        canonical.Name = FirstValue(ordered.Select(record => IsPlaceholderName(record.Name) ? "" : record.Name), canonical.Name);
+        canonical.Ip = FirstValue(ordered.Select(record => record.Ip));
+        canonical.Ping = FirstValue(ordered.Select(record => record.Ping));
+        canonical.Platform = FirstValue(ordered.Select(record => record.Platform).Where(value => !value.Equals("Unknown", StringComparison.OrdinalIgnoreCase)), canonical.Platform);
+        canonical.Level = FirstValue(ordered.Select(record => record.Level));
+        canonical.BuildingCount = FirstValue(ordered.Select(record => record.BuildingCount));
+        canonical.Notes = FirstValue(ordered.Select(record => record.Notes));
+        canonical.FirstSeenUtc = group.Where(record => record.FirstSeenUtc > DateTime.UnixEpoch).Select(record => record.FirstSeenUtc).DefaultIfEmpty(canonical.FirstSeenUtc).Min();
+        canonical.LastSeenUtc = group.Select(record => record.LastSeenUtc).DefaultIfEmpty(canonical.LastSeenUtc).Max();
+        canonical.ObservedSessions = group.Max(record => record.ObservedSessions);
+        canonical.IsOnline = group.Any(record => record.IsOnline);
+        canonical.IsBanned = group.Any(record => record.IsBanned);
+        canonical.Source = ordered.FirstOrDefault(record => record.Source.Equals("REST", StringComparison.OrdinalIgnoreCase))?.Source
+            ?? FirstValue(ordered.Select(record => record.Source), canonical.Source);
+        canonical.Key = BuildKey(canonical);
+        return canonical;
+    }
+
+    private static string BuildKey(PlayerHistoryRecord record)
+    {
+        if (!string.IsNullOrWhiteSpace(record.UserId)) return "user:" + record.UserId.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(record.SteamId)) return "steam:" + record.SteamId.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(record.PlayerId)) return "player:" + record.PlayerId.Trim().ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(record.Key) ? "unknown:" + Guid.NewGuid().ToString("N") : record.Key;
+    }
+
+    private static string FirstValue(IEnumerable<string?> values, string fallback = "") =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? fallback;
+
+    private static bool IsPlaceholderName(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+        || value.Equals("Unknown imported player", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("Unknown", StringComparison.OrdinalIgnoreCase);
 
     private static bool IdentifiersEqual(string? left, string? right)
     {
@@ -271,11 +350,6 @@ public sealed class PlayerHistoryService
         catch (UnauthorizedAccessException) { return false; }
     }
 
-    private static bool IsValidPlayerSaveId(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return false;
-        var id = value.Trim();
-        return id.Length == 32 && id.All(Uri.IsHexDigit);
-    }
+    private static bool IsValidPlayerSaveId(string? value) => PlayerSaveDiscoveryService.IsValidPlayerId(value);
 
 }

@@ -13,6 +13,8 @@ public sealed class ProductionWorldImportPipeline
     private readonly WorldRepairPlanner repairPlanner = new();
     private readonly RepairPreviewService previewService = new();
     private readonly RealWorldRelationshipValidator validator = new();
+    private readonly SafeFileSystemService fileSystem = new();
+    private readonly PlayerSaveDiscoveryService playerSaveDiscovery = new();
 
     public ProductionWorldImportPipeline(WorldImportService importer, WorldImportTransactionService transactions, IPalworldSaveCodec codec)
     { this.importer=importer; this.transactions=transactions; decoder=new Plm1SaveDecoder(codec); }
@@ -23,10 +25,10 @@ public sealed class ProductionWorldImportPipeline
         if(!scan.IsValid) throw new InvalidDataException("Archive did not pass safe world-import validation: "+string.Join(" ",scan.Warnings));
         transaction.State=WorldImportTransactionState.ArchiveAnalyzed; transactions.Save(transaction);
         var staged=importer.Stage(scan); transaction.WorkingWorldPath=staged; transaction.State=WorldImportTransactionState.Extracted; transactions.Save(transaction);
-        var level=Directory.EnumerateFiles(staged,"Level.sav",SearchOption.AllDirectories).OrderBy(x=>x.Count(c=>c==Path.DirectorySeparatorChar)).FirstOrDefault() ?? throw new FileNotFoundException("Staged world does not contain Level.sav.");
+        var level=fileSystem.EnumerateFiles(staged,"Level.sav",SearchOption.AllDirectories,cancellationToken).OrderBy(x=>x.Count(c=>c==Path.DirectorySeparatorChar)).FirstOrDefault() ?? throw new FileNotFoundException("Staged world does not contain Level.sav.");
         var decoded=await decoder.DecodeAsync(level,transaction.DecodedRoot,cancellationToken);
         transaction.State=WorldImportTransactionState.SaveDecoded; transactions.Save(transaction);
-        var playerFiles=Directory.Exists(Path.Combine(Path.GetDirectoryName(level)!,"Players"))?Directory.EnumerateFiles(Path.Combine(Path.GetDirectoryName(level)!,"Players"),"*.sav"):[];
+        var playerFiles=playerSaveDiscovery.DiscoverFromPlayersDirectory(Path.Combine(Path.GetDirectoryName(level)!,"Players"),cancellationToken).Accepted.Select(x=>x.Path).ToArray();
         var live=scanner.Scan(decoded.JsonPath,playerFiles); bases.Enrich(live.Snapshot,bases.Discover(decoded.JsonPath)); guilds.Enrich(live.Snapshot,guilds.Discover(decoded.JsonPath));
         var mappings=mappingEngine.Suggest(live.Snapshot.Players,destinationPlayers).ToList(); var plan=repairPlanner.Create(live.Snapshot,mappings); var preview=previewService.Build(live.Snapshot,mappings,plan); var validation=validator.Validate(live.Snapshot);
         var result=new ProductionImportResult { TransactionId=transaction.TransactionId,OutputWorldPath=transaction.OutputWorldPath,Snapshot=live.Snapshot,Preview=preview,Validation=validation };

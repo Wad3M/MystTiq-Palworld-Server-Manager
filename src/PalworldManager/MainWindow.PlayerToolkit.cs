@@ -33,7 +33,7 @@ public partial class MainWindow
         var candidates = CurrentPlayerRows().Where(p => PlayerKey(p) != PlayerKey(source)).OrderBy(p => p.Name).ToList();
         if (candidates.Count == 0)
         {
-            MessageBox.Show("No second known player is available for comparison.", "Player Comparison", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("No second known player is available for comparison.", "Player Comparison", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         var combo = new ComboBox { ItemsSource = candidates, DisplayMemberPath = "Name", SelectedIndex = 0, Margin = new Thickness(0, 8, 0, 12) };
@@ -63,7 +63,7 @@ public partial class MainWindow
         var folder = Path.Combine(settings.LogsRoot, "PlayerReports");
         var path = playerHealth.ExportHtml(player, currentPlayerHealthReport, playerAdministration.GetSummary(key), timeline, folder);
         RecordAudit("Success", "Players", "Player report exported", path, 4);
-        MessageBox.Show("Player report created:\n\n" + path, "Export Player Report", MessageBoxButton.OK, MessageBoxImage.Information);
+        AppDialog.Show("Player report created:\n\n" + path, "Export Player Report", MessageBoxButton.OK, MessageBoxImage.Information);
         Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
     }
 
@@ -76,6 +76,6 @@ public partial class MainWindow
             ? "No repairs are currently recommended."
             : "Recommended repairs:\n\n" + string.Join("\n", currentPlayerHealthReport.RepairRecommendations.Select(r => "• " + r)) +
               "\n\nThis release is preview-only. No save files will be modified.";
-        MessageBox.Show(message, "Repair Preview", MessageBoxButton.OK, MessageBoxImage.Information);
+        AppDialog.Show(message, "Repair Preview", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

@@ -1,74 +1,57 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Build','Package','Installer','All','Clean','Version')]
+    [ValidateSet('Build','Package','Installer','InstallerTools','Checksums','Release','All','Clean','Version','Validate')]
     [string]$Action = 'All',
     [ValidateSet('Debug','Release')]
     [string]$Configuration = 'Release',
-    [string]$ISCC = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+    [string]$ISCC,
+    [switch]$SkipInstaller,
+    [switch]$StrictValidation
 )
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $scripts = Join-Path $root 'scripts'
 $artifacts = Join-Path $root 'artifacts'
-$versionScript = Join-Path $scripts 'Get-ProjectVersion.ps1'
-$buildScript = Join-Path $scripts 'Build.ps1'
-$packageScript = Join-Path $scripts 'Package-Portable.ps1'
-$installerScript = Join-Path $scripts 'Build-Installer.ps1'
 
-function Get-MystTiqVersion {
-    & $versionScript
-}
-
-function Invoke-Build {
-    Write-Host "==> Building MystTiq ($Configuration)..." -ForegroundColor Cyan
-    & $buildScript -Configuration $Configuration
-}
-
-function Invoke-Package {
-    $version = Get-MystTiqVersion
-    Write-Host "==> Packaging portable v$version..." -ForegroundColor Cyan
-    & $packageScript -Version $version
-}
-
-function Invoke-Installer {
-    $version = Get-MystTiqVersion
-    Write-Host "==> Building installer v$version..." -ForegroundColor Cyan
-    & $installerScript -Version $version -ISCC $ISCC
+function Invoke-Script {
+    param([string]$Name, [hashtable]$Parameters = @{})
+    $path = Join-Path $scripts $Name
+    if (-not (Test-Path $path -PathType Leaf)) { throw "Required build script was not found: $path" }
+    & $path @Parameters
 }
 
 switch ($Action) {
-    'Version' {
-        Get-MystTiqVersion
-    }
+    'Version' { Invoke-Script 'Get-ProjectVersion.ps1' }
+    'Validate' { Invoke-Script 'Validate-Release.ps1' @{ Strict = $StrictValidation } }
+    'InstallerTools' { Invoke-Script 'Install-InnoSetup.ps1' }
     'Clean' {
         Write-Host '==> Cleaning build artifacts...' -ForegroundColor Cyan
         Remove-Item $artifacts -Recurse -Force -ErrorAction SilentlyContinue
-        Get-ChildItem (Join-Path $root 'src') -Directory -Recurse |
+        Get-ChildItem (Join-Path $root 'src') -Directory -Recurse -Force -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -in @('bin','obj') } |
             Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
         Write-Host 'Clean complete.' -ForegroundColor Green
     }
-    'Build' {
-        Invoke-Build
-    }
+    'Build' { Invoke-Script 'Build.ps1' @{ Configuration = $Configuration } }
     'Package' {
-        Invoke-Build
-        Invoke-Package
+        Invoke-Script 'Build.ps1' @{ Configuration = $Configuration }
+        Invoke-Script 'Package-Portable.ps1'
+        Invoke-Script 'Build-Checksums.ps1'
     }
     'Installer' {
-        Invoke-Build
-        Invoke-Installer
+        Invoke-Script 'Validate-Release.ps1' @{ Strict = $StrictValidation }
+        Invoke-Script 'Build.ps1' @{ Configuration = $Configuration }
+        Invoke-Script 'Build-Installer.ps1' @{ ISCC = $ISCC }
+        Invoke-Script 'Build-Checksums.ps1'
     }
-    'All' {
-        Invoke-Build
-        Invoke-Package
-        if (Test-Path $ISCC) {
-            Invoke-Installer
+    'Checksums' { Invoke-Script 'Build-Checksums.ps1' }
+    { $_ -in @('Release','All') } {
+        Invoke-Script 'Build-Release.ps1' @{
+            Configuration = $Configuration
+            ISCC = $ISCC
+            SkipInstaller = $SkipInstaller
+            StrictValidation = $StrictValidation
         }
-        else {
-            Write-Warning "Inno Setup was not found at '$ISCC'. Portable package completed; installer was skipped."
-        }
-        Write-Host '==> Release preparation complete.' -ForegroundColor Green
     }
 }

@@ -51,7 +51,7 @@ public partial class MainWindow
     {
         if (currentWorldValidatorReport is null)
         {
-            MessageBox.Show("Run World Validator before exporting a report.", "World Validator", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Run World Validator before exporting a report.", "World Validator", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -82,7 +82,7 @@ public partial class MainWindow
     {
         if (currentWorldValidatorReport is null || currentWorldValidatorReport.RepairableCount == 0)
         {
-            MessageBox.Show("No repairable validation findings are currently available.", "World Validator", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("No repairable validation findings are currently available.", "World Validator", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         NavigateToPage(MainPageIndex.Recovery);

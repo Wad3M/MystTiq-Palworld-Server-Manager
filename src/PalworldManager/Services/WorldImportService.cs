@@ -4,6 +4,8 @@ namespace PalworldManager.Services;
 
 public sealed class WorldImportService
 {
+    private readonly SafeFileSystemService fileSystem = new();
+    private readonly PlayerSaveDiscoveryService playerSaveDiscovery = new();
     private static readonly HashSet<string> AllowedRootFiles = new(StringComparer.OrdinalIgnoreCase)
     { "Level.sav", "LevelMeta.sav", "LocalData.sav", "WorldOption.sav" };
     private static readonly string[] BlockedExtensions = [".exe", ".dll", ".bat", ".cmd", ".ps1", ".vbs", ".js", ".msi", ".scr", ".com"];
@@ -168,11 +170,8 @@ public sealed class WorldImportService
             throw new InvalidDataException("Level.sav is missing or empty.");
         var meta = Path.Combine(worldPath, "LevelMeta.sav");
         var players = Path.Combine(worldPath, "Players");
-        var playerCount = Directory.Exists(players)
-            ? Directory.EnumerateFiles(players, "*.sav", SearchOption.TopDirectoryOnly)
-                .Count(f => !f.EndsWith("_dps.sav", StringComparison.OrdinalIgnoreCase))
-            : 0;
-        var fileCount = Directory.EnumerateFiles(worldPath, "*", SearchOption.AllDirectories).Count();
+        var playerCount = playerSaveDiscovery.DiscoverFromPlayersDirectory(players).Accepted.Count;
+        var fileCount = fileSystem.EnumerateFiles(worldPath, "*", SearchOption.AllDirectories).Count;
         var hash = HashFile(level);
         return $"Validated: Level.sav {new FileInfo(level).Length:N0} bytes • LevelMeta.sav {(File.Exists(meta) ? "present" : "not present (advisory)")} • Players {playerCount} • Files {fileCount} • SHA-256 {hash[..12]}…";
     }
@@ -233,10 +232,12 @@ public sealed class WorldImportService
         var manifest = new { importedUtc = DateTime.UtcNow, sourceArchive = Path.GetFileName(scan.ArchivePath), sourcePath = scan.ArchivePath, sourceSha256 = scan.ArchiveSha256, destinationWorldId = Path.GetFileName(destination), destinationWorldPath = destination, levelSaveSha256 = HashFile(level), playerSaveCount = scan.PlayerSaveCount, worldOptionMode = plan.WorldOptionMode.ToString(), backupPath = backup, quarantinePath = quarantine, status };
         File.WriteAllText(file, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true })); return file;
     }
-    private static void ValidateStagedWorld(string root, WorldImportScanResult scan)
+    private void ValidateStagedWorld(string root, WorldImportScanResult scan)
     {
         var level = Path.Combine(root, "Level.sav"); if (!File.Exists(level) || new FileInfo(level).Length == 0) throw new InvalidDataException("Staged Level.sav is missing or empty.");
-        var players = Path.Combine(root, "Players"); if (scan.PlayerSaveCount > 0 && (!Directory.Exists(players) || Directory.EnumerateFiles(players, "*.sav").Count() < scan.PlayerSaveCount)) throw new InvalidDataException("Not all player saves were staged.");
+        var players = Path.Combine(root, "Players");
+        var discovered = playerSaveDiscovery.DiscoverFromPlayersDirectory(players).Accepted.Count;
+        if (scan.PlayerSaveCount > 0 && discovered < scan.PlayerSaveCount) throw new InvalidDataException("Not all valid player saves were staged.");
     }
     private static bool IsAllowed(string relative)
     {

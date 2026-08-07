@@ -44,7 +44,7 @@ public partial class MainWindow : Window
     private readonly System.Collections.Concurrent.ConcurrentQueue<(string Display, string Persistent)> pendingUiLogs = new();
     private int logFlushScheduled;
     private readonly List<string> rconHistory = [];
-    private readonly HttpClient modMetadataClient = new() { Timeout = TimeSpan.FromSeconds(15) };
+    private readonly HttpClient modMetadataClient = new() { Timeout = ApplicationConstants.Network.StandardRequestTimeout };
     private int rconHistoryIndex;
     private bool consolePaused;
     private volatile bool adminCommandsRuntimeLoaded;
@@ -52,7 +52,7 @@ public partial class MainWindow : Window
     private readonly Dictionary<string, string> modLoadStates = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string[]> modLoadAliases = new(StringComparer.OrdinalIgnoreCase);
     private int modLoadSessionGeneration;
-    private readonly DispatcherTimer uiHeartbeatTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer uiHeartbeatTimer = new() { Interval = ApplicationConstants.Timing.UiHeartbeatInterval };
     private System.Threading.Timer? idleWatchdogTimer;
     private DateTime lastUiHeartbeatUtc = DateTime.UtcNow;
     private DateTime lastConsoleViewRefreshUtc = DateTime.MinValue;
@@ -72,7 +72,7 @@ public partial class MainWindow : Window
     private ObservableCollection<ModDashboardRow> modDashboardRows = [];
     private static readonly string ModScanResultsPath = Path.Combine(ApplicationPathService.Current.ActivityRoot, "mod-scan-results.json");
 
-    private readonly DispatcherTimer monitorTimer = new() { Interval = TimeSpan.FromSeconds(10) };
+    private readonly DispatcherTimer monitorTimer = new() { Interval = ApplicationConstants.Timing.MonitorInterval };
     private volatile bool restPollingSuspended = true;
     private CancellationTokenSource? restResumeCts;
     private readonly SemaphoreSlim monitorRefreshGate = new(1, 1);
@@ -96,7 +96,7 @@ public partial class MainWindow : Window
     private readonly DateTime managerStartedUtc = DateTime.UtcNow;
     private volatile bool restartInProgress;
     private volatile bool cancelPendingRestart;
-    private readonly DispatcherTimer automationTimer = new() { Interval = TimeSpan.FromSeconds(30) };
+    private readonly DispatcherTimer automationTimer = new() { Interval = ApplicationConstants.Timing.AutomationInterval };
     private DateTime lastScheduledRestartDate = DateTime.MinValue;
     private readonly Queue<DateTime> crashRecoveryAttempts = new();
     private static readonly string WindowPlacementPath = Path.Combine(ApplicationPathService.Current.ActivityRoot, "window-placement.json");
@@ -148,60 +148,13 @@ public partial class MainWindow : Window
         InitializeSetupPasswordDefaults();
         InitializeQolOptions();
         LoadSettings(); RefreshBackups(); RefreshMods(); RefreshEnvironment(); ReloadConfig(); RefreshCrashAnalyzer(); RefreshUpdateCenter(); RefreshModRuntime();
-        monitorTimer.Tick += async (_, _) => await MonitorTickAsync();
-        monitorTimer.Start();
-        automationTimer.Tick += AutomationTimer_Tick;
-        automationTimer.Start();
+        InitializeTransactionCenter();
+        InitializeDiagnosticsCenter();
         ScheduledRestartCheck.IsChecked = settings.ScheduledRestartEnabled;
         ScheduledRestartTimeBox.Text = settings.ScheduledRestartTime;
         AutoCrashRecoveryCheck.IsChecked = settings.AutoCrashRecovery;
-        uiHeartbeatTimer.Tick += (_, _) => lastUiHeartbeatUtc = DateTime.UtcNow;
-        uiHeartbeatTimer.Start();
-        idleWatchdogTimer = new System.Threading.Timer(_ => IdleWatchdogTick(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         UpdateAdminCommandsConsoleState();
-        Loaded += async (_, _) =>
-        {
-            if (await Task.Run(server.IsRunning))
-            {
-                var adopted = await Task.Run(server.TryAdoptRunningServer);
-                Log(adopted
-                    ? "[SESSION] Existing PalServer process adopted after manager startup."
-                    : "[SESSION] PalServer was detected, but MystTiq could not adopt the process. Stop/Restart will use the discovered-process fallback path.");
-                ScheduleRestPollingResume();
-                BeginModLoadTracking();
-                StartSessionLogTail();
-            }
-            await MonitorTickAsync();
-            await InitializeWorldDataOnStartupAsync();
-            await LoadUe4ssReleasesAsync();
-        };
-        Closing += MainWindow_Closing;
-        Closed+=(_,_) =>
-        {
-            StopSessionLogTail();
-            restResumeCts?.Cancel();
-            restResumeCts?.Dispose();
-            monitorTimer.Stop();
-            automationTimer.Stop();
-            uiHeartbeatTimer.Stop();
-            idleWatchdogTimer?.Dispose();
-            idleWatchdogTimer = null;
-            server.OutputReceived -= HandleServerOutput;
-            server.ServerExited -= HandleServerExit;
-            server.Dispose();
-            historicalAnalytics?.Flush();
-            sessionLog.Dispose();
-            modMetadataClient.Dispose();
-            infrastructureNotifications.Published -= HandleInfrastructureNotification;
-            pageOperations.ProgressChanged -= HandlePageOperationProgress;
-            pageOperations.Dispose();
-            ue4ssReleases.Dispose();
-            stabilityTestCts?.Cancel();
-            stabilityTestCts?.Dispose();
-            activeWorldContext.Changed -= ActiveWorldContext_Changed;
-            activeWorldContext.Dispose();
-            ObserveTask(rcon.DisposeAsync().AsTask(), "RCON disposal");
-        };
+        InitializeWindowLifecycle();
     }
 
 
@@ -227,7 +180,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var result = MessageBox.Show(
+        var result = AppDialog.Show(
             "The Palworld server is currently running.\n\n" +
             "Closing the Server Manager will FORCE the server to shut down immediately. " +
             "Connected players may lose unsaved progress.\n\n" +
@@ -250,7 +203,7 @@ public partial class MainWindow : Window
         try
         {
             Log("Manager close confirmed. Force-stopping the Palworld server...");
-            await StopSessionLogTailAsync(TimeSpan.FromSeconds(1));
+            await StopSessionLogTailAsync(ApplicationConstants.Timing.ShutdownLogTailTimeout);
             await server.ForceStopAsync();
             Log("Palworld server was force-stopped. Closing the manager.");
 
@@ -264,7 +217,7 @@ public partial class MainWindow : Window
             IsEnabled = true;
             Log($"Unable to force-stop the server while closing: {ex.Message}");
 
-            MessageBox.Show(
+            AppDialog.Show(
                 "The manager could not confirm that the Palworld server stopped. " +
                 "The manager will remain open.\n\n" + ex.Message,
                 "Server Shutdown Failed",
@@ -412,6 +365,11 @@ public partial class MainWindow : Window
             case MainPageIndex.Workspace:
                 RefreshWorkspaceManager();
                 break;
+            case MainPageIndex.Diagnostics:
+                DiagnosticsStatusText.Text = lastDiagnosticsSnapshot is null
+                    ? "Diagnostics are ready. Run the full audit when you want a current health snapshot."
+                    : $"Last diagnostics score: {lastDiagnosticsSnapshot.Score}% ({lastDiagnosticsSnapshot.OverallStatus}).";
+                break;
         }
     }
     private void RefreshGuilds()
@@ -558,9 +516,10 @@ public partial class MainWindow : Window
         var playerDirectory = string.IsNullOrWhiteSpace(worldDirectory) ? "" : Path.Combine(worldDirectory!, "Players");
         if (Directory.Exists(playerDirectory))
         {
-            foreach (var savePath in Directory.EnumerateFiles(playerDirectory, "*.sav", SearchOption.TopDirectoryOnly))
+            foreach (var candidate in new PlayerSaveDiscoveryService().DiscoverFromPlayersDirectory(playerDirectory).Accepted)
             {
-                var uid = Path.GetFileNameWithoutExtension(savePath);
+                var savePath = candidate.Path;
+                var uid = candidate.PlayerId;
                 if (string.IsNullOrWhiteSpace(uid) || players.ContainsKey(uid)) continue;
                 players[uid] = new GuildWorldPlayerRow
                 {
@@ -602,7 +561,7 @@ public partial class MainWindow : Window
         var guild = SelectedGuild;
         if (guild is null || string.IsNullOrWhiteSpace(guild.GuildId))
         {
-            MessageBox.Show("Select a guild with a valid guild ID first.", "Guild Manager", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a guild with a valid guild ID first.", "Guild Manager", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         Clipboard.SetText(guild.GuildId);
@@ -615,7 +574,7 @@ public partial class MainWindow : Window
         var member = SelectedGuildMember;
         if (member is null)
         {
-            MessageBox.Show("Select a guild member first.", "Guild Manager", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a guild member first.", "Guild Manager", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         NavigateToPage(4);
@@ -634,7 +593,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "World Discovery Diagnostics", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "World Discovery Diagnostics", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
     private void ExportGuildSnapshot_Click(object sender, RoutedEventArgs e)
@@ -644,7 +603,7 @@ public partial class MainWindow : Window
         var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "JSON files (*.json)|*.json", FileName = $"GuildSnapshot_{DateTime.Now:yyyyMMdd_HHmmss}.json" };
         if (dialog.ShowDialog() != true) return;
         guilds.ExportSnapshot(currentGuildSnapshot, dialog.FileName);
-        MessageBox.Show("Guild snapshot exported successfully.", "Guilds", MessageBoxButton.OK, MessageBoxImage.Information);
+        AppDialog.Show("Guild snapshot exported successfully.", "Guilds", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void ValidateGuildRepair_Click(object sender, RoutedEventArgs e)
@@ -666,7 +625,7 @@ public partial class MainWindow : Window
 
     private void AddPlayerToGuild_Click(object sender, RoutedEventArgs e)
     {
-        var guild=SelectedGuild; if(guild is null){ MessageBox.Show("Select a guild first."); return; }
+        var guild=SelectedGuild; if(guild is null){ AppDialog.Show("Select a guild first."); return; }
         var uid=Microsoft.VisualBasic.Interaction.InputBox("Enter the player UID to add:","Add Player to Guild",""); if(string.IsNullOrWhiteSpace(uid)) return;
         var name=Microsoft.VisualBasic.Interaction.InputBox("Enter the player display name:","Add Player to Guild",uid);
         if(!guild.Members.Any(m=>m.PlayerUid.Equals(uid,StringComparison.OrdinalIgnoreCase))) guild.Members.Add(new GuildMemberRow{PlayerUid=uid,PlayerName=string.IsNullOrWhiteSpace(name)?uid:name});
@@ -675,20 +634,20 @@ public partial class MainWindow : Window
 
     private void TransferGuildLeadership_Click(object sender, RoutedEventArgs e)
     {
-        var guild=SelectedGuild; var member=SelectedGuildMember; if(guild is null || member is null){MessageBox.Show("Select a guild and member first.");return;}
+        var guild=SelectedGuild; var member=SelectedGuildMember; if(guild is null || member is null){AppDialog.Show("Select a guild and member first.");return;}
         foreach(var m in guild.Members)m.IsLeader=false; member.IsLeader=true; guild.LeaderUid=member.PlayerUid; guild.LeaderName=member.PlayerName;
         guildRepairPlan.Operations.Add(new GuildRepairOperation{Type=GuildRepairOperationType.TransferLeadership,GuildId=guild.GuildId,PlayerUid=member.PlayerUid,Description=$"Transfer leadership to {member.PlayerName}"}); RefreshGuildsGridView(); GuildSelection_Changed(this,new SelectionChangedEventArgs(System.Windows.Controls.Primitives.Selector.SelectionChangedEvent, Array.Empty<object>(), Array.Empty<object>()));
     }
 
     private void ClaimOrphanedGuild_Click(object sender, RoutedEventArgs e)
     {
-        var guild=SelectedGuild; if(guild is null){MessageBox.Show("Select a guild first.");return;} if(!guild.IsOrphaned){MessageBox.Show("The selected guild is not orphaned.");return;}
+        var guild=SelectedGuild; if(guild is null){AppDialog.Show("Select a guild first.");return;} if(!guild.IsOrphaned){AppDialog.Show("The selected guild is not orphaned.");return;}
         AddPlayerToGuild_Click(sender,e); var member=guild.Members.LastOrDefault(); if(member is null)return; foreach(var m in guild.Members)m.IsLeader=false; member.IsLeader=true; guild.LeaderUid=member.PlayerUid; guild.LeaderName=member.PlayerName; guildRepairPlan.Operations.Add(new GuildRepairOperation{Type=GuildRepairOperationType.ClaimOrphanedGuild,GuildId=guild.GuildId,PlayerUid=member.PlayerUid,Description=$"Claim orphaned guild {guild.Name}"}); RefreshGuildsGridView();
     }
 
     private void RepairGuildMappings_Click(object sender, RoutedEventArgs e)
     {
-        var guild=SelectedGuild; if(guild is null){MessageBox.Show("Select a guild first.");return;}
+        var guild=SelectedGuild; if(guild is null){AppDialog.Show("Select a guild first.");return;}
         guild.Members= guild.Members.GroupBy(m=>m.PlayerUid,StringComparer.OrdinalIgnoreCase).Select(g=>g.First()).ToList();
         if(!string.IsNullOrWhiteSpace(guild.LeaderUid) && !guild.Members.Any(m=>m.PlayerUid.Equals(guild.LeaderUid,StringComparison.OrdinalIgnoreCase))) guild.Members.Add(new GuildMemberRow{PlayerUid=guild.LeaderUid,PlayerName=guild.LeaderName,IsLeader=true});
         guildRepairPlan.Operations.Add(new GuildRepairOperation{Type=GuildRepairOperationType.RepairOwnershipMappings,GuildId=guild.GuildId,Description=$"Normalize ownership mappings for {guild.Name}"}); RefreshGuildsGridView();
@@ -696,7 +655,7 @@ public partial class MainWindow : Window
 
     private void ApplyGuildRepair_Click(object sender, RoutedEventArgs e)
     {
-        if(currentGuildSnapshot is null || guildRepairPlan.Operations.Count==0){MessageBox.Show("No guild repair operations are staged.");return;}
+        if(currentGuildSnapshot is null || guildRepairPlan.Operations.Count==0){AppDialog.Show("No guild repair operations are staged.");return;}
         try { var result=new GuildRepairExecutor(settings).Execute(currentGuildSnapshot,guildRepairPlan); GuildRepairStatusText.Text=$"{result.Message} Backup: {result.BackupPath}"; GuildRepairStatusText.Foreground=Brushes.LightGreen; guildRepairPlan=new GuildRepairPlan{WorldPath=currentGuildSnapshot.WorldPath}; RefreshGuilds(); }
         catch(Exception ex){GuildRepairStatusText.Text="Repair failed: "+ex.Message; GuildRepairStatusText.Foreground=Brushes.IndianRed;}
     }
@@ -706,10 +665,10 @@ public partial class MainWindow : Window
     private void RepairImportedWorldWizard_Click(object sender, RoutedEventArgs e)
     {
         RefreshGuilds();
-        if(currentGuildSnapshot is null || currentGuildSnapshot.Guilds.Count==0){MessageBox.Show("No decoded guild data was found. Export the imported Level.sav to Level.sav.json or provide Guilds.json, then refresh.","Repair Imported World",MessageBoxButton.OK,MessageBoxImage.Warning);return;}
+        if(currentGuildSnapshot is null || currentGuildSnapshot.Guilds.Count==0){AppDialog.Show("No decoded guild data was found. Export the imported Level.sav to Level.sav.json or provide Guilds.json, then refresh.","Repair Imported World",MessageBoxButton.OK,MessageBoxImage.Warning);return;}
         var orphaned=currentGuildSnapshot.Guilds.Where(g=>g.IsOrphaned).ToList();
         var summary=$"World: {currentGuildSnapshot.SourcePath}\nGuilds: {currentGuildSnapshot.Guilds.Count}\nOrphaned guilds: {orphaned.Count}\n\nThe wizard will validate IDs, remove duplicate memberships, repair leader membership links, create a full backup, and write the repaired decoded guild data. Continue?";
-        if(MessageBox.Show(summary,"Repair Imported World — Review",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        if(AppDialog.Show(summary,"Repair Imported World — Review",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         foreach(var guild in currentGuildSnapshot.Guilds)
         {
             guild.Members=guild.Members.Where(m=>!string.IsNullOrWhiteSpace(m.PlayerUid)).GroupBy(m=>m.PlayerUid,StringComparer.OrdinalIgnoreCase).Select(g=>g.First()).ToList();
@@ -721,9 +680,9 @@ public partial class MainWindow : Window
         {
             guildTransactions.ValidatePlan(currentGuildSnapshot,guildRepairPlan); var world=File.Exists(currentGuildSnapshot.SourcePath) ? Path.GetDirectoryName(currentGuildSnapshot.SourcePath)! : currentGuildSnapshot.SourcePath; var backup=guildTransactions.CreateBackup(world); guilds.SaveSnapshot(currentGuildSnapshot);
             var report=Path.Combine(world,$"MystGuildRepairReport_{DateTime.Now:yyyyMMdd_HHmmss}.json"); File.WriteAllText(report,System.Text.Json.JsonSerializer.Serialize(new{completedUtc=DateTime.UtcNow,backup,operations=guildRepairPlan.Operations,warnings=currentGuildSnapshot.Warnings},new System.Text.Json.JsonSerializerOptions{WriteIndented=true}));
-            MessageBox.Show($"Imported-world guild repair completed.\n\nBackup: {backup}\nReport: {report}","Repair Imported World",MessageBoxButton.OK,MessageBoxImage.Information); guildRepairPlan=new GuildRepairPlan{WorldPath=world}; RefreshGuilds();
+            AppDialog.Show($"Imported-world guild repair completed.\n\nBackup: {backup}\nReport: {report}","Repair Imported World",MessageBoxButton.OK,MessageBoxImage.Information); guildRepairPlan=new GuildRepairPlan{WorldPath=world}; RefreshGuilds();
         }
-        catch(Exception ex){MessageBox.Show("The wizard could not apply the repair. The original world was not intentionally removed.\n\n"+ex.Message,"Repair Imported World",MessageBoxButton.OK,MessageBoxImage.Error);}
+        catch(Exception ex){AppDialog.Show("The wizard could not apply the repair. The original world was not intentionally removed.\n\n"+ex.Message,"Repair Imported World",MessageBoxButton.OK,MessageBoxImage.Error);}
     }
 
     private void HandleServerOutput(string line)
@@ -737,32 +696,44 @@ public partial class MainWindow : Window
 
         crashAnalyzer.Observe(normalized);
         ObserveExplicitModLoad(normalized);
-
-        // Admin Commands has used multiple startup message formats across releases,
-        // including both "AdminCommands has been loaded successfully!" and
-        // "[AdminCommands] has been loaded successfully!". Treat the combination
-        // of the mod name + an explicit successful-load phrase as authoritative
-        // runtime evidence rather than relying on one exact string.
-        var adminLine = normalized.Contains("AdminCommands", StringComparison.OrdinalIgnoreCase);
-        var adminLoadSuccess = adminLine &&
-            (normalized.Contains("loaded successfully", StringComparison.OrdinalIgnoreCase) ||
-             normalized.Contains("successfully loaded", StringComparison.OrdinalIgnoreCase));
-        var adminLoadFailure = adminLine &&
-            (normalized.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
-             normalized.Contains("exception", StringComparison.OrdinalIgnoreCase) ||
-             normalized.Contains("fatal", StringComparison.OrdinalIgnoreCase));
-
-        if (adminLoadSuccess)
-        {
-            adminCommandsRuntimeLoaded = true;
-            Dispatcher.BeginInvoke(new Action(UpdateAdminCommandsConsoleState));
-        }
-        else if (adminLoadFailure)
-        {
-            adminCommandsRuntimeLoaded = false;
-            Dispatcher.BeginInvoke(new Action(UpdateAdminCommandsConsoleState));
-        }
+        ObserveAdminCommandsRuntime(normalized);
         Log("[SERVER] " + normalized);
+    }
+
+
+    private void ObserveAdminCommandsRuntime(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return;
+
+        // Match common package/display variants such as AdminCommands,
+        // Admin Commands, [AdminCommands], and admin_commands.
+        var compact = Regex.Replace(line, "[^a-zA-Z0-9]", string.Empty);
+        if (!compact.Contains("admincommands", StringComparison.OrdinalIgnoreCase)) return;
+
+        var success =
+            line.Contains("loaded successfully", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("successfully loaded", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("initialized successfully", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("registered successfully", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("started successfully", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("entry point executed", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("hook registered", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("hooks registered", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("heartbeat", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("functionally verified", StringComparison.OrdinalIgnoreCase);
+        var failure =
+            line.Contains("failed to load", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("failed loading", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("load failed", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("unhandled exception", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("fatal", StringComparison.OrdinalIgnoreCase);
+
+        if (!success && !failure) return;
+        var loaded = success && !failure;
+        if (adminCommandsRuntimeLoaded == loaded) return;
+
+        adminCommandsRuntimeLoaded = loaded;
+        Dispatcher.BeginInvoke(new Action(UpdateAdminCommandsConsoleState));
     }
 
     private static string NormalizeServerOutput(string line)
@@ -908,7 +879,7 @@ public partial class MainWindow : Window
             var diagnosticPath = WriteManagerExceptionDiagnostic(ex, "Exclusive operation");
             Log($"ERROR: {ex.GetType().Name}: {ex.Message}");
             Log($"[DIAGNOSTIC] Manager exception details saved: {diagnosticPath}");
-            MessageBox.Show(
+            AppDialog.Show(
                 ex.Message + "\n\nDiagnostic details were saved to:\n" + diagnosticPath,
                 "Palworld Server Manager", MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -1057,7 +1028,7 @@ public partial class MainWindow : Window
         AdminCommandsStatusText.Foreground = adminCommandsRuntimeLoaded ? Brushes.LightGreen : Brushes.Gold;
     }
 
-    private void RefreshModRuntime()
+    private void RefreshModRuntime(IEnumerable<ModRow>? currentMods = null)
     {
         if (ModRuntimeStatusText is null) return;
         try
@@ -1074,23 +1045,68 @@ public partial class MainWindow : Window
             var latest = environment.GetLatestUe4ssRuntimeSnapshot();
             ModRuntimeBackupText.Text = latest is null ? "Last runtime snapshot: None" : $"Last runtime snapshot: {Path.GetFileName(latest)}";
 
-            var runtimeMods = mods.Scan();
-            var admin = runtimeMods.FirstOrDefault(m => m.Name.Contains("Admin", StringComparison.OrdinalIgnoreCase) && m.Name.Contains("Command", StringComparison.OrdinalIgnoreCase));
-            var qol = runtimeMods.FirstOrDefault(m => m.Name.Contains("Quality", StringComparison.OrdinalIgnoreCase) || m.Source.Contains("3761921027", StringComparison.OrdinalIgnoreCase) || m.Package.Contains("3761921027", StringComparison.OrdinalIgnoreCase));
-            ModRuntimeCompatibilityText.Text =
-                $"Quality of Life: {(qol is null ? "Not installed" : qol.Enabled ? "Enabled" : "Installed / disabled")}\n" +
-                $"Admin Commands: {(admin is null ? "Not installed" : admin.Enabled ? "Enabled" : "Installed / disabled")}\n\n" +
-                "Runtime guidance:\n" +
-                "• Current Admin Commands releases require an experimental UE4SS-compatible runtime.\n" +
-                "• If using experimental UE4SS, MemberVariableLayout.ini should be present for compatibility.\n" +
-                "• Change runtime only while PalServer is stopped. MystTiq snapshots the current runtime before imports.\n" +
-                "• Runtime imports preserve managed user-mod folders; re-verify all mods after a runtime change.";
+            var runtimeMods = (currentMods ?? mods.Scan()).ToList();
+            var compatibility = modCompatibility.Scan(runtimeMods);
+            var enabled = runtimeMods.Count(mod => mod.Enabled);
+            var ue4ssMods = runtimeMods.Count(mod =>
+                mod.Type.Contains("UE4SS", StringComparison.OrdinalIgnoreCase) ||
+                mod.Source.Contains("UE4SS", StringComparison.OrdinalIgnoreCase));
+            var compatible = compatibility.Results.Count(result => result.OverallState == ModCompatibilityState.Compatible);
+            var attention = compatibility.Results.Count(result => result.OverallState == ModCompatibilityState.Attention);
+            var conflicts = compatibility.Results.Count(result => result.OverallState == ModCompatibilityState.Conflict);
+            var failed = compatibility.Results.Count(result => result.OverallState == ModCompatibilityState.Failed);
+
+            var runtimeAssessment = !state.Installed && ue4ssMods > 0
+                ? "UE4SS-dependent mods are installed, but the runtime is missing."
+                : state.Installed && !state.Enabled && ue4ssMods > 0
+                    ? "UE4SS-dependent mods are installed, but the runtime is disabled."
+                    : state.Installed && state.Enabled
+                        ? "The UE4SS runtime is installed and enabled."
+                        : "No enabled UE4SS runtime is currently required by the detected inventory.";
+
+            var issues = compatibility.Results
+                .Where(result => result.OverallState != ModCompatibilityState.Compatible)
+                .Take(5)
+                .Select(result => $"• {result.Name}: {result.OverallStatus} — {result.Details}")
+                .ToList();
+
+            var lines = new List<string>
+            {
+                runtimeAssessment,
+                $"Detected mods: {runtimeMods.Count} total • {enabled} enabled • {ue4ssMods} UE4SS/Lua",
+                $"Compatibility: {compatible} compatible • {attention} attention • {conflicts} conflict • {failed} failed",
+                identity.MemberVariableLayoutPresent
+                    ? "MemberVariableLayout.ini is present."
+                    : "MemberVariableLayout.ini was not detected; verify whether the selected runtime/mod combination requires it."
+            };
+
+            if (issues.Count > 0)
+            {
+                lines.Add(string.Empty);
+                lines.Add("Items requiring review:");
+                lines.AddRange(issues);
+                if (compatibility.Results.Count(result => result.OverallState != ModCompatibilityState.Compatible) > issues.Count)
+                    lines.Add("• Additional items require review in the MOD Dashboard.");
+            }
+            else if (runtimeMods.Count > 0)
+            {
+                lines.Add(string.Empty);
+                lines.Add("No dependency, file-overlap, or local-version issues were detected by the current scan.");
+            }
+
+            lines.Add(string.Empty);
+            lines.Add("Change UE4SS only while PalServer is stopped, then run Verify All Mods after the next server start.");
+            ModRuntimeCompatibilityText.Text = string.Join(Environment.NewLine, lines);
+            if (ModRuntimeCompatibilityUpdatedText is not null)
+                ModRuntimeCompatibilityUpdatedText.Text = $"Updated {DateTime.Now:t}";
         }
         catch (Exception ex)
         {
             ModRuntimeStatusText.Text = "CHECK FAILED";
             ModRuntimeStatusText.Foreground = Brushes.IndianRed;
             ModRuntimeCompatibilityText.Text = "Runtime inspection failed: " + ex.Message;
+            if (ModRuntimeCompatibilityUpdatedText is not null)
+                ModRuntimeCompatibilityUpdatedText.Text = "Update failed";
         }
     }
 
@@ -1104,21 +1120,21 @@ public partial class MainWindow : Window
             Directory.CreateDirectory(folder);
             Process.Start(new ProcessStartInfo("explorer.exe", folder) { UseShellExecute = true });
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Open Runtime Folder", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { AppDialog.Show(ex.Message, "Open Runtime Folder", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void VerifyModRuntime_Click(object sender, RoutedEventArgs e)
     {
         var result = environment.VerifyComponent("UE4SS Runtime");
         RefreshModRuntime();
-        MessageBox.Show(result.Message, "UE4SS Runtime Verification", MessageBoxButton.OK, result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        AppDialog.Show(result.Message, "UE4SS Runtime Verification", MessageBoxButton.OK, result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
     }
 
     private void ToggleModRuntime_Click(object sender, RoutedEventArgs e)
     {
         if (server.IsRunning())
         {
-            MessageBox.Show("Stop PalServer before changing the UE4SS runtime state.", "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("Stop PalServer before changing the UE4SS runtime state.", "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         try
@@ -1129,12 +1145,12 @@ public partial class MainWindow : Window
             Log("[UE4SS] " + message);
             RefreshEnvironment();
             RefreshModRuntime();
-            MessageBox.Show(message, "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show(message, "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             Log("[UE4SS] Runtime state change failed: " + ex.Message);
-            MessageBox.Show(ex.Message, "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1142,7 +1158,7 @@ public partial class MainWindow : Window
     {
         if (server.IsRunning())
         {
-            MessageBox.Show("Stop PalServer before taking or changing a UE4SS runtime snapshot.", "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("Stop PalServer before taking or changing a UE4SS runtime snapshot.", "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         try
@@ -1150,16 +1166,16 @@ public partial class MainWindow : Window
             var path = environment.CreateUe4ssRuntimeSnapshot();
             Log("[UE4SS] Runtime snapshot created: " + path);
             RefreshModRuntime();
-            MessageBox.Show("Runtime snapshot created:\n\n" + path, "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Runtime snapshot created:\n\n" + path, "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Runtime Snapshot", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { AppDialog.Show(ex.Message, "Runtime Snapshot", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void ImportModRuntimeZip_Click(object sender, RoutedEventArgs e)
     {
         if (server.IsRunning())
         {
-            MessageBox.Show("Stop PalServer before importing a different UE4SS runtime.", "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("Stop PalServer before importing a different UE4SS runtime.", "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         var dialog = new Microsoft.Win32.OpenFileDialog
@@ -1170,7 +1186,7 @@ public partial class MainWindow : Window
             Multiselect = false
         };
         if (dialog.ShowDialog(this) != true) return;
-        if (MessageBox.Show(
+        if (AppDialog.Show(
             "MystTiq will snapshot the current UE4SS runtime, then import compatible runtime files from this ZIP. Managed user-mod folders are preserved. Continue?",
             "Change UE4SS Runtime", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         try
@@ -1179,12 +1195,12 @@ public partial class MainWindow : Window
             Log("[UE4SS] " + message);
             RefreshEnvironment();
             RefreshModRuntime();
-            MessageBox.Show(message + "\n\nRun Verify All Mods before starting the server.", "Runtime Imported", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show(message + "\n\nRun Verify All Mods before starting the server.", "Runtime Imported", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             Log("[UE4SS] Runtime import failed: " + ex.Message);
-            MessageBox.Show(ex.Message, "Runtime Import Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "Runtime Import Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1192,7 +1208,7 @@ public partial class MainWindow : Window
     {
         if (server.IsRunning())
         {
-            MessageBox.Show("Stop PalServer before restoring a UE4SS runtime snapshot.", "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("Stop PalServer before restoring a UE4SS runtime snapshot.", "MOD Runtime", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         var root = Path.Combine(settings.BackupRoot, "UE4SS-Runtimes");
@@ -1206,19 +1222,19 @@ public partial class MainWindow : Window
             Multiselect = false
         };
         if (dialog.ShowDialog(this) != true) return;
-        if (MessageBox.Show("Restore the selected runtime snapshot? User-mod folders will be preserved.", "Restore Runtime", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        if (AppDialog.Show("Restore the selected runtime snapshot? User-mod folders will be preserved.", "Restore Runtime", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         try
         {
             var message = environment.RestoreUe4ssRuntimeSnapshot(dialog.FileName);
             Log("[UE4SS] " + message);
             RefreshEnvironment();
             RefreshModRuntime();
-            MessageBox.Show(message, "Runtime Restored", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show(message, "Runtime Restored", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             Log("[UE4SS] Runtime restore failed: " + ex.Message);
-            MessageBox.Show(ex.Message, "Runtime Restore Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "Runtime Restore Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1483,7 +1499,7 @@ public partial class MainWindow : Window
         var processes = server.ScanServerProcesses();
         if (processes.Count == 0)
         {
-            MessageBox.Show("No Palworld server processes are currently detected.", "Server Process Scan", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("No Palworld server processes are currently detected.", "Server Process Scan", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -1491,7 +1507,7 @@ public partial class MainWindow : Window
             $"PID {item.ProcessId}  {item.Name}\n" +
             $"Path: {(string.IsNullOrWhiteSpace(item.ExecutablePath) ? "Unavailable" : item.ExecutablePath)}\n" +
             $"Configured server: {(item.InConfiguredServerRoot ? "Yes" : "No")}");
-        MessageBox.Show(string.Join("\n\n", lines), "Server Process Scan", MessageBoxButton.OK, MessageBoxImage.Information);
+        AppDialog.Show(string.Join("\n\n", lines), "Server Process Scan", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private async void ForceCleanup_Click(object sender, RoutedEventArgs e)
@@ -1504,7 +1520,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var answer = MessageBox.Show(
+        var answer = AppDialog.Show(
             $"Force-close Palworld processes belonging to the configured server?\n\nDetected processes: {processes.Count}\n\nUse this only when the server is hung or orphaned.",
             "Force Server Cleanup", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes) return;
@@ -1522,7 +1538,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             Log("Force Cleanup failed: " + ex.Message);
-            MessageBox.Show(ex.Message, "Force Cleanup Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "Force Cleanup Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1661,7 +1677,7 @@ public partial class MainWindow : Window
     }
     private async Task PrepareForNewServerSessionAsync(CancellationToken ct)
     {
-        await StopSessionLogTailAsync(TimeSpan.FromSeconds(1));
+        await StopSessionLogTailAsync(ApplicationConstants.Timing.ShutdownLogTailTimeout);
         await server.CancelActiveSessionIoAsync(TimeSpan.FromSeconds(1));
         ct.ThrowIfCancellationRequested();
         var io = server.GetSessionIoDiagnostics();
@@ -1732,7 +1748,7 @@ public partial class MainWindow : Window
             }
 
             UpdateStatusText.Text = "Current operation: Stopping server — releasing session I/O";
-            await StopSessionLogTailAsync(TimeSpan.FromSeconds(1));
+            await StopSessionLogTailAsync(ApplicationConstants.Timing.ShutdownLogTailTimeout);
             UpdateStatusText.Text = "Current operation: Stopping server — terminating PalServer";
             await server.ForceStopAsync();
 
@@ -1776,7 +1792,7 @@ public partial class MainWindow : Window
                 }
 
                 UpdateStatusText.Text = "Current operation: Restarting — releasing session I/O";
-                await StopSessionLogTailAsync(TimeSpan.FromSeconds(1));
+                await StopSessionLogTailAsync(ApplicationConstants.Timing.ShutdownLogTailTimeout);
                 UpdateStatusText.Text = "Current operation: Restarting — terminating PalServer";
                 await server.ForceStopAsync();
                 UpdateStatusText.Text = "Current operation: Restarting — verifying stop cleanup";
@@ -1832,7 +1848,7 @@ public partial class MainWindow : Window
 
                 BackupsStatusText.Foreground = Brushes.LightGreen;
                 BackupsStatusText.Text = $"Backup completed successfully: {Path.GetFileName(path)}";
-                MessageBox.Show(
+                AppDialog.Show(
                     $"Backup completed successfully.\n\n{path}",
                     "Backup Complete",
                     MessageBoxButton.OK,
@@ -1846,7 +1862,7 @@ public partial class MainWindow : Window
             }
             catch (BackupSourceLockedException ex) when (server.IsRunning())
             {
-                var choice = MessageBox.Show(
+                var choice = AppDialog.Show(
                     "Palworld is holding an active save file open, so Windows cannot create a consistent live snapshot.\n\n" +
                     $"Locked file: {ex.RelativePath}\n\n" +
                     "MystTiq can temporarily stop the server, create and verify the backup, then start the server again. " +
@@ -1870,7 +1886,7 @@ public partial class MainWindow : Window
                     var path = await CreateCoordinatedMaintenanceBackupAsync(ct);
                     BackupsStatusText.Foreground = Brushes.LightGreen;
                     BackupsStatusText.Text = $"Maintenance backup completed successfully: {Path.GetFileName(path)}";
-                    MessageBox.Show(
+                    AppDialog.Show(
                         $"Backup completed and the Palworld server was started again.\n\n{path}",
                         "Maintenance Backup Complete",
                         MessageBoxButton.OK,
@@ -1881,7 +1897,7 @@ public partial class MainWindow : Window
                     BackupsStatusText.Foreground = Brushes.IndianRed;
                     BackupsStatusText.Text = "Maintenance backup failed: " + maintenanceError.Message;
                     Log("Maintenance backup failed: " + maintenanceError.Message);
-                    MessageBox.Show(
+                    AppDialog.Show(
                         "MystTiq could not complete the coordinated maintenance backup.\n\n" +
                         maintenanceError.Message +
                         "\n\nCheck the Dashboard before manually starting the server.",
@@ -1895,7 +1911,7 @@ public partial class MainWindow : Window
                 BackupsStatusText.Foreground = Brushes.IndianRed;
                 BackupsStatusText.Text = "Backup failed: " + ex.Message;
                 Log("Backup failed: " + ex.Message);
-                MessageBox.Show(
+                AppDialog.Show(
                     "MystTiq could not create the backup.\n\n" + ex.Message,
                     "Backup Failed",
                     MessageBoxButton.OK,
@@ -1928,7 +1944,7 @@ public partial class MainWindow : Window
         }
 
         UpdateStatusText.Text = "Current operation: Maintenance backup — stopping server";
-        await StopSessionLogTailAsync(TimeSpan.FromSeconds(1));
+        await StopSessionLogTailAsync(ApplicationConstants.Timing.ShutdownLogTailTimeout);
         await server.ForceStopAsync();
 
         var cleanup = await server.CleanupSessionAfterShutdownAsync(ct);
@@ -2039,7 +2055,7 @@ public partial class MainWindow : Window
             if (worldOverride is not null)
                 Log("[BACKUP WARNING] Imported-world override detected: " + worldOverride);
 
-            var answer = MessageBox.Show(
+            var answer = AppDialog.Show(
                 warning.ToString(),
                 "REST Save Authentication Failed",
                 MessageBoxButton.YesNo,
@@ -2071,7 +2087,7 @@ public partial class MainWindow : Window
                     SetUpdateStatus(
                         ServerUpdateState.Error,
                         "Update status: Stop the Palworld server before checking for updates.");
-                    MessageBox.Show(
+                    AppDialog.Show(
                         "Stop the Palworld server before checking for or installing server updates.",
                         "Server Update",
                         MessageBoxButton.OK,
@@ -2120,7 +2136,7 @@ public partial class MainWindow : Window
 
                     case ServerUpdateState.Error:
                         Log("SteamCMD update failed: " + result.Message);
-                        MessageBox.Show(
+                        AppDialog.Show(
                             result.Message,
                             "Server Update Failed",
                             MessageBoxButton.OK,
@@ -2329,10 +2345,11 @@ public partial class MainWindow : Window
             var wanted = NormalizeId(playerId);
             if (string.IsNullOrWhiteSpace(wanted)) return string.Empty;
 
-            return Directory.EnumerateDirectories(settings.SaveRoot, "Players", SearchOption.AllDirectories)
-                .SelectMany(directory => Directory.EnumerateFiles(directory, "*.sav", SearchOption.TopDirectoryOnly))
-                .Where(path => !Path.GetFileNameWithoutExtension(path).EndsWith("_dps", StringComparison.OrdinalIgnoreCase))
-                .FirstOrDefault(path => NormalizeId(Path.GetFileNameWithoutExtension(path)) == wanted) ?? string.Empty;
+            var fileSystem = new SafeFileSystemService();
+            var discovery = new PlayerSaveDiscoveryService(fileSystem);
+            return fileSystem.EnumerateDirectories(settings.SaveRoot, "Players", SearchOption.AllDirectories)
+                .SelectMany(directory => discovery.DiscoverFromPlayersDirectory(directory).Accepted)
+                .FirstOrDefault(candidate => NormalizeId(candidate.PlayerId) == wanted)?.Path ?? string.Empty;
         }
         catch
         {
@@ -2414,7 +2431,7 @@ public partial class MainWindow : Window
         showAllKnownPlayers = true;
         PlayerViewCombo.SelectedIndex = 1;
         RefreshPlayerHistoryGrid();
-        MessageBox.Show(added == 0 ? "No new player save files were found." : $"Discovered {added} additional player save file(s). Imported records will be enriched automatically if those players connect again.", "Player History", MessageBoxButton.OK, MessageBoxImage.Information);
+        AppDialog.Show(added == 0 ? "No new player save files were found." : $"Discovered {added} additional player save file(s). Imported records will be enriched automatically if those players connect again.", "Player History", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
 
@@ -2422,7 +2439,7 @@ public partial class MainWindow : Window
     {
         if (PlayersGrid.SelectedItem is not PlayerRow p)
         {
-            MessageBox.Show("Select a player first.", "Player Manager", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a player first.", "Player Manager", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         Clipboard.SetText($"Player: {p.Name}{Environment.NewLine}User ID: {p.UserId}{Environment.NewLine}Steam ID: {p.SteamId}{Environment.NewLine}Player ID: {p.PlayerId}");
@@ -2433,7 +2450,7 @@ public partial class MainWindow : Window
     {
         if (PlayersGrid.SelectedItem is not PlayerRow p || string.IsNullOrWhiteSpace(p.SavePath) || !File.Exists(p.SavePath))
         {
-            MessageBox.Show("No matching player save file was found for the selected player. Use Discover Saves to rescan the world.", "Player Manager", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("No matching player save file was found for the selected player. Use Discover Saves to rescan the world.", "Player Manager", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{p.SavePath}\"") { UseShellExecute = true });
@@ -2444,23 +2461,23 @@ public partial class MainWindow : Window
     {
         if (PlayersGrid.SelectedItem is not PlayerRow player)
         {
-            MessageBox.Show("Select a player first.", "Delete Player Files", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a player first.", "Delete Player Files", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         if (player.Status.Equals("ONLINE", StringComparison.OrdinalIgnoreCase))
         {
-            MessageBox.Show("The selected player is online. Disconnect or kick the player, stop PalServer, and try again.", "Delete Player Files", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("The selected player is online. Disconnect or kick the player, stop PalServer, and try again.", "Delete Player Files", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (server.IsRunning())
         {
-            MessageBox.Show("PalServer must be stopped before player files can be deleted.", "Delete Player Files", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("PalServer must be stopped before player files can be deleted.", "Delete Player Files", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         var primarySavePath = ResolvePlayerSavePath(player);
         if (string.IsNullOrWhiteSpace(primarySavePath) || !File.Exists(primarySavePath))
         {
-            var removeOnly = MessageBox.Show(
+            var removeOnly = AppDialog.Show(
                 $"No primary save file can be located for {player.Name}.\n\nRemove this stale player record from MystTiq's player list?\n\nThis does not alter Level.sav, guilds, bases, or Palbox ownership.",
                 "Remove Stale Player Record",
                 MessageBoxButton.YesNo,
@@ -2477,7 +2494,7 @@ public partial class MainWindow : Window
 
         var dpsPath = Path.Combine(Path.GetDirectoryName(primarySavePath) ?? string.Empty, Path.GetFileNameWithoutExtension(primarySavePath) + "_dps.sav");
         var warning = $"Delete the selected player's save files?\n\nPlayer: {player.Name}\nPlayer ID: {BlankDash(player.PlayerId)}\nPrimary save: {primarySavePath}\n_dps companion: {(File.Exists(dpsPath) ? dpsPath : "not present")}\n\nMyst will create a recovery ZIP first. This removes player files and all matching manager history records, but it does NOT purge guild, base, Palbox, or Level.sav references. Use Player Recovery or Guild & Base Recovery if ownership references remain.";
-        if (MessageBox.Show(warning, "Delete Player Files", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        if (AppDialog.Show(warning, "Delete Player Files", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
 
         try
         {
@@ -2510,12 +2527,12 @@ public partial class MainWindow : Window
             RefreshPlayerHistoryGrid();
             Log($"[PLAYERS] Deleted player files for {player.Name}; removed {removedRecords} matching history record(s). Recovery ZIP: {backupPath}");
             RecordAudit("Warning", "Players", "Player save files deleted", $"{player.Name} • recovery: {backupPath}", 4);
-            MessageBox.Show($"Player files deleted successfully.\n\nRecovery ZIP:\n{backupPath}\n\nWorld ownership references were not changed.", "Delete Player Files", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show($"Player files deleted successfully.\n\nRecovery ZIP:\n{backupPath}\n\nWorld ownership references were not changed.", "Delete Player Files", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             Log("[PLAYERS] Delete failed: " + ex.Message);
-            MessageBox.Show("Player deletion failed. No further files will be removed.\n\n" + ex.Message, "Delete Player Files", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show("Player deletion failed. No further files will be removed.\n\n" + ex.Message, "Delete Player Files", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -2524,7 +2541,7 @@ public partial class MainWindow : Window
         var rows = PlayersGrid.ItemsSource?.Cast<PlayerRow>().ToList() ?? [];
         if (rows.Count == 0)
         {
-            MessageBox.Show("There are no players in the current filtered view to export.", "Player Manager", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("There are no players in the current filtered view to export.", "Player Manager", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         var dialog = new Microsoft.Win32.SaveFileDialog
@@ -2563,11 +2580,11 @@ public partial class MainWindow : Window
         if (PlayersGrid.SelectedItem is not PlayerRow p) return;
         if (!p.Status.Equals("ONLINE", StringComparison.OrdinalIgnoreCase))
         {
-            MessageBox.Show("Kick and Ban Selected require the player to be online. Offline players remain available in All Known Players for notes, IDs, and unban operations.", "Players", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Kick and Ban Selected require the player to be online. Offline players remain available in All Known Players for notes, IDs, and unban operations.", "Players", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         var id = string.IsNullOrWhiteSpace(p.UserId) ? p.SteamId : p.UserId;
-        if (string.IsNullOrWhiteSpace(id)) { MessageBox.Show("This player has no server UserID available yet.", "Players", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (string.IsNullOrWhiteSpace(id)) { AppDialog.Show("This player has no server UserID available yet.", "Players", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         try
         {
             using var api=Api();
@@ -2595,17 +2612,17 @@ public partial class MainWindow : Window
 
     private void AdminAccess_Click(object sender, RoutedEventArgs e)
     {
-        if (PlayersGrid.SelectedItem is not PlayerRow p) { MessageBox.Show("Select a player first.", "Admin Access", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (PlayersGrid.SelectedItem is not PlayerRow p) { AppDialog.Show("Select a player first.", "Admin Access", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         var uid = string.IsNullOrWhiteSpace(p.UserId) ? p.SteamId : p.UserId;
         var password = ReadRconSettings().Password;
         var text = $"Player: {p.Name}\nPlatform: {p.Platform}\nPlayer UID: {uid}\n\nVanilla Palworld does not provide a native command that remotely promotes one selected player. In-game admin is granted with /AdminPassword <password>. Admin Commands 1.0.1+ also supports PlayerUID-based permissions, but MystTiq will not guess or rewrite that mod's permission schema until it is detected from the installed mod.\n\nIn-game command for this session:\n/AdminPassword {(string.IsNullOrWhiteSpace(password) ? "<your admin password>" : password)}";
-        MessageBox.Show(text, "Admin Access", MessageBoxButton.OK, MessageBoxImage.Information);
+        AppDialog.Show(text, "Admin Access", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private async void Unban_Click(object sender, RoutedEventArgs e)
     {
         var id = PlayersGrid.SelectedItem is PlayerRow p ? (string.IsNullOrWhiteSpace(p.UserId) ? p.SteamId : p.UserId) : string.Empty;
-        if (string.IsNullOrWhiteSpace(id)) { MessageBox.Show("Select a known player with a UserID/SteamID. You can also enter UnBanPlayer <UserID> in the RCON console.", "Unban", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (string.IsNullOrWhiteSpace(id)) { AppDialog.Show("Select a known player with a UserID/SteamID. You can also enter UnBanPlayer <UserID> in the RCON console.", "Unban", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         try
         {
             await EnsureRconConnectedAsync();
@@ -2633,7 +2650,7 @@ public partial class MainWindow : Window
         var raw = ScheduledRestartTimeBox.Text.Trim();
         if (!TimeSpan.TryParse(raw, out var parsed) || parsed < TimeSpan.Zero || parsed >= TimeSpan.FromDays(1))
         {
-            MessageBox.Show("Enter the scheduled restart time as HH:mm, for example 04:00.", "Automation", MessageBoxButton.OK, MessageBoxImage.Warning); return;
+            AppDialog.Show("Enter the scheduled restart time as HH:mm, for example 04:00.", "Automation", MessageBoxButton.OK, MessageBoxImage.Warning); return;
         }
         settings.ScheduledRestartEnabled = ScheduledRestartCheck.IsChecked == true;
         settings.ScheduledRestartTime = raw;
@@ -2680,7 +2697,7 @@ public partial class MainWindow : Window
     {
         if (BackupsGrid.SelectedItem is not BackupRow backup)
         {
-            MessageBox.Show("Select a backup first.", "Verify Backup", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a backup first.", "Verify Backup", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -2695,7 +2712,7 @@ public partial class MainWindow : Window
                 BackupsStatusText.Foreground = Brushes.LightGreen;
                 BackupsStatusText.Text = "Backup verified successfully: " + result.Summary;
                 Log($"Backup verification passed: {backup.FilePath}; SHA-256 {result.Sha256}");
-                MessageBox.Show(
+                AppDialog.Show(
                     $"Backup verified successfully.\n\n{Path.GetFileName(backup.FilePath)}\n{result.Summary}\n\nSHA-256: {result.Sha256}",
                     "Backup Verified",
                     MessageBoxButton.OK,
@@ -2716,7 +2733,7 @@ public partial class MainWindow : Window
         {
             BackupsStatusText.Foreground = Brushes.IndianRed;
             BackupsStatusText.Text = "Restore failed: Select a backup first.";
-            MessageBox.Show(
+            AppDialog.Show(
                 "Select a backup first.",
                 "Restore Backup",
                 MessageBoxButton.OK,
@@ -2728,7 +2745,7 @@ public partial class MainWindow : Window
         {
             BackupsStatusText.Foreground = Brushes.IndianRed;
             BackupsStatusText.Text = "Restore blocked: Stop the server before restoring a backup.";
-            MessageBox.Show(
+            AppDialog.Show(
                 "The Palworld server must be stopped before a backup can be restored.",
                 "Restore Backup",
                 MessageBoxButton.OK,
@@ -2736,7 +2753,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var choice = MessageBox.Show(
+        var choice = AppDialog.Show(
             $"Restore this backup?\n\n{Path.GetFileName(backup.FilePath)}\n{backup.SizeMb:N2} MB\nCreated {backup.Created:g}\n\n" +
             "The current SaveGames folder will be preserved as a safety copy before it is replaced.",
             "Confirm Backup Restore",
@@ -2760,7 +2777,7 @@ public partial class MainWindow : Window
 
                 BackupsStatusText.Foreground = Brushes.LightGreen;
                 BackupsStatusText.Text = $"Restore completed successfully. Previous save preserved at: {safetyPath}";
-                MessageBox.Show(
+                AppDialog.Show(
                     "Backup restored successfully.\n\n" +
                     $"Restored: {Path.GetFileName(backup.FilePath)}\n" +
                     $"Previous save safety copy: {safetyPath}\n\n" +
@@ -2782,11 +2799,11 @@ public partial class MainWindow : Window
     {
         if (BackupsGrid.SelectedItem is not BackupRow backup)
         {
-            MessageBox.Show("Select a backup first.", "Delete Backup", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a backup first.", "Delete Backup", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        var choice = MessageBox.Show(
+        var choice = AppDialog.Show(
             $"Permanently delete this backup?\n\n{Path.GetFileName(backup.FilePath)}\n{backup.SizeMb:N2} MB\nCreated {backup.Created:g}",
             "Delete Backup",
             MessageBoxButton.YesNo,
@@ -2816,6 +2833,7 @@ public partial class MainWindow : Window
         ModDashLastVerified.Text = $"Last Scan: {snapshot.ScannedAt:MMM d yyyy}  {snapshot.ScannedAt:h:mm tt}  •  Duration: {snapshot.Duration.TotalSeconds:0.0} sec  •  One Scan";
         ModLibrarySummaryText.Text = $"Installed: {installed.Count}  •  Enabled: {installed.Count(x => x.Enabled)}  •  Disabled: {installed.Count(x => !x.Enabled)}";
         RefreshModDashboard(installed);
+        RefreshModRuntime(installed);
 
         // Local workshop packages are often identified only by their numeric Steam ID.
         // Resolve friendly Workshop titles in the background and keep the ID visible
@@ -3038,7 +3056,7 @@ public partial class MainWindow : Window
     {
         if (ModDashboardGrid.SelectedItem is not ModDashboardRow selected)
         {
-            MessageBox.Show("Select a mod first.", "MOD Verification", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a mod first.", "MOD Verification", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         try
@@ -3074,7 +3092,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "MOD Verification", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "MOD Verification", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -3187,7 +3205,7 @@ public partial class MainWindow : Window
             var disabled = modDashboardRows.Count(x => x.Health == "Disabled");
             var failed = modDashboardRows.Count(x => x.Health == "Failed");
             var unknown = modDashboardRows.Count(x => x.Health == "Unknown");
-            MessageBox.Show(
+            AppDialog.Show(
                 failed == 0 && attention == 0 && disabled == 0 && unknown == 0
                     ? $"Verification completed. All {installed.Count} detected mod(s) have matching runtime evidence and no detected errors."
                     : $"Verification completed. Healthy: {healthy}; Attention: {attention}; Disabled: {disabled}; Failed: {failed}; Unknown: {unknown}. Review the MOD Dashboard for details.",
@@ -3197,7 +3215,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"MOD verification could not be completed.\n\n{ex.Message}", "MOD Verification", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show($"MOD verification could not be completed.\n\n{ex.Message}", "MOD Verification", MessageBoxButton.OK, MessageBoxImage.Error);
             RefreshMods();
         }
     }
@@ -3273,12 +3291,12 @@ public partial class MainWindow : Window
             var attentionCount = modDashboardRows.Count(row => row.Compatibility == "Attention");
             var message = $"Compatibility scan complete. Compatible: {compatibleCount}; Updates: {updateCount}; Conflicts: {conflictCount}; Missing dependencies: {missingCount}; Attention: {attentionCount}.";
             ModDashHealthDetails.Text = message + " Runtime verification remains separate; use Verify All Mods to confirm loading.";
-            MessageBox.Show(message, "MOD Compatibility Scan", MessageBoxButton.OK,
+            AppDialog.Show(message, "MOD Compatibility Scan", MessageBoxButton.OK,
                 conflictCount > 0 || missingCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Compatibility scan could not be completed.\n\n{ex.Message}", "MOD Compatibility", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show($"Compatibility scan could not be completed.\n\n{ex.Message}", "MOD Compatibility", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -3384,7 +3402,7 @@ public partial class MainWindow : Window
         var name = LocalModsGrid.SelectedItem is LocalModRow local ? local.Name : ModsGrid.SelectedItem is ModRow installed ? installed.Name : string.Empty;
         if (string.IsNullOrWhiteSpace(name))
         {
-            MessageBox.Show("Select a mod first.", "Search Online", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a mod first.", "Search Online", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         var query = Uri.EscapeDataString($"Palworld mod {name}");
@@ -3498,7 +3516,7 @@ public partial class MainWindow : Window
 
         if (path is null || !Directory.Exists(path))
         {
-            MessageBox.Show("The selected mod folder could not be found.", "Open Mod Folder", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("The selected mod folder could not be found.", "Open Mod Folder", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         Process.Start(new ProcessStartInfo("explorer.exe", path) { UseShellExecute = true });
@@ -3508,7 +3526,7 @@ public partial class MainWindow : Window
     {
         if (LocalModsGrid.SelectedItem is not LocalModRow mod || string.IsNullOrWhiteSpace(mod.WorkshopId))
         {
-            MessageBox.Show("Select a local Steam Workshop mod first.", "Open Workshop", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a local Steam Workshop mod first.", "Open Workshop", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         Process.Start(new ProcessStartInfo($"https://steamcommunity.com/sharedfiles/filedetails/?id={mod.WorkshopId}") { UseShellExecute = true });
@@ -3522,13 +3540,13 @@ public partial class MainWindow : Window
     {
         if (ModsGrid.SelectedItem is not ModRow selected)
         {
-            MessageBox.Show("Select an installed mod first.", enabled ? "Enable Mod" : "Disable Mod", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select an installed mod first.", enabled ? "Enable Mod" : "Disable Mod", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
         if (server.IsRunning())
         {
-            var proceed = MessageBox.Show(
+            var proceed = AppDialog.Show(
                 $"'{selected.Name}' will be {(enabled ? "enabled" : "disabled")} on disk, but PalServer is currently running.\n\nThe server must be restarted before the runtime state changes. Continue?",
                 enabled ? "Enable Mod" : "Disable Mod",
                 MessageBoxButton.YesNo, MessageBoxImage.Warning);
@@ -3564,13 +3582,13 @@ public partial class MainWindow : Window
                 .ToList();
             if (selectedWarnings.Count > 0)
                 message += "\n\nWarnings:\n" + string.Join("\n", selectedWarnings.Take(8));
-            MessageBox.Show(message, enabled ? "Mod Enabled" : "Mod Disabled", MessageBoxButton.OK,
+            AppDialog.Show(message, enabled ? "Mod Enabled" : "Mod Disabled", MessageBoxButton.OK,
                 selectedWarnings.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
             Log($"Failed to {(enabled ? "enable" : "disable")} mod '{selected.Name}': {ex.Message}");
-            MessageBox.Show(ex.Message, enabled ? "Enable Mod Failed" : "Disable Mod Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, enabled ? "Enable Mod Failed" : "Disable Mod Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -3580,12 +3598,12 @@ public partial class MainWindow : Window
         var currentRows = mods.Scan().ToList();
         if (currentRows.Count == 0)
         {
-            MessageBox.Show("No installed mods were found.", "Enable All Mods", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("No installed mods were found.", "Enable All Mods", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         if (server.IsRunning())
         {
-            var proceed = MessageBox.Show("Enable all discovered mods on disk? PalServer must be restarted before runtime state changes.", "Enable All Mods", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            var proceed = AppDialog.Show("Enable all discovered mods on disk? PalServer must be restarted before runtime state changes.", "Enable All Mods", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
             if (proceed != MessageBoxResult.Yes) return;
         }
         foreach (var row in currentRows) row.Enabled = true;
@@ -3593,7 +3611,7 @@ public partial class MainWindow : Window
         modInventory.Invalidate();
         RefreshMods();
         Log($"Enabled all mods: {result.EnabledCount} enabled, {result.ChangedItemCount} runtime file/folder change(s).");
-        MessageBox.Show($"All discovered mods have been enabled. Files/folders changed: {result.ChangedItemCount}." + (server.IsRunning() ? "\n\nRestart PalServer for the runtime state to change." : ""), "All Mods Enabled", MessageBoxButton.OK, result.Warnings.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        AppDialog.Show($"All discovered mods have been enabled. Files/folders changed: {result.ChangedItemCount}." + (server.IsRunning() ? "\n\nRestart PalServer for the runtime state to change." : ""), "All Mods Enabled", MessageBoxButton.OK, result.Warnings.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
     }
 
     private void DisableAllMods_Click(object sender, RoutedEventArgs e)
@@ -3601,11 +3619,11 @@ public partial class MainWindow : Window
         var currentRows = mods.Scan().ToList();
         if (currentRows.Count == 0)
         {
-            MessageBox.Show("No installed mods were found.", "Disable All Mods", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("No installed mods were found.", "Disable All Mods", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        var answer = MessageBox.Show(
+        var answer = AppDialog.Show(
             $"Disable all {currentRows.Count} installed server mod(s)?\n\nWorkshop downloads and ZIP-installed files will be retained so they can be enabled again later." +
             (server.IsRunning() ? "\n\nPalServer is running. Restart the server after applying this change." : string.Empty),
             "Disable All Mods", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
@@ -3624,7 +3642,7 @@ public partial class MainWindow : Window
             message += "\n\nWarnings:\n" + string.Join("\n", result.Warnings.Take(8));
         if (server.IsRunning())
             message += "\n\nRestart PalServer for the runtime state to change.";
-        MessageBox.Show(message, "All Mods Disabled", MessageBoxButton.OK,
+        AppDialog.Show(message, "All Mods Disabled", MessageBoxButton.OK,
             result.Warnings.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
     }
 
@@ -3632,7 +3650,7 @@ public partial class MainWindow : Window
     {
         if (server.IsRunning())
         {
-            var proceed = MessageBox.Show(
+            var proceed = AppDialog.Show(
                 "Repairing UE4SS activation state changes files on disk. The currently running PalServer will not change until it is restarted. Continue?",
                 "Repair MOD States", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
             if (proceed != MessageBoxResult.Yes) return;
@@ -3653,13 +3671,13 @@ public partial class MainWindow : Window
             if (server.IsRunning())
                 message += "\n\nRestart PalServer for runtime state to match the repaired configuration.";
 
-            MessageBox.Show(message, "MOD States Repaired", MessageBoxButton.OK,
+            AppDialog.Show(message, "MOD States Repaired", MessageBoxButton.OK,
                 result.Warnings.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
             Log($"Failed to repair UE4SS mod states: {ex.Message}");
-            MessageBox.Show(ex.Message, "Repair MOD States Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "Repair MOD States Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -3677,7 +3695,7 @@ public partial class MainWindow : Window
         message += "\n\nRestart the Palworld server for all changes to take effect.";
 
         Log($"Applied mod states: {result.EnabledCount} enabled, {result.DisabledCount} disabled, {result.ChangedItemCount} file/folder changes.");
-        MessageBox.Show(message, "Mod Changes Applied", MessageBoxButton.OK,
+        AppDialog.Show(message, "Mod Changes Applied", MessageBoxButton.OK,
             result.Warnings.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
     }
 
@@ -3685,11 +3703,11 @@ public partial class MainWindow : Window
     {
         if (ModsGrid.SelectedItem is not ModRow mod)
         {
-            MessageBox.Show("Select a mod first.", "Delete Mod", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a mod first.", "Delete Mod", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        var choice = MessageBox.Show(
+        var choice = AppDialog.Show(
             $"Permanently remove '{mod.Name}' and all files recorded for this mod?\n\n" +
             "Shared files that belong to another separately installed mod are not tracked automatically. " +
             "Only continue when this is the mod you intend to remove.",
@@ -3734,7 +3752,7 @@ public partial class MainWindow : Window
         var dependencyText = preview.Dependencies.Count == 0
             ? "None detected"
             : string.Join(", ", preview.Dependencies);
-        var analysisChoice = MessageBox.Show(
+        var analysisChoice = AppDialog.Show(
             $"Package Analysis\n\n" +
             $"Name: {preview.Name}\n" +
             $"Type: {preview.PackageType}\n" +
@@ -3755,7 +3773,7 @@ public partial class MainWindow : Window
         var requiresStoppedServer = preview.PackageType.Contains("Win64 Loader", StringComparison.OrdinalIgnoreCase);
         if (requiresStoppedServer && server.IsRunning())
         {
-            var stopChoice = MessageBox.Show(
+            var stopChoice = AppDialog.Show(
                 $"{preview.Name} installs native DLL files directly into the Palworld Win64 folder. PalServer must be stopped before these files can be installed safely.\n\nStop the server and continue?",
                 "Stop Server for Native MOD Install",
                 MessageBoxButton.YesNo,
@@ -3779,7 +3797,7 @@ public partial class MainWindow : Window
                 ? "1 installed file will be replaced."
                 : $"{preview.ExistingFiles.Count} installed files will be replaced.";
 
-            var choice = MessageBox.Show(
+            var choice = AppDialog.Show(
                 $"{preview.Name} is already installed.\n\n" +
                 conflictSummary + "\n\n" +
                 "MystTiq will stage and validate the new package, back up the current installation, replace it as an upgrade, preserve its enabled state, remove obsolete files, and roll back automatically if any step fails.\n\nUpgrade this mod?",
@@ -3796,7 +3814,7 @@ public partial class MainWindow : Window
 
             if (server.IsRunning())
             {
-                var stopChoice = MessageBox.Show(
+                var stopChoice = AppDialog.Show(
                     "PalServer is running and may have mod files locked. MystTiq must stop it before performing this upgrade.\n\nStop the server and continue?",
                     "Stop Server for MOD Upgrade",
                     MessageBoxButton.YesNo,
@@ -3826,7 +3844,7 @@ public partial class MainWindow : Window
         if (result.SkippedFiles.Count > 0)
             Log($"Skipped {result.SkippedFiles.Count} unrecognized documentation or unsupported files.");
 
-        MessageBox.Show(
+        AppDialog.Show(
             $"{(overwrite ? "Upgraded" : "Installed")} {result.Name}.\n\nFiles installed: {result.InstalledFileCount}\n" +
             "The mod has been added to the Mods list. Enable it if required, apply the enabled list, and restart the server.",
             overwrite ? "Mod Updated" : "Mod Installed",
@@ -4275,7 +4293,7 @@ public partial class MainWindow : Window
             config.Export(dialog.FileName);
             SetConfigStatus("Configuration exported to " + dialog.FileName, false);
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Export Failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { AppDialog.Show(ex.Message, "Export Failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void ImportConfig_Click(object sender, RoutedEventArgs e)
@@ -4284,13 +4302,13 @@ public partial class MainWindow : Window
         {
             var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Import PalWorldSettings.ini", Filter = "INI files (*.ini)|*.ini", CheckFileExists = true, Multiselect = false };
             if (dialog.ShowDialog(this) != true) return;
-            if (server.IsRunning() && MessageBox.Show("The server is running. Importing configuration now requires a restart before it takes effect. Continue?", "Server Running", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+            if (server.IsRunning() && AppDialog.Show("The server is running. Importing configuration now requires a restart before it takes effect. Continue?", "Server Running", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             config.Import(dialog.FileName);
             ReloadConfig();
             SyncApiPasswordFromServerConfiguration(logChanges: true);
             SetConfigStatus("Configuration imported successfully. Restart the server to apply it.", false);
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Import Failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { AppDialog.Show(ex.Message, "Import Failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void CompareConfig_Click(object sender, RoutedEventArgs e)
@@ -4298,10 +4316,10 @@ public partial class MainWindow : Window
         ConfigGrid.CommitEdit(DataGridEditingUnit.Cell, true);
         ConfigGrid.CommitEdit(DataGridEditingUnit.Row, true);
         var changed = configRows.Where(x => x.IsDirty).ToList();
-        if (changed.Count == 0) { MessageBox.Show("There are no unsaved configuration changes.", "Compare Changes", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (changed.Count == 0) { AppDialog.Show("There are no unsaved configuration changes.", "Compare Changes", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         var details = string.Join("\n\n", changed.Take(20).Select(x => $"{x.DisplayName} ({x.Name})\nCurrent: {x.Value}\nSaved: {(x.IsDirty ? "previous active value" : x.Value)}"));
         if (changed.Count > 20) details += $"\n\n…and {changed.Count - 20} more changes.";
-        MessageBox.Show(details, $"{changed.Count} Unsaved Configuration Change(s)", MessageBoxButton.OK, MessageBoxImage.Information);
+        AppDialog.Show(details, $"{changed.Count} Unsaved Configuration Change(s)", MessageBoxButton.OK, MessageBoxImage.Information);
     }
     private void ReloadConfig_Click(object s,RoutedEventArgs e)=>ReloadConfig();
 
@@ -4347,7 +4365,7 @@ public partial class MainWindow : Window
 
         if (configRows.Any(row => row.IsDirty))
         {
-            var answer = MessageBox.Show(
+            var answer = AppDialog.Show(
                 "You have unsaved configuration changes.\n\nLoading active settings will discard those edits. Continue?",
                 "Discard Unsaved Changes?",
                 MessageBoxButton.YesNo,
@@ -4427,7 +4445,7 @@ public partial class MainWindow : Window
         {
             Log("ERROR loading configuration defaults: " + ex.Message);
             SetConfigStatus("Load defaults failed: " + ex.Message, true);
-            MessageBox.Show(ex.Message, "Load Defaults Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "Load Defaults Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -4440,13 +4458,13 @@ public partial class MainWindow : Window
             var invalid = configRows.Where(row => !row.IsValid).ToList();
             if (invalid.Count > 0)
             {
-                MessageBox.Show("Correct the highlighted invalid values before saving.\n\n" + string.Join("\n", invalid.Take(8).Select(x => $"• {x.DisplayName}: {x.ValidationMessage}")), "Invalid Configuration", MessageBoxButton.OK, MessageBoxImage.Warning);
+                AppDialog.Show("Correct the highlighted invalid values before saving.\n\n" + string.Join("\n", invalid.Take(8).Select(x => $"• {x.DisplayName}: {x.ValidationMessage}")), "Invalid Configuration", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (server.IsRunning())
             {
-                var proceed = MessageBox.Show("The Palworld server is currently running. The configuration can be saved, but most changes will not take effect until the server is restarted.\n\nSave anyway?", "Server Restart Required", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                var proceed = AppDialog.Show("The Palworld server is currently running. The configuration can be saved, but most changes will not take effect until the server is restarted.\n\nSave anyway?", "Server Restart Required", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
                 if (proceed != MessageBoxResult.Yes) return;
             }
 
@@ -4457,7 +4475,7 @@ public partial class MainWindow : Window
                           ". Restart the Palworld server for all settings to take effect.";
             Log("Configuration saved to PalWorldSettings.ini.");
             SetConfigStatus(message, false);
-            MessageBox.Show(
+            AppDialog.Show(
                 "Configuration changes were saved to:\n" + settings.ConfigFile +
                 "\n\nRestart the Palworld server for all settings to take effect.",
                 "Configuration Saved",
@@ -4468,7 +4486,7 @@ public partial class MainWindow : Window
         {
             Log("ERROR: " + ex.Message);
             SetConfigStatus("Save failed: " + ex.Message, true);
-            MessageBox.Show(ex.Message, "Configuration Save Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "Configuration Save Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -4486,7 +4504,7 @@ public partial class MainWindow : Window
 
         if (path is null)
         {
-            MessageBox.Show(
+            AppDialog.Show(
                 "No Palworld text log was found under:" + Environment.NewLine +
                 settings.LogsRoot + Environment.NewLine + Environment.NewLine +
                 "The manager automatically adds -log -logformat=text when starting the server.",
@@ -4539,7 +4557,72 @@ public partial class MainWindow : Window
     private void RefreshConsole_Click(object sender, RoutedEventArgs e)
     {
         RefreshConsoleView();
-        Log("Console view refreshed.");
+        RefreshAdminCommandsRuntimeFromHistory(logResult: false);
+        Log("Console view and Admin Commands runtime status refreshed.");
+    }
+
+    private void RefreshAdminCommandsStatus_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshAdminCommandsRuntimeFromHistory(logResult: true);
+    }
+
+    private void RefreshAdminCommandsRuntimeFromHistory(bool logResult)
+    {
+        var priorState = adminCommandsRuntimeLoaded;
+        var evidenceFound = false;
+        var loaded = false;
+
+        // Newest evidence wins. This repairs stale UI state when the Console tab is
+        // revisited after the original runtime line was emitted.
+        for (var index = consoleLines.Count - 1; index >= 0; index--)
+        {
+            var line = consoleLines[index];
+            var compact = Regex.Replace(line, "[^a-zA-Z0-9]", string.Empty);
+            if (!compact.Contains("admincommands", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var success =
+                line.Contains("loaded successfully", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("successfully loaded", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("initialized successfully", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("registered successfully", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("started successfully", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("entry point executed", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("hook registered", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("hooks registered", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("heartbeat", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("functionally verified", StringComparison.OrdinalIgnoreCase);
+            var failure =
+                line.Contains("failed to load", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("failed loading", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("load failed", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("unhandled exception", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("fatal", StringComparison.OrdinalIgnoreCase);
+
+            if (!success && !failure)
+                continue;
+
+            evidenceFound = true;
+            loaded = success && !failure;
+            break;
+        }
+
+        adminCommandsRuntimeLoaded = server.IsRunning() && evidenceFound && loaded;
+        UpdateAdminCommandsConsoleState();
+
+        if (logResult)
+        {
+            var result = adminCommandsRuntimeLoaded
+                ? "loaded runtime evidence found"
+                : evidenceFound
+                    ? "latest runtime evidence does not confirm a successful load"
+                    : "no retained Admin Commands runtime evidence found";
+            Log($"Admin Commands status refresh completed: {result}.");
+        }
+        else if (priorState != adminCommandsRuntimeLoaded)
+        {
+            Log($"Admin Commands status synchronized from retained session evidence: {(adminCommandsRuntimeLoaded ? "loaded" : "not loaded")}.");
+        }
     }
 
     private void PauseConsole_Click(object sender, RoutedEventArgs e)
@@ -4678,7 +4761,7 @@ public partial class MainWindow : Window
         var worldOverride = FindWorldOptionOverride();
         if (worldOverride is null)
         {
-            MessageBox.Show(
+            AppDialog.Show(
                 "No WorldOption.sav override was found under the configured SaveGames folder. PalWorldSettings.ini should be authoritative unless another external tool is changing the server configuration.",
                 "Imported World Check",
                 MessageBoxButton.OK,
@@ -4694,7 +4777,7 @@ public partial class MainWindow : Window
 
         if (server.IsRunning())
         {
-            MessageBox.Show(
+            AppDialog.Show(
                 message + "Stop PalServer, then run CHECK WORLD OVERRIDE again to safely back up and disable the override.",
                 "World Override Detected",
                 MessageBoxButton.OK,
@@ -4702,7 +4785,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var answer = MessageBox.Show(
+        var answer = AppDialog.Show(
             message + "Back up and disable WorldOption.sav now? The original file will be renamed, not deleted.",
             "World Override Detected",
             MessageBoxButton.YesNo,
@@ -4714,7 +4797,7 @@ public partial class MainWindow : Window
         try
         {
             var backup = DisableWorldOptionOverride(worldOverride);
-            MessageBox.Show(
+            AppDialog.Show(
                 "WorldOption.sav was backed up and disabled.\n\n" + backup + "\n\nStart PalServer again so PalWorldSettings.ini becomes authoritative, then run Server Doctor / RCON Doctor to retest authentication.",
                 "World Override Disabled",
                 MessageBoxButton.OK,
@@ -4722,7 +4805,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "World Override Fix Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "World Override Fix Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -4761,7 +4844,7 @@ public partial class MainWindow : Window
         {
             if (server.IsRunning())
             {
-                MessageBox.Show(
+                AppDialog.Show(
                     message + "\n\nStop PalServer before disabling WorldOption.sav. After the server is stopped, run RCON Doctor or Backups > CHECK WORLD OVERRIDE again.",
                     "RCON Doctor",
                     MessageBoxButton.OK,
@@ -4769,20 +4852,20 @@ public partial class MainWindow : Window
             }
             else
             {
-                var answer = MessageBox.Show(message + "\n\nBack up and disable WorldOption.sav now? The original file will be renamed, not deleted.", "RCON Doctor", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                var answer = AppDialog.Show(message + "\n\nBack up and disable WorldOption.sav now? The original file will be renamed, not deleted.", "RCON Doctor", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
                 if (answer == MessageBoxResult.Yes)
                 {
                     try
                     {
                         var backup = DisableWorldOptionOverride(worldOverride);
                         Log("[RCON DOCTOR] WorldOption.sav disabled safely: " + backup);
-                        MessageBox.Show("World override backed up and disabled. Start PalServer again so PalWorldSettings.ini becomes authoritative.", "World Override Disabled", MessageBoxButton.OK, MessageBoxImage.Information);
+                        AppDialog.Show("World override backed up and disabled. Start PalServer again so PalWorldSettings.ini becomes authoritative.", "World Override Disabled", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
-                    catch (Exception ex) { MessageBox.Show(ex.Message, "World Override Fix Failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+                    catch (Exception ex) { AppDialog.Show(ex.Message, "World Override Fix Failed", MessageBoxButton.OK, MessageBoxImage.Error); }
                 }
             }
         }
-        else MessageBox.Show(message, "RCON Doctor", MessageBoxButton.OK, MessageBoxImage.Information);
+        else AppDialog.Show(message, "RCON Doctor", MessageBoxButton.OK, MessageBoxImage.Information);
     }
     private async void RconConnect_Click(object sender, RoutedEventArgs e)
     {
@@ -4816,7 +4899,7 @@ public partial class MainWindow : Window
 
             if (IsDangerousRconCommand(command))
             {
-                var answer = MessageBox.Show($"Send this administrative command?\n\n{command}", "Confirm RCON Command", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                var answer = AppDialog.Show($"Send this administrative command?\n\n{command}", "Confirm RCON Command", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
                 if (answer != MessageBoxResult.Yes) return;
             }
 
@@ -5045,8 +5128,12 @@ public partial class MainWindow : Window
 
                 while ((line = await reader.ReadLineAsync(ct)) is not null)
                 {
-                    if (!string.IsNullOrWhiteSpace(line))
-                        Log("[PAL.LOG] " + line);
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    var normalized = NormalizeServerOutput(line);
+                    if (string.IsNullOrWhiteSpace(normalized)) continue;
+                    ObserveExplicitModLoad(normalized);
+                    ObserveAdminCommandsRuntime(normalized);
+                    Log("[PAL.LOG] " + normalized);
                 }
 
                 position = stream.Position;
@@ -5172,7 +5259,7 @@ public partial class MainWindow : Window
             SettingsStatusText.Text = "Save failed: " + exception.Message;
             Log("[SETTINGS ERROR] Save failed: " + exception.Message);
 
-            MessageBox.Show(
+            AppDialog.Show(
                 "The manager settings could not be saved." + Environment.NewLine + Environment.NewLine + exception.Message,
                 "Settings Save Failed",
                 MessageBoxButton.OK,
@@ -5347,7 +5434,7 @@ public partial class MainWindow : Window
         var steamReady = File.Exists(settings.SteamCmdPath);
         var ue4ss = environment.VerifyComponent("UE4SS Runtime");
         SetSetupOperationState("COMPLETE", "Update check complete", $"Steam Workshop updates: {workshopUpdates}; available but not installed: {workshopMissing}.", 100, completed: true);
-        MessageBox.Show(
+        AppDialog.Show(
             $"SteamCMD: {(steamReady ? "Installed" : "Missing")}\n" +
             $"Palworld Dedicated Server: {(serverReady ? "Installed" : "Missing")}\n" +
             $"UE4SS: {(ue4ss.Success ? "Ready" : "Needs attention")}\n" +
@@ -5829,12 +5916,12 @@ public partial class MainWindow : Window
             else if (row.Component == "SteamCMD") await InstallSteamCmdFromUiAsync();
             else if (row.Component == "UE4SS Runtime") await InstallUe4ssFromUiAsync();
             else if (row.Component == "Palworld Dedicated Server") await InstallServerFromUiAsync();
-            else MessageBox.Show("This component is managed externally. Use the source shown in Update Center.", "Update Center", MessageBoxButton.OK, MessageBoxImage.Information);
+            else AppDialog.Show("This component is managed externally. Use the source shown in Update Center.", "Update Center", MessageBoxButton.OK, MessageBoxImage.Information);
             RefreshUpdateCenter();
             return;
         }
         if (row.Action == "VERIFY")
-            MessageBox.Show(row.Recommendation, row.Component, MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show(row.Recommendation, row.Component, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private async Task UpgradePipFromUpdateCenterAsync()
@@ -5842,7 +5929,7 @@ public partial class MainWindow : Window
         var python = ResolvePythonExecutable();
         if (string.IsNullOrWhiteSpace(python))
         {
-            MessageBox.Show("Python could not be resolved. Repair Python from Server Setup first.", "Update pip", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("Python could not be resolved. Repair Python from Server Setup first.", "Update pip", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         await RunExclusive(async ct =>
@@ -5881,21 +5968,21 @@ public partial class MainWindow : Window
         };
         if (string.IsNullOrWhiteSpace(url))
         {
-            MessageBox.Show(row.Recommendation, row.Component, MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show(row.Recommendation, row.Component, MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-        catch (Exception ex) { MessageBox.Show($"Unable to open the source page.\n\n{ex.Message}", row.Component, MessageBoxButton.OK, MessageBoxImage.Warning); }
+        catch (Exception ex) { AppDialog.Show($"Unable to open the source page.\n\n{ex.Message}", row.Component, MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
 
     private async void UpdateAllAvailable_Click(object sender, RoutedEventArgs e)
     {
         var rows = (UpdateCenterGrid.ItemsSource as ICollectionView)?.SourceCollection?.Cast<UpdateCenterRow>().ToList() ?? [];
         var available = rows.Where(r => r.Status.Equals("UPDATE AVAILABLE", StringComparison.OrdinalIgnoreCase)).ToList();
-        if (available.Count == 0) { MessageBox.Show("No confirmed updates are currently available.", "Update Center", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (available.Count == 0) { AppDialog.Show("No confirmed updates are currently available.", "Update Center", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         if (available.Any(r => r.Component == "Palworld Dedicated Server")) UpdateServerFromCenter_Click(sender, e);
         if (available.Any(r => r.Component == "UE4SS Runtime" || r.Group == "Installed MODs"))
-            MessageBox.Show("Server updates have been started. UE4SS and MOD updates require selecting the desired release/package, so MystTiq will open their management pages rather than guessing.", "Update All Available", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Server updates have been started. UE4SS and MOD updates require selecting the desired release/package, so MystTiq will open their management pages rather than guessing.", "Update All Available", MessageBoxButton.OK, MessageBoxImage.Information);
         await Task.CompletedTask;
     }
 
@@ -6062,11 +6149,11 @@ public partial class MainWindow : Window
     {
         if (server.IsRunning())
         {
-            MessageBox.Show("Stop the Palworld server before updating its files.", "Update Server", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("Stop the Palworld server before updating its files.", "Update Server", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var confirm = MessageBox.Show("SteamCMD will validate and update the Palworld dedicated server files. Continue?", "Update Server", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var confirm = AppDialog.Show("SteamCMD will validate and update the Palworld dedicated server files. Continue?", "Update Server", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.Yes) return;
 
         await RunExclusive(async ct =>
@@ -6085,7 +6172,7 @@ public partial class MainWindow : Window
             catch (Exception ex)
             {
                 SetSetupOperationState("FAILED", "Palworld server update failed", ex.Message, 100, failed: true);
-                MessageBox.Show(ex.Message, "Update Server", MessageBoxButton.OK, MessageBoxImage.Error);
+                AppDialog.Show(ex.Message, "Update Server", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         });
     }
@@ -6103,7 +6190,7 @@ public partial class MainWindow : Window
             100,
             completed: failed.Count == 0,
             failed: failed.Count > 0);
-        MessageBox.Show(report, "Verify All Components", MessageBoxButton.OK, failed.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        AppDialog.Show(report, "Verify All Components", MessageBoxButton.OK, failed.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
         RefreshEnvironment();
         _ = RefreshStatusAsync();
     }
@@ -6115,7 +6202,7 @@ public partial class MainWindow : Window
         {
             var result = environment.VerifyComponent(row.Component);
             InstallStatusText.Text = $"{row.Component}: {result.Message}";
-            MessageBox.Show(result.Message, row.Component + " Verification", MessageBoxButton.OK, result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+            AppDialog.Show(result.Message, row.Component + " Verification", MessageBoxButton.OK, result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
             RefreshEnvironment();
             await RefreshStatusAsync();
             return;
@@ -6137,7 +6224,7 @@ public partial class MainWindow : Window
         {
             if (server.IsRunning())
             {
-                MessageBox.Show("Stop PalServer before changing the UE4SS runtime state.", "UE4SS Runtime", MessageBoxButton.OK, MessageBoxImage.Warning);
+                AppDialog.Show("Stop PalServer before changing the UE4SS runtime state.", "UE4SS Runtime", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -6146,12 +6233,12 @@ public partial class MainWindow : Window
                 var message = row.Action == "DISABLE" ? environment.DisableUe4ssRuntime() : environment.EnableUe4ssRuntime();
                 Log("[UE4SS] " + message);
                 InstallStatusText.Text = message;
-                MessageBox.Show(message + "\n\nThe next PalServer start will use this runtime state.", "UE4SS Runtime", MessageBoxButton.OK, MessageBoxImage.Information);
+                AppDialog.Show(message + "\n\nThe next PalServer start will use this runtime state.", "UE4SS Runtime", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 Log("[UE4SS] Runtime state change failed: " + ex.Message);
-                MessageBox.Show(ex.Message, "UE4SS Runtime", MessageBoxButton.OK, MessageBoxImage.Error);
+                AppDialog.Show(ex.Message, "UE4SS Runtime", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         else if (row.Component == "Backup Storage" && row.Action == "CREATE") Directory.CreateDirectory(settings.BackupRoot);
@@ -6168,14 +6255,14 @@ public partial class MainWindow : Window
             SyncApiPasswordFromServerConfiguration(logChanges: true);
             ReloadConfig();
             InstallStatusText.Text = "REST API and RCON were enabled in PalWorldSettings.ini. Restart the Palworld server before connecting.";
-            MessageBox.Show(
+            AppDialog.Show(
                 "REST API and RCON are now enabled in the active server configuration.\n\n" +
                 "RCON Port: 25575\n" +
                 "Password: AdminPassword\n\n" +
                 "Restart the Palworld server for the change to take effect.",
                 "Remote Administration Enabled", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-        else MessageBox.Show($"No automated action is registered for {row.Component}.", "Server Setup", MessageBoxButton.OK, MessageBoxImage.Information);
+        else AppDialog.Show($"No automated action is registered for {row.Component}.", "Server Setup", MessageBoxButton.OK, MessageBoxImage.Information);
         RefreshEnvironment();
     }
 
@@ -6184,7 +6271,7 @@ public partial class MainWindow : Window
 
     private async void InstallRequired_Click(object sender, RoutedEventArgs e)
     {
-        if(MessageBox.Show("This will install any missing required components: Python with pip, SteamCMD, the Palworld dedicated server, latest experimental UE4SS, Palworld Save Tools, default settings, backup storage, and mod folders. Continue?","Install Required Components",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        if(AppDialog.Show("This will install any missing required components: Python with pip, SteamCMD, the Palworld dedicated server, latest experimental UE4SS, Palworld Save Tools, default settings, backup storage, and mod folders. Continue?","Install Required Components",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         SetSetupOperationState("RUNNING", "Installing missing components", "Preparing the guided installation workflow.", 1);
         var players=int.TryParse(SetupPlayersBox.Text,out var p)?p:32; var gamePort=int.TryParse(SetupPublicPortBox.Text,out var gp)?gp:8211; var restPort=int.TryParse(SetupRestPortBox.Text,out var rp)?rp:8212;
         await RunExclusive(async ct => await installer.InstallRequiredAsync(SetupServerNameBox.Text,SetupDescriptionBox.Text,SetupAdminPasswordBox.Password,SetupServerPasswordBox.Password,players,gamePort,restPort,CreateInstallProgress(),ct));
@@ -6196,7 +6283,7 @@ public partial class MainWindow : Window
     private void CreateSetupSettings_Click(object sender, RoutedEventArgs e)
     {
         if(!int.TryParse(SetupPlayersBox.Text,out var players) || players<1 || players>128 || !int.TryParse(SetupPublicPortBox.Text,out var gamePort) || !int.TryParse(SetupRestPortBox.Text,out var restPort))
-        { MessageBox.Show("Enter valid player and port values.","Default Settings",MessageBoxButton.OK,MessageBoxImage.Warning); return; }
+        { AppDialog.Show("Enter valid player and port values.","Default Settings",MessageBoxButton.OK,MessageBoxImage.Warning); return; }
         installer.CreateDefaultConfiguration(SetupServerNameBox.Text,SetupDescriptionBox.Text,SetupAdminPasswordBox.Password,SetupServerPasswordBox.Password,players,gamePort,restPort);
         SyncApiPasswordFromServerConfiguration(logChanges: true);
         SetSetupOperationState("COMPLETE", "Default configuration created", "REST API credentials were synchronized with the manager.", 100, completed: true);
@@ -6220,14 +6307,14 @@ public partial class MainWindow : Window
 
     private async Task InstallPythonFromUiAsync()
     {
-        if (MessageBox.Show("Install the latest official 64-bit Python release with pip?", "Install Python", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (AppDialog.Show("Install the latest official 64-bit Python release with pip?", "Install Python", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         await RunExclusive(async ct => { await installer.InstallComponentAsync("Python Runtime", CreateInstallProgress(), ct); });
         RefreshEnvironment();
     }
 
     private async Task InstallSaveToolsFromUiAsync()
     {
-        if (MessageBox.Show("Install or repair the official cheahjs palworld-save-tools converter under the configured server folder? Python 3.9+ is required.", "Install Palworld Save Tools", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (AppDialog.Show("Install or repair the official cheahjs palworld-save-tools converter under the configured server folder? Python 3.9+ is required.", "Install Palworld Save Tools", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         await RunExclusive(async ct => { await installer.InstallComponentAsync("Palworld Save Tools", CreateInstallProgress(), ct); });
         RefreshEnvironment();
     }
@@ -6235,14 +6322,14 @@ public partial class MainWindow : Window
 
     private async Task InstallPlmDecoderFromUiAsync()
     {
-        if (MessageBox.Show("Install or repair PlM/Oodle decoding support? This installs pyooz and the PlM-capable PalworldSaveTools source under the server Tools folder.", "Install PlM/Oodle Decoder", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (AppDialog.Show("Install or repair PlM/Oodle decoding support? This installs pyooz and the PlM-capable PalworldSaveTools source under the server Tools folder.", "Install PlM/Oodle Decoder", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         await RunExclusive(async ct => { await installer.InstallComponentAsync("PlM/Oodle Decoder", CreateInstallProgress(), ct); });
         RefreshEnvironment();
     }
 
     private async Task InstallUe4ssFromUiAsync()
     {
-        if(MessageBox.Show("Install or repair the latest experimental UE4SS release in the Palworld server Win64 folder?","Install UE4SS",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        if(AppDialog.Show("Install or repair the latest experimental UE4SS release in the Palworld server Win64 folder?","Install UE4SS",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         await RunExclusive(async ct => { await installer.InstallComponentAsync("UE4SS Runtime", CreateInstallProgress(), ct); });
         RefreshEnvironment();
     }
@@ -6278,13 +6365,13 @@ public partial class MainWindow : Window
 
     private async void ImportLocalMod_Click(object sender, RoutedEventArgs e)
     {
-        if (LocalModsGrid.SelectedItem is not LocalModRow mod) { MessageBox.Show("Select a local Workshop mod first.", "Import Mod", MessageBoxButton.OK, MessageBoxImage.Information); return; }
-        if (mod.Compatibility == "Unknown" && MessageBox.Show("This mod's server compatibility is unknown. Import it anyway?", "Compatibility Warning", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        if (server.IsRunning()) { MessageBox.Show("Stop the server before importing a mod.", "Server Running", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (LocalModsGrid.SelectedItem is not LocalModRow mod) { AppDialog.Show("Select a local Workshop mod first.", "Import Mod", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (mod.Compatibility == "Unknown" && AppDialog.Show("This mod's server compatibility is unknown. Import it anyway?", "Compatibility Warning", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        if (server.IsRunning()) { AppDialog.Show("Stop the server before importing a mod.", "Server Running", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
 
         if (LooksLikeUe4ssRuntimePackage(mod.SourcePath) && environment.VerifyComponent("UE4SS Runtime").Success)
         {
-            var answer = MessageBox.Show(
+            var answer = AppDialog.Show(
                 "This Workshop package appears to contain a UE4SS runtime, but UE4SS is already installed in the configured Palworld server.\n\n" +
                 "Installing a second runtime is usually redundant and can cause startup or shutdown instability.\n\n" +
                 "Import the duplicate runtime anyway?",
@@ -6453,15 +6540,15 @@ public partial class MainWindow : Window
     {
         if (server.IsRunning())
         {
-            MessageBox.Show("Stop PalServer before changing UE4SS versions.", "UE4SS Version Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("Stop PalServer before changing UE4SS versions.", "UE4SS Version Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (Ue4ssReleaseCombo.SelectedItem is not Ue4ssReleaseInfo release)
         {
-            MessageBox.Show("Select a GitHub release first.", "UE4SS Version Manager", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Select a GitHub release first.", "UE4SS Version Manager", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        if (MessageBox.Show($"Install {release.Display}?\n\nMyst will snapshot the current runtime first and preserve user-mod folders.", "Install UE4SS Release", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        if (AppDialog.Show($"Install {release.Display}?\n\nMyst will snapshot the current runtime first and preserve user-mod folders.", "Install UE4SS Release", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
 
         try
         {
@@ -6473,13 +6560,13 @@ public partial class MainWindow : Window
             RefreshEnvironment();
             RefreshModRuntime();
             Ue4ssReleaseDetailText.Text = $"Installed {release.Display}. Run Verify and test the server before enabling user mods.";
-            MessageBox.Show(message + "\n\nSelected GitHub release: " + release.Display, "UE4SS Runtime Installed", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show(message + "\n\nSelected GitHub release: " + release.Display, "UE4SS Runtime Installed", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             Ue4ssReleaseDetailText.Text = "Runtime installation failed: " + ex.Message;
             Log("[UE4SS] GitHub runtime installation failed: " + ex.Message);
-            MessageBox.Show(ex.Message, "UE4SS Runtime Install Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppDialog.Show(ex.Message, "UE4SS Runtime Install Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -6493,7 +6580,7 @@ public partial class MainWindow : Window
     {
         if (!server.IsRunning())
         {
-            MessageBox.Show("Start PalServer before running an idle stability test.", "Idle Stability Test", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("Start PalServer before running an idle stability test.", "Idle Stability Test", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         if (stabilityTestCts is not null) return;
@@ -6638,7 +6725,7 @@ public partial class MainWindow : Window
 
     private void PrepareVanillaIsolation_Click(object sender, RoutedEventArgs e)
     {
-        if (server.IsRunning()) { MessageBox.Show("Stop PalServer before changing isolation mode.", "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (server.IsRunning()) { AppDialog.Show("Stop PalServer before changing isolation mode.", "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         try
         {
             CaptureIsolationStateIfNeeded();
@@ -6650,12 +6737,12 @@ public partial class MainWindow : Window
             StabilityIsolationStatusText.Text = "Prepared VANILLA: all user mods disabled and UE4SS disabled. Start PalServer, then run Idle Stability Test.";
             RefreshMods(); RefreshModRuntime();
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { AppDialog.Show(ex.Message, "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void PrepareUe4ssIsolation_Click(object sender, RoutedEventArgs e)
     {
-        if (server.IsRunning()) { MessageBox.Show("Stop PalServer before changing isolation mode.", "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (server.IsRunning()) { AppDialog.Show("Stop PalServer before changing isolation mode.", "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         try
         {
             CaptureIsolationStateIfNeeded();
@@ -6668,15 +6755,15 @@ public partial class MainWindow : Window
             StabilityIsolationStatusText.Text = "Prepared UE4SS ONLY: user mods disabled and UE4SS enabled. Start PalServer, then run Idle Stability Test.";
             RefreshMods(); RefreshModRuntime();
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { AppDialog.Show(ex.Message, "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void RestoreIsolationState_Click(object sender, RoutedEventArgs e)
     {
-        if (server.IsRunning()) { MessageBox.Show("Stop PalServer before restoring the previous mod/runtime state.", "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (server.IsRunning()) { AppDialog.Show("Stop PalServer before restoring the previous mod/runtime state.", "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         if (stabilitySavedModStates is null && stabilitySavedUe4ssEnabled is null)
         {
-            MessageBox.Show("No saved isolation state exists yet.", "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("No saved isolation state exists yet.", "Runtime Isolation", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         try
@@ -6691,7 +6778,7 @@ public partial class MainWindow : Window
             StabilityIsolationStatusText.Text = "Previous mod/runtime state restored.";
             RefreshMods(); RefreshModRuntime();
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Runtime Isolation Restore", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { AppDialog.Show(ex.Message, "Runtime Isolation Restore", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private async void RefreshServerEvents_Click(object sender, RoutedEventArgs e)
