@@ -1,5 +1,4 @@
 using PalworldManager.Models;
-using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
 
 namespace PalworldManager.Services;
@@ -89,6 +88,10 @@ public sealed class ServerService : IDisposable
     private readonly ServerProcessDiscoveryService processDiscovery;
     private readonly ServerResourceMonitor resourceMonitor;
     private readonly SteamServerUpdateService updateService;
+    private readonly IServerSessionInspector sessionInspector;
+    private readonly ServerLifecycleEvaluator lifecycleEvaluator;
+    private readonly IServerPlatformOperations platformOperations;
+    private readonly ServerPlatformProfile platformProfile;
     private Process? managedProcess;
     private bool disposed;
     private volatile ServerLifecycleState lifecycleState = ServerLifecycleState.Stopped;
@@ -111,31 +114,29 @@ public sealed class ServerService : IDisposable
     private int activeRestPollers;
     private int activePlayerPollers;
     private int cleanupInProgress;
-
-    private const int SwHide = 0;
-    private const uint Th32CsSnapProcess = 0x00000002;
-    private static readonly int[] GuardedPorts = [8211, 8212, 25575];
-
-    private static readonly string[] Names =
-    [
-        "PalServer",
-        "PalServer-Win64-Shipping",
-        "PalServer-Win64-Shipping-Cmd",
-        "PalServer-Win64-Test",
-        "PalServer-Win64-Test-Cmd"
-    ];
-
     public event Action<string>? OutputReceived;
     public event Action<int>? ServerExited;
 
     public bool LastExitWasExpected { get; private set; }
     public DateTime? LastExitAt { get; private set; }
 
-    public ServerService(AppSettings settings)
+    public ServerService(
+        AppSettings settings,
+        IServerSessionInspector? sessionInspector = null,
+        IServerPlatformOperations? platformOperations = null,
+        ServerPlatformProfile? platformProfile = null)
     {
         this.settings = settings;
-        processDiscovery = new ServerProcessDiscoveryService(settings.ServerRoot, Names, GuardedPorts);
-        resourceMonitor = new ServerResourceMonitor(Names);
+        this.platformProfile = platformProfile ?? ServerPlatformProfile.Windows;
+        processDiscovery = new ServerProcessDiscoveryService(
+            settings.ServerRoot,
+            this.platformProfile.ProcessNames,
+            this.platformProfile.GuardedPorts);
+        resourceMonitor = new ServerResourceMonitor(this.platformProfile.ProcessNames);
+        this.sessionInspector = sessionInspector ?? new ServerSessionInspector(this.platformProfile.GuardedPorts);
+        this.platformOperations = platformOperations ??
+            new WindowsServerPlatformOperations(settings, processDiscovery, this.platformProfile);
+        lifecycleEvaluator = new ServerLifecycleEvaluator();
         updateService = new SteamServerUpdateService(
             settings,
             IsRunning,
@@ -143,6 +144,21 @@ public sealed class ServerService : IDisposable
     }
 
     public bool HasActiveSession => Volatile.Read(ref activeSessionId) > 0;
+    public long ActiveSessionId => Volatile.Read(ref activeSessionId);
+
+    public DateTime? ActiveSessionStartedAt
+    {
+        get
+        {
+            lock (processLock)
+            {
+                return activeSessionId > 0 && activeSessionStartedAt != default
+                    ? activeSessionStartedAt
+                    : null;
+            }
+        }
+    }
+
 
     public bool TryAdoptRunningServer()
     {
@@ -151,7 +167,7 @@ public sealed class ServerService : IDisposable
         if (HasActiveSession)
             return true;
 
-        foreach (var name in Names)
+        foreach (var name in platformProfile.ProcessNames)
         {
             foreach (var candidate in Process.GetProcessesByName(name))
             {
@@ -202,13 +218,13 @@ public sealed class ServerService : IDisposable
 
                     try
                     {
-                        activeSessionSnapshot = CaptureSessionSnapshot(sessionId, adopted.Id);
+                        activeSessionSnapshot = sessionInspector.Capture(sessionId, adopted.Id);
                     }
                     catch
                     {
                         activeSessionSnapshot = new ServerSessionSnapshot(
                             sessionId, adopted.Id, DateTime.Now, Array.Empty<ServerSessionProcessInfo>(),
-                            Array.Empty<string>(), GetGuardedListeningPorts());
+                            Array.Empty<string>(), sessionInspector.GetGuardedListeningPorts());
                     }
 
                     adopted.Exited += (_, _) =>
@@ -299,7 +315,7 @@ public sealed class ServerService : IDisposable
 
         try
         {
-            var snapshot = CaptureSessionSnapshot(sessionId, rootPid);
+            var snapshot = sessionInspector.Capture(sessionId, rootPid);
             lock (processLock)
             {
                 if (activeSessionId == sessionId)
@@ -312,121 +328,6 @@ public sealed class ServerService : IDisposable
             return GetActiveSessionSnapshot();
         }
     }
-
-    private ServerSessionSnapshot CaptureSessionSnapshot(long sessionId, int rootPid)
-    {
-        var processEntries = EnumerateProcessTree();
-        var descendants = GetDescendantProcessIds(processEntries, rootPid);
-        descendants.Add(rootPid);
-
-        var processes = new List<ServerSessionProcessInfo>();
-        foreach (var entry in processEntries.Where(x => descendants.Contains(x.ProcessId)))
-        {
-            try
-            {
-                using var process = Process.GetProcessById(entry.ProcessId);
-                var path = string.Empty;
-                try { path = process.MainModule?.FileName ?? string.Empty; } catch { }
-                var responding = true;
-                try { responding = process.Responding; } catch { }
-                processes.Add(new ServerSessionProcessInfo(
-                    entry.ProcessId, entry.ParentProcessId, process.ProcessName, path, responding));
-            }
-            catch
-            {
-                // Process may exit while the snapshot is being captured.
-            }
-        }
-
-        var modules = new List<string>();
-        foreach (var processInfo in processes)
-        {
-            try
-            {
-                using var runtimeProcess = Process.GetProcessById(processInfo.ProcessId);
-                foreach (ProcessModule module in runtimeProcess.Modules)
-                {
-                    try
-                    {
-                        var value = string.IsNullOrWhiteSpace(module.FileName)
-                            ? module.ModuleName
-                            : module.FileName;
-                        if (!string.IsNullOrWhiteSpace(value))
-                            modules.Add(value);
-                    }
-                    catch { }
-                }
-            }
-            catch { }
-        }
-
-        return new ServerSessionSnapshot(
-            sessionId, rootPid, DateTime.Now, processes,
-            modules.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList(),
-            GetGuardedListeningPorts());
-    }
-
-    private static HashSet<int> GetDescendantProcessIds(
-        IReadOnlyList<NativeProcessEntry> entries, int rootPid)
-    {
-        var result = new HashSet<int>();
-        var queue = new Queue<int>();
-        queue.Enqueue(rootPid);
-        while (queue.Count > 0)
-        {
-            var parent = queue.Dequeue();
-            foreach (var child in entries.Where(x => x.ParentProcessId == parent))
-            {
-                if (result.Add(child.ProcessId))
-                    queue.Enqueue(child.ProcessId);
-            }
-        }
-        return result;
-    }
-
-    private static IReadOnlyList<NativeProcessEntry> EnumerateProcessTree()
-    {
-        var result = new List<NativeProcessEntry>();
-        var snapshot = CreateToolhelp32Snapshot(Th32CsSnapProcess, 0);
-        if (snapshot == new IntPtr(-1))
-            return result;
-
-        try
-        {
-            var entry = new ProcessEntry32 { dwSize = (uint)Marshal.SizeOf<ProcessEntry32>() };
-            if (!Process32First(snapshot, ref entry))
-                return result;
-            do
-            {
-                result.Add(new NativeProcessEntry(
-                    unchecked((int)entry.th32ProcessID),
-                    unchecked((int)entry.th32ParentProcessID),
-                    entry.szExeFile ?? string.Empty));
-                entry.dwSize = (uint)Marshal.SizeOf<ProcessEntry32>();
-            } while (Process32Next(snapshot, ref entry));
-        }
-        finally
-        {
-            CloseHandle(snapshot);
-        }
-        return result;
-    }
-
-    private static IReadOnlyList<int> GetGuardedListeningPorts()
-    {
-        try
-        {
-            var listeners = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
-            return listeners.Select(x => x.Port)
-                .Where(port => GuardedPorts.Contains(port))
-                .Distinct().OrderBy(x => x).ToList();
-        }
-        catch
-        {
-            return Array.Empty<int>();
-        }
-    }
-
 
     public bool IsPortListening(int port) => processDiscovery.IsPortListening(port);
 
@@ -470,34 +371,21 @@ public sealed class ServerService : IDisposable
             try { managedDetected = managedProcess is not null && !managedProcess.HasExited; } catch { }
         }
 
-        var state = lifecycleState;
-        if (!processDetected && state is ServerLifecycleState.Running or ServerLifecycleState.Starting)
-            state = ServerLifecycleState.Crashed;
-        else if (!processDetected && state == ServerLifecycleState.Stopping)
-            state = ServerLifecycleState.Stopped;
-        else if (processDetected && state == ServerLifecycleState.Stopped)
-            state = ServerLifecycleState.Running;
-
-        if (state == ServerLifecycleState.Starting && DateTime.UtcNow - lifecycleChangedUtc > TimeSpan.FromSeconds(45) && processDetected)
-            state = ServerLifecycleState.Running;
-        // A normal Palworld shutdown includes the configured warning/countdown. Do not
-        // declare the process hung while that countdown is still legitimately running.
-        var shutdownHungThreshold = TimeSpan.FromSeconds(Math.Max(45, settings.RestartWarningSeconds + 45));
-        if (state == ServerLifecycleState.Stopping && DateTime.UtcNow - lifecycleChangedUtc > shutdownHungThreshold && processDetected)
-            state = ServerLifecycleState.Hung;
+        var state = lifecycleEvaluator.Evaluate(
+            lifecycleState,
+            processDetected,
+            lifecycleChangedUtc,
+            settings.RestartWarningSeconds,
+            DateTime.UtcNow);
 
         lifecycleState = state;
         return new ServerHealthSnapshot(
-            state, processDetected, managedDetected, processes.Count,
-            state switch
-            {
-                ServerLifecycleState.Hung => "Palworld process remains after the shutdown timeout.",
-                ServerLifecycleState.Crashed => "The managed Palworld process exited unexpectedly.",
-                ServerLifecycleState.Starting => "Palworld is starting.",
-                ServerLifecycleState.Stopping => "Palworld is stopping.",
-                ServerLifecycleState.Running => "Palworld process is running.",
-                _ => "No Palworld server process is running."
-            }, DateTime.Now);
+            state,
+            processDetected,
+            managedDetected,
+            processes.Count,
+            lifecycleEvaluator.Describe(state),
+            DateTime.Now);
     }
 
     public void MarkStopping()
@@ -532,30 +420,14 @@ public sealed class ServerService : IDisposable
         lifecycleState = ServerLifecycleState.Starting;
         lifecycleChangedUtc = DateTime.UtcNow;
 
-        var executable = ResolveServerExecutable();
+        var executable = platformOperations.ResolveServerExecutable();
         var arguments = EnsureLoggingArguments(settings.LaunchArguments);
         arguments = EnsureWorkshopArgument(arguments);
 
         if (noMods)
             arguments = AppendArgument(arguments, "-NoMods");
 
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = executable,
-            Arguments = arguments,
-            // Unreal server binaries should run from their own folder. This also
-            // prevents the root PalServer bootstrapper from spawning a visible
-            // Shipping-Cmd child process.
-            WorkingDirectory = Path.GetDirectoryName(executable) ?? settings.ServerRoot,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WindowStyle = ProcessWindowStyle.Hidden,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = false,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8
-        };
+        var startInfo = platformOperations.CreateServerStartInfo(executable, arguments);
 
         var process = new Process
         {
@@ -663,7 +535,7 @@ public sealed class ServerService : IDisposable
                         await Task.Delay(delay).ConfigureAwait(false);
                         if (disposed || Volatile.Read(ref activeSessionId) != sessionId)
                             return;
-                        var snapshot = CaptureSessionSnapshot(sessionId, process.Id);
+                        var snapshot = sessionInspector.Capture(sessionId, process.Id);
                         lock (processLock)
                         {
                             if (activeSessionId == sessionId)
@@ -705,7 +577,18 @@ public sealed class ServerService : IDisposable
             // This is a secondary safeguard. Normally no window is ever created
             // because the Shipping-Cmd executable is launched directly with
             // CreateNoWindow and redirected output.
-            _ = Task.Run(HidePalworldWindowsDuringStartupAsync);
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await platformOperations.ApplyPostLaunchWindowPolicyAsync(ioCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    OutputReceived?.Invoke($"[PLATFORM] Post-launch window policy warning: {ex.Message}");
+                }
+            });
         }
         catch
         {
@@ -801,89 +684,6 @@ public sealed class ServerService : IDisposable
         await AwaitReaderShutdownAsync(sessionId, stdoutTask, stderrTask, timeout).ConfigureAwait(false);
     }
 
-    private string ResolveServerExecutable()
-    {
-        var candidates = new[]
-        {
-            // Current dedicated-server binary. Launching this directly is the
-            // important part: PalServer.exe is only a bootstrapper and spawns
-            // this executable in a separate visible console window.
-            Path.Combine(
-                settings.ServerRoot,
-                "Pal",
-                "Binaries",
-                "Win64",
-                "PalServer-Win64-Shipping-Cmd.exe"),
-
-            // Alternate names used by older/test server builds.
-            Path.Combine(
-                settings.ServerRoot,
-                "Pal",
-                "Binaries",
-                "Win64",
-                "PalServer-Win64-Test-Cmd.exe"),
-
-            Path.Combine(
-                settings.ServerRoot,
-                "Pal",
-                "Binaries",
-                "Win64",
-                "PalServer-Win64-Shipping.exe"),
-
-            Path.Combine(
-                settings.ServerRoot,
-                "Pal",
-                "Binaries",
-                "Win64",
-                "PalServer-Win64-Test.exe"),
-
-            // Last-resort compatibility fallback. This may create a separate
-            // console on installations whose real binary cannot be found.
-            settings.ServerExe
-        };
-
-        return candidates.FirstOrDefault(File.Exists)
-            ?? throw new FileNotFoundException(
-                "No Palworld server executable was found.",
-                string.Join(Environment.NewLine, candidates));
-    }
-
-    private async Task HidePalworldWindowsDuringStartupAsync()
-    {
-        for (var attempt = 0; attempt < 40; attempt++)
-        {
-            if (disposed)
-                return;
-
-            foreach (var name in Names)
-            {
-                var processes = Process.GetProcessesByName(name);
-
-                foreach (var process in processes)
-                {
-                    using (process)
-                    {
-                        try
-                        {
-                            process.Refresh();
-                            var handle = process.MainWindowHandle;
-
-                            if (handle != IntPtr.Zero)
-                                ShowWindow(handle, SwHide);
-                        }
-                        catch
-                        {
-                            // The process may be starting or exiting.
-                        }
-                    }
-                }
-            }
-
-            await Task.Delay(500);
-        }
-    }
-
-
     private string EnsureWorkshopArgument(string arguments)
     {
         if (ContainsArgument(arguments, "-workshopdir="))
@@ -949,9 +749,8 @@ public sealed class ServerService : IDisposable
                 startupSnapshot = activeSessionSnapshot;
             }
 
-            var nativeEntries = EnumerateProcessTree();
             var descendantIds = rootPid > 0
-                ? GetDescendantProcessIds(nativeEntries, rootPid)
+                ? new HashSet<int>(sessionInspector.GetDescendantProcessIds(rootPid))
                 : new HashSet<int>();
 
             if (startupSnapshot is not null)
@@ -979,8 +778,8 @@ public sealed class ServerService : IDisposable
             // workflow where the server root/process identity is revalidated immediately.
             var terminated = new List<int>();
             var remainingPids = orphans.Where(IsProcessAlive).OrderBy(x => x).ToList();
-            var remainingPorts = GetGuardedListeningPorts().ToList();
-            var clean = remainingPids.Count == 0 && remainingPorts.Count == 0 && !HasDetectedServerProcess();
+            var remainingPorts = sessionInspector.GetGuardedListeningPorts().ToList();
+            var clean = remainingPids.Count == 0 && remainingPorts.Count == 0 && !HasDetectedServerProcessViaPlatform();
             var completedAt = DateTime.Now;
             var reportPath = WriteSessionCleanupReport(
                 sessionId, rootPid, startedAt, completedAt, startupSnapshot,
@@ -1094,7 +893,7 @@ public sealed class ServerService : IDisposable
             try
             {
                 if (!ownedProcess.HasExited)
-                    ownedProcess.Kill(entireProcessTree: true);
+                    platformOperations.KillProcessTree(ownedProcess);
             }
             catch
             {
@@ -1102,7 +901,7 @@ public sealed class ServerService : IDisposable
             }
         }
 
-        KillDetectedServerProcesses();
+        KillDetectedServerProcessesViaPlatform();
 
         // Windows can report the tracked process as alive briefly after the
         // process tree has been terminated. Verify by polling the real Palworld
@@ -1111,7 +910,7 @@ public sealed class ServerService : IDisposable
 
         while (DateTime.UtcNow < verificationDeadline)
         {
-            if (!HasDetectedServerProcess())
+            if (!HasDetectedServerProcessViaPlatform())
             {
                 ClearExitedManagedProcess();
                 lifecycleState = ServerLifecycleState.Stopped;
@@ -1121,10 +920,10 @@ public sealed class ServerService : IDisposable
             }
 
             await Task.Delay(500);
-            KillDetectedServerProcesses();
+            KillDetectedServerProcessesViaPlatform();
         }
 
-        if (HasDetectedServerProcess())
+        if (HasDetectedServerProcessViaPlatform())
             throw new InvalidOperationException(
                 "A Palworld server process is still running after the shutdown timeout.");
 
@@ -1134,7 +933,7 @@ public sealed class ServerService : IDisposable
         try { await CleanupSessionAfterShutdownAsync(CancellationToken.None).ConfigureAwait(false); } catch { }
     }
 
-    private bool HasDetectedServerProcess()
+    private bool HasDetectedServerProcessViaPlatform()
     {
         var ownedPid = -1;
         lock (processLock)
@@ -1142,30 +941,10 @@ public sealed class ServerService : IDisposable
             try { ownedPid = managedProcess?.Id ?? -1; } catch { }
         }
 
-        foreach (var name in Names)
-        {
-            var processes = Process.GetProcessesByName(name);
-            foreach (var process in processes)
-            {
-                using (process)
-                {
-                    try
-                    {
-                        if (process.Id == ownedPid && !process.HasExited)
-                            return true;
-                        var path = string.Empty;
-                        try { path = process.MainModule?.FileName ?? string.Empty; } catch { }
-                        if (IsPathInsideServerRoot(path) && !process.HasExited)
-                            return true;
-                    }
-                    catch { }
-                }
-            }
-        }
-        return false;
+        return platformOperations.HasDetectedServerProcess(ownedPid);
     }
 
-    private void KillDetectedServerProcesses()
+    private void KillDetectedServerProcessesViaPlatform()
     {
         var ownedPid = -1;
         lock (processLock)
@@ -1173,28 +952,7 @@ public sealed class ServerService : IDisposable
             try { ownedPid = managedProcess?.Id ?? -1; } catch { }
         }
 
-        foreach (var name in Names)
-        {
-            var processes = Process.GetProcessesByName(name);
-            foreach (var process in processes)
-            {
-                using (process)
-                {
-                    try
-                    {
-                        var path = string.Empty;
-                        try { path = process.MainModule?.FileName ?? string.Empty; } catch { }
-                        var belongsToThisServer = process.Id == ownedPid || IsPathInsideServerRoot(path);
-                        if (belongsToThisServer && !process.HasExited)
-                            process.Kill(entireProcessTree: true);
-                    }
-                    catch
-                    {
-                        // Best effort. Verification runs after kill attempts.
-                    }
-                }
-            }
-        }
+        platformOperations.KillDetectedServerProcesses(ownedPid);
     }
 
     private void ClearExitedManagedProcess()
@@ -1271,37 +1029,4 @@ public sealed class ServerService : IDisposable
         try { ioCts?.Dispose(); } catch { }
         Interlocked.Exchange(ref shutdownRequestedSessionId, 0);
     }
-
-    private readonly record struct NativeProcessEntry(int ProcessId, int ParentProcessId, string Name);
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-    private struct ProcessEntry32
-    {
-        public uint dwSize;
-        public uint cntUsage;
-        public uint th32ProcessID;
-        public IntPtr th32DefaultHeapID;
-        public uint th32ModuleID;
-        public uint cntThreads;
-        public uint th32ParentProcessID;
-        public int pcPriClassBase;
-        public uint dwFlags;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-        public string szExeFile;
-    }
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr CreateToolhelp32Snapshot(uint flags, uint processId);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern bool Process32First(IntPtr snapshot, ref ProcessEntry32 entry);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern bool Process32Next(IntPtr snapshot, ref ProcessEntry32 entry);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool CloseHandle(IntPtr handle);
-
-    [DllImport("user32.dll")]
-    private static extern bool ShowWindow(IntPtr windowHandle, int command);
 }

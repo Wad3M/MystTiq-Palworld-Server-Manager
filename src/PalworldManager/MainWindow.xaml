@@ -968,6 +968,7 @@
      <RowDefinition Height="Auto"/>
      <RowDefinition Height="Auto"/>
      <RowDefinition Height="Auto"/>
+     <RowDefinition Height="Auto"/>
      <RowDefinition Height="*"/>
      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
@@ -1000,7 +1001,51 @@
      <Border Grid.Column="3" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="CPU" Foreground="#7FA6CA" FontSize="9"/><TextBlock x:Name="CpuText" Text="0.0%" Foreground="White" FontSize="16" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="1" Margin="12,0"><TextBlock Text="MEMORY" Foreground="#7FA6CA" FontSize="9"/><TextBlock x:Name="MemoryText" Text="0 MB" Foreground="White" FontSize="16" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="2" VerticalAlignment="Center"><ProgressBar x:Name="CpuBar" Width="78" Height="8" Maximum="100"/><ProgressBar x:Name="MemoryBar" Width="78" Height="8" Maximum="16384" Margin="0,8,0,0"/></StackPanel><TextBlock x:Name="PlayersText" Text="Players: —" Visibility="Collapsed"/><TextBlock x:Name="ResourceUpdatedText" Text="Updated: —" Visibility="Collapsed"/></Grid></Border>
     </Grid>
 
-    <Border Grid.Row="3" Background="#0F1B27" BorderBrush="#294A68" BorderThickness="1" CornerRadius="9" Padding="8" Margin="0,7,0,0">
+
+    <Border Grid.Row="3" Background="#102235" BorderBrush="#35658D" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,7,0,0"
+            ToolTip="Live World Pulse uses the current PalServer session plus authoritative saved-world evidence. The world clock is read from GameTimeSaveData.GameDateTimeTicks and is never estimated from server uptime.">
+     <Grid>
+      <Grid.ColumnDefinitions>
+       <ColumnDefinition Width="1.25*"/>
+       <ColumnDefinition Width="*"/>
+       <ColumnDefinition Width="*"/>
+       <ColumnDefinition Width="*"/>
+       <ColumnDefinition Width="1.15*"/>
+      </Grid.ColumnDefinitions>
+
+      <StackPanel Grid.Column="0" Margin="0,0,12,0">
+       <TextBlock Text="WORLD PULSE" Foreground="#7FC8FF" FontSize="10" FontWeight="Bold"/>
+       <TextBlock x:Name="DashboardWorldClockText" Text="Day — • --:--" Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,3,0,0"/>
+       <TextBlock x:Name="DashboardWorldClockDetailText" Text="Waiting for saved world clock" Foreground="#9FC4EA" FontSize="10" TextTrimming="CharacterEllipsis"/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="1" Margin="0,0,12,0">
+       <TextBlock Text="SERVER SESSION" Foreground="#7FA6CA" FontSize="9" FontWeight="Bold"/>
+       <TextBlock x:Name="DashboardPulseUptimeText" Text="00:00:00" Foreground="#9FE1FF" FontSize="15" FontWeight="Bold" Margin="0,4,0,0"/>
+       <TextBlock x:Name="DashboardPulseSessionText" Text="No active session" Foreground="#8CA5BB" FontSize="9"/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="2" Margin="0,0,12,0">
+       <TextBlock Text="PLAYERS THIS SESSION" Foreground="#7FA6CA" FontSize="9" FontWeight="Bold"/>
+       <TextBlock x:Name="DashboardPulsePlayersText" Text="0 online • Peak 0" Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,4,0,0"/>
+       <TextBlock x:Name="DashboardPulsePlayerDetailText" Text="0 joins • 0 unique" Foreground="#8CA5BB" FontSize="9"/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="3" Margin="0,0,12,0">
+       <TextBlock Text="WORLD SAVE" Foreground="#7FA6CA" FontSize="9" FontWeight="Bold"/>
+       <TextBlock x:Name="DashboardPulseSaveText" Text="Unavailable" Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,4,0,0"/>
+       <TextBlock x:Name="DashboardPulseBackupText" Text="Backup: —" Foreground="#8CA5BB" FontSize="9" TextTrimming="CharacterEllipsis"/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="4">
+       <TextBlock Text="LAST PLAYER EVENT" Foreground="#7FA6CA" FontSize="9" FontWeight="Bold"/>
+       <TextBlock x:Name="DashboardPulseLastEventText" Text="No player transition observed" Foreground="#DCEBFA" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+       <TextBlock Text="Session counters reset when PalServer starts a new session." Foreground="#72899F" FontSize="9" TextWrapping="Wrap"/>
+      </StackPanel>
+     </Grid>
+    </Border>
+
+    <Border Grid.Row="4" Background="#0F1B27" BorderBrush="#294A68" BorderThickness="1" CornerRadius="9" Padding="8" Margin="0,7,0,0">
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="HEALTH" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold" Margin="0,0,8,0"/><TextBlock x:Name="DashboardHealthText" Text="CHECKING" Foreground="#F0B246" FontSize="14" FontWeight="Bold"/></StackPanel>
       <WrapPanel Grid.Column="1" Margin="18,0,0,0" VerticalAlignment="Center"><TextBlock x:Name="DashboardHealthPlayers" Text="Players: —" Foreground="#C9D8E8" Margin="0,0,16,0"/><TextBlock x:Name="DashboardHealthRest" Text="REST: Checking" Foreground="#C9D8E8" Margin="0,0,16,0"/><TextBlock x:Name="DashboardHealthRcon" Text="RCON: Idle" Foreground="#C9D8E8" Margin="0,0,16,0"/><TextBlock x:Name="DashboardHealthMods" Text="Mods: —" Foreground="#C9D8E8" Margin="0,0,16,0"/><TextBlock x:Name="DashboardHealthBackup" Text="Backup: —" Foreground="#C9D8E8"/></WrapPanel>
@@ -1008,7 +1053,7 @@
      </Grid>
     </Border>
 
-    <Grid Grid.Row="4" Margin="0,7,0,0" Height="104">
+    <Grid Grid.Row="5" Margin="0,7,0,0" Height="104">
      <Grid.ColumnDefinitions><ColumnDefinition Width="1.65*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
      <Border Grid.Column="0" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,7,0">
       <Grid>
@@ -1071,13 +1116,13 @@
      </Border>
     </Grid>
 
-    <Grid Grid.Row="5" Margin="0,7,0,0" MinHeight="160">
+    <Grid Grid.Row="6" Margin="0,7,0,0" MinHeight="160">
      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="235"/></Grid.ColumnDefinitions>
      <Border Grid.Column="0" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,7,0"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="LIVE SERVER / MANAGER LOG" FontWeight="Bold"/><TextBlock x:Name="DashboardRefreshStatusText" Grid.Column="1" Text="Dashboard intelligence ready" Foreground="#9FC4EA" FontSize="10"/></Grid><TextBox x:Name="DashboardLog" Grid.Row="1" Style="{StaticResource LogViewerTextBox}" Margin="0,7,0,0"/></Grid></Border>
      <Border Grid.Column="1" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8" Padding="10"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="ONLINE PLAYERS" FontWeight="Bold"/><Border Grid.Column="1" Background="#17314A" BorderBrush="#315F88" BorderThickness="1" CornerRadius="9" Padding="7,2"><TextBlock x:Name="DashboardPlayerCountText" Text="0" Foreground="#8FCBFF" FontWeight="Bold"/></Border></Grid><ListBox x:Name="DashboardPlayersList" Grid.Row="1" Margin="0,6,0,0" Background="#0B1118" BorderBrush="#24384B" BorderThickness="1" Foreground="#DCEBFA" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"><ListBox.ItemTemplate><DataTemplate><Border BorderBrush="#1E3346" BorderThickness="0,0,0,1" Padding="8,6"><StackPanel Orientation="Horizontal"><Ellipse Width="7" Height="7" Fill="#35D36B" Margin="0,0,8,0" VerticalAlignment="Center"/><TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
     </Grid>
 
-    <Border Grid.Row="6" Background="#0F1822" BorderBrush="#29415A" BorderThickness="1" CornerRadius="8" Padding="9,7" Margin="0,7,0,0">
+    <Border Grid.Row="7" Background="#0F1822" BorderBrush="#29415A" BorderThickness="1" CornerRadius="8" Padding="9,7" Margin="0,7,0,0">
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel Grid.Column="0"><TextBlock Text="SERVER NAME" Foreground="#7FA6CA" FontSize="9"/><TextBlock x:Name="ServerNameFooterText" Text="—" Foreground="White" FontSize="13" FontWeight="Bold"/></StackPanel>
       <Border Grid.Column="1" Width="1" Background="#29415A" HorizontalAlignment="Center"/>
@@ -1093,7 +1138,7 @@
     </Border>
 
     <!-- Retained nonvisual analytics controls used by existing handlers. -->
-    <Expander Grid.Row="6" Visibility="Collapsed" IsExpanded="False">
+    <Expander Grid.Row="7" Visibility="Collapsed" IsExpanded="False">
      <StackPanel>
       <Button Click="HistoricalRefresh_Click"/><Button Click="HistoricalExport_Click"/>
       <TextBlock x:Name="HistoricalPlayersSummaryText"/><TextBlock x:Name="HistoricalWorldSummaryText"/>

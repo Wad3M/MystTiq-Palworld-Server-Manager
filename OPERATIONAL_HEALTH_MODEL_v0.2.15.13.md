@@ -1,0 +1,32 @@
+# MystTiq Operational Health Model — v0.2.15.13
+
+## Goal
+Server-level Overall Health must represent confirmed operational problems, not the absence of optional MOD runtime confirmation.
+
+## MOD contribution rules
+Neutral/informational states do not reduce Overall Health:
+- Disabled
+- Active / Unverified
+- Active
+- Installed
+- Unknown / not yet checked
+
+Confirmed enabled-MOD problems do reduce Overall Health:
+- Failed/runtime error
+- Missing deployment
+- Misconfigured active runtime
+- State mismatch/duplicate Attention
+- Confirmed conflict
+- Missing dependency
+
+## Composition
+`ModPlatformHealthService` owns MOD-to-server-health interpretation and produces `ModPlatformHealthSnapshot`.
+
+`DashboardIntelligenceService` consumes that snapshot rather than recomputing MOD health from installed/healthy counts.
+
+The Dashboard MOD card and compact health strip use the same snapshot so wording and Overall Health remain consistent.
+
+## Expected behavior
+- 8 installed, 8 disabled, 0 confirmed issues => no MOD deduction.
+- 8 installed, 6 healthy, 2 Active / Unverified => no MOD deduction.
+- 8 installed, 7 healthy, 1 enabled Failed => one confirmed MOD issue and a health deduction.

@@ -1,0 +1,30 @@
+# MystTiq Architecture Refactor — v0.2.15.16
+
+## New profile seam
+
+`ServerPlatformProfile` is the single source for:
+- server process names
+- server executable-relative paths
+- SteamCMD executable naming
+- guarded server ports
+
+The default `Windows` profile preserves all existing Windows conventions.
+
+## Resulting lifecycle structure
+
+`ServerService`
+- platform-neutral lifecycle facade/policy
+- consumes `ServerPlatformProfile`
+- consumes `IServerSessionInspector`
+- consumes `IServerPlatformOperations`
+
+`WindowsServerPlatformOperations`
+- Windows launch/window/termination implementation
+- consumes the selected platform profile
+
+This removes another class of Windows naming assumptions from the lifecycle facade.
+
+## Remaining Linux-preparation areas
+- SteamCMD execution/packaging abstraction
+- broader server-root/runtime path conventions (especially UE4SS Win64 paths)
+- non-WPF host/UI strategy for a true Linux manager build

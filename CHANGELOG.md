@@ -1,5 +1,124 @@
 # Changelog
 
+## v0.2.15.17 — Live World Telemetry & Dashboard Pulse
+
+- Added `WorldTelemetryService` with server-session-scoped player metrics: current online, peak online, joins, leaves, unique players, and last player transition.
+- Added `WorldClockProvider` to read the authoritative saved Palworld clock from decoded `Level.sav` `GameTimeSaveData.GameDateTimeTicks`.
+- Added `WorldTelemetrySnapshot` / `WorldClockSnapshot` models and centralized telemetry composition.
+- Added `ServerService.ActiveSessionId` and `ActiveSessionStartedAt` read-only session metadata for true PalServer uptime.
+- Added a Dashboard `WORLD PULSE` strip showing saved world day/time, session uptime, session player metrics, save freshness, latest backup age, and last player event.
+- Player join/leave and saved-world day changes can flow into the existing Activity/Audit feed.
+- The existing Dashboard UPTIME indicator now reflects the active PalServer session rather than MystTiq process uptime.
+- World-clock values are never estimated from uptime; if authoritative save evidence is unavailable, MystTiq displays the clock as unavailable.
+- No intended changes to MOD health/runtime evidence, server lifecycle semantics, dark theme, button standards, or tooltip standards.
+
+
+## v0.2.15.16 — Platform Profile Abstraction & Documentation Consistency
+
+- Added `ServerPlatformProfile` as the centralized source for PalServer process names, executable-relative paths, SteamCMD executable naming, and guarded ports.
+- Removed hard-coded Windows PalServer process names and guarded-port constants from `ServerService`.
+- `ServerProcessDiscoveryService`, `ServerResourceMonitor`, `ServerSessionInspector`, and `WindowsServerPlatformOperations` now receive their conventions through the selected platform profile.
+- Preserved the Windows profile and all current Windows lifecycle behavior as the default.
+- Performed a full README consistency rewrite: removed duplicate Feature Matrix/release-diary content, removed stale baseline/RC claims, consolidated MOD runtime-health semantics, corrected Linux wording, and made CHANGELOG/release-notes authoritative for historical version detail.
+- No intended UI, dark-theme, button, tooltip, MOD evidence, operational-health, or lifecycle behavior changes.
+
+
+## v0.2.15.15 — Server Platform Services Abstraction
+
+- Added `IServerPlatformOperations` as the platform boundary for executable resolution, process launch policy, post-launch window handling, forced process-tree termination, and server-process fallback cleanup.
+- Added `WindowsServerPlatformOperations` containing the existing Windows-specific implementation.
+- `ServerService` now depends on `IServerPlatformOperations` and retains the Windows implementation as its compatibility default.
+- Removed Windows `user32.dll` window-hiding P/Invoke and executable-path selection logic from `ServerService`.
+- Removed direct `Process.Kill(entireProcessTree: true)` fallback logic from `ServerService`; forced termination now delegates through the platform service.
+- Reduced `ServerService` further while preserving the public facade, current session semantics, stream readers, startup/restart behavior, native MOD evidence, and operational-health logic.
+- No intended UI, dark-theme, button, tooltip, server configuration, or runtime behavior changes.
+
+
+## v0.2.15.14 FIX1 — Composition Root Namespace Compile Hotfix
+
+- Added the missing `using PalworldManager.Models;` import to `ApplicationServiceComposition.cs`.
+- Restored visibility of `AppSettings` in the new application composition root.
+- Added regression-harness coverage for the composition-root namespace dependency.
+- No service graph, platform abstraction, UI, MOD health, or runtime behavior changed.
+
+
+## v0.2.15.14 — Application Composition & Platform Abstraction Preparation
+
+- Added `ApplicationServiceComposition` as an explicit composition root for MystTiq's core server/MOD/diagnostics service graph.
+- Removed direct construction of core server/MOD services from `MainWindow`; the window now consumes the composed graph and remains responsible for UI event wiring.
+- Added `IServerSessionInspector` as the platform boundary for server-session process tree, loaded-module, descendant-process, and guarded-port inspection.
+- `ServerSessionInspector` remains the Windows implementation and preserves v0.2.15.12 session/module behavior.
+- `ServerService` now depends on `IServerSessionInspector` while retaining a Windows default implementation for compatibility.
+- Established a clean seam for a future Linux session/process inspector without adding OS conditionals throughout server/runtime-evidence logic.
+- No intended UI, theme, button, tooltip, health, MOD evidence, start/stop/restart, or server configuration behavior changes.
+
+
+## v0.2.15.13 FIX2 — Regression Harness Quoting Hotfix
+
+- Fixed PowerShell parsing in `Test-v0.2.15.13-Logic.ps1`.
+- Replaced nested double-quoted text in the conflict-regression failure message with PowerShell-safe single-quoted message strings.
+- No C# health logic, MOD conflict semantics, UI behavior, or server health scoring changed from FIX1.
+
+
+## v0.2.15.13 FIX1 — MOD Conflict Health False-Positive Hotfix
+
+- Fixed a server-health false positive where `No known conflict` matched a broad `Contains("Conflict")` check.
+- MOD conflict health now requires either `Compatibility == Conflict` or the explicit status `Confirmed conflict`.
+- Healthy MODs with `No known conflict` no longer count as confirmed server-health issues.
+- Added regression-harness coverage to prevent broad conflict-string matching from returning.
+- No change to genuine conflict, missing dependency, runtime error, failed, missing, or misconfigured MOD penalties.
+
+
+## v0.2.15.13 — Operational Health Model & Application Composition Refinement
+
+- Added `ModPlatformHealthService` as the single source of truth for MOD contribution to server-level health.
+- Disabled, Active / Unverified, Active, Installed, and Unknown MOD states are informational/neutral and no longer reduce Overall Health.
+- Enabled MOD failures, runtime errors, missing deployment, misconfiguration, state/duplicate attention, confirmed conflicts, and missing dependencies are explicit health issues.
+- `DashboardIntelligenceService` now consumes `ModPlatformHealthSnapshot` instead of deriving `installed - healthy`.
+- Dashboard MOD card, compact health strip, Overall Health detail, and tooltip now share the centralized MOD health interpretation.
+- Preserved v0.2.15.12 FIX1 server lifecycle/process modularization and v0.2.15.10+ runtime evidence behavior.
+
+
+## v0.2.15.12 FIX1 — Server Inspector Delegation Compile Hotfix
+
+- Repaired three stale `ServerService` references left after process/session inspection was extracted to `ServerSessionInspector`.
+- Cleanup now obtains descendant process IDs and guarded listening ports through the extracted inspector.
+- Added a public read-only descendant-process query to `ServerSessionInspector`.
+- Updated the stale v0.2.15.11 MOD-center source comment to v0.2.15.12.
+- Tightened the v0.2.15.12 regression harness to detect stale extracted-helper references before release build.
+- No lifecycle behavior, cleanup safety policy, runtime evidence semantics, UI styling, buttons, or tooltips changed.
+
+
+## v0.2.15.12 — Server Lifecycle & Process Modularization
+
+- Extracted PalServer process-tree, loaded-module, and guarded-port inspection into `ServerSessionInspector`.
+- Extracted lifecycle-state interpretation into the pure `ServerLifecycleEvaluator`.
+- Reduced `ServerService` while retaining it as the compatibility facade used by the rest of MystTiq.
+- Preserved current-session/PID snapshot semantics required by native UE4SS runtime evidence.
+- Preserved start, stop, restart, adoption, cleanup, update, resource-monitoring, and I/O behavior.
+- Established explicit process/session boundaries that can later be placed behind Windows/Linux platform interfaces.
+- No intended UI, theme, button, tooltip, configuration, or runtime-evidence semantic changes.
+
+
+## v0.2.15.11 FIX1 — MOD Center Extraction Compile Hotfix
+
+- Repaired four interpolated dialog strings in `MainWindow.ModCenter.cs` that were accidentally split across physical source lines during the modularization extraction.
+- Restored the original escaped newline behavior (`\n\n`) without changing dialog text or runtime logic.
+- Added regression harness checks for the extracted MOD-center dialog strings.
+- No MOD architecture, runtime evidence, UI styling, or workflow behavior changed.
+
+
+## v0.2.15.11 — MOD Architecture Modularization
+
+- Added `ModCoordinator` as the application-facing orchestration boundary for inventory, verification, compatibility, recommendations, and verification export.
+- Added `ModDashboardStateService` to own Dashboard projection, merge, health, and summary logic without WPF dependencies.
+- Added MOD workflow/result models.
+- Extracted the MOD Library/Dashboard/UI workflow from the monolithic `MainWindow.xaml.cs` into `MainWindow.ModCenter.cs`.
+- MainWindow now delegates MOD workflow orchestration instead of coordinating backend services directly.
+- Preserved runtime evidence, native module verification, UI behavior, button/tooltip standards, and dark theme.
+- No intentional user-facing feature or file-format changes.
+
+
 ## v0.2.15.10 FIX1 — Release Synchronization & Harness Hotfix
 
 - Fixed the v0.2.15.10 PowerShell regression harness by replacing the `R` helper name that collided with PowerShell's `r` / `Invoke-History` alias.

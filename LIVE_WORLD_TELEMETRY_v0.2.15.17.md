@@ -1,0 +1,31 @@
+# Live World Telemetry Architecture — v0.2.15.17
+
+## Data flow
+
+`ActiveWorldContextService`
+→ active Level.sav timestamp
+
+`WorldDiscoverySnapshotService`
+→ decoded Level.sav JSON
+
+`WorldClockProvider`
+→ `GameTimeSaveData.GameDateTimeTicks`
+→ day + time-of-day snapshot
+
+`ServerService`
+→ active PalServer session ID/start time
+
+`PlayerHistoryService`
+→ current online identities
+
+`BackupService`
+→ latest backup timestamp
+
+All inputs are combined by `WorldTelemetryService` into an immutable `WorldTelemetrySnapshot` consumed by the Dashboard.
+
+## Trust rules
+- Never derive world day/time from process uptime.
+- Never extrapolate the saved clock between Level.sav writes.
+- Reset session player metrics on PalServer session change.
+- Treat missing telemetry as unavailable, not unhealthy.
+- Telemetry is informational and does not affect Overall Health.

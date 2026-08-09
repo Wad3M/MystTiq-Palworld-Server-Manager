@@ -82,11 +82,11 @@ public partial class MainWindow
         var online = history.Count(x => x.IsOnline);
         var saveFiles = history.Count(x => x.Source.Contains("save", StringComparison.OrdinalIgnoreCase));
         var orphaned = guildRows.Count(x => x.IsOrphaned);
-        var healthyMods = modDashboardRows.Count(x => IsDashboardModHealthy(x.Health));
+        var modHealth = modPlatformHealth.Evaluate(modDashboardRows);
         var latestBackup = backups.List().FirstOrDefault();
         var recentBackup = latestBackup is not null && DateTime.Now - latestBackup.Created < TimeSpan.FromHours(24);
         var worldAvailable = !string.IsNullOrWhiteSpace(SaveInspector.FindActiveWorldPath());
-        var snapshot = dashboardIntelligence.Build(online, history.Count, saveFiles, guildRows.Count, orphaned, modDashboardRows.Count, healthyMods, recentBackup, worldAvailable, dashboardLifecycleState);
+        var snapshot = dashboardIntelligence.Build(online, history.Count, saveFiles, guildRows.Count, orphaned, modHealth, recentBackup, worldAvailable, dashboardLifecycleState);
 
         DashboardPlayersStateText.Text = $"{snapshot.OnlinePlayers} online / {snapshot.KnownPlayers} known";
         DashboardPlayersDetailText.Text = $"{snapshot.PlayerSaveFiles} player save record(s) discovered";
@@ -98,6 +98,7 @@ public partial class MainWindow
             : $"{snapshot.OperationalState} • {snapshot.WarningCount} confirmed issue(s)";
         DashboardOverallHealthCard.ToolTip = BuildHealthBreakdownTooltip(snapshot);
         DashboardLastUpdatedText.Text = $"Last updated {snapshot.RefreshedUtc.ToLocalTime():HH:mm:ss}";
+        RefreshWorldPulse(history);
         RefreshDashboardActivityTicker();
     }
 
@@ -117,13 +118,10 @@ public partial class MainWindow
         DashboardCommandDetailText.Text = health.State == ServerLifecycleState.Running
             ? "Palworld is running under MystTiq management. Live monitoring is active."
             : health.Detail;
-        DashboardUptimeText.Text = (DateTime.UtcNow - managerStartedUtc).ToString(@"hh\:mm\:ss");
 
-        DashboardModStateText.Text = modDashboardRows.Count == 0 ? "No Mods" : $"{modDashboardRows.Count} Installed";
-        var healthyMods = modDashboardRows.Count(x => IsDashboardModHealthy(x.Health));
-        DashboardModDetailText.Text = modDashboardRows.Count == 0
-            ? "Vanilla server profile"
-            : $"{healthyMods} healthy • {modDashboardRows.Count - healthyMods} need review";
+        var modHealth = modPlatformHealth.Evaluate(modDashboardRows);
+        DashboardModStateText.Text = modHealth.Installed == 0 ? "No Mods" : $"{modHealth.Installed} Installed";
+        DashboardModDetailText.Text = modHealth.Summary;
 
         var latestBackup = backups.List().FirstOrDefault();
         if (latestBackup is null)
@@ -147,6 +145,7 @@ public partial class MainWindow
             {
                 DashboardWorldNameText.Text = "No Active World";
                 DashboardWorldDetailText.Text = isInstalled ? "Start the server or import a world." : "Install the server to create a world.";
+                RefreshDashboardIntelligence();
                 return;
             }
 
@@ -163,6 +162,121 @@ public partial class MainWindow
 
         RefreshDashboardIntelligence();
     }
+    private void RefreshWorldPulse(IReadOnlyList<PlayerHistoryRecord> history)
+    {
+        try
+        {
+            var discovery = worldDiscovery.Current();
+            var onlinePlayers = history
+                .Where(x => x.IsOnline)
+                .Select(x => new WorldTelemetryPlayer(
+                    FirstNonBlank(x.Key, x.PlayerId, x.UserId, x.SteamId, x.Name),
+                    FirstNonBlank(x.Name, x.UserId, x.SteamId, x.PlayerId)))
+                .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+                .ToList();
+
+            var latestBackup = backups.List().FirstOrDefault();
+            var update = worldTelemetry.Update(
+                server.ActiveSessionId,
+                server.ActiveSessionStartedAt,
+                onlinePlayers,
+                discovery.DecodedJsonPath,
+                discovery.Context.LevelLastWriteUtc,
+                latestBackup?.Created);
+
+            var pulse = update.Snapshot;
+            DashboardUptimeText.Text = FormatDuration(pulse.SessionUptime);
+            DashboardPulseUptimeText.Text = FormatDuration(pulse.SessionUptime);
+            DashboardPulseSessionText.Text = pulse.SessionId > 0
+                ? $"Session #{pulse.SessionId}"
+                : "No active PalServer session";
+
+            if (pulse.WorldClock.Available)
+            {
+                DashboardWorldClockText.Text = $"{pulse.WorldClock.DayDisplay} • {pulse.WorldClock.TimeDisplay}";
+                var freshness = pulse.LastWorldSaveUtc.HasValue
+                    ? FormatAge(DateTime.UtcNow - pulse.LastWorldSaveUtc.Value)
+                    : "unknown";
+                DashboardWorldClockDetailText.Text = $"Exact saved world clock • {freshness} fresh";
+                DashboardWorldClockText.Foreground = Brushes.White;
+            }
+            else
+            {
+                DashboardWorldClockText.Text = "Day — • --:--";
+                DashboardWorldClockDetailText.Text = "World clock unavailable — MystTiq will not estimate it";
+                DashboardWorldClockText.Foreground = Brushes.Gold;
+            }
+
+            DashboardPulsePlayersText.Text = $"{pulse.OnlinePlayers} online • Peak {pulse.PeakPlayers}";
+            DashboardPulsePlayerDetailText.Text =
+                $"{pulse.SessionJoins} joins • {pulse.SessionLeaves} leaves • {pulse.UniquePlayers} unique";
+            DashboardPulseLastEventText.Text = pulse.LastPlayerEvent;
+
+            if (pulse.LastWorldSaveUtc.HasValue)
+            {
+                var saveAge = DateTime.UtcNow - pulse.LastWorldSaveUtc.Value;
+                DashboardPulseSaveText.Text = $"{FormatAge(saveAge)} ago";
+                DashboardPulseSaveText.Foreground = saveAge < TimeSpan.FromMinutes(10)
+                    ? Brushes.LightGreen
+                    : Brushes.Gold;
+            }
+            else
+            {
+                DashboardPulseSaveText.Text = "Unavailable";
+                DashboardPulseSaveText.Foreground = Brushes.Gold;
+            }
+
+            DashboardPulseBackupText.Text = pulse.LastBackupLocal.HasValue
+                ? $"Backup: {FormatAge(DateTime.Now - pulse.LastBackupLocal.Value)} ago"
+                : "Backup: none detected";
+
+            foreach (var worldEvent in update.Events)
+            {
+                var action = worldEvent.Kind switch
+                {
+                    "PlayerJoined" => "Player joined",
+                    "PlayerLeft" => "Player left",
+                    "WorldDayChanged" => "World day changed",
+                    _ => worldEvent.Kind
+                };
+                RecordAudit("Information", "World Pulse", action,
+                    $"{worldEvent.Summary} • {worldEvent.Detail}", MainPageIndex.Dashboard);
+            }
+        }
+        catch (Exception ex)
+        {
+            DashboardWorldClockText.Text = "Day — • --:--";
+            DashboardWorldClockDetailText.Text = "World telemetry unavailable: " + ex.Message;
+            DashboardPulseUptimeText.Text = "00:00:00";
+            DashboardPulseSessionText.Text = "Telemetry unavailable";
+            DashboardPulsePlayersText.Text = "—";
+            DashboardPulsePlayerDetailText.Text = "Session metrics unavailable";
+            DashboardPulseSaveText.Text = "Unavailable";
+            DashboardPulseBackupText.Text = "Backup: —";
+            DashboardPulseLastEventText.Text = "Telemetry unavailable";
+        }
+    }
+
+    private static string FirstNonBlank(params string[] values) =>
+        values.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty;
+
+    private static string FormatDuration(TimeSpan value)
+    {
+        value = value < TimeSpan.Zero ? TimeSpan.Zero : value;
+        return value.TotalDays >= 1
+            ? $"{(int)value.TotalDays}d {value.Hours:00}h {value.Minutes:00}m"
+            : value.ToString(@"hh\:mm\:ss");
+    }
+
+    private static string FormatAge(TimeSpan value)
+    {
+        if (value < TimeSpan.Zero) value = TimeSpan.Zero;
+        if (value.TotalSeconds < 60) return $"{Math.Max(0, (int)value.TotalSeconds)}s";
+        if (value.TotalMinutes < 60) return $"{(int)value.TotalMinutes}m";
+        if (value.TotalHours < 24) return $"{(int)value.TotalHours}h {value.Minutes}m";
+        return $"{(int)value.TotalDays}d {value.Hours}h";
+    }
+
     private static string BuildHealthBreakdownTooltip(DashboardIntelligenceSnapshot snapshot)
     {
         var lines = new List<string>
@@ -175,7 +289,13 @@ public partial class MainWindow
 
         foreach (var signal in snapshot.Signals)
         {
-            lines.Add($"{(signal.IsWarning ? "!" : "✓")} {signal.Name}: {signal.Status}");
+            var marker = signal.Severity switch
+            {
+                DashboardHealthSeverity.Critical or DashboardHealthSeverity.Error or DashboardHealthSeverity.Warning => "!",
+                DashboardHealthSeverity.Informational => "i",
+                _ => "✓"
+            };
+            lines.Add($"{marker} {signal.Name}: {signal.Status}");
             lines.Add($"   {signal.Detail}");
         }
 
