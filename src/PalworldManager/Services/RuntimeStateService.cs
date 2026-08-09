@@ -10,9 +10,6 @@ namespace PalworldManager.Services;
 /// </summary>
 public sealed class RuntimeStateService
 {
-    private static readonly Regex StartedLuaModPattern = new(
-        "Starting\\s+Lua\\s+mod\\s+[\"'](?<name>[^\"']+)[\"']",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex RuntimeErrorPattern = new(
         "(failed\\s+to\\s+load|load\\s+failed|unhandled\\s+exception|fatal)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -188,13 +185,8 @@ public sealed class RuntimeStateService
             string? line;
             while ((line = reader.ReadLine()) is not null)
             {
-                var started = StartedLuaModPattern.Match(line);
-                if (started.Success)
-                {
-                    var name = started.Groups["name"].Value.Trim();
-                    foreach (var alias in ExpandAlias(name))
-                        changed |= loadedAliases.Add(alias);
-                }
+                foreach (var alias in ModRuntimeEvidenceEngine.ExtractPositiveAliases(line))
+                    changed |= loadedAliases.Add(alias);
 
                 if (RuntimeErrorPattern.IsMatch(line) && runtimeErrors.Count < 100)
                 {

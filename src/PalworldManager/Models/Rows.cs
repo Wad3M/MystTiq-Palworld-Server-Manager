@@ -85,7 +85,8 @@ public sealed class ModRow
         ? PresentInActiveRuntime ? "Active" : "Missing"
         : "N/A";
     public string RuntimeLoadedStatus => Type.Contains("UE4SS", StringComparison.OrdinalIgnoreCase) || Source.Contains("UE4SS", StringComparison.OrdinalIgnoreCase)
-        ? LoadedByUe4ss ? "Loaded" : "Not loaded"
+        ? LoadedByUe4ss ? "Loaded" :
+            Enabled && Deployed && PresentInActiveRuntime ? "Active / Unverified" : "Not loaded"
         : "N/A";
     public string Status => !Deployed ? "Missing files" :
         (Type.Contains("UE4SS", StringComparison.OrdinalIgnoreCase) || Source.Contains("UE4SS", StringComparison.OrdinalIgnoreCase)) && !PresentInActiveRuntime ? "Misconfigured" :

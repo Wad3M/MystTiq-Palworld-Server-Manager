@@ -124,7 +124,7 @@ public partial class MainWindow : Window
         sessionLog = new SessionLogService(settings.LogsRoot);
         ue4ssRuntimeResolver = new Ue4ssRuntimeResolver(settings);
         runtimeState = new RuntimeStateService();
-        runtimeState.StateChanged += state => Log($"[RUNTIME STATE] Revision {state.Revision} • Session {(state.SessionActive ? state.SessionId : "Inactive")} • Loaded aliases {state.LoadedCount} • Errors {state.ErrorCount}");
+        runtimeState.StateChanged += HandleRuntimeStateChanged;
         foreach (var line in ue4ssRuntimeResolver.BuildDiagnosticLines())
             Log(line);
         var applicationPaths = ApplicationPathService.Current;
@@ -146,7 +146,7 @@ public partial class MainWindow : Window
         backups=new(settings);
         config=new(settings);
         mods=new(settings, ue4ssRuntimeResolver, runtimeState);
-        modVerification=new(settings, runtimeState, modHealthEvaluation);
+        modVerification=new(settings, runtimeState, server, modHealthEvaluation);
         modLifecycle = new ModLifecycleCoordinator(mods, modRepairRecommendations);
         modCompatibility=new(settings);
         environment=new(settings);
@@ -2887,6 +2887,34 @@ public partial class MainWindow : Window
         });
     }
 
+    private void HandleRuntimeStateChanged(RuntimeStateSnapshot state)
+    {
+        Log($"[RUNTIME STATE] Revision {state.Revision} • Session {(state.SessionActive ? state.SessionId : "Inactive")} • Loaded aliases {state.LoadedCount} • Errors {state.ErrorCount}");
+
+        // v0.2.15.10: runtime evidence is event-driven. When the authoritative
+        // session state gains load evidence, synchronize existing Library and
+        // Dashboard rows immediately rather than waiting for a manual Verify All.
+        // Do not force a new filesystem/log scan here; that could recurse through
+        // RuntimeStateService.Observe(). The cached inventory receives the new
+        // immutable runtime snapshot instead.
+        _ = Dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                var snapshot = modInventory.Current("Runtime evidence update", force: false);
+                var installed = snapshot.Mods.ToList();
+                runtimeState.ApplyTo(installed);
+                ModsGrid.Items.Refresh();
+                RefreshModDashboard(installed);
+                RefreshModRuntime(installed);
+            }
+            catch (Exception ex)
+            {
+                Log("[RUNTIME EVIDENCE] UI synchronization failed: " + ex.Message);
+            }
+        });
+    }
+
     private void RefreshMods_Click(object s,RoutedEventArgs e)=>RefreshMods();
     private void RefreshMods()
     {
@@ -3176,9 +3204,9 @@ public partial class MainWindow : Window
     {
         var rows = results.ToList();
         var healthyCount = rows.Count(x => x.Health == "Healthy");
-        var runtimeUnverifiedCount = rows.Count(x => x.Health == "Runtime Unverified");
+        var runtimeUnverifiedCount = rows.Count(x => x.Health is "Runtime Unverified" or "Active / Unverified");
         var failedCount = rows.Count(x => x.Health is "Failed" or "Missing");
-        var attentionCount = rows.Count(x => x.Health is "Runtime Unverified" or "Misconfigured" or "Attention" or "Failed" or "Missing" or "Unknown");
+        var attentionCount = rows.Count(x => x.Health is "Misconfigured" or "Attention" or "Failed" or "Missing" or "Unknown");
         var updates = rows.Count(x => x.VersionStatus.StartsWith("Update ", StringComparison.OrdinalIgnoreCase));
         var conflicts = rows.Count(x => x.Compatibility == "Conflict");
         var missingDependencies = rows.Count(x => x.DependencyStatus.StartsWith("Missing ", StringComparison.OrdinalIgnoreCase));
@@ -3202,6 +3230,7 @@ public partial class MainWindow : Window
 
         ModDashScore.Text = failedCount > 0 ? "FAILED"
             : attentionCount > 0 ? "ATTENTION"
+            : runtimeUnverifiedCount > 0 ? "UNVERIFIED"
             : runtimeChecked ? "WORKING"
             : "UNKNOWN";
         if (runtimeChecked && failedCount == 0 && attentionCount == 0)
@@ -3209,6 +3238,12 @@ public partial class MainWindow : Window
             ModDashHealthText.Text = "All detected mods are healthy";
             ModDashHealthDetails.Text = "All detected mods passed their centralized health rules. UE4SS/Lua mods have matching runtime load evidence; non-UE4SS mods passed installation and enabled-state verification.";
             ModDashHealthBanner.Background = new SolidColorBrush(Color.FromRgb(23, 58, 42));
+        }
+        else if (runtimeChecked && attentionCount == 0 && runtimeUnverifiedCount > 0)
+        {
+            ModDashHealthText.Text = $"{runtimeUnverifiedCount} mod{(runtimeUnverifiedCount == 1 ? "" : "s")} awaiting runtime confirmation";
+            ModDashHealthDetails.Text = "No failures were detected. These MODs are installed, enabled, and active, but MystTiq has not observed mod-specific positive runtime evidence in this session.";
+            ModDashHealthBanner.Background = new SolidColorBrush(Color.FromRgb(32, 64, 96));
         }
         else if (attentionCount == 0)
         {
@@ -3273,7 +3308,7 @@ public partial class MainWindow : Window
             ModDashLastVerified.Text = $"Last Scan: {inventory.ScannedAt:MMM d yyyy}  {inventory.ScannedAt:h:mm tt}  •  Duration: {inventory.Duration.TotalSeconds:0.0} sec  •  One Scan";
 
             var healthy = modDashboardRows.Count(x => x.Health == "Healthy");
-            var runtimeUnverified = modDashboardRows.Count(x => x.Health == "Runtime Unverified");
+            var runtimeUnverified = modDashboardRows.Count(x => x.Health is "Runtime Unverified" or "Active / Unverified");
             var attention = modDashboardRows.Count(x => x.Health is "Attention" or "Misconfigured");
             var disabled = modDashboardRows.Count(x => x.Health == "Disabled");
             var failed = modDashboardRows.Count(x => x.Health is "Failed" or "Missing");
@@ -3281,7 +3316,7 @@ public partial class MainWindow : Window
             AppDialog.Show(
                 failed == 0 && attention == 0 && runtimeUnverified == 0 && unknown == 0
                     ? $"Verification completed. {healthy} healthy; {disabled} disabled. All enabled detected mods satisfy their centralized health rules."
-                    : $"Verification completed. Healthy: {healthy}; Runtime Unverified: {runtimeUnverified}; Attention/Misconfigured: {attention}; Disabled: {disabled}; Failed/Missing: {failed}; Unknown: {unknown}. Review the MOD Dashboard for details.",
+                    : $"Verification completed. Healthy: {healthy}; Active / Unverified: {runtimeUnverified}; Attention/Misconfigured: {attention}; Disabled: {disabled}; Failed/Missing: {failed}; Unknown: {unknown}. Review the MOD Dashboard for details.",
                 "MOD Runtime Verification",
                 MessageBoxButton.OK,
                 failed > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);

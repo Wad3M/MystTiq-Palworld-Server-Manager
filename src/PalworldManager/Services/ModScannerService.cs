@@ -316,7 +316,7 @@ public sealed class ModScannerService
                 Enabled = configuredEnabled || markerOverride,
                 Deployed = Directory.EnumerateFileSystemEntries(folder).Any(),
                 Source = "UE4SS",
-                Type = "UE4SS / Lua",
+                Type = DetectUe4ssFolderType(folder),
                 Description = ReadLocalDescription(folder),
                 EnableReason = markerOverride && !configuredEnabled
                     ? "STATE MISMATCH: enabled.txt is overriding mods.txt (configured disabled, runtime effectively enabled). Use Repair States."
@@ -330,6 +330,20 @@ public sealed class ModScannerService
     }
 
 
+
+    private static string DetectUe4ssFolderType(string folder)
+    {
+        try
+        {
+            var hasLua = Directory.EnumerateFiles(folder, "*.lua", SearchOption.AllDirectories).Any();
+            var hasDll = Directory.EnumerateFiles(folder, "*.dll", SearchOption.AllDirectories).Any();
+            if (hasLua && hasDll) return "UE4SS / Hybrid";
+            if (hasDll) return "UE4SS / Native";
+            if (hasLua) return "UE4SS / Lua";
+        }
+        catch { }
+        return "UE4SS";
+    }
 
     private IReadOnlyList<string> FindManagedUe4ssRuntimeAliases(IEnumerable<string> files)
     {

@@ -41,16 +41,53 @@
 
 
 ## Current baseline / target validation
-- Official baseline: v0.2.15.6 — Pre-start MOD Reconciliation & Runtime Health Hardening.
-- Current target: v0.2.15.7 — Unified Runtime State Architecture.
-- FIX2 runtime reacquisition acceptance: UE4SS mods transition to Loaded from current-session evidence without historical-log leakage.
-- FIX2 Dashboard acceptance: positive shared runtime evidence clears stale Runtime Unverified state.
-- FIX2 MOD Info acceptance: REFRESH INFO never launches SEARCH ONLINE.
-- [ ] RuntimeStateService is the only owner of current-session loaded evidence.
-- [ ] New session establishes the UE4SS log boundary before pre-start reconciliation.
-- [ ] Loaded state remains stable through periodic/manual Library refreshes for 5+ minutes.
+- Official baseline: v0.2.15.7 — Unified Runtime State Architecture.
+- Current target: v0.2.15.8 — Runtime Evidence Engine Refinement.
+- [ ] `ModRuntimeEvidenceEngine` is the single verification interpreter for UE4SS/Lua positive runtime evidence.
+- [ ] AntiDupe and PalImportFilter no longer remain Runtime Unverified when the MOD Library has authoritative Loaded evidence.
+- [ ] Expanded positive signatures are session-scoped through `RuntimeStateService`; historical logs cannot create cross-session Loaded state.
+- [ ] RuntimeStateService evidence changes synchronize Library and Dashboard without requiring a manual Verify All timing window.
+- [ ] Verification details/export identify the runtime evidence source and matched alias where available.
 - [ ] Stop clears runtime state; next start reacquires evidence without prior-session leakage.
-- [ ] MOD Library, Dashboard, Verify All, and exported report agree on runtime-loaded state.
+- [ ] REFRESH INFO remains a local metadata/runtime refresh and SEARCH ONLINE remains the only browser-search action.
 - [ ] Build Clean / Validate / All passes.
-- [ ] Logic harness passes with zero failures.
+- [ ] v0.2.15.8 logic harness passes with zero failures.
 - Phase-specific release notes, build test plan, and apply instructions are maintained under `release-notes/`.
+
+
+## v0.2.15.8 FIX1 acceptance
+- [ ] 0 build errors / 0 warnings
+- [ ] Missing positive evidence displays Active / Unverified, not Not loaded
+- [ ] Positive current-session evidence produces Loaded / Healthy
+- [ ] AntiDupe and PalImportFilter semantics verified
+- [ ] Export includes confidence/source detail
+
+
+## v0.2.15.9 acceptance
+- [ ] Clean / Validate / All pass with zero errors and warnings.
+- [ ] Logic harness passes.
+- [ ] UE4SS verification details include capability profile.
+- [ ] Active / Unverified remains non-failure for quiet mods.
+- [ ] Observed functional activity can promote a mod to Confirmed Running.
+- [ ] Export contains capability/evidence details.
+
+
+## v0.2.15.10 acceptance
+- [ ] Clean / Validate / All: zero errors/warnings.
+- [ ] Native runtime logic harness passes.
+- [ ] AntiDupe exact DLL path confirms Loaded.
+- [ ] PalImportFilter exact DLL path confirms Loaded.
+- [ ] Duplicate `main.dll` filenames do not cross-confirm.
+- [ ] Stop/start clears old session proof.
+- [ ] Disabled native mod is not confirmed.
+- [ ] Module inspection unavailable => Active / Unverified.
+- [ ] Lua evidence behavior unchanged.
+
+
+## v0.2.15.10 FIX1 release synchronization
+- [ ] `Build.ps1 Validate` reports 0 errors / 0 warnings.
+- [ ] Only the v0.2.15.10 logic harness remains active under `scripts`.
+- [ ] `docs/index.html` references v0.2.15.10.
+- [ ] `src/PalworldManager/app.manifest` references v0.2.15.10.
+- [ ] v0.2.15.10 harness passes without PowerShell alias collisions.
+- [ ] Native runtime module detection behavior remains unchanged from v0.2.15.10.

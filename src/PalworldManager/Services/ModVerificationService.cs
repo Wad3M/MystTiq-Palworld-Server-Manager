@@ -8,13 +8,19 @@ public sealed class ModVerificationService
     private readonly List<IModVerifier> verifiers;
     private readonly ModHealthEvaluationService healthEvaluator;
     private readonly RuntimeStateService runtimeState;
+    private readonly ModRuntimeEvidenceEngine runtimeEvidence;
+    private readonly ModCapabilityAnalysisService capabilityAnalysis;
+    private readonly NativeModuleEvidenceService nativeModuleEvidence;
 
-    public ModVerificationService(AppSettings settings, RuntimeStateService runtimeState, ModHealthEvaluationService? healthEvaluator = null)
+    public ModVerificationService(AppSettings settings, RuntimeStateService runtimeState, ServerService server, ModHealthEvaluationService? healthEvaluator = null)
     {
         this.settings = settings;
         this.runtimeState = runtimeState ?? throw new ArgumentNullException(nameof(runtimeState));
         this.healthEvaluator = healthEvaluator ?? new ModHealthEvaluationService();
-        verifiers = [new GenericModVerifier(this.healthEvaluator)];
+        runtimeEvidence = new ModRuntimeEvidenceEngine();
+        capabilityAnalysis = new ModCapabilityAnalysisService(settings);
+        nativeModuleEvidence = new NativeModuleEvidenceService(settings, server);
+        verifiers = [new GenericModVerifier(this.healthEvaluator, runtimeEvidence, capabilityAnalysis, nativeModuleEvidence)];
     }
 
     public IReadOnlyList<VerificationResult> VerifyAll(IEnumerable<ModRow> mods, bool serverRunning)
@@ -131,10 +137,16 @@ public sealed class ModVerificationService
     private sealed class GenericModVerifier : IModVerifier
     {
         private readonly ModHealthEvaluationService healthEvaluator;
+        private readonly ModRuntimeEvidenceEngine runtimeEvidence;
+    private readonly ModCapabilityAnalysisService capabilityAnalysis;
+        private readonly NativeModuleEvidenceService nativeModuleEvidence;
 
-        public GenericModVerifier(ModHealthEvaluationService healthEvaluator)
+        public GenericModVerifier(ModHealthEvaluationService healthEvaluator, ModRuntimeEvidenceEngine runtimeEvidence, ModCapabilityAnalysisService capabilityAnalysis, NativeModuleEvidenceService nativeModuleEvidence)
         {
             this.healthEvaluator = healthEvaluator;
+            this.runtimeEvidence = runtimeEvidence;
+            this.capabilityAnalysis = capabilityAnalysis;
+            this.nativeModuleEvidence = nativeModuleEvidence;
         }
 
         private static readonly string[] ErrorTokens =
@@ -166,7 +178,26 @@ public sealed class ModVerificationService
                 ? sharedRuntimeErrors
                 : relevant.Where(IsRuntimeErrorLine).Take(3).ToList();
             var successFound = relevant.Any(IsRuntimeSuccessLine);
-            var runtimeEvidenceFound = isUe4ss ? mod.LoadedByUe4ss : successFound || mod.LoadedByUe4ss;
+            var evidence = isUe4ss
+                ? runtimeEvidence.Assess(mod, context.RuntimeState, context.ServerRunning)
+                : new RuntimeEvidenceAssessment(successFound || mod.LoadedByUe4ss ? RuntimeEvidenceState.ConfirmedLoaded : RuntimeEvidenceState.ActiveUnverified, successFound || mod.LoadedByUe4ss ? 100 : 70, "Recent server/loader logs", "",
+                    successFound || mod.LoadedByUe4ss ? "Matching non-UE4SS runtime evidence was found." : "No matching non-UE4SS runtime evidence was found.");
+            var capability = isUe4ss ? capabilityAnalysis.Analyze(mod) : null;
+            var moduleEvidence = isUe4ss && context.ServerRunning
+                ? nativeModuleEvidence.Inspect(mod)
+                : NativeModuleEvidence.NotApplicable("Native module inspection is not applicable while the server is offline.");
+
+            if (moduleEvidence.ConfirmedMapped && evidence.State == RuntimeEvidenceState.ActiveUnverified)
+                evidence = new RuntimeEvidenceAssessment(
+                    RuntimeEvidenceState.ConfirmedLoaded,
+                    100,
+                    "PalServer native module table",
+                    moduleEvidence.MatchedPath,
+                    moduleEvidence.Detail);
+
+            if (isUe4ss && context.ServerRunning)
+                evidence = runtimeEvidence.PromoteFunctionalActivity(evidence, mod, relevant);
+            var runtimeEvidenceFound = evidence.Confirmed;
 
             var duplicate = context.LogicalInstallCounts.TryGetValue(ModVerificationService.Normalize(mod.Package), out var count) && count > 1;
             var filesPresent = mod.Deployed;
@@ -182,19 +213,38 @@ public sealed class ModVerificationService
                 duplicateDetected: duplicate);
 
             var runtimeStatus = runtimeError ? "Error detected"
+                : isUe4ss ? evidence.DisplayStatus
                 : runtimeEvidenceFound ? "Loaded"
-                : context.ServerRunning ? "No load evidence"
+                : context.ServerRunning ? "Active / Unverified"
                 : "Server offline";
 
             var detailParts = new List<string>();
             if (isUe4ss)
-                detailParts.Add($"Runtime session {(context.RuntimeState.SessionActive ? context.RuntimeState.SessionId : "inactive")}, revision {context.RuntimeState.Revision}; centralized current-session evidence used.");
+            {
+                detailParts.Add($"Runtime evidence: {evidence.DisplayStatus} ({evidence.Confidence}% confidence). Source: {evidence.Source}. {evidence.Detail}");
+                if (!string.IsNullOrWhiteSpace(evidence.MatchedAlias))
+                    detailParts.Add($"Matched runtime alias: {evidence.MatchedAlias}.");
+                if (moduleEvidence.State != NativeModuleEvidenceState.NotApplicable)
+                {
+                    detailParts.Add($"Native module evidence: {moduleEvidence.State}. {moduleEvidence.Detail}");
+                    if (!string.IsNullOrWhiteSpace(moduleEvidence.MatchedPath))
+                        detailParts.Add($"Mapped native module: {moduleEvidence.MatchedPath}.");
+                }
+                if (capability is not null)
+                {
+                    detailParts.Add($"Capability profile: {capability.ModKind}. {capability.Detail}");
+                    if (capability.ExpectedEvidence.Count > 0)
+                        detailParts.Add($"Expected functional proof: {string.Join(", ", capability.ExpectedEvidence)}.");
+                    if (evidence.State == RuntimeEvidenceState.ActiveUnverified && capability.IsEventDriven)
+                        detailParts.Add("This appears to be an event-driven MOD; remaining Active / Unverified can be normal until its trigger occurs.");
+                }
+            }
             else if (context.LogFiles.Count == 0) detailParts.Add("No UE4SS or server logs were found.");
             else detailParts.Add($"Checked {context.LogFiles.Count} recent log file(s).");
             if (duplicate) detailParts.Add("Duplicate logical installation detected.");
             if (mod.EnableReason.Contains("STATE MISMATCH", StringComparison.OrdinalIgnoreCase))
                 detailParts.Add("Configured and effective UE4SS activation state do not match. Repair States should be run before the next server start.");
-            if (!runtimeEvidenceFound && context.ServerRunning) detailParts.Add("The server is running, but no matching load entry was found.");
+            if (!runtimeEvidenceFound && context.ServerRunning) detailParts.Add("No positive current-session execution signature has been observed. Absence of a signature is not treated as proof that the MOD failed to load.");
             if (!context.ServerRunning) detailParts.Add("Start the server, then verify again for runtime evidence.");
             if (!string.IsNullOrWhiteSpace(mod.EnableReason)) detailParts.Add("Enabled-state evidence: " + mod.EnableReason);
 

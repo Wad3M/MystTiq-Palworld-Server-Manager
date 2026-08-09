@@ -256,8 +256,9 @@ MOD Library runtime status now refreshes live UE4SS evidence on every authoritat
 | **v0.2.15.4** | Completed RC work | Runtime-loaded status from UE4SS.log, active-runtime presence, active-vs-legacy diagnostics, and expanded UE4SS path health UI |
 | **v0.2.15.5** | Completed | Centralized MOD health evaluation, consistent Dashboard/Library health states, and persistent Workshop identity resolution |
 | **v0.2.15.6** | Completed Baseline | Pre-start MOD reconciliation, startup health gate, repair recommendations, verification report export, and runtime-loaded hotfix investigation |
-| **v0.2.15.7** | Current RC | Unified session-aware runtime state service, immutable runtime snapshots, single-source MOD loaded state, revisioned diagnostics, and session-safe log evidence |
-| **v0.3.0** | Planned | Transaction Engine, Repair Queue, Preview Engine, and Rollback Framework |
+| **v0.2.15.7** | Completed Baseline | Unified session-aware runtime state service, immutable runtime snapshots, single-source MOD loaded state, revisioned diagnostics, and session-safe log evidence |
+| **v0.2.15.8** | Current RC | Runtime Evidence Engine refinement, expanded positive UE4SS signatures, structured evidence explanations, and event-driven Dashboard/Library synchronization |
+| **v0.3.0.0** | Planned | Linux support foundation and platform abstraction layer while preserving the mature Windows workflow |
 | **v1.0** | Goal | Stable production release |
 
 ## Contributing
@@ -310,12 +311,19 @@ The long-term vision is to provide a consistent management experience across mul
 Hotfix candidate that keeps positively observed UE4SS load state stable for the lifetime of the current PalServer session, even when UE4SS rotates logs. Session evidence resets at stop/new-session boundaries.
 
 
-### v0.2.15.7 FIX2 — Runtime reacquisition hardening
-- Current-session UE4SS evidence now follows every discovered UE4SS log behind safe pre-start cursors.
-- Recreated or in-place rewritten logs are detected by file identity/prefix fingerprint so startup load lines cannot be skipped when a new log regrows beyond an old offset.
-- Positive shared runtime state now heals stale MOD Dashboard **Runtime Unverified** rows during normal refresh.
-- **REFRESH INFO** is now a local/runtime refresh action only; browser lookup remains exclusive to **SEARCH ONLINE**.
-
 ### v0.2.15.7 — Unified Runtime State Architecture
 
 MystTiq now owns MOD runtime state in a single session-aware `RuntimeStateService`. The service begins from the current UE4SS log boundary when a new PalServer session is prepared, reads only new runtime evidence for that session, latches positive `Starting Lua mod` evidence, exposes immutable revisioned snapshots, and clears state when the server session ends. The MOD scanner, Library, Dashboard, verification/export inputs, and runtime diagnostics now consume the same runtime state instead of maintaining a separate UI latch. This prevents periodic inventory refreshes or UE4SS log rotation from turning valid current-session MODs back to **Not loaded**, while also preventing prior-session startup lines from being inherited by a new server session.
+
+
+### v0.2.15.8 — Runtime Evidence Engine Refinement
+
+Runtime verification now uses a dedicated `ModRuntimeEvidenceEngine` instead of letting each surface independently decide whether a MOD is loaded. The engine treats the unified current-session runtime snapshot and the MOD Library's authoritative `LoadedByUe4ss` state as primary evidence, records the matched alias/evidence source in verification details, and recognizes additional conservative UE4SS positive-load signatures beyond `Starting Lua mod`. Runtime-state changes now push synchronization to the existing MOD Library and Dashboard rows, eliminating timing windows where the Library can show **Loaded** while the Dashboard remains **Runtime Unverified**.
+
+
+### Current release candidate — v0.2.15.10
+MOD Functional Verification & Capability Analysis adds observational capability profiling and Confirmed Running evidence above the v0.2.15.8 FIX1 baseline.
+
+
+### v0.2.15.10 — Native Runtime Module Evidence
+Current release candidate adds exact-path PalServer process-module evidence for native/hybrid UE4SS mods while preserving current-session isolation and observational safety.

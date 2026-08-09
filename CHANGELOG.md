@@ -1,6 +1,77 @@
 # Changelog
 
+## v0.2.15.10 FIX1 — Release Synchronization & Harness Hotfix
+
+- Fixed the v0.2.15.10 PowerShell regression harness by replacing the `R` helper name that collided with PowerShell's `r` / `Invoke-History` alias.
+- Removed obsolete v0.2.15.9 harnesses from the active `scripts` folder.
+- Synchronized `docs/index.html` and `src/PalworldManager/app.manifest` to v0.2.15.10.
+- Refreshed release checklist, release notes, build/test plan, apply instructions, and source manifest.
+- No native runtime module evidence or MOD verification behavior changed.
+
+
+## v0.2.15.10 — Native Runtime Module Evidence
+
+- Integrated read-only PalServer process-module evidence for native/hybrid UE4SS mods.
+- Exact canonical path matching prevents collisions between mods that both use `main.dll`.
+- Native module mapping provides 100% Confirmed Loaded evidence while Confirmed Running still requires functional activity.
+- Runtime inspection refreshes the current ServerService session snapshot and includes the PalServer process tree.
+- Enumeration failures fail open to Active / Unverified, never a false load failure.
+
+
+## v0.2.15.9 FIX2 — Native UE4SS Detection & Verification
+
+- Corrected UE4SS inventory classification using actual payload: Lua, Native, Hybrid, or generic UE4SS.
+- Added non-executing PE validation and bounded printable-string analysis for native DLL capability hints.
+- Native static signatures are diagnostic capability evidence only; they never count as proof that a DLL executed.
+- Separated `Active / Unverified` from actual MOD attention/failure counts.
+- Dashboard now reports quiet valid MODs as `awaiting runtime confirmation` instead of `need attention`.
+- Preserved current-session runtime evidence requirements and observational safety.
+
+
+## v0.2.15.9 FIX1 — Compile Hotfix
+
+- Added the missing `ConfirmedRunning` member to `RuntimeEvidenceState`.
+- Updated the v0.2.15.9 regression harness so PowerShell build steps are judged by exceptions rather than stale `$LASTEXITCODE` values.
+- Updated the stale v0.2.15.8 source comment that caused release validation to warn.
+- No runtime-verification architecture or functional-detection behavior changed.
+
+
+## v0.2.15.9 — MOD Functional Verification & Capability Analysis
+
+- Added non-destructive UE4SS capability/source analysis.
+- Added Confirmed Running state based on observed current-session functional activity.
+- Verification now reports MOD kind, detected runtime APIs, and expected functional proof.
+- Preserved v0.2.15.8 FIX1 Active / Unverified semantics for quiet/event-driven mods.
+- MystTiq remains observational and does not inject or modify third-party MOD code.
+
+
+## v0.2.15.8 FIX1 — Runtime Evidence Model & Confidence Engine
+
+- Added Confirmed Loaded, Active / Unverified, Not Loaded, Error, Disabled, and N/A runtime semantics.
+- Added evidence confidence, source, matched alias, and explanation.
+- Added UE4SS `enabled.txt, starting mod` loader acknowledgement detection.
+- Absence of a positive signature no longer falsely means Not Loaded for a correctly deployed/enabled UE4SS mod.
+- Preserved current-session evidence boundaries.
+
+
 All notable public changes will be documented here.
+
+## [0.2.15.8] - 2026-08-09
+
+### Added
+- Added `ModRuntimeEvidenceEngine` as the centralized interpreter for UE4SS/Lua positive runtime evidence.
+- Added structured evidence explanations with source and matched runtime alias for verification/report diagnostics.
+- Added conservative positive UE4SS signatures for Starting/Loading Lua mods and explicit loaded/initialized/registered mod messages.
+- Added event-driven runtime-state synchronization so authoritative evidence updates existing MOD Library and Dashboard rows without waiting for a manual Verify All.
+
+### Changed
+- RuntimeStateService now delegates positive load-signature extraction to the shared runtime evidence engine instead of owning a single `Starting Lua mod` regex.
+- UE4SS verification now consumes the same authoritative runtime state as the MOD Library and treats `LoadedByUe4ss` as positive evidence when the inventory has already resolved a valid runtime identity.
+- Runtime verification details now explain whether evidence came from the unified runtime session or unified inventory state.
+
+### Fixed
+- Prevented MOD Dashboard rows such as AntiDupe and PalImportFilter from remaining **Runtime Unverified** while the MOD Library already reports them **Loaded**.
+- Removed the verification timing window where runtime evidence could arrive after a Dashboard scan but before a later manual refresh.
 
 ## [0.2.15.7] - 2026-08-09
 
@@ -19,14 +90,6 @@ All notable public changes will be documented here.
 ### Fixed
 - Prevented periodic MOD Library refreshes and UE4SS log changes from erasing valid current-session loaded state.
 - Prevented runtime-loaded evidence from a previous PalServer session from being carried into a new session.
-
-### v0.2.15.7 FIX2 — Current-session runtime reacquisition
-- Fixed unified runtime state remaining **Not Loaded / Runtime Unverified** when UE4SS replaced its log during startup and the replacement grew beyond the pre-start byte offset before MystTiq's first observation.
-- RuntimeStateService now tracks UE4SS log identity using creation metadata in addition to byte offsets and resets a recreated log to byte zero.
-- Current-session runtime observation now follows all discovered `UE4SS*.log` candidates behind safe pre-start baselines instead of depending on one selected runtime log.
-- MOD Dashboard refresh now consumes positive shared runtime state so a stale **Runtime Unverified** result can heal to **Loaded/Healthy** without requiring a second independent parser path.
-- Fixed **REFRESH INFO** so it refreshes local/runtime MOD metadata and never falls through to **SEARCH ONLINE** or unexpectedly opens a browser.
-- Extended the v0.2.15.7 regression harness for recreated logs, multi-log observation, Dashboard synchronization, and Refresh Info action separation.
 
 ### v0.2.15.7 FIX1 — Compile hotfix
 - Fixed the two-argument `ModService` constructor to chain through its declared `ue4ssResolver` parameter instead of the stale pre-refactor identifier.

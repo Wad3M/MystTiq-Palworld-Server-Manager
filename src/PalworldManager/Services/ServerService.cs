@@ -290,6 +290,29 @@ public sealed class ServerService : IDisposable
             return activeSessionSnapshot;
     }
 
+    public ServerSessionSnapshot? RefreshActiveSessionSnapshot()
+    {
+        var sessionId = Volatile.Read(ref activeSessionId);
+        int rootPid;
+        lock (processLock) rootPid = activeSessionRootPid;
+        if (sessionId <= 0 || rootPid <= 0) return null;
+
+        try
+        {
+            var snapshot = CaptureSessionSnapshot(sessionId, rootPid);
+            lock (processLock)
+            {
+                if (activeSessionId == sessionId)
+                    activeSessionSnapshot = snapshot;
+            }
+            return snapshot;
+        }
+        catch
+        {
+            return GetActiveSessionSnapshot();
+        }
+    }
+
     private ServerSessionSnapshot CaptureSessionSnapshot(long sessionId, int rootPid)
     {
         var processEntries = EnumerateProcessTree();
@@ -316,23 +339,26 @@ public sealed class ServerService : IDisposable
         }
 
         var modules = new List<string>();
-        try
+        foreach (var processInfo in processes)
         {
-            using var root = Process.GetProcessById(rootPid);
-            foreach (ProcessModule module in root.Modules)
+            try
             {
-                try
+                using var runtimeProcess = Process.GetProcessById(processInfo.ProcessId);
+                foreach (ProcessModule module in runtimeProcess.Modules)
                 {
-                    var value = string.IsNullOrWhiteSpace(module.FileName)
-                        ? module.ModuleName
-                        : module.FileName;
-                    if (!string.IsNullOrWhiteSpace(value))
-                        modules.Add(value);
+                    try
+                    {
+                        var value = string.IsNullOrWhiteSpace(module.FileName)
+                            ? module.ModuleName
+                            : module.FileName;
+                        if (!string.IsNullOrWhiteSpace(value))
+                            modules.Add(value);
+                    }
+                    catch { }
                 }
-                catch { }
             }
+            catch { }
         }
-        catch { }
 
         return new ServerSessionSnapshot(
             sessionId, rootPid, DateTime.Now, processes,
