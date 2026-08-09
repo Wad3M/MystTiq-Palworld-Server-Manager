@@ -195,10 +195,7 @@ public partial class MainWindow
     private static bool IsDashboardModHealthy(string? health)
     {
         if (string.IsNullOrWhiteSpace(health)) return false;
-        return health.Equals("Healthy", StringComparison.OrdinalIgnoreCase)
-            || health.Equals("Active", StringComparison.OrdinalIgnoreCase)
-            || health.Equals("Installed", StringComparison.OrdinalIgnoreCase)
-            || health.Equals("Disabled", StringComparison.OrdinalIgnoreCase);
+        return health.Equals("Healthy", StringComparison.OrdinalIgnoreCase);
     }
 
 }

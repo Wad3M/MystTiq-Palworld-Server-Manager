@@ -28,11 +28,18 @@ public sealed class ServerDoctorService(AppSettings settings)
             "Use Scan Processes / Force Cleanup if Palworld is hung or orphaned.");
 
         var win64 = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64");
-        var ue4ss = File.Exists(Path.Combine(win64, "UE4SS.dll")) || Directory.Exists(Path.Combine(win64, "UE4SS")) || Directory.Exists(Path.Combine(win64, "Mods"));
-        Add("UE4SS", ue4ss, ue4ss ? "UE4SS runtime markers were detected." : "UE4SS is not installed or could not be detected.",
-            "Install UE4SS only if your enabled mods require it.");
+        var ue4ssResolver = new Ue4ssRuntimeResolver(settings);
+        var ue4ssInfo = ue4ssResolver.Resolve();
+        var ue4ss = File.Exists(Path.Combine(win64, "UE4SS.dll")) ||
+                    File.Exists(Path.Combine(ue4ssInfo.Ue4ssRoot, "UE4SS.dll")) ||
+                    Directory.Exists(ue4ssInfo.Ue4ssRoot);
+        Add("UE4SS", ue4ss && !ue4ssInfo.HasPathMismatch,
+            !ue4ss ? "UE4SS is not installed or could not be detected."
+            : ue4ssInfo.HasPathMismatch ? ue4ssInfo.WarningMessage
+            : $"UE4SS runtime detected. Active Mods Root: {ue4ssInfo.ActiveModsRoot}",
+            ue4ssInfo.HasPathMismatch ? "Resolve the UE4SS Mods Root mismatch before managing runtime mods." : "Install UE4SS only if your enabled mods require it.");
 
-        var modService = new ModService(settings);
+        var modService = new ModService(settings, ue4ssResolver);
         var installedMods = modService.Scan();
         var enabledMods = installedMods.Count(m => m.Enabled);
         var compatibility = new ModCompatibilityService(settings).Scan(installedMods);

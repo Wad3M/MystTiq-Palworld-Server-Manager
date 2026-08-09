@@ -195,10 +195,11 @@ public sealed class ModCompatibilityService(AppSettings settings)
             return false;
 
         var win64 = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64");
+        var runtime = new Ue4ssRuntimeResolver(settings).Resolve();
         return File.Exists(Path.Combine(win64, "UE4SS.dll")) ||
-               File.Exists(Path.Combine(win64, "UE4SS-settings.ini")) ||
-               Directory.Exists(Path.Combine(win64, "UE4SS")) ||
-               Directory.Exists(Path.Combine(win64, "Mods"));
+               File.Exists(Path.Combine(runtime.Ue4ssRoot, "UE4SS.dll")) ||
+               File.Exists(Path.Combine(runtime.Ue4ssRoot, "UE4SS-settings.ini")) ||
+               Directory.Exists(runtime.Ue4ssRoot);
     }
 
     private bool DependencySatisfied(string dependency, IReadOnlyList<ModRow> installed)
@@ -209,9 +210,10 @@ public sealed class ModCompatibilityService(AppSettings settings)
         if (key.Contains("ue4ss", StringComparison.OrdinalIgnoreCase))
         {
             var win64 = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64");
+            var runtime = new Ue4ssRuntimeResolver(settings).Resolve();
             return File.Exists(Path.Combine(win64, "UE4SS.dll")) ||
-                   Directory.Exists(Path.Combine(win64, "UE4SS")) ||
-                   Directory.Exists(Path.Combine(win64, "Mods"));
+                   File.Exists(Path.Combine(runtime.Ue4ssRoot, "UE4SS.dll")) ||
+                   Directory.Exists(runtime.Ue4ssRoot);
         }
 
         return installed.Any(item =>

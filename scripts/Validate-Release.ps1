@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param([switch]$Strict)
 
 $ErrorActionPreference = 'Stop'
@@ -41,7 +41,16 @@ foreach ($relative in $expectedVersionFiles) {
     $path = Join-Path $root $relative
     if ((Test-Path $path -PathType Leaf) -and -not (Select-String -Path $path -SimpleMatch $version -Quiet)) { Add-Issue Warning 'Version consistency' "Current version $version was not found in $relative" }
 }
-$activeFiles = Get-ChildItem $root -File -Recurse -Include *.cs,*.xaml,*.csproj,*.props,*.ps1,*.iss,*.yml,*.yaml,*.html | Where-Object { $_.FullName -notlike "*\release-notes\*" -and $_.Name -ne 'CHANGELOG.md' }
+# Scan active source/build files for accidental stale references within the current release line.
+# Documentation landing pages are intentionally excluded from this stale-reference scan because
+# they may legitimately mention the current candidate, official baseline, and planned versions
+# at the same time. They are still checked above to ensure the current version is present.
+$activeFiles = Get-ChildItem $root -File -Recurse -Include *.cs,*.xaml,*.csproj,*.props,*.ps1,*.iss,*.yml,*.yaml,*.html | Where-Object {
+    $relativePath = $_.FullName.Substring($root.Length + 1)
+    $_.FullName -notlike "*\release-notes\*" -and
+    $_.Name -ne 'CHANGELOG.md' -and
+    $relativePath -ne 'docs\index.html'
+}
 $versionParts = $version.Split('.')
 $releaseLinePrefix = [regex]::Escape(($versionParts[0..2] -join '.'))
 $versionPattern = "(?<!\d)$releaseLinePrefix\.\d+(?:-[0-9A-Za-z.-]+)?(?!\d)"

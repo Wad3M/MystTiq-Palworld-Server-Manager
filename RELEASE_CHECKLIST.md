@@ -40,7 +40,17 @@
 - [ ] The validated release is promoted as the official baseline only after compile and runtime approval.
 
 
-## Release Complete
-- Documentation audited
-- Release notes finalized
-- Baseline promoted to v0.2.14.11
+## Current baseline / target validation
+- Official baseline: v0.2.15.6 — Pre-start MOD Reconciliation & Runtime Health Hardening.
+- Current target: v0.2.15.7 — Unified Runtime State Architecture.
+- FIX2 runtime reacquisition acceptance: UE4SS mods transition to Loaded from current-session evidence without historical-log leakage.
+- FIX2 Dashboard acceptance: positive shared runtime evidence clears stale Runtime Unverified state.
+- FIX2 MOD Info acceptance: REFRESH INFO never launches SEARCH ONLINE.
+- [ ] RuntimeStateService is the only owner of current-session loaded evidence.
+- [ ] New session establishes the UE4SS log boundary before pre-start reconciliation.
+- [ ] Loaded state remains stable through periodic/manual Library refreshes for 5+ minutes.
+- [ ] Stop clears runtime state; next start reacquires evidence without prior-session leakage.
+- [ ] MOD Library, Dashboard, Verify All, and exported report agree on runtime-loaded state.
+- [ ] Build Clean / Validate / All passes.
+- [ ] Logic harness passes with zero failures.
+- Phase-specific release notes, build test plan, and apply instructions are maintained under `release-notes/`.

@@ -4,9 +4,13 @@ public enum ModHealthStatus
 {
     Unknown,
     Healthy,
+    Active,
+    RuntimeUnverified,
+    Misconfigured,
     Attention,
     Failed,
-    Disabled
+    Disabled,
+    Missing
 }
 
 public sealed class VerificationResult
@@ -41,4 +45,5 @@ public sealed class ModVerificationContext
     public required IReadOnlyList<string> LogFiles { get; init; }
     public required IReadOnlyDictionary<string, int> LogicalInstallCounts { get; init; }
     public bool ServerRunning { get; init; }
+    public required RuntimeStateSnapshot RuntimeState { get; init; }
 }

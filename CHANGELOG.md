@@ -2,6 +2,51 @@
 
 All notable public changes will be documented here.
 
+## [0.2.15.7] - 2026-08-09
+
+### Added
+- Added `RuntimeStateService` as the authoritative, session-aware owner for MOD runtime-loaded evidence.
+- Added immutable `RuntimeStateSnapshot` records with session ID, revision, timestamps, runtime log identity, loaded aliases, runtime errors, and health metadata.
+- Added session-bound UE4SS log offsets so new sessions consume only newly written runtime evidence instead of inheriting historical `Starting Lua mod` lines.
+- Added runtime-state diagnostics to the MOD Runtime view, including session ID, revision, loaded alias count, and last observation time.
+
+### Changed
+- MOD inventory scans now observe runtime evidence through `RuntimeStateService` and apply the shared snapshot to MOD rows.
+- MOD Library refreshes no longer own a private runtime-loaded latch.
+- Server session preparation starts a new runtime-state session; server exit clears the authoritative runtime state.
+- Runtime verification/export continues to use the same inventory rows, which are now populated from the centralized runtime source of truth.
+
+### Fixed
+- Prevented periodic MOD Library refreshes and UE4SS log changes from erasing valid current-session loaded state.
+- Prevented runtime-loaded evidence from a previous PalServer session from being carried into a new session.
+
+### v0.2.15.7 FIX2 — Current-session runtime reacquisition
+- Fixed unified runtime state remaining **Not Loaded / Runtime Unverified** when UE4SS replaced its log during startup and the replacement grew beyond the pre-start byte offset before MystTiq's first observation.
+- RuntimeStateService now tracks UE4SS log identity using creation metadata in addition to byte offsets and resets a recreated log to byte zero.
+- Current-session runtime observation now follows all discovered `UE4SS*.log` candidates behind safe pre-start baselines instead of depending on one selected runtime log.
+- MOD Dashboard refresh now consumes positive shared runtime state so a stale **Runtime Unverified** result can heal to **Loaded/Healthy** without requiring a second independent parser path.
+- Fixed **REFRESH INFO** so it refreshes local/runtime MOD metadata and never falls through to **SEARCH ONLINE** or unexpectedly opens a browser.
+- Extended the v0.2.15.7 regression harness for recreated logs, multi-log observation, Dashboard synchronization, and Refresh Info action separation.
+
+### v0.2.15.7 FIX1 — Compile hotfix
+- Fixed the two-argument `ModService` constructor to chain through its declared `ue4ssResolver` parameter instead of the stale pre-refactor identifier.
+- Removed an unused `RuntimeStateService` field from `GenericModVerifier`, clearing the migration warnings without changing verification behavior.
+- Added a regression check for the constructor-chain compile failure.
+
+### v0.2.15.6 FIX2 — Runtime-loaded session persistence
+- Fixed MOD Library runtime-loaded state reverting to **Not loaded** after UE4SS log rotation/refresh.
+- Positive UE4SS load evidence is now latched for the current PalServer session and is not erased by later logs that omit startup lines.
+- Session-loaded evidence resets on server exit and before a new server session, preventing stale cross-session status.
+- Added regression checks for session-latch application and reset boundaries.
+
+## [0.2.15.6 FIX1] - 2026-08-08
+
+### Fixed
+- MOD Library UE4SS/Lua `LOADED` state now refreshes dynamic runtime evidence instead of reusing a pre-start cached resolver snapshot.
+- Workshop and managed packages now retain UE4SS runtime-folder aliases so `Starting Lua mod` evidence can match the actual runtime identity even when package/friendly names differ.
+- The MOD Library automatically synchronizes after the 45-second startup evidence window.
+- Logic regression harness now recognizes the `report.CanStart` gate implementation and no longer treats stale native `$LASTEXITCODE` values as failed PowerShell build steps.
+
 ## [0.2.14.9 FIX3] - 2026-08-06
 
 ### Changed
@@ -195,3 +240,80 @@ All notable public changes will be documented here.
 - Admin Commands refresh reliability improvements
 - Scroll routing audit
 - Documentation and release wrap-up completed
+
+## v0.2.15.1
+
+### Added
+- Central `Ue4ssRuntimeResolver` as the authoritative source for UE4SS runtime and MOD-root paths.
+- `Ue4ssRuntimeInfo` snapshot model for modern, legacy, active, and runtime-reported MOD roots.
+- UE4SS.log parsing for `Loading mods from:` runtime verification.
+- Session-cached resolution with explicit refresh and invalidation support.
+- Startup diagnostics that log the selected active root, detection method, runtime-reported root, and health state.
+
+### Changed
+- v0.2.15.x development now begins from the validated v0.2.14.11 baseline.
+- The resolver prefers an existing modern `Win64\ue4ss\Mods` layout, can use UE4SS runtime-log evidence, retains legacy `Win64\Mods` compatibility, and never selects the legacy root merely because it contains more mods.
+
+### Safety
+- Phase 1 performs detection and diagnostics only. It does not migrate, move, delete, enable, disable, or rewrite existing MOD files.
+## v0.2.15.2
+
+### Changed
+- Migrated `ModService` and `ModScannerService` UE4SS runtime operations to `Ue4ssRuntimeResolver.GetActiveModsRoot()`.
+- MOD inventory now enumerates the active UE4SS Mods Root rather than assuming `Win64\Mods`.
+- ZIP install planning for recognized UE4SS Lua/DLL packages now targets the active runtime root.
+- Enable/disable, `mods.txt`, `enabled.txt`, state repair, managed-path detection, and delete operations use the same resolved active root.
+- MOD Dashboard folder actions use the resolver-selected active root.
+- Server Doctor and UE4SS dependency checks no longer treat a legacy Mods directory alone as proof of the active runtime.
+
+### Safety
+- No automatic legacy-to-modern migration or deletion is performed in this phase. Legacy content remains untouched for Phase 3 migration support.
+- Existing managed manifests can still recognize both modern and legacy UE4SS paths for identification/migration purposes, while live operations target only the active runtime root.
+
+
+## v0.2.15.6
+
+### Pre-start MOD Reconciliation & Runtime Health Hardening
+- Added `ModLifecycleCoordinator` as the authoritative boundary for normal modded PalServer startup.
+- Pre-start reconciliation now repairs UE4SS `enabled.txt` overrides, preserves/creates canonical `mods.txt` entries, and immediately rescans effective MOD state.
+- Added a startup health gate that blocks normal modded startup when enabled files are missing, an enabled UE4SS MOD is outside the resolver-selected Active Mods Root, a state mismatch remains, duplicate logical installs are detected, or reconciliation returns filesystem/state warnings.
+- Preserved **Start Without MODs** as an intentional health-gate bypass for recovery and isolation testing.
+- Added `ModRepairRecommendationEngine` for deterministic operator-facing repair guidance.
+- Added TXT + JSON MOD verification report export from the MOD Dashboard using existing MystTiq button/tooltip/dark-theme standards.
+- Updated versioning, README roadmap, release checklist, release notes, build/test plan, apply instructions, and source manifest for v0.2.15.6.
+
+## v0.2.15.5
+
+### Centralized MOD Health & Identity
+- Added one authoritative `ModHealthEvaluationService` used by verification and UI health presentation.
+- UE4SS/Lua mods are no longer reported Healthy without matching runtime load evidence while the server is running.
+- Added explicit Runtime Unverified and Misconfigured health states.
+- PAK/Workshop mods use installation/enabled verification and do not require UE4SS Lua load evidence.
+- Main Dashboard healthy counts now include only genuinely Healthy MODs.
+- Workshop display names are resolved from MystTiq's metadata cache during inventory scans so rescans preserve names such as `PalSchema (3625280368)`.
+- MOD verification summaries now distinguish healthy, runtime-unverified, misconfigured/attention, disabled, failed/missing, and unknown states.
+
+## v0.2.15.4
+
+### Runtime-Loaded Status & Expanded UE4SS Diagnostics
+- Added active-runtime presence and UE4SS-loaded state to managed MOD inventory rows.
+- Parse the latest UE4SS runtime log for `Starting Lua mod` evidence.
+- UE4SS/Lua mods that are not present under the resolver-selected Active Mods Root now report `Misconfigured` rather than healthy/installed.
+- Expanded MOD Runtime diagnostics with UE4SS root, Active Mods Root, Legacy Mods Root, runtime-reported root, path health, active/legacy directory counts, and loaded Lua-mod count.
+- Preserved v0.2.15.3 migration semantics; no automatic migration or destructive legacy cleanup was added.
+
+## v0.2.15.3
+
+### UE4SS Legacy Migration & ZIP Normalization — Phase 3
+- Added safe copy-first migration from the legacy `Win64\Mods` directory into the resolver-selected Active Mods Root.
+- Legacy copies are retained; migration never performs destructive moves or deletes.
+- Existing active-root files are preserved when their content differs, and conflicts are reported instead of overwritten.
+- Known UE4SS runtime-component folders are skipped so legacy runtime components cannot replace the active UE4SS installation.
+- Added a MOD Dashboard migration action using existing MystTiq warning-button and tooltip standards.
+- Normalized `ue4ss\Mods\<Mod>`, `Mods\<Mod>`, and wrapped `<Mod>\Scripts\...` archive layouts into `<ActiveModsRoot>\<Mod>\...`.
+- Removed the remaining generic ZIP deployment path that could recreate `Win64\Mods` for UE4SS package content.
+### v0.2.15.3 FIX1
+- Changed the Windows installer default directory for fresh installs to `C:\GameServers\MystTiqPalworldServer`.
+- Installer and post-install launch now run elevated; the application itself continues to request administrator privileges on subsequent launches.
+- Updated README installer guidance and executable naming.
+

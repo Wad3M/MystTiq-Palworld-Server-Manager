@@ -172,7 +172,7 @@ Whether you are hosting a family server for a few friends or managing a larger c
 
 1. Download the latest release.
 2. Extract the portable ZIP.
-3. Launch **MystTiq.exe**.
+3. Launch **MystTiqPalworldServer.exe**. Windows will request administrator approval.
 4. Select your Palworld Dedicated Server installation.
 5. Start managing your server.
 
@@ -180,10 +180,7 @@ Whether you are hosting a family server for a few friends or managing a larger c
 
 - Windows 10 or Windows 11 (64-bit)
 - Palworld Dedicated Server
-- Administrator privileges may be required for:
-  - Windows services
-  - Firewall configuration
-  - Protected installation folders
+- Administrator privileges are required when running MystTiq so it can manage the dedicated server, Windows services, firewall configuration, and protected server paths.
 
 ## Download
 
@@ -192,8 +189,10 @@ The latest builds are available from the GitHub **Releases** page.
 Available packages include:
 
 - Portable Windows ZIP
-- Windows Installer *(planned)*
+- Windows Installer
 - Source code
+
+The Windows installer defaults to `C:\GameServers\MystTiqPalworldServer` and requests administrator privileges. The installed application also requests elevation whenever it is launched from its Start Menu or desktop shortcut.
 
 ## Building From Source
 
@@ -215,10 +214,13 @@ Build:
 Release | x64
 ```
 
-Or use PowerShell:
+Or use the standard MystTiq PowerShell validation workflow from the repository root:
 
 ```powershell
-./scripts/Build.ps1
+Get-ChildItem . -Recurse -Filter *.ps1 | Unblock-File
+.\Build.ps1 Clean
+.\Build.ps1 Validate
+.\Build.ps1 All
 ```
 
 ## Documentation
@@ -235,12 +237,26 @@ Planned guides include:
 - Troubleshooting
 - FAQ
 
+
+### v0.2.15.6 MOD lifecycle hardening
+
+Normal modded server starts now pass through a centralized `ModLifecycleCoordinator`. MystTiq repairs known UE4SS `enabled.txt`/`mods.txt` drift, rescans the authoritative active runtime, and blocks startup when enabled MOD files are missing, an enabled UE4SS MOD is outside the Active Mods Root, a state mismatch remains, a duplicate logical install is detected, or reconciliation cannot guarantee state because of filesystem warnings. **Start Without MODs intentionally bypasses this gate** so operators retain a recovery/isolation path. The MOD Dashboard can also export TXT and JSON verification reports with deterministic repair recommendations.
+
+### v0.2.15.6 FIX1 runtime-loaded synchronization
+
+MOD Library runtime status now refreshes live UE4SS evidence on every authoritative scan, preserves actual UE4SS runtime-folder aliases for Workshop/managed packages, and automatically refreshes the Library after the 45-second startup evidence window. This prevents valid running MODs from remaining stuck at **Not loaded** because of a pre-start resolver cache or package/folder-name mismatch.
+
 ## Roadmap
 
 | Version | Status | Highlights |
 |---|:---:|---|
-| **v0.2.14.11** | Current | Public release and repository polish |
-| **v0.2.15** | Planned | Documentation and packaging improvements |
+| **v0.2.15.1** | Completed | UE4SS runtime resolver foundation: dynamic modern/legacy path detection, runtime-log verification, mismatch diagnostics, and session-cached authoritative path resolution |
+| **v0.2.15.2** | Completed | MOD inventory, install, enable/disable, delete, state repair, `mods.txt`, `enabled.txt`, folder access, and UE4SS health checks consume the authoritative Active Mods Root |
+| **v0.2.15.3** | Baseline | Copy-first legacy-to-active MOD migration, active-root-safe ZIP layout normalization, conflict preservation, and migration diagnostics |
+| **v0.2.15.4** | Completed RC work | Runtime-loaded status from UE4SS.log, active-runtime presence, active-vs-legacy diagnostics, and expanded UE4SS path health UI |
+| **v0.2.15.5** | Completed | Centralized MOD health evaluation, consistent Dashboard/Library health states, and persistent Workshop identity resolution |
+| **v0.2.15.6** | Completed Baseline | Pre-start MOD reconciliation, startup health gate, repair recommendations, verification report export, and runtime-loaded hotfix investigation |
+| **v0.2.15.7** | Current RC | Unified session-aware runtime state service, immutable runtime snapshots, single-source MOD loaded state, revisioned diagnostics, and session-safe log evidence |
 | **v0.3.0** | Planned | Transaction Engine, Repair Queue, Preview Engine, and Rollback Framework |
 | **v1.0** | Goal | Stable production release |
 
@@ -288,3 +304,18 @@ The long-term vision is to provide a consistent management experience across mul
 <p align="center">
   Built for the self-hosting community.
 </p>
+
+
+### v0.2.15.6 FIX2 — Runtime-loaded Session Persistence
+Hotfix candidate that keeps positively observed UE4SS load state stable for the lifetime of the current PalServer session, even when UE4SS rotates logs. Session evidence resets at stop/new-session boundaries.
+
+
+### v0.2.15.7 FIX2 — Runtime reacquisition hardening
+- Current-session UE4SS evidence now follows every discovered UE4SS log behind safe pre-start cursors.
+- Recreated or in-place rewritten logs are detected by file identity/prefix fingerprint so startup load lines cannot be skipped when a new log regrows beyond an old offset.
+- Positive shared runtime state now heals stale MOD Dashboard **Runtime Unverified** rows during normal refresh.
+- **REFRESH INFO** is now a local/runtime refresh action only; browser lookup remains exclusive to **SEARCH ONLINE**.
+
+### v0.2.15.7 — Unified Runtime State Architecture
+
+MystTiq now owns MOD runtime state in a single session-aware `RuntimeStateService`. The service begins from the current UE4SS log boundary when a new PalServer session is prepared, reads only new runtime evidence for that session, latches positive `Starting Lua mod` evidence, exposes immutable revisioned snapshots, and clears state when the server session ends. The MOD scanner, Library, Dashboard, verification/export inputs, and runtime diagnostics now consume the same runtime state instead of maintaining a separate UI latch. This prevents periodic inventory refreshes or UE4SS log rotation from turning valid current-session MODs back to **Not loaded**, while also preventing prior-session startup lines from being inherited by a new server session.

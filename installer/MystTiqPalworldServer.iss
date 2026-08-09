@@ -14,7 +14,7 @@ AppPublisher=MystTiq Contributors
 AppPublisherURL=https://github.com/Wad3M/MystTiq-Palworld-Server-Manager
 AppSupportURL=https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues
 AppUpdatesURL=https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/releases
-DefaultDirName={localappdata}\Programs\MystTiq Palworld Server Manager
+DefaultDirName=C:\GameServers\MystTiqPalworldServer
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 AllowNoIcons=yes
@@ -27,7 +27,7 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 LicenseFile=..\LICENSE
 CloseApplications=yes
 RestartApplications=no
@@ -45,4 +45,4 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent runascurrentuser

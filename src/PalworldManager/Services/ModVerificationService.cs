@@ -6,11 +6,15 @@ public sealed class ModVerificationService
 {
     private readonly AppSettings settings;
     private readonly List<IModVerifier> verifiers;
+    private readonly ModHealthEvaluationService healthEvaluator;
+    private readonly RuntimeStateService runtimeState;
 
-    public ModVerificationService(AppSettings settings)
+    public ModVerificationService(AppSettings settings, RuntimeStateService runtimeState, ModHealthEvaluationService? healthEvaluator = null)
     {
         this.settings = settings;
-        verifiers = [new GenericModVerifier()];
+        this.runtimeState = runtimeState ?? throw new ArgumentNullException(nameof(runtimeState));
+        this.healthEvaluator = healthEvaluator ?? new ModHealthEvaluationService();
+        verifiers = [new GenericModVerifier(this.healthEvaluator)];
     }
 
     public IReadOnlyList<VerificationResult> VerifyAll(IEnumerable<ModRow> mods, bool serverRunning)
@@ -25,7 +29,8 @@ public sealed class ModVerificationService
             LogFiles = logFiles,
             LogLines = logLines,
             LogicalInstallCounts = counts,
-            ServerRunning = serverRunning
+            ServerRunning = serverRunning,
+            RuntimeState = runtimeState.Current
         };
 
         var results = new List<VerificationResult>();
@@ -125,6 +130,13 @@ public sealed class ModVerificationService
 
     private sealed class GenericModVerifier : IModVerifier
     {
+        private readonly ModHealthEvaluationService healthEvaluator;
+
+        public GenericModVerifier(ModHealthEvaluationService healthEvaluator)
+        {
+            this.healthEvaluator = healthEvaluator;
+        }
+
         private static readonly string[] ErrorTokens =
         [
             "error", "fatal", "exception", "stack trace", "lua error", "failed to load",
@@ -144,42 +156,45 @@ public sealed class ModVerificationService
             var relevant = context.LogLines.Where(line => aliases.Any(alias =>
                 line.Contains(alias, StringComparison.OrdinalIgnoreCase))).ToList();
 
-            var errorLines = relevant.Where(IsRuntimeErrorLine).Take(3).ToList();
+            var isUe4ss = mod.Type.Contains("UE4SS", StringComparison.OrdinalIgnoreCase) ||
+                          mod.Source.Contains("UE4SS", StringComparison.OrdinalIgnoreCase);
+            var sharedRuntimeErrors = context.RuntimeState.RuntimeErrors
+                .Where(line => aliases.Any(alias => line.Contains(alias, StringComparison.OrdinalIgnoreCase)))
+                .Take(3)
+                .ToList();
+            var errorLines = isUe4ss
+                ? sharedRuntimeErrors
+                : relevant.Where(IsRuntimeErrorLine).Take(3).ToList();
             var successFound = relevant.Any(IsRuntimeSuccessLine);
+            var runtimeEvidenceFound = isUe4ss ? mod.LoadedByUe4ss : successFound || mod.LoadedByUe4ss;
 
             var duplicate = context.LogicalInstallCounts.TryGetValue(ModVerificationService.Normalize(mod.Package), out var count) && count > 1;
             var filesPresent = mod.Deployed;
             var enabled = mod.Enabled;
             var runtimeError = errorLines.Count > 0;
 
-            int score = 0;
-            if (filesPresent) score += 30;
-            if (enabled) score += 25;
-            if (successFound) score += 30;
-            else if (!context.ServerRunning) score += 10;
-            if (!runtimeError) score += 15;
-            if (duplicate) score = Math.Max(0, score - 20);
-
-            ModHealthStatus health;
-            if (!filesPresent || runtimeError) health = ModHealthStatus.Failed;
-            else if (!enabled) health = ModHealthStatus.Disabled;
-            else if (mod.EnableReason.Contains("STATE MISMATCH", StringComparison.OrdinalIgnoreCase)) health = ModHealthStatus.Attention;
-            else if (successFound && !duplicate) health = ModHealthStatus.Healthy;
-            else if (duplicate) health = ModHealthStatus.Attention;
-            else health = ModHealthStatus.Unknown;
+            var evaluation = healthEvaluator.Evaluate(
+                mod,
+                context.ServerRunning,
+                runtimeChecked: true,
+                runtimeEvidenceFound: runtimeEvidenceFound,
+                runtimeErrorFound: runtimeError,
+                duplicateDetected: duplicate);
 
             var runtimeStatus = runtimeError ? "Error detected"
-                : successFound ? "Loaded"
+                : runtimeEvidenceFound ? "Loaded"
                 : context.ServerRunning ? "No load evidence"
                 : "Server offline";
 
             var detailParts = new List<string>();
-            if (context.LogFiles.Count == 0) detailParts.Add("No UE4SS or server logs were found.");
+            if (isUe4ss)
+                detailParts.Add($"Runtime session {(context.RuntimeState.SessionActive ? context.RuntimeState.SessionId : "inactive")}, revision {context.RuntimeState.Revision}; centralized current-session evidence used.");
+            else if (context.LogFiles.Count == 0) detailParts.Add("No UE4SS or server logs were found.");
             else detailParts.Add($"Checked {context.LogFiles.Count} recent log file(s).");
             if (duplicate) detailParts.Add("Duplicate logical installation detected.");
             if (mod.EnableReason.Contains("STATE MISMATCH", StringComparison.OrdinalIgnoreCase))
                 detailParts.Add("Configured and effective UE4SS activation state do not match. Repair States should be run before the next server start.");
-            if (!successFound && context.ServerRunning) detailParts.Add("The server is running, but no matching load entry was found.");
+            if (!runtimeEvidenceFound && context.ServerRunning) detailParts.Add("The server is running, but no matching load entry was found.");
             if (!context.ServerRunning) detailParts.Add("Start the server, then verify again for runtime evidence.");
             if (!string.IsNullOrWhiteSpace(mod.EnableReason)) detailParts.Add("Enabled-state evidence: " + mod.EnableReason);
 
@@ -190,15 +205,15 @@ public sealed class ModVerificationService
                 Type = mod.Type,
                 FilesPresent = filesPresent,
                 Enabled = enabled,
-                RuntimeEvidenceFound = successFound,
+                RuntimeEvidenceFound = runtimeEvidenceFound,
                 RuntimeErrorFound = runtimeError,
                 DuplicateDetected = duplicate,
                 FilesStatus = !filesPresent ? "Missing" : duplicate ? "Duplicate" : "Present",
                 RuntimeStatus = runtimeStatus,
                 ErrorSummary = errorLines.Count == 0 ? "None" : string.Join(" | ", errorLines.Select(TrimLine)),
                 Details = string.Join(" ", detailParts),
-                HealthScore = score,
-                HealthStatus = health,
+                HealthScore = evaluation.Score,
+                HealthStatus = evaluation.Status,
                 VerifiedAt = DateTime.Now
             };
         }

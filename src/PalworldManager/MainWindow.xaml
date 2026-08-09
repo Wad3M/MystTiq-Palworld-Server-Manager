@@ -1714,7 +1714,7 @@
      <Border Style="{StaticResource SectionBanner}">
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <StackPanel><TextBlock Text="MOD Dashboard" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Confirm that server mods are installed, enabled, and ready for runtime verification." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0"/></StackPanel>
-       <WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}"><Button Content="✓  VERIFY &amp; SCAN ALL MODS" Style="{StaticResource RefreshButton}" Click="VerifyAllMods_Click" ToolTip="Runs the authoritative MOD workflow: inventory, verification, compatibility, dependencies, runtime evidence, health, Dashboard, Library, and notifications."/></WrapPanel>
+       <WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}"><Button Content="✓  VERIFY &amp; SCAN ALL MODS" Style="{StaticResource RefreshButton}" Click="VerifyAllMods_Click" ToolTip="Runs the authoritative MOD workflow: inventory, verification, compatibility, dependencies, runtime evidence, health, Dashboard, Library, and notifications."/><Button Content="⇩  EXPORT REPORT" Style="{StaticResource InfoButton}" Click="ExportModVerificationReport_Click" ToolTip="Exports the current MOD verification evidence and repair recommendations as human-readable TXT and structured JSON reports."/></WrapPanel>
       </Grid>
      </Border>
 
@@ -1764,7 +1764,7 @@
          <TextBlock x:Name="ModDetailCompatibility" Foreground="#DCE6F2" TextWrapping="Wrap"/>
          <TextBlock Text="DETAILS / EVIDENCE" Foreground="#64B5F6" FontWeight="Bold" Margin="0,12,0,4"/>
          <TextBlock x:Name="ModDetailEvidence" Text="Select a mod to view verification evidence." Foreground="#C9D9E8" TextWrapping="Wrap"/>
-         <WrapPanel Margin="0,11,0,0"><Button Content="✓  VERIFY SELECTED" Style="{StaticResource RefreshButton}" Click="VerifySelectedMod_Click" ToolTip="Verifies the selected mod installation and runtime requirements. A successful result does not guarantee stability."/><Button Content="📂  OPEN MODS FOLDER" Style="{StaticResource InfoButton}" Click="OpenModsRoot_Click" ToolTip="Opens the managed Palworld mods folder in File Explorer."/></WrapPanel>
+         <WrapPanel Margin="0,11,0,0"><Button Content="✓  VERIFY SELECTED" Style="{StaticResource RefreshButton}" Click="VerifySelectedMod_Click" ToolTip="Verifies the selected mod installation and runtime requirements. A successful result does not guarantee stability."/><Button Content="⇢  MIGRATE LEGACY MODS" Style="{StaticResource ModWarningButton}" Click="MigrateLegacyMods_Click" ToolTip="Safely copies user MOD files from the legacy Win64\Mods folder into the resolver-selected active UE4SS Mods root. Existing active files and legacy copies are preserved."/><Button Content="📂  OPEN MODS FOLDER" Style="{StaticResource InfoButton}" Click="OpenModsRoot_Click" ToolTip="Opens the resolver-selected active UE4SS Mods root in File Explorer."/></WrapPanel>
         </StackPanel>
        </ScrollViewer>
       </Border>
@@ -1812,7 +1812,9 @@
         <DataGridCheckBoxColumn Header="ON" Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}" Width="52"/>
         <DataGridTextColumn Header="MOD" Binding="{Binding Name}" Width="2*" IsReadOnly="True"/>
         <DataGridTextColumn Header="TYPE" Binding="{Binding Type}" Width="105" IsReadOnly="True"/>
-        <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="90" IsReadOnly="True"/>
+        <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="100" IsReadOnly="True"/>
+        <DataGridTextColumn Header="RUNTIME" Binding="{Binding RuntimeLocationStatus}" Width="90" IsReadOnly="True"/>
+        <DataGridTextColumn Header="LOADED" Binding="{Binding RuntimeLoadedStatus}" Width="95" IsReadOnly="True"/>
        </DataGrid.Columns>
       </DataGrid>
      </DockPanel>

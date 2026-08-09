@@ -20,7 +20,11 @@ public partial class MainWindow : Window
     private readonly BackupService backups;
     private readonly ConfigService config;
     private readonly ModService mods;
+    private readonly ModHealthEvaluationService modHealthEvaluation = new();
     private readonly ModVerificationService modVerification;
+    private readonly ModRepairRecommendationEngine modRepairRecommendations = new();
+    private readonly ModLifecycleCoordinator modLifecycle;
+    private readonly ModVerificationReportExportService modVerificationReportExporter = new();
     private readonly ModCompatibilityService modCompatibility;
     private readonly SessionLogService sessionLog;
     private readonly CrashAnalyzerService crashAnalyzer;
@@ -65,6 +69,8 @@ public partial class MainWindow : Window
     private bool? stabilitySavedUe4ssEnabled;
 
     private readonly EnvironmentService environment;
+    private readonly Ue4ssRuntimeResolver ue4ssRuntimeResolver;
+    private readonly RuntimeStateService runtimeState;
     private readonly ModInventorySnapshotService modInventory;
     private readonly InstallerService installer;
     private ObservableCollection<EnvironmentComponentRow> environmentRows = [];
@@ -116,6 +122,11 @@ public partial class MainWindow : Window
         RestoreWindowPlacement();
         settings=store.Load();
         sessionLog = new SessionLogService(settings.LogsRoot);
+        ue4ssRuntimeResolver = new Ue4ssRuntimeResolver(settings);
+        runtimeState = new RuntimeStateService();
+        runtimeState.StateChanged += state => Log($"[RUNTIME STATE] Revision {state.Revision} • Session {(state.SessionActive ? state.SessionId : "Inactive")} • Loaded aliases {state.LoadedCount} • Errors {state.ErrorCount}");
+        foreach (var line in ue4ssRuntimeResolver.BuildDiagnosticLines())
+            Log(line);
         var applicationPaths = ApplicationPathService.Current;
         Log(applicationPaths.IsPortable
             ? $"[WORKSPACE] Portable mode enabled. Workspace: {applicationPaths.WorkspaceRoot}"
@@ -134,8 +145,9 @@ public partial class MainWindow : Window
         server.ServerExited += HandleServerExit;
         backups=new(settings);
         config=new(settings);
-        mods=new(settings);
-        modVerification=new(settings);
+        mods=new(settings, ue4ssRuntimeResolver, runtimeState);
+        modVerification=new(settings, runtimeState, modHealthEvaluation);
+        modLifecycle = new ModLifecycleCoordinator(mods, modRepairRecommendations);
         modCompatibility=new(settings);
         environment=new(settings);
         modInventory = new ModInventorySnapshotService(mods, environment);
@@ -763,6 +775,7 @@ public partial class MainWindow : Window
     {
         SuspendRestPolling("server stopped");
         adminCommandsRuntimeLoaded = false;
+        runtimeState.EndSession();
         Interlocked.Increment(ref modLoadSessionGeneration);
         Dispatcher.BeginInvoke(new Action(UpdateAdminCommandsConsoleState));
         StopSessionLogTail();
@@ -1045,7 +1058,11 @@ public partial class MainWindow : Window
             var latest = environment.GetLatestUe4ssRuntimeSnapshot();
             ModRuntimeBackupText.Text = latest is null ? "Last runtime snapshot: None" : $"Last runtime snapshot: {Path.GetFileName(latest)}";
 
+            var runtimeInfo = ue4ssRuntimeResolver.Refresh();
+            runtimeState.Observe(runtimeInfo);
             var runtimeMods = (currentMods ?? mods.Scan()).ToList();
+            runtimeState.ApplyTo(runtimeMods);
+            var runtimeSnapshot = runtimeState.Current;
             var compatibility = modCompatibility.Scan(runtimeMods);
             var enabled = runtimeMods.Count(mod => mod.Enabled);
             var ue4ssMods = runtimeMods.Count(mod =>
@@ -1073,6 +1090,13 @@ public partial class MainWindow : Window
             var lines = new List<string>
             {
                 runtimeAssessment,
+                $"UE4SS Root: {runtimeInfo.Ue4ssRoot}",
+                $"Active Mods Root: {runtimeInfo.ActiveModsRoot}",
+                $"Legacy Mods Root: {runtimeInfo.LegacyModsRoot}",
+                $"Runtime Mods Root: {runtimeInfo.RuntimeModsRoot ?? "Not reported"}",
+                $"Path health: {runtimeInfo.HealthState}" + (runtimeInfo.HasPathMismatch ? " — MANAGER/RUNTIME MISMATCH" : ""),
+                $"Root inventory: {runtimeInfo.ActiveModDirectoryCount} active • {runtimeInfo.LegacyModDirectoryCount} legacy • {runtimeSnapshot.LoadedCount} current-session runtime aliases",
+                $"Runtime session: {(runtimeSnapshot.SessionActive ? runtimeSnapshot.SessionId : "Inactive")} • revision {runtimeSnapshot.Revision} • last observed {(runtimeSnapshot.LastObservedAt?.ToString("T") ?? "N/A")}",
                 $"Detected mods: {runtimeMods.Count} total • {enabled} enabled • {ue4ssMods} UE4SS/Lua",
                 $"Compatibility: {compatible} compatible • {attention} attention • {conflicts} conflict • {failed} failed",
                 identity.MemberVariableLayoutPresent
@@ -1542,22 +1566,49 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ReconcileModStateBeforeStart()
+    private bool ReconcileModStateBeforeStart()
     {
+        ModLifecycleReport report;
         try
         {
-            var repair = mods.RepairUe4ssStates();
-            if (repair.RepairedMarkers > 0 || repair.EntriesAdded > 0)
-                Log($"UE4SS pre-start reconciliation: {repair.RepairedMarkers} enabled.txt override(s) neutralized, {repair.EntriesAdded} mods.txt entr{(repair.EntriesAdded == 1 ? "y" : "ies")} added.");
-            foreach (var warning in repair.Warnings.Take(5))
-                Log("UE4SS state reconciliation warning: " + warning);
+            report = modLifecycle.ReconcileBeforeStart();
         }
         catch (Exception ex)
         {
-            // State repair is protective, but a filesystem permission problem should
-            // not silently prevent the operator from starting the server.
-            Log("UE4SS pre-start reconciliation could not complete: " + ex.Message);
+            Log("[MOD LIFECYCLE] Pre-start reconciliation failed: " + ex.Message);
+            AppDialog.Show(
+                "MystTiq could not complete the pre-start MOD reconciliation. The normal modded startup has been blocked to avoid launching with an unknown runtime state.\n\n" +
+                ex.Message + "\n\nUse Repair States / Verify & Scan All MODs, correct the reported issue, then start again. You can still use Start Without MODs for isolation testing.",
+                "MOD Startup Health Gate", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
         }
+
+        var repair = report.Reconciliation;
+        Log($"[MOD LIFECYCLE] Pre-start reconciliation complete: {repair.RepairedMarkers} enabled.txt override(s) neutralized; {repair.EntriesAdded} mods.txt entr{(repair.EntriesAdded == 1 ? "y" : "ies")} added; {report.Mods.Count} MOD(s) scanned.");
+        foreach (var warning in report.Warnings.Take(5))
+            Log("[MOD LIFECYCLE] Warning: " + warning);
+        foreach (var recommendation in report.Recommendations.Where(x => x.Severity == "Blocking").Take(5))
+            Log($"[MOD LIFECYCLE] Recommendation for {recommendation.Name}: {recommendation.Action} — {recommendation.Reason}");
+
+        if (report.CanStart)
+        {
+            Log($"[MOD LIFECYCLE] Startup health gate: {report.GateStatus}. Normal modded startup may continue.");
+            return true;
+        }
+
+        Log($"[MOD LIFECYCLE] Startup health gate: BLOCKED ({report.BlockingReasons.Count} reason(s)).");
+        foreach (var reason in report.BlockingReasons.Take(8))
+            Log("[MOD LIFECYCLE] BLOCK: " + reason);
+
+        var details = string.Join("\n", report.BlockingReasons.Take(6).Select(x => "• " + x));
+        if (report.BlockingReasons.Count > 6)
+            details += $"\n• …and {report.BlockingReasons.Count - 6} more issue(s).";
+        AppDialog.Show(
+            "MystTiq stopped the normal server start because the reconciled MOD state is not safe to launch.\n\n" +
+            details +
+            "\n\nRun Repair States and Verify & Scan All MODs, address the recommendations, then start again. Start Without MODs remains available for isolation testing.",
+            "MOD Startup Health Gate", MessageBoxButton.OK, MessageBoxImage.Warning);
+        return false;
     }
 
     private void BeginModLoadTracking()
@@ -1651,6 +1702,12 @@ public partial class MainWindow : Window
         var unconfirmed = snapshot.Count - confirmed - failed;
         Log($"[MOD LOAD] Totals: {snapshot.Count} enabled; {confirmed} confirmed; {unconfirmed} unconfirmed; {failed} explicit failure(s).");
         Log("[MOD LOAD] Note: ENABLED/UNCONFIRMED means MystTiq saw configuration evidence but no explicit successful-load message; it is not automatically a failure.");
+
+        // Synchronize the MOD Library after the startup evidence window. The scanner
+        // now refreshes UE4SS runtime evidence, so this updates LOADED automatically
+        // instead of leaving the pre-start snapshot visible until a later manual scan.
+        modInventory.Invalidate();
+        RefreshMods();
     }
 
     private void Start_Click(object s, RoutedEventArgs e)
@@ -1667,7 +1724,7 @@ public partial class MainWindow : Window
             SuspendRestPolling("server startup");
             await ResetRconForServerSessionAsync("new server session");
             await PrepareForNewServerSessionAsync(ct);
-            ReconcileModStateBeforeStart();
+            if (!ReconcileModStateBeforeStart()) return;
             BeginModLoadTracking();
             server.Start();
             StartSessionLogTail();
@@ -1687,7 +1744,8 @@ public partial class MainWindow : Window
                 $"Previous server session I/O is still active (stdout={io.StdOutReaders}, stderr={io.StdErrReaders}, Pal.log={io.PalLogReaders}). " +
                 "Run Force Cleanup before starting another server session.");
         }
-        Log("[SESSION] Previous session I/O verified clean. Starting a new server session.");
+        var runtimeSession = runtimeState.BeginSession(ue4ssRuntimeResolver.Refresh());
+        Log($"[SESSION] Previous session I/O verified clean. Runtime session {runtimeSession.SessionId} started at revision {runtimeSession.Revision}.");
     }
 
     private void StartNoMods_Click(object s, RoutedEventArgs e) => _ = RunExclusive(async ct =>
@@ -1821,7 +1879,7 @@ public partial class MainWindow : Window
             UpdateStatusText.Text = "Current operation: Restarting — starting server";
             await ResetRconForServerSessionAsync("restart startup");
             await PrepareForNewServerSessionAsync(ct);
-            ReconcileModStateBeforeStart();
+            if (!ReconcileModStateBeforeStart()) return;
             server.Start();
             StartSessionLogTail();
             ScheduleRestPollingResume();
@@ -1976,17 +2034,24 @@ public partial class MainWindow : Window
                 UpdateStatusText.Text = "Current operation: Maintenance backup — starting server";
                 await ResetRconForServerSessionAsync("maintenance backup restart");
                 await PrepareForNewServerSessionAsync(ct);
-                ReconcileModStateBeforeStart();
-                BeginModLoadTracking();
-                server.Start();
-                StartSessionLogTail();
-                ScheduleRestPollingResume();
-                UpdateStatusText.Text = backupFailure is null
-                    ? "Current operation: Maintenance backup complete — server started"
-                    : "Current operation: Backup failed — server restarted";
-                Log(backupFailure is null
-                    ? "Coordinated maintenance backup completed and the server was started again."
-                    : "The maintenance backup failed, but MystTiq started the server again successfully.");
+                if (!ReconcileModStateBeforeStart())
+                {
+                    UpdateStatusText.Text = "Current operation: Maintenance restart blocked — MOD health gate";
+                    Log("Maintenance restart was blocked by the MOD startup health gate. The server remains stopped.");
+                }
+                else
+                {
+                    BeginModLoadTracking();
+                    server.Start();
+                    StartSessionLogTail();
+                    ScheduleRestPollingResume();
+                    UpdateStatusText.Text = backupFailure is null
+                        ? "Current operation: Maintenance backup complete — server started"
+                        : "Current operation: Backup failed — server restarted";
+                    Log(backupFailure is null
+                        ? "Coordinated maintenance backup completed and the server was started again."
+                        : "The maintenance backup failed, but MystTiq started the server again successfully.");
+                }
             }
             catch (Exception restartError)
             {
@@ -2827,6 +2892,7 @@ public partial class MainWindow : Window
     {
         var snapshot = modInventory.Current("Scan Library", force: true);
         var installed = snapshot.Mods.ToList();
+        runtimeState.ApplyTo(installed);
         ModsGrid.ItemsSource = installed;
         localModRows = new ObservableCollection<LocalModRow>(snapshot.LocalMods);
         LocalModsGrid.ItemsSource = localModRows;
@@ -2938,17 +3004,34 @@ public partial class MainWindow : Window
                 existing.FilesStatus = mod.Deployed ? "Present" : "Missing";
                 existing.EnabledStatus = mod.Enabled ? "Enabled" : "Disabled";
 
-                // A normal Refresh must never invent a new health score or overwrite a
-                // completed verification result. Only invalidate runtime evidence when
-                // the underlying installation/enabled state actually changed.
+                // Installation/enabled-state changes invalidate the old verification.
                 if (filesChanged || enabledChanged)
                 {
                     existing.RuntimeStatus = "Not checked";
                     existing.ErrorStatus = "Not checked";
                     existing.LastVerified = "Never";
-                    existing.Health = !mod.Deployed ? "Failed" : !mod.Enabled ? "Disabled" : server.IsRunning() ? "Active" : "Installed";
-                    existing.HealthScore = 0;
-                    existing.Details = server.IsRunning() && mod.Deployed && mod.Enabled ? "Enabled and deployed while the server is running. Run Verify & Scan All MODs for definitive runtime evidence." : "MOD state changed. Run Verify & Scan All MODs to establish a new runtime result.";
+                    var evaluation = modHealthEvaluation.Evaluate(mod, server.IsRunning(), runtimeChecked: false);
+                    existing.Health = evaluation.DisplayStatus;
+                    existing.HealthScore = evaluation.Score;
+                    existing.Details = evaluation.Detail;
+                }
+
+                // RuntimeStateService is the authoritative current-session source. A
+                // positive runtime observation must immediately heal a previously
+                // Runtime-Unverified Dashboard row during an ordinary Library refresh;
+                // otherwise Dashboard and Library can disagree even though they share
+                // the same backend state. Never infer an unload from missing text here.
+                if (server.IsRunning() && mod.LoadedByUe4ss &&
+                    (mod.Type.Contains("UE4SS", StringComparison.OrdinalIgnoreCase) ||
+                     mod.Source.Contains("UE4SS", StringComparison.OrdinalIgnoreCase)))
+                {
+                    existing.RuntimeStatus = "Loaded";
+                    existing.ErrorStatus = existing.ErrorStatus == "Not checked" ? "None" : existing.ErrorStatus;
+                    existing.LastVerified = DateTime.Now.ToString("g");
+                    var evaluation = modHealthEvaluation.Evaluate(mod, serverRunning: true, runtimeChecked: true);
+                    existing.Health = evaluation.DisplayStatus;
+                    existing.HealthScore = evaluation.Score;
+                    existing.Details = evaluation.Detail;
                 }
 
                 updated.Add(existing);
@@ -2968,9 +3051,9 @@ public partial class MainWindow : Window
                 ConflictStatus = "Not scanned",
                 VersionStatus = "Not checked",
                 Compatibility = "Not scanned",
-                Health = !mod.Deployed ? "Failed" : !mod.Enabled ? "Disabled" : server.IsRunning() ? "Active" : "Installed",
-                HealthScore = 0,
-                Details = server.IsRunning() && mod.Deployed && mod.Enabled ? "Enabled and deployed while the server is running. Run Verify & Scan All MODs for definitive runtime evidence." : "Run Verify & Scan All MODs after the server starts to check UE4SS and server logs."
+                Health = modHealthEvaluation.Evaluate(mod, server.IsRunning(), runtimeChecked: false).DisplayStatus,
+                HealthScore = modHealthEvaluation.Evaluate(mod, server.IsRunning(), runtimeChecked: false).Score,
+                Details = modHealthEvaluation.Evaluate(mod, server.IsRunning(), runtimeChecked: false).Detail
             });
         }
 
@@ -3071,14 +3154,7 @@ public partial class MainWindow : Window
             selected.EnabledStatus = result.Enabled ? "Enabled" : "Disabled";
             selected.RuntimeStatus = result.RuntimeStatus;
             selected.ErrorStatus = result.ErrorSummary;
-            selected.Health = result.HealthStatus switch
-            {
-                ModHealthStatus.Healthy => "Healthy",
-                ModHealthStatus.Failed => "Failed",
-                ModHealthStatus.Disabled => "Disabled",
-                ModHealthStatus.Attention => "Attention",
-                _ => mod.Deployed && mod.Enabled && server.IsRunning() ? "Active" : mod.Deployed ? "Installed" : "Unknown"
-            };
+            selected.Health = ModHealthEvaluationService.ToDisplayText(result.HealthStatus);
             selected.HealthScore = result.HealthScore;
             selected.Details = result.Details;
             selected.LastVerified = result.VerifiedAt.ToString("g");
@@ -3099,9 +3175,10 @@ public partial class MainWindow : Window
     private void UpdateModDashboardSummary(int installedCount, IEnumerable<ModDashboardRow> results, bool runtimeChecked)
     {
         var rows = results.ToList();
-        var healthyCount = rows.Count(x => x.Health is "Healthy" or "Active");
-        var failedCount = rows.Count(x => x.Health == "Failed");
-        var attentionCount = rows.Count(x => x.Health is "Attention" or "Failed" or "Disabled" or "Unknown");
+        var healthyCount = rows.Count(x => x.Health == "Healthy");
+        var runtimeUnverifiedCount = rows.Count(x => x.Health == "Runtime Unverified");
+        var failedCount = rows.Count(x => x.Health is "Failed" or "Missing");
+        var attentionCount = rows.Count(x => x.Health is "Runtime Unverified" or "Misconfigured" or "Attention" or "Failed" or "Missing" or "Unknown");
         var updates = rows.Count(x => x.VersionStatus.StartsWith("Update ", StringComparison.OrdinalIgnoreCase));
         var conflicts = rows.Count(x => x.Compatibility == "Conflict");
         var missingDependencies = rows.Count(x => x.DependencyStatus.StartsWith("Missing ", StringComparison.OrdinalIgnoreCase));
@@ -3130,7 +3207,7 @@ public partial class MainWindow : Window
         if (runtimeChecked && failedCount == 0 && attentionCount == 0)
         {
             ModDashHealthText.Text = "All detected mods are healthy";
-            ModDashHealthDetails.Text = "Required files are present, mods are enabled, and matching runtime load evidence was found without detected errors.";
+            ModDashHealthDetails.Text = "All detected mods passed their centralized health rules. UE4SS/Lua mods have matching runtime load evidence; non-UE4SS mods passed installation and enabled-state verification.";
             ModDashHealthBanner.Background = new SolidColorBrush(Color.FromRgb(23, 58, 42));
         }
         else if (attentionCount == 0)
@@ -3147,8 +3224,10 @@ public partial class MainWindow : Window
         {
             ModDashHealthText.Text = $"{attentionCount} mod{(attentionCount == 1 ? "" : "s")} need attention";
             ModDashHealthDetails.Text = failedCount > 0
-                ? $"{failedCount} failed verification. Review the runtime, error, and details columns for evidence."
-                : "Review disabled mods, missing runtime evidence, duplicates, or missing files in the verification matrix.";
+                ? $"{failedCount} failed or missing. Review runtime, error, and evidence details."
+                : runtimeUnverifiedCount > 0
+                    ? $"{runtimeUnverifiedCount} UE4SS mod{(runtimeUnverifiedCount == 1 ? "" : "s")} are active but runtime-unverified. Start/refresh the server and verify again for UE4SS load evidence."
+                    : "Review misconfigured mods, state mismatches, duplicates, or other verification evidence.";
             ModDashHealthBanner.Background = new SolidColorBrush(Color.FromRgb(74, 54, 24));
         }
     }
@@ -3182,14 +3261,7 @@ public partial class MainWindow : Window
                 ConflictStatus = compatibility.Results.First(x => x.Package.Equals(result.Package, StringComparison.OrdinalIgnoreCase)).ConflictStatus,
                 VersionStatus = compatibility.Results.First(x => x.Package.Equals(result.Package, StringComparison.OrdinalIgnoreCase)).VersionStatus,
                 Compatibility = compatibility.Results.First(x => x.Package.Equals(result.Package, StringComparison.OrdinalIgnoreCase)).OverallStatus,
-                Health = result.HealthStatus switch
-                {
-                    ModHealthStatus.Healthy => "Healthy",
-                    ModHealthStatus.Failed => "Failed",
-                    ModHealthStatus.Disabled => "Disabled",
-                    ModHealthStatus.Attention => "Attention",
-                    _ => result.Enabled && result.FilesStatus.Equals("Present", StringComparison.OrdinalIgnoreCase) && server.IsRunning() ? "Active" : result.Enabled ? "Installed" : "Unknown"
-                },
+                Health = ModHealthEvaluationService.ToDisplayText(result.HealthStatus),
                 HealthScore = result.HealthScore,
                 Details = result.Details,
                 LastVerified = result.VerifiedAt.ToString("g")
@@ -3200,15 +3272,16 @@ public partial class MainWindow : Window
             UpdateModDashboardSummary(installed.Count, modDashboardRows, true);
             ModDashLastVerified.Text = $"Last Scan: {inventory.ScannedAt:MMM d yyyy}  {inventory.ScannedAt:h:mm tt}  •  Duration: {inventory.Duration.TotalSeconds:0.0} sec  •  One Scan";
 
-            var healthy = modDashboardRows.Count(x => IsDashboardModHealthy(x.Health));
-            var attention = modDashboardRows.Count(x => x.Health == "Attention");
+            var healthy = modDashboardRows.Count(x => x.Health == "Healthy");
+            var runtimeUnverified = modDashboardRows.Count(x => x.Health == "Runtime Unverified");
+            var attention = modDashboardRows.Count(x => x.Health is "Attention" or "Misconfigured");
             var disabled = modDashboardRows.Count(x => x.Health == "Disabled");
-            var failed = modDashboardRows.Count(x => x.Health == "Failed");
+            var failed = modDashboardRows.Count(x => x.Health is "Failed" or "Missing");
             var unknown = modDashboardRows.Count(x => x.Health == "Unknown");
             AppDialog.Show(
-                failed == 0 && attention == 0 && disabled == 0 && unknown == 0
-                    ? $"Verification completed. All {installed.Count} detected mod(s) have matching runtime evidence and no detected errors."
-                    : $"Verification completed. Healthy: {healthy}; Attention: {attention}; Disabled: {disabled}; Failed: {failed}; Unknown: {unknown}. Review the MOD Dashboard for details.",
+                failed == 0 && attention == 0 && runtimeUnverified == 0 && unknown == 0
+                    ? $"Verification completed. {healthy} healthy; {disabled} disabled. All enabled detected mods satisfy their centralized health rules."
+                    : $"Verification completed. Healthy: {healthy}; Runtime Unverified: {runtimeUnverified}; Attention/Misconfigured: {attention}; Disabled: {disabled}; Failed/Missing: {failed}; Unknown: {unknown}. Review the MOD Dashboard for details.",
                 "MOD Runtime Verification",
                 MessageBoxButton.OK,
                 failed > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
@@ -3217,6 +3290,27 @@ public partial class MainWindow : Window
         {
             AppDialog.Show($"MOD verification could not be completed.\n\n{ex.Message}", "MOD Verification", MessageBoxButton.OK, MessageBoxImage.Error);
             RefreshMods();
+        }
+    }
+
+    private void ExportModVerificationReport_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var inventory = modInventory.Current("Export MOD verification report", force: true);
+            var verification = modVerification.VerifyAll(inventory.Mods, server.IsRunning());
+            var recommendations = modRepairRecommendations.Build(inventory.Mods, verification);
+            var exported = modVerificationReportExporter.Export(verification, recommendations);
+            Log($"MOD verification report exported: {exported.TextPath}");
+            AppDialog.Show(
+                $"Verification report exported for {exported.ModCount} MOD(s).\n\nText: {exported.TextPath}\nJSON: {exported.JsonPath}",
+                "MOD Verification Report", MessageBoxButton.OK, MessageBoxImage.Information);
+            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{exported.TextPath}\"") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            AppDialog.Show($"The MOD verification report could not be exported.\n\n{ex.Message}",
+                "MOD Verification Report", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -3304,9 +3398,66 @@ public partial class MainWindow : Window
 
     private void OpenModsRoot_Click(object sender, RoutedEventArgs e)
     {
-        var path = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64", "Mods");
+        var path = ue4ssRuntimeResolver.GetActiveModsRoot();
         Directory.CreateDirectory(path);
         Process.Start(new ProcessStartInfo("explorer.exe", path) { UseShellExecute = true });
+    }
+
+    private void MigrateLegacyMods_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var preview = mods.InspectLegacyMigration();
+            if (!preview.IsMigrationRequired || preview.CandidateCount == 0)
+            {
+                AppDialog.Show(
+                    $"No user MOD folders require migration.\n\nLegacy: {preview.LegacyRoot}\nActive: {preview.ActiveRoot}",
+                    "UE4SS Legacy MOD Migration",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            if (server.IsRunning())
+            {
+                AppDialog.Show(
+                    "Stop PalServer before migrating legacy UE4SS MOD files. The migration is copy-first and non-destructive, but MOD files should not be changing while they are copied.",
+                    "Stop Server Before Migration",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var legacyOnly = preview.LegacyOnlyMods.Count;
+            var alreadyPresent = preview.AlreadyPresentMods.Count;
+            var skipped = preview.SkippedRuntimeComponents.Count;
+            var choice = AppDialog.Show(
+                $"UE4SS mod path mismatch detected.\n\nManaged / legacy:\n{preview.LegacyRoot}\n\nActive UE4SS:\n{preview.ActiveRoot}\n\n" +
+                $"Legacy-only user MODs: {legacyOnly}\nAlready present in active root: {alreadyPresent}\nUE4SS runtime component folders skipped: {skipped}\n\n" +
+                "MystTiq will COPY missing user MOD files into the active root. Existing active files will never be overwritten, and the legacy copies will not be deleted. Continue?",
+                "Migrate Legacy UE4SS MODs",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning,
+                MessageBoxResult.No);
+
+            if (choice != MessageBoxResult.Yes) return;
+
+            var result = mods.MigrateLegacyMods();
+            RefreshMods();
+            Log($"UE4SS legacy migration completed: {result.CopiedModCount} mod folder(s), {result.CopiedFileCount} file(s) copied, {result.ConflictCount} conflict(s) preserved.");
+
+            var message = $"Migration completed.\n\nMOD folders copied: {result.CopiedModCount}\nFiles copied: {result.CopiedFileCount}\nConflicts preserved: {result.ConflictCount}\n\nLegacy copies were retained for rollback safety.";
+            if (result.Warnings.Count > 0)
+                message += "\n\nNotes:\n" + string.Join("\n", result.Warnings.Select(item => "• " + item));
+
+            AppDialog.Show(message, "UE4SS Legacy MOD Migration", MessageBoxButton.OK,
+                result.ConflictCount == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            Log($"UE4SS legacy migration failed: {ex.Message}");
+            AppDialog.Show(ex.Message, "UE4SS Legacy MOD Migration Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
     private void ModsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -3389,12 +3540,43 @@ public partial class MainWindow : Window
 
     private async void RefreshSelectedModInfo_Click(object sender, RoutedEventArgs e)
     {
-        if (LocalModsGrid.SelectedItem is LocalModRow local && !string.IsNullOrWhiteSpace(local.WorkshopId))
+        // REFRESH INFO is a local/runtime refresh action. Searching the web is kept
+        // exclusively behind SEARCH ONLINE so the two buttons never perform the same
+        // action or unexpectedly launch a browser.
+        if (ModsGrid.SelectedItem is ModRow installed)
         {
-            await LoadOnlineWorkshopInfoAsync(local, forceRefresh: true);
+            var package = installed.Package;
+            RefreshMods();
+            var refreshed = (ModsGrid.ItemsSource as IEnumerable<ModRow>)?
+                .FirstOrDefault(row => row.Package.Equals(package, StringComparison.OrdinalIgnoreCase));
+            if (refreshed is not null)
+            {
+                ModsGrid.SelectedItem = refreshed;
+                ModsGrid.ScrollIntoView(refreshed);
+                ModInfoOnlineStatus.Text = "Local metadata, deployment state, and current-session runtime status refreshed.";
+            }
             return;
         }
-        SearchSelectedModOnline_Click(sender, e);
+
+        if (LocalModsGrid.SelectedItem is LocalModRow local)
+        {
+            var workshopId = local.WorkshopId;
+            RefreshMods();
+            var refreshed = localModRows.FirstOrDefault(row =>
+                row.WorkshopId.Equals(workshopId, StringComparison.OrdinalIgnoreCase));
+            if (refreshed is not null)
+            {
+                LocalModsGrid.SelectedItem = refreshed;
+                LocalModsGrid.ScrollIntoView(refreshed);
+                if (!string.IsNullOrWhiteSpace(refreshed.WorkshopId))
+                    await LoadOnlineWorkshopInfoAsync(refreshed, forceRefresh: true);
+                else
+                    ModInfoOnlineStatus.Text = "Local metadata refreshed. No Workshop ID is available for an online metadata refresh.";
+            }
+            return;
+        }
+
+        AppDialog.Show("Select an installed or local MOD first.", "Refresh MOD Info", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void SearchSelectedModOnline_Click(object sender, RoutedEventArgs e)
@@ -3508,7 +3690,7 @@ public partial class MainWindow : Window
         if (ModsGrid.SelectedItem is ModRow installed)
         {
             var managed = Path.Combine(settings.ManagedModsRoot, installed.Package);
-            var ue4ss = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64", "Mods", installed.Package);
+            var ue4ss = Path.Combine(ue4ssRuntimeResolver.GetActiveModsRoot(), installed.Package);
             path = Directory.Exists(managed) ? managed : Directory.Exists(ue4ss) ? ue4ss : null;
         }
         else if (LocalModsGrid.SelectedItem is LocalModRow local)

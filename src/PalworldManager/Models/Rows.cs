@@ -78,7 +78,18 @@ public sealed class ModRow
     public string Type { get; set; } = "Unknown";
     public string Description { get; set; } = "No description metadata was found for this mod.";
     public string EnableReason { get; set; } = "State not evaluated.";
-    public string Status => Deployed ? (Enabled ? "Enabled" : "Disabled") : "Missing files";
+    public bool PresentInActiveRuntime { get; set; }
+    public bool LoadedByUe4ss { get; set; }
+    public IReadOnlyList<string> RuntimeAliases { get; set; } = [];
+    public string RuntimeLocationStatus => Type.Contains("UE4SS", StringComparison.OrdinalIgnoreCase) || Source.Contains("UE4SS", StringComparison.OrdinalIgnoreCase)
+        ? PresentInActiveRuntime ? "Active" : "Missing"
+        : "N/A";
+    public string RuntimeLoadedStatus => Type.Contains("UE4SS", StringComparison.OrdinalIgnoreCase) || Source.Contains("UE4SS", StringComparison.OrdinalIgnoreCase)
+        ? LoadedByUe4ss ? "Loaded" : "Not loaded"
+        : "N/A";
+    public string Status => !Deployed ? "Missing files" :
+        (Type.Contains("UE4SS", StringComparison.OrdinalIgnoreCase) || Source.Contains("UE4SS", StringComparison.OrdinalIgnoreCase)) && !PresentInActiveRuntime ? "Misconfigured" :
+        Enabled ? "Enabled" : "Disabled";
 }
 
 public sealed class ModDashboardRow

@@ -6,8 +6,12 @@ namespace PalworldManager.Services;
 /// Builds the logical installed-mod inventory from Workshop, managed ZIP, PAK, and UE4SS sources.
 /// The service is read-only apart from normalizing legacy MystTiq install-manifest identities.
 /// </summary>
-public sealed class ModScannerService(AppSettings settings)
+public sealed class ModScannerService
 {
+    private readonly AppSettings settings;
+    private readonly Ue4ssRuntimeResolver ue4ssResolver;
+    private readonly RuntimeStateService runtimeState;
+    private readonly WorkshopIdentityService workshopIdentity = new();
     private static readonly string[] PakExtensions = [".pak", ".ucas", ".utoc"];
     private static readonly HashSet<string> KnownUe4ssRuntimeComponents = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -15,6 +19,18 @@ public sealed class ModScannerService(AppSettings settings)
         "ConsoleCommandsMod", "ConsoleEnablerMod", "jsbLuaProfilerMod", "Keybinds",
         "LineTraceMod", "shared", "SplitScreenMod"
     };
+
+    public ModScannerService(AppSettings settings)
+        : this(settings, new Ue4ssRuntimeResolver(settings), new RuntimeStateService()) { }
+
+    public ModScannerService(AppSettings settings, Ue4ssRuntimeResolver ue4ssRuntimeResolver, RuntimeStateService runtimeState)
+    {
+        this.settings = settings;
+        this.ue4ssResolver = ue4ssRuntimeResolver ?? throw new ArgumentNullException(nameof(ue4ssRuntimeResolver));
+        this.runtimeState = runtimeState ?? throw new ArgumentNullException(nameof(runtimeState));
+    }
+
+    private string ActiveUe4ssModsRoot => ue4ssResolver.GetActiveModsRoot();
 
     public List<ModRow> Scan()
     {
@@ -71,11 +87,14 @@ public sealed class ModScannerService(AppSettings settings)
                     package = "Workshop_" + workshopId;
                 if (string.IsNullOrWhiteSpace(name))
                     name = ReadWorkshopDisplayName(folder) ?? $"Workshop Mod {workshopId}";
+                name = workshopIdentity.ResolveDisplayName(workshopId, name);
                 if (string.IsNullOrWhiteSpace(type))
                     type = DetectModType(folder);
 
                 var deployed = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
                     .Any(path => !path.EndsWith("myst-install-manifest.json", StringComparison.OrdinalIgnoreCase));
+
+                var runtimeAliases = FindUe4ssRuntimeAliases(folder);
 
                 rows[package] = new ModRow
                 {
@@ -87,6 +106,7 @@ public sealed class ModScannerService(AppSettings settings)
                     Source = $"Steam Workshop {workshopId}",
                     Type = type,
                     Description = ReadLocalDescription(folder),
+                    RuntimeAliases = runtimeAliases,
                     EnableReason = !deployed
                         ? "Workshop package has no deployable files."
                         : workshopActive
@@ -149,6 +169,7 @@ public sealed class ModScannerService(AppSettings settings)
                     Deployed = managedState.Deployed,
                     Source = "ZIP",
                     Type = managedType,
+                    RuntimeAliases = FindManagedUe4ssRuntimeAliases(manifest.Files),
                     EnableReason = managedState.Reason
                 };
             }
@@ -162,12 +183,36 @@ public sealed class ModScannerService(AppSettings settings)
         // that are already owned by a Workshop inventory record.
         ScanLoosePakMods(rows, enabled, workshopAliases);
         ScanUe4ssMods(rows, enabled, workshopAliases);
+        AnnotateUe4ssRuntimeState(rows.Values);
 
         return rows.Values
             .GroupBy(row => BuildLogicalInventoryKey(row), StringComparer.OrdinalIgnoreCase)
             .Select(group => MergeLogicalRows(group))
             .OrderBy(row => row.Name)
             .ToList();
+    }
+
+    private void AnnotateUe4ssRuntimeState(IEnumerable<ModRow> rows)
+    {
+        // Runtime load evidence is dynamic while PalServer is running. A scanner
+        // pass must not reuse a pre-start/session-cached snapshot or every row can
+        // remain stuck at "Not loaded" after UE4SS has actually started the mods.
+        var info = ue4ssResolver.Refresh();
+        runtimeState.Observe(info);
+        var materialized = rows.ToList();
+        foreach (var row in materialized)
+        {
+            var isUe4ss = row.Type.Contains("UE4SS", StringComparison.OrdinalIgnoreCase) || row.Source.Contains("UE4SS", StringComparison.OrdinalIgnoreCase);
+            if (!isUe4ss) continue;
+
+            var candidates = new[] { row.Package, row.Name }
+                .Concat(row.RuntimeAliases ?? [])
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            row.PresentInActiveRuntime = candidates.Any(value => Directory.Exists(Path.Combine(info.ActiveModsRoot, value)));
+        }
+        runtimeState.ApplyTo(materialized);
     }
 
     private static string BuildLogicalInventoryKey(ModRow row)
@@ -196,6 +241,12 @@ public sealed class ModScannerService(AppSettings settings)
 
         preferred.Enabled = list.Any(row => row.Enabled);
         preferred.Deployed = list.Any(row => row.Deployed);
+        preferred.PresentInActiveRuntime = list.Any(row => row.PresentInActiveRuntime);
+        preferred.LoadedByUe4ss = list.Any(row => row.LoadedByUe4ss);
+        preferred.RuntimeAliases = list.SelectMany(row => row.RuntimeAliases ?? [])
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
         if (preferred.Type.Equals("Workshop", StringComparison.OrdinalIgnoreCase))
         {
             var richerType = list.Select(row => row.Type)
@@ -236,7 +287,7 @@ public sealed class ModScannerService(AppSettings settings)
 
     private void ScanUe4ssMods(Dictionary<string, ModRow> rows, HashSet<string> enabled, HashSet<string> workshopAliases)
     {
-        var ue4ssRoot = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64", "Mods");
+        var ue4ssRoot = ActiveUe4ssModsRoot;
         if (!Directory.Exists(ue4ssRoot))
             return;
 
@@ -276,6 +327,59 @@ public sealed class ModScannerService(AppSettings settings)
                             : "UE4SS mods.txt marks this mod disabled."
             };
         }
+    }
+
+
+
+    private IReadOnlyList<string> FindManagedUe4ssRuntimeAliases(IEnumerable<string> files)
+    {
+        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var activeRoot = Path.GetFullPath(ActiveUe4ssModsRoot);
+        foreach (var file in files.Where(path => !string.IsNullOrWhiteSpace(path)))
+        {
+            try
+            {
+                var fullPath = Path.GetFullPath(file);
+                var relative = Path.GetRelativePath(activeRoot, fullPath);
+                if (relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative))
+                    continue;
+
+                var first = relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(first) && !KnownUe4ssRuntimeComponents.Contains(first))
+                    aliases.Add(first);
+            }
+            catch { }
+        }
+        return aliases.OrderBy(value => value, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private static IReadOnlyList<string> FindUe4ssRuntimeAliases(string packageRoot)
+    {
+        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var luaPath in Directory.EnumerateFiles(packageRoot, "*.lua", SearchOption.AllDirectories))
+            {
+                var relative = Path.GetRelativePath(packageRoot, luaPath);
+                var parts = relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries);
+                for (var index = parts.Length - 2; index >= 0; index--)
+                {
+                    if (!parts[index].Equals("Mods", StringComparison.OrdinalIgnoreCase) || index + 1 >= parts.Length)
+                        continue;
+
+                    var candidate = parts[index + 1];
+                    if (!string.IsNullOrWhiteSpace(candidate) && !KnownUe4ssRuntimeComponents.Contains(candidate))
+                        aliases.Add(candidate);
+                    break;
+                }
+            }
+        }
+        catch
+        {
+            // Alias discovery is supplemental evidence only. A damaged package must
+            // not prevent the rest of the MOD inventory from being displayed.
+        }
+        return aliases.OrderBy(value => value, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     private static bool IsPakOrDisabledPak(string path)
@@ -384,7 +488,7 @@ public sealed class ModScannerService(AppSettings settings)
 
         // UE4SS has its own authoritative enable list. ZIP-installed Lua mods must
         // be reconstructed from this file instead of relying on PalModSettings.ini.
-        var ue4ssModsTxt = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64", "Mods", "mods.txt");
+        var ue4ssModsTxt = Path.Combine(ActiveUe4ssModsRoot, "mods.txt");
         if (File.Exists(ue4ssModsTxt))
         {
             foreach (var rawLine in File.ReadLines(ue4ssModsTxt))
@@ -420,7 +524,7 @@ public sealed class ModScannerService(AppSettings settings)
                 if (enabledPackages.Contains(folder))
                     return (true, true, $"UE4SS mods.txt marks '{folder}' enabled.");
 
-                var enabledMarker = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64", "Mods", folder, "enabled.txt");
+                var enabledMarker = Path.Combine(ActiveUe4ssModsRoot, folder, "enabled.txt");
                 if (File.Exists(enabledMarker))
                     return (true, true, $"STATE MISMATCH: '{folder}/enabled.txt' is overriding mods.txt. Use Repair States to make mods.txt authoritative.");
             }
@@ -478,7 +582,7 @@ public sealed class ModScannerService(AppSettings settings)
 
     private bool IsUe4ssPath(string path)
     {
-        var modsRoot = Path.GetFullPath(Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64", "Mods"))
+        var modsRoot = Path.GetFullPath(ActiveUe4ssModsRoot)
             .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         try
         {
@@ -492,7 +596,7 @@ public sealed class ModScannerService(AppSettings settings)
 
     private IEnumerable<string> GetManagedUe4ssFolders(IEnumerable<string> files)
     {
-        var modsRoot = Path.GetFullPath(Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64", "Mods"))
+        var modsRoot = Path.GetFullPath(ActiveUe4ssModsRoot)
             .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
         foreach (var file in files)
@@ -569,27 +673,27 @@ public sealed class ModScannerService(AppSettings settings)
         }
     }
 
-    private static string? TryGetUe4ssRuntimeFolderName(string filePath)
+    private string? TryGetUe4ssRuntimeFolderName(string filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath)) return null;
-        var normalized = Normalize(filePath);
-        const string marker = "/Pal/Binaries/Win64/Mods/";
-        var index = normalized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (index < 0)
+
+        var info = ue4ssResolver.Resolve();
+        foreach (var root in new[] { info.ActiveModsRoot, info.ModernModsRoot, info.LegacyModsRoot }
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            const string shorterMarker = "Pal/Binaries/Win64/Mods/";
-            index = normalized.IndexOf(shorterMarker, StringComparison.OrdinalIgnoreCase);
-            if (index < 0) return null;
-            index += shorterMarker.Length;
-        }
-        else
-        {
-            index += marker.Length;
+            try
+            {
+                var rootFull = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                var fileFull = Path.GetFullPath(filePath);
+                if (!fileFull.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase)) continue;
+                var relative = fileFull[rootFull.Length..];
+                var separator = relative.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+                return separator <= 0 ? null : relative[..separator];
+            }
+            catch { }
         }
 
-        var remainder = normalized[index..];
-        var slash = remainder.IndexOf('/');
-        return slash <= 0 ? null : remainder[..slash];
+        return null;
     }
 
     private static string CleanName(string value)
