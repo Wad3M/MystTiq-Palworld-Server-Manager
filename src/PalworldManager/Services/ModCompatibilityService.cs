@@ -8,8 +8,16 @@ namespace PalworldManager.Services;
 /// own the same destination file. Name-family matches are reported as potential
 /// conflicts rather than confirmed failures.
 /// </summary>
-public sealed class ModCompatibilityService(AppSettings settings)
+public sealed class ModCompatibilityService
 {
+    private readonly AppSettings settings;
+    private readonly IServerPathProfile paths;
+
+    public ModCompatibilityService(AppSettings settings, IServerPathProfile? paths = null)
+    {
+        this.settings = settings;
+        this.paths = paths ?? ServerPathProfile.ForCurrentPlatform(settings);
+    }
     private static readonly string[] DependencyPropertyNames =
     [
         "Dependencies", "dependencies", "RequiredMods", "requiredMods", "Requires", "requires"
@@ -194,8 +202,8 @@ public sealed class ModCompatibilityService(AppSettings settings)
         if (!key.Contains("ue4ss", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        var win64 = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64");
-        var runtime = new Ue4ssRuntimeResolver(settings).Resolve();
+        var win64 = paths.RuntimeBinaryRoot;
+        var runtime = new Ue4ssRuntimeResolver(settings, paths).Resolve();
         return File.Exists(Path.Combine(win64, "UE4SS.dll")) ||
                File.Exists(Path.Combine(runtime.Ue4ssRoot, "UE4SS.dll")) ||
                File.Exists(Path.Combine(runtime.Ue4ssRoot, "UE4SS-settings.ini")) ||
@@ -209,8 +217,8 @@ public sealed class ModCompatibilityService(AppSettings settings)
 
         if (key.Contains("ue4ss", StringComparison.OrdinalIgnoreCase))
         {
-            var win64 = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64");
-            var runtime = new Ue4ssRuntimeResolver(settings).Resolve();
+            var win64 = paths.RuntimeBinaryRoot;
+            var runtime = new Ue4ssRuntimeResolver(settings, paths).Resolve();
             return File.Exists(Path.Combine(win64, "UE4SS.dll")) ||
                    File.Exists(Path.Combine(runtime.Ue4ssRoot, "UE4SS.dll")) ||
                    Directory.Exists(runtime.Ue4ssRoot);

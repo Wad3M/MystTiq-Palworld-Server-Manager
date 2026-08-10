@@ -7,7 +7,6 @@ namespace PalworldManager.Services;
 
 public sealed class InstallerService
 {
-    private const string SteamCmdUrl = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip";
     private const string Ue4ssExperimentalReleaseApi = "https://api.github.com/repos/UE4SS-RE/RE-UE4SS/releases/tags/experimental-latest";
     private const string PythonFtpRoot = "https://www.python.org/ftp/python/";
     private const string PalworldSaveToolsLatestReleaseApi = "https://api.github.com/repos/cheahjs/palworld-save-tools/releases/latest";
@@ -17,11 +16,18 @@ public sealed class InstallerService
     private const string SimdeSourceZip = "https://github.com/simd-everywhere/simde/archive/refs/heads/master.zip";
     private const string VsBuildToolsBootstrapperUrl = "https://aka.ms/vs/17/release/vs_BuildTools.exe";
     private readonly AppSettings settings;
+    private readonly IServerPathProfile paths;
+    private readonly IServerDistributionPlatformService distribution;
     private readonly HttpClient http;
 
-    public InstallerService(AppSettings settings)
+    public InstallerService(
+        AppSettings settings,
+        IServerPathProfile? paths = null,
+        IServerDistributionPlatformService? distribution = null)
     {
         this.settings = settings;
+        this.paths = paths ?? ServerPathProfile.ForCurrentPlatform(settings);
+        this.distribution = distribution ?? ServerDistributionPlatformService.ForCurrentPlatform();
         http = new HttpClient();
         http.DefaultRequestHeaders.UserAgent.ParseAdd(ApplicationVersion.UserAgent);
     }
@@ -83,7 +89,7 @@ public sealed class InstallerService
         return component switch
         {
             "SteamCMD" => File.Exists(settings.SteamCmdPath) && new FileInfo(settings.SteamCmdPath).Length > 0,
-            "Palworld Dedicated Server" => File.Exists(settings.ServerExe) && new FileInfo(settings.ServerExe).Length > 0,
+            "Palworld Dedicated Server" => File.Exists(paths.ServerExecutable) && new FileInfo(paths.ServerExecutable).Length > 0,
             "UE4SS Runtime" => IsUe4ssInstalled(),
             "Python Runtime" => !string.IsNullOrWhiteSpace(ResolvePythonExecutable()),
             "Palworld Save Tools" => File.Exists(ResolveSaveToolsConverter()),
@@ -95,7 +101,7 @@ public sealed class InstallerService
 
     private bool IsUe4ssInstalled()
     {
-        var win64 = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64");
+        var win64 = paths.RuntimeBinaryRoot;
         return File.Exists(Path.Combine(win64, "dwmapi.dll")) ||
                File.Exists(Path.Combine(win64, "UE4SS.dll")) ||
                Directory.Exists(Path.Combine(win64, "ue4ss"));
@@ -587,16 +593,16 @@ public sealed class InstallerService
         Directory.CreateDirectory(folder);
         var zip = Path.Combine(Path.GetTempPath(), $"myst-steamcmd-{Guid.NewGuid():N}.zip");
         progress?.Report(new() { Component="SteamCMD", Message="Downloading SteamCMD from Valve...", Percent=10 });
-        await DownloadAsync(SteamCmdUrl, zip, progress, "SteamCMD", 10, 65, ct);
+        await DownloadAsync(distribution.SteamCmdPackageUri.ToString(), zip, progress, "SteamCMD", 10, 65, ct);
         progress?.Report(new() { Component="SteamCMD", Message="Extracting SteamCMD...", Percent=72 });
-        ZipFile.ExtractToDirectory(zip, folder, true);
+        distribution.ExtractSteamCmdPackage(zip, folder);
         File.Delete(zip);
-        if (!File.Exists(settings.SteamCmdPath)) throw new FileNotFoundException("steamcmd.exe was not found after extraction.", settings.SteamCmdPath);
+        if (!File.Exists(settings.SteamCmdPath)) throw new FileNotFoundException($"{distribution.SteamCmdExecutableName} was not found after extraction.", settings.SteamCmdPath);
         progress?.Report(new() { Component="SteamCMD", Message="Running SteamCMD self-update...", Percent=82 });
         Exception? selfUpdateFailure = null;
         try
         {
-            await RunProcessAsync(settings.SteamCmdPath, "+quit", folder, progress, "SteamCMD", ct);
+            await RunProcessAsync(settings.SteamCmdPath, distribution.BuildSteamCmdSelfUpdateArguments(), folder, progress, "SteamCMD", ct);
         }
         catch (Exception ex)
         {
@@ -604,7 +610,7 @@ public sealed class InstallerService
         }
 
         if (!File.Exists(settings.SteamCmdPath) || new FileInfo(settings.SteamCmdPath).Length == 0)
-            throw new FileNotFoundException("SteamCMD self-update failed and steamcmd.exe could not be verified.", settings.SteamCmdPath, selfUpdateFailure);
+            throw new FileNotFoundException($"SteamCMD self-update failed and {distribution.SteamCmdExecutableName} could not be verified.", settings.SteamCmdPath, selfUpdateFailure);
 
         progress?.Report(new()
         {
@@ -637,13 +643,9 @@ public sealed class InstallerService
         // Use ProcessStartInfo.ArgumentList so paths containing spaces are passed to
         // SteamCMD exactly as intended. The first attempt follows the official
         // install command and validates the downloaded files.
-        var validateArgs = new[]
-        {
-            "+force_install_dir", settings.ServerRoot,
-            "+login", "anonymous",
-            "+app_update", "2394010", "validate",
-            "+quit"
-        };
+        var validateArgs = distribution.BuildPalworldServerInstallArguments(
+            settings.ServerRoot,
+            validate: true);
 
         try
         {
@@ -665,13 +667,9 @@ public sealed class InstallerService
                 Percent = 45
             });
 
-            var installArgs = new[]
-            {
-                "+force_install_dir", settings.ServerRoot,
-                "+login", "anonymous",
-                "+app_update", "2394010",
-                "+quit"
-            };
+            var installArgs = distribution.BuildPalworldServerInstallArguments(
+                settings.ServerRoot,
+                validate: false);
 
             try
             {
@@ -697,10 +695,10 @@ public sealed class InstallerService
 
             throw new FileNotFoundException(
                 "Palworld Dedicated Server could not be verified. PalServer.exe was not created at:" +
-                Environment.NewLine + settings.ServerExe + Environment.NewLine + Environment.NewLine +
+                Environment.NewLine + paths.ServerExecutable + Environment.NewLine + Environment.NewLine +
                 detail + Environment.NewLine + Environment.NewLine +
                 "Check free disk space, antivirus protection, and SteamCMD network access, then try Repair.",
-                settings.ServerExe);
+                paths.ServerExecutable);
         }
 
         progress?.Report(new()
@@ -715,13 +713,13 @@ public sealed class InstallerService
 
     private bool IsServerExecutableValid()
     {
-        return File.Exists(settings.ServerExe) && new FileInfo(settings.ServerExe).Length > 0;
+        return File.Exists(paths.ServerExecutable) && new FileInfo(paths.ServerExecutable).Length > 0;
     }
 
     private void TryRecoverDefaultSteamCmdInstall(string steamCmdFolder, IProgress<InstallProgressInfo>? progress)
     {
-        var defaultRoot = Path.Combine(steamCmdFolder, "steamapps", "common", "PalServer");
-        var defaultExe = Path.Combine(defaultRoot, "PalServer.exe");
+        var defaultRoot = distribution.GetDefaultPalworldInstallRoot(steamCmdFolder);
+        var defaultExe = Path.Combine(defaultRoot, Path.GetFileName(paths.ServerExecutable));
         if (!File.Exists(defaultExe) || new FileInfo(defaultExe).Length == 0)
             return;
 
@@ -792,7 +790,7 @@ public sealed class InstallerService
 
     public async Task InstallUe4ssAsync(IProgress<InstallProgressInfo>? progress, CancellationToken ct)
     {
-        var win64 = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64");
+        var win64 = paths.RuntimeBinaryRoot;
         if (!Directory.Exists(win64)) throw new DirectoryNotFoundException("Install the Palworld dedicated server first.");
         progress?.Report(new() { Component="UE4SS Runtime", Message="Finding the latest experimental UE4SS release...", Percent=8 });
         using var response = await http.GetAsync(Ue4ssExperimentalReleaseApi, ct); response.EnsureSuccessStatusCode();

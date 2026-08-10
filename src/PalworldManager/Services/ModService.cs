@@ -7,6 +7,7 @@ public sealed class ModService
 {
     private readonly AppSettings settings;
     private readonly Ue4ssRuntimeResolver ue4ssResolver;
+    private readonly IServerPathProfile paths;
     private static readonly string[] PakExtensions = [".pak", ".ucas", ".utoc"];
     private static readonly HashSet<string> KnownUe4ssRuntimeComponents = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -23,9 +24,10 @@ public sealed class ModService
     public ModService(AppSettings settings, Ue4ssRuntimeResolver ue4ssResolver)
         : this(settings, ue4ssResolver, new RuntimeStateService()) { }
 
-    public ModService(AppSettings settings, Ue4ssRuntimeResolver ue4ssResolver, RuntimeStateService runtimeState)
+    public ModService(AppSettings settings, Ue4ssRuntimeResolver ue4ssResolver, RuntimeStateService runtimeState, IServerPathProfile? paths = null)
     {
         this.settings = settings;
+        this.paths = paths ?? ServerPathProfile.ForCurrentPlatform(settings);
         this.ue4ssResolver = ue4ssResolver ?? throw new ArgumentNullException(nameof(ue4ssResolver));
         scanner = new ModScannerService(settings, ue4ssResolver, runtimeState);
     }
@@ -730,7 +732,7 @@ public sealed class ModService
         if (hasPalDefenderModule && hasSupportedProxyLoader)
         {
             const string packageName = "PalDefender";
-            var win64Folder = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64");
+            var win64Folder = paths.RuntimeBinaryRoot;
             var allowedRootExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 ".dll", ".ini", ".json", ".toml", ".cfg", ".txt"

@@ -277,11 +277,11 @@
             <Setter Property="ToolTipService.InitialShowDelay" Value="350"/>
             <Setter Property="ToolTipService.ShowDuration" Value="18000"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="22,12"/>
-            <Setter Property="Margin" Value="8,0,0,0"/>
-            <Setter Property="MinWidth" Value="150"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="Margin" Value="7,0,0,0"/>
+            <Setter Property="MinWidth" Value="135"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#42A5FF"/>
@@ -336,10 +336,10 @@
 
         <!-- Unified application button styling. Individual buttons may override Background/BorderBrush for warning actions. -->
         <Style x:Key="AppButton" TargetType="Button" BasedOn="{StaticResource ConfigPrimaryButton}">
-            <Setter Property="MinWidth" Value="112"/>
-            <Setter Property="Padding" Value="17,10"/>
-            <Setter Property="Margin" Value="7,0,0,0"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="MinWidth" Value="101"/>
+            <Setter Property="Padding" Value="15,9"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="FontSize" Value="12"/>
         </Style>
 
         <Style TargetType="Button" BasedOn="{StaticResource AppButton}"/>
@@ -348,39 +348,39 @@
              Success/Warning/Danger/Info/Refresh/Diagnostic styles below. -->
         <Style x:Key="MystTiqStandardButton" TargetType="Button" BasedOn="{StaticResource AppButton}"/>
         <Style x:Key="MystTiqCompactButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
-            <Setter Property="MinWidth" Value="88"/>
-            <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="Margin" Value="5,2,0,2"/>
-            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="MinWidth" Value="79"/>
+            <Setter Property="MinHeight" Value="27"/>
+            <Setter Property="Padding" Value="9,4"/>
+            <Setter Property="Margin" Value="4,2,0,2"/>
+            <Setter Property="FontSize" Value="10.5"/>
         </Style>
         <Style x:Key="MystTiqToolbarButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
-            <Setter Property="MinWidth" Value="104"/>
-            <Setter Property="MinHeight" Value="34"/>
-            <Setter Property="Padding" Value="12,7"/>
-            <Setter Property="Margin" Value="6,2,0,2"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinWidth" Value="94"/>
+            <Setter Property="MinHeight" Value="31"/>
+            <Setter Property="Padding" Value="11,6"/>
+            <Setter Property="Margin" Value="5,2,0,2"/>
+            <Setter Property="FontSize" Value="11"/>
         </Style>
         <Style x:Key="MystTiqWideActionButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="MinHeight" Value="34"/>
-            <Setter Property="Padding" Value="14,7"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="31"/>
+            <Setter Property="Padding" Value="13,6"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="FontSize" Value="11"/>
         </Style>
         <Style x:Key="MystTiqIconButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
-            <Setter Property="MinWidth" Value="34"/>
-            <Setter Property="Width" Value="34"/>
-            <Setter Property="Height" Value="34"/>
-            <Setter Property="Padding" Value="5"/>
+            <Setter Property="MinWidth" Value="31"/>
+            <Setter Property="Width" Value="31"/>
+            <Setter Property="Height" Value="31"/>
+            <Setter Property="Padding" Value="4"/>
             <Setter Property="Margin" Value="4,2"/>
         </Style>
         <Style x:Key="MystTiqDataGridActionButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
-            <Setter Property="MinWidth" Value="84"/>
-            <Setter Property="MinHeight" Value="28"/>
-            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="MinWidth" Value="76"/>
+            <Setter Property="MinHeight" Value="25"/>
+            <Setter Property="Padding" Value="7,4"/>
             <Setter Property="Margin" Value="2"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="10"/>
         </Style>
 
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
@@ -501,85 +501,94 @@
         <!-- Compact Workspace Manager actions. Keep semantic MystTiq colors while
              reducing control density for the workspace operations page. -->
         <Style x:Key="WorkspaceRefreshButton" TargetType="Button" BasedOn="{StaticResource RefreshButton}">
-            <Setter Property="MinWidth" Value="96"/>
-            <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="Margin" Value="5,2,0,2"/>
-            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="MinWidth" Value="86"/>
+            <Setter Property="MinHeight" Value="29"/>
+            <Setter Property="Padding" Value="9,5"/>
+            <Setter Property="Margin" Value="4,2,0,2"/>
+            <Setter Property="FontSize" Value="10.5"/>
         </Style>
         <Style x:Key="WorkspaceSuccessButton" TargetType="Button" BasedOn="{StaticResource SuccessButton}">
-            <Setter Property="MinWidth" Value="104"/>
-            <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="Margin" Value="5,2,0,2"/>
-            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="MinWidth" Value="94"/>
+            <Setter Property="MinHeight" Value="29"/>
+            <Setter Property="Padding" Value="9,5"/>
+            <Setter Property="Margin" Value="4,2,0,2"/>
+            <Setter Property="FontSize" Value="10.5"/>
         </Style>
         <Style x:Key="WorkspaceInfoButton" TargetType="Button" BasedOn="{StaticResource InfoButton}">
-            <Setter Property="MinWidth" Value="82"/>
-            <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="Padding" Value="9,6"/>
-            <Setter Property="Margin" Value="5,2,0,2"/>
-            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="MinWidth" Value="74"/>
+            <Setter Property="MinHeight" Value="29"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Margin" Value="4,2,0,2"/>
+            <Setter Property="FontSize" Value="10.5"/>
         </Style>
         <Style x:Key="WorkspaceSecondaryButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-            <Setter Property="MinWidth" Value="92"/>
-            <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="Padding" Value="9,6"/>
-            <Setter Property="Margin" Value="5,2,0,2"/>
-            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="MinWidth" Value="83"/>
+            <Setter Property="MinHeight" Value="29"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Margin" Value="4,2,0,2"/>
+            <Setter Property="FontSize" Value="10.5"/>
         </Style>
         <Style x:Key="WorkspaceSaveButton" TargetType="Button" BasedOn="{StaticResource SuccessButton}">
-            <Setter Property="MinWidth" Value="108"/>
-            <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="Margin" Value="5,2,0,2"/>
-            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="MinWidth" Value="97"/>
+            <Setter Property="MinHeight" Value="29"/>
+            <Setter Property="Padding" Value="9,5"/>
+            <Setter Property="Margin" Value="4,2,0,2"/>
+            <Setter Property="FontSize" Value="10.5"/>
         </Style>
 
         <!-- Compact MODS/UE4SS/Server Doctor actions. These preserve the semantic
              button colors while allowing dense action rows to wrap cleanly at
              smaller window sizes and common Windows DPI scaling levels. -->
         <Style x:Key="ModPrimaryButton" TargetType="Button" BasedOn="{StaticResource ConfigPrimaryButton}">
-            <Setter Property="MinWidth" Value="104"/>
-            <Setter Property="MinHeight" Value="38"/>
-            <Setter Property="Padding" Value="13,8"/>
-            <Setter Property="Margin" Value="6,3,0,3"/>
-            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="MinWidth" Value="94"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Margin" Value="5,2,0,2"/>
+            <Setter Property="FontSize" Value="11.5"/>
         </Style>
         <Style x:Key="ModSuccessButton" TargetType="Button" BasedOn="{StaticResource SuccessButton}">
-            <Setter Property="MinWidth" Value="104"/><Setter Property="MinHeight" Value="38"/><Setter Property="Padding" Value="13,8"/><Setter Property="Margin" Value="6,3,0,3"/><Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="MinWidth" Value="94"/><Setter Property="MinHeight" Value="34"/><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="5,2,0,2"/><Setter Property="FontSize" Value="11.5"/>
         </Style>
         <Style x:Key="ModWarningButton" TargetType="Button" BasedOn="{StaticResource WarningButton}">
-            <Setter Property="MinWidth" Value="104"/><Setter Property="MinHeight" Value="38"/><Setter Property="Padding" Value="13,8"/><Setter Property="Margin" Value="6,3,0,3"/><Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="MinWidth" Value="94"/><Setter Property="MinHeight" Value="34"/><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="5,2,0,2"/><Setter Property="FontSize" Value="11.5"/>
         </Style>
         <Style x:Key="ModDiagnosticButton" TargetType="Button" BasedOn="{StaticResource DiagnosticButton}">
-            <Setter Property="MinWidth" Value="104"/><Setter Property="MinHeight" Value="38"/><Setter Property="Padding" Value="13,8"/><Setter Property="Margin" Value="6,3,0,3"/><Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="MinWidth" Value="94"/><Setter Property="MinHeight" Value="34"/><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="5,2,0,2"/><Setter Property="FontSize" Value="11.5"/>
         </Style>
         <Style x:Key="ModSecondaryButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-            <Setter Property="MinWidth" Value="104"/><Setter Property="MinHeight" Value="38"/><Setter Property="Padding" Value="13,8"/><Setter Property="Margin" Value="6,3,0,3"/><Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="MinWidth" Value="94"/><Setter Property="MinHeight" Value="34"/><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="5,2,0,2"/><Setter Property="FontSize" Value="11.5"/>
         </Style>
         <Style x:Key="ModDangerButton" TargetType="Button" BasedOn="{StaticResource DangerButton}">
-            <Setter Property="MinWidth" Value="104"/><Setter Property="MinHeight" Value="38"/><Setter Property="Padding" Value="13,8"/><Setter Property="Margin" Value="6,3,0,3"/><Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="MinWidth" Value="94"/><Setter Property="MinHeight" Value="34"/><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="5,2,0,2"/><Setter Property="FontSize" Value="11.5"/>
         </Style>
         <Style x:Key="ModActionWrapPanel" TargetType="WrapPanel">
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="MaxWidth" Value="650"/>
         </Style>
+        <Style x:Key="MystTiqActionGrid" TargetType="UniformGrid">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Rows" Value="1"/>
+        </Style>
+        <Style x:Key="ModActionGrid" TargetType="UniformGrid" BasedOn="{StaticResource MystTiqActionGrid}">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="MaxWidth" Value="650"/>
+        </Style>
 
         <Style x:Key="ConfigViewButton" TargetType="Button" BasedOn="{StaticResource AppButton}">
-            <Setter Property="MinWidth" Value="145"/>
-            <Setter Property="Height" Value="38"/>
-            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="MinWidth" Value="131"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="13,6"/>
             <Setter Property="Margin" Value="0,0,8,0"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12"/>
         </Style>
         <Style x:Key="ConfigViewSelectedButton" TargetType="Button" BasedOn="{StaticResource SuccessButton}">
-            <Setter Property="MinWidth" Value="145"/>
-            <Setter Property="Height" Value="38"/>
-            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="MinWidth" Value="131"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="13,6"/>
             <Setter Property="Margin" Value="0,0,8,0"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12"/>
         </Style>
 
         <Style x:Key="QolComboBoxItem" TargetType="ComboBoxItem">
@@ -869,7 +878,7 @@
         <!-- Global notification bell. The full application shell is reserved for v2.12. -->
         <Grid Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,9,22,0" Panel.ZIndex="90">
             <Grid>
-                <Button x:Name="NotificationBellButton" Width="42" Height="38" Padding="0" Visibility="Collapsed"
+                <Button x:Name="NotificationBellButton" Width="38" Height="34" Padding="0" Visibility="Collapsed"
                         Background="#132334" BorderBrush="#31506C" BorderThickness="1" Foreground="#DCE8F5"
                         PreviewMouseLeftButtonDown="NotificationBell_PreviewMouseLeftButtonDown"
                         Click="NotificationBell_Click" ToolTip="Show recent notifications">
@@ -902,7 +911,7 @@
                                 <TextBlock x:Name="NotificationFlyoutSummaryText" Text="No unread notifications" Foreground="#9FC4EA" FontSize="11" Margin="0,2,0,0"/>
                             </StackPanel>
                             <Button Grid.Column="1" Content="✓  MARK READ" Style="{StaticResource NeutralButton}"
-                                    Padding="9,5" Margin="8,0,0,0" Click="NotificationFlyoutMarkAllRead_Click"
+                                    Padding="8,4" Margin="8,0,0,0" Click="NotificationFlyoutMarkAllRead_Click"
                                     ToolTip="Mark all notifications as read."/>
                         </Grid>
                         <Border Grid.Row="1" Height="1" Background="#29415A" Margin="0,10,0,8"/>
@@ -939,9 +948,9 @@
                         <Grid Grid.Row="3" Margin="0,8,0,0">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Text="Select an item to mark it read." Foreground="#71869D" FontSize="10" VerticalAlignment="Center"/>
-                            <Button Grid.Column="1" Content="▤  ACTIVITY &amp; AUDIT" Style="{StaticResource InfoButton}" Padding="9,5"
+                            <Button Grid.Column="1" Content="▤  ACTIVITY &amp; AUDIT" Style="{StaticResource InfoButton}" Padding="8,4"
                                     Click="NotificationFlyoutActivity_Click" ToolTip="Open Activity &amp; Audit for the complete historical record."/>
-                            <Button Grid.Column="2" Content="✕  CLEAR" Style="{StaticResource NeutralButton}" Padding="9,5" Margin="6,0,0,0"
+                            <Button Grid.Column="2" Content="✕  CLEAR" Style="{StaticResource NeutralButton}" Padding="8,4" Margin="6,0,0,0"
                                     Click="NotificationFlyoutClear_Click" ToolTip="Clear all unpinned notifications."/>
                         </Grid>
                     </Grid>
@@ -976,7 +985,7 @@
     <Border Grid.Row="0" Style="{StaticResource SectionBanner}" Padding="12,9">
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel VerticalAlignment="Center"><TextBlock Text="Dashboard" FontSize="21" FontWeight="Bold" Foreground="White"/><TextBlock Text="Monitor resources, control the server, and follow live activity." Foreground="#9FC4EA" FontSize="12" Margin="0,2,16,0"/></StackPanel>
-      <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="DashboardRefresh_Click" ToolTip="Refreshes dashboard, player, guild, world, MOD, and backup summaries."/><Button x:Name="DashboardStartButton" Content="▶  START" Click="Start_Click" ToolTip="Starts the Palworld dedicated server using the current MystTiq configuration." Style="{StaticResource SuccessButton}"/><Button x:Name="DashboardRestartButton" Content="↻  RESTART" Style="{StaticResource WarningButton}" Click="Restart_Click" ToolTip="Performs a controlled restart of the Palworld server."/><Button x:Name="DashboardStopButton" Content="■  STOP" Style="{StaticResource DangerButton}" Click="Stop_Click" ToolTip="Stops the Palworld server using the normal managed shutdown sequence."/></WrapPanel>
+      <UniformGrid Columns="4" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}"><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="DashboardRefresh_Click" ToolTip="Refreshes dashboard, player, guild, world, MOD, and backup summaries."/><Button x:Name="DashboardStartButton" Content="▶  START" Click="Start_Click" ToolTip="Starts the Palworld dedicated server using the current MystTiq configuration." Style="{StaticResource SuccessButton}"/><Button x:Name="DashboardRestartButton" Content="↻  RESTART" Style="{StaticResource WarningButton}" Click="Restart_Click" ToolTip="Performs a controlled restart of the Palworld server."/><Button x:Name="DashboardStopButton" Content="■  STOP" Style="{StaticResource DangerButton}" Click="Stop_Click" ToolTip="Stops the Palworld server using the normal managed shutdown sequence."/></UniformGrid>
      </Grid>
     </Border>
 
@@ -988,16 +997,16 @@
        <Border Grid.Column="1" Background="#17314A" BorderBrush="#3E769F" BorderThickness="1" CornerRadius="16" Padding="10,5" VerticalAlignment="Center"><StackPanel><TextBlock Text="UPTIME" Foreground="#82A9C7" FontSize="8" HorizontalAlignment="Center"/><TextBlock x:Name="DashboardUptimeText" Text="00:00:00" Foreground="#9FE1FF" FontWeight="Bold" FontSize="13"/></StackPanel></Border>
       </Grid>
      </Border>
-     <Border Grid.Column="1" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,0,7,0"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><TextBlock Text="ACTIVE WORLD" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock Grid.Row="1" x:Name="DashboardWorldNameText" Text="Detecting..." Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,3,0,1" TextTrimming="CharacterEllipsis"/><Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="DashboardWorldDetailText" Text="World summary unavailable" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/><Button Grid.Column="1" Content="↗  OPEN" Style="{StaticResource InfoButton}" Click="DashboardOpenWorld_Click" Padding="8,3" Margin="6,0,0,0" ToolTip="Open World."/></Grid></Grid></Border>
-     <Border Grid.Column="2" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,0,7,0"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><TextBlock Text="BACKUP" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock Grid.Row="1" x:Name="DashboardBackupStateText" Text="Checking..." Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,3,0,1"/><Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="DashboardBackupDetailText" Text="Backup status unavailable" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/><Button Grid.Column="1" Content="▣  BACKUP" Click="Backup_Click" Padding="8,3" Margin="6,0,0,0" Style="{StaticResource WarningButton}" ToolTip="Backup Now."/></Grid></Grid></Border>
-     <Border x:Name="DashboardOverallHealthCard" Grid.Column="3" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><TextBlock Text="OVERALL HEALTH" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock Grid.Row="1" x:Name="DashboardOverallHealthText" Text="--%" Foreground="#9FE1FF" FontSize="18" FontWeight="Bold" Margin="0,3,0,1"/><Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="DashboardOverallHealthDetailText" Text="Collecting health signals" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/><Button Grid.Column="1" Content="✚  DOCTOR" Style="{StaticResource DiagnosticButton}" Click="DashboardOpenDoctor_Click" Padding="8,3" Margin="6,0,0,0" ToolTip="Open Server Doctor."/></Grid></Grid></Border>
+     <Border Grid.Column="1" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,0,7,0"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><TextBlock Text="ACTIVE WORLD" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock Grid.Row="1" x:Name="DashboardWorldNameText" Text="Detecting..." Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,3,0,1" TextTrimming="CharacterEllipsis"/><Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="DashboardWorldDetailText" Text="World summary unavailable" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/><Button Grid.Column="1" Content="↗  OPEN" Style="{StaticResource InfoButton}" Click="DashboardOpenWorld_Click" Margin="6,0,0,0" ToolTip="Open World."/></Grid></Grid></Border>
+     <Border Grid.Column="2" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,0,7,0"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><TextBlock Text="BACKUP" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock Grid.Row="1" x:Name="DashboardBackupStateText" Text="Checking..." Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,3,0,1"/><Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="DashboardBackupDetailText" Text="Backup status unavailable" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/><Button Grid.Column="1" Content="▣  BACKUP" Click="Backup_Click" Margin="6,0,0,0" Style="{StaticResource WarningButton}" ToolTip="Backup Now."/></Grid></Grid></Border>
+     <Border x:Name="DashboardOverallHealthCard" Grid.Column="3" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><TextBlock Text="OVERALL HEALTH" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock Grid.Row="1" x:Name="DashboardOverallHealthText" Text="--%" Foreground="#9FE1FF" FontSize="18" FontWeight="Bold" Margin="0,3,0,1"/><Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="DashboardOverallHealthDetailText" Text="Collecting health signals" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/><Button Grid.Column="1" Content="✚  DOCTOR" Style="{StaticResource DiagnosticButton}" Click="DashboardOpenDoctor_Click" Margin="6,0,0,0" ToolTip="Open Server Doctor."/></Grid></Grid></Border>
     </Grid>
 
     <Grid Grid.Row="2" Margin="0,7,0,0">
      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition Width="1.2*"/></Grid.ColumnDefinitions>
-     <Border Grid.Column="0" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,0,7,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="PLAYERS" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="DashboardPlayersStateText" Text="Scanning..." Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,3,0,1"/><TextBlock x:Name="DashboardPlayersDetailText" Text="Player intelligence unavailable" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/></StackPanel><Button Grid.Column="1" Content="↗  OPEN" Style="{StaticResource InfoButton}" Click="DashboardOpenPlayers_Click" Padding="8,3" VerticalAlignment="Center" ToolTip="Open Players."/></Grid></Border>
-     <Border Grid.Column="1" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,0,7,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="GUILDS &amp; BASES" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="DashboardGuildsStateText" Text="Scanning..." Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,3,0,1"/><TextBlock x:Name="DashboardGuildsDetailText" Text="Guild intelligence unavailable" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/></StackPanel><Button Grid.Column="1" Content="↗  OPEN" Style="{StaticResource InfoButton}" Click="DashboardOpenGuilds_Click" Padding="8,3" VerticalAlignment="Center" ToolTip="Open Guilds."/></Grid></Border>
-     <Border Grid.Column="2" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,0,7,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="MOD PLATFORM" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="DashboardModStateText" Text="Checking..." Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,3,0,1"/><TextBlock x:Name="DashboardModDetailText" Text="Mod status unavailable" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/></StackPanel><Button Grid.Column="1" Content="↗  OPEN" Style="{StaticResource InfoButton}" Click="DashboardOpenMods_Click" Padding="8,3" VerticalAlignment="Center" ToolTip="Open MODs."/></Grid></Border>
+     <Border Grid.Column="0" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,0,7,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="PLAYERS" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="DashboardPlayersStateText" Text="Scanning..." Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,3,0,1"/><TextBlock x:Name="DashboardPlayersDetailText" Text="Player intelligence unavailable" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/></StackPanel><Button Grid.Column="1" Content="↗  OPEN" Style="{StaticResource InfoButton}" Click="DashboardOpenPlayers_Click" VerticalAlignment="Center" ToolTip="Open Players."/></Grid></Border>
+     <Border Grid.Column="1" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,0,7,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="GUILDS &amp; BASES" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="DashboardGuildsStateText" Text="Scanning..." Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,3,0,1"/><TextBlock x:Name="DashboardGuildsDetailText" Text="Guild intelligence unavailable" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/></StackPanel><Button Grid.Column="1" Content="↗  OPEN" Style="{StaticResource InfoButton}" Click="DashboardOpenGuilds_Click" VerticalAlignment="Center" ToolTip="Open Guilds."/></Grid></Border>
+     <Border Grid.Column="2" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9" Margin="0,0,7,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="MOD PLATFORM" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="DashboardModStateText" Text="Checking..." Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,3,0,1"/><TextBlock x:Name="DashboardModDetailText" Text="Mod status unavailable" Foreground="#A9C2D9" FontSize="10" TextTrimming="CharacterEllipsis"/></StackPanel><Button Grid.Column="1" Content="↗  OPEN" Style="{StaticResource InfoButton}" Click="DashboardOpenMods_Click" VerticalAlignment="Center" ToolTip="Open MODs."/></Grid></Border>
      <Border Grid.Column="3" Background="{StaticResource Card}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="9" Padding="9"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="CPU" Foreground="#7FA6CA" FontSize="9"/><TextBlock x:Name="CpuText" Text="0.0%" Foreground="White" FontSize="16" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="1" Margin="12,0"><TextBlock Text="MEMORY" Foreground="#7FA6CA" FontSize="9"/><TextBlock x:Name="MemoryText" Text="0 MB" Foreground="White" FontSize="16" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="2" VerticalAlignment="Center"><ProgressBar x:Name="CpuBar" Width="78" Height="8" Maximum="100"/><ProgressBar x:Name="MemoryBar" Width="78" Height="8" Maximum="16384" Margin="0,8,0,0"/></StackPanel><TextBlock x:Name="PlayersText" Text="Players: —" Visibility="Collapsed"/><TextBlock x:Name="ResourceUpdatedText" Text="Updated: —" Visibility="Collapsed"/></Grid></Border>
     </Grid>
 
@@ -1049,7 +1058,7 @@
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="HEALTH" Foreground="#7FA6CA" FontSize="10" FontWeight="Bold" Margin="0,0,8,0"/><TextBlock x:Name="DashboardHealthText" Text="CHECKING" Foreground="#F0B246" FontSize="14" FontWeight="Bold"/></StackPanel>
       <WrapPanel Grid.Column="1" Margin="18,0,0,0" VerticalAlignment="Center"><TextBlock x:Name="DashboardHealthPlayers" Text="Players: —" Foreground="#C9D8E8" Margin="0,0,16,0"/><TextBlock x:Name="DashboardHealthRest" Text="REST: Checking" Foreground="#C9D8E8" Margin="0,0,16,0"/><TextBlock x:Name="DashboardHealthRcon" Text="RCON: Idle" Foreground="#C9D8E8" Margin="0,0,16,0"/><TextBlock x:Name="DashboardHealthMods" Text="Mods: —" Foreground="#C9D8E8" Margin="0,0,16,0"/><TextBlock x:Name="DashboardHealthBackup" Text="Backup: —" Foreground="#C9D8E8"/></WrapPanel>
-      <WrapPanel Grid.Column="2"><Button Content="⌕  SCAN" Style="{StaticResource RefreshButton}" Click="ScanServerProcesses_Click" Padding="9,4" ToolTip="Scans Windows for Palworld server processes."/><Button Content="✚  DOCTOR" Style="{StaticResource DiagnosticButton}" Click="RunServerDoctor_Click" Padding="9,4" ToolTip="Runs Server Doctor diagnostics."/><Button Content="✕  CLEANUP" Style="{StaticResource DangerButton}" Click="ForceCleanup_Click" Padding="9,4" ToolTip="Force-stops remaining Palworld server processes when needed."/></WrapPanel>
+      <UniformGrid Columns="3" Grid.Column="2" Style="{StaticResource MystTiqActionGrid}"><Button Content="⌕  SCAN" Style="{StaticResource RefreshButton}" Click="ScanServerProcesses_Click" ToolTip="Scans Windows for Palworld server processes."/><Button Content="✚  DOCTOR" Style="{StaticResource DiagnosticButton}" Click="RunServerDoctor_Click" ToolTip="Runs Server Doctor diagnostics."/><Button Content="✕  CLEANUP" Style="{StaticResource DangerButton}" Click="ForceCleanup_Click" ToolTip="Force-stops remaining Palworld server processes when needed."/></UniformGrid>
      </Grid>
     </Border>
 
@@ -1180,7 +1189,7 @@
       <DataGrid.Columns>
        <DataGridTemplateColumn Header="ACTION" Width="120"><DataGridTemplateColumn.CellTemplate><DataTemplate><Button Content="{Binding Action}" Style="{StaticResource MystTiqDataGridActionButton}" Click="EnvironmentAction_Click" ToolTip="Runs the recommended setup or repair action for this environment item." ContentTemplate="{StaticResource DynamicActionButtonTemplate}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
        <DataGridTextColumn Header="COMPONENT" Binding="{Binding Component}" Width="210"/>
-       <DataGridTemplateColumn Header="STATUS" Width="115"><DataGridTemplateColumn.CellTemplate><DataTemplate><Border x:Name="StatusBadge" CornerRadius="4" Padding="8,3" HorizontalAlignment="Stretch" Background="#465568"><TextBlock Text="{Binding Status}" Foreground="White" FontWeight="Bold" FontSize="10" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><DataTemplate.Triggers><DataTrigger Binding="{Binding Status}" Value="READY"><Setter TargetName="StatusBadge" Property="Background" Value="#1F8B4C"/></DataTrigger><DataTrigger Binding="{Binding Status}" Value="MISSING"><Setter TargetName="StatusBadge" Property="Background" Value="#B53B3B"/></DataTrigger><DataTrigger Binding="{Binding Status}" Value="DISABLED"><Setter TargetName="StatusBadge" Property="Background" Value="#B37A18"/></DataTrigger><DataTrigger Binding="{Binding Status}" Value="OPTIONAL"><Setter TargetName="StatusBadge" Property="Background" Value="#B37A18"/></DataTrigger></DataTemplate.Triggers></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+       <DataGridTemplateColumn Header="STATUS" Width="95"><DataGridTemplateColumn.CellTemplate><DataTemplate><Border x:Name="StatusBadge" CornerRadius="4" Padding="6,2" MinWidth="68" HorizontalAlignment="Center" Background="#465568"><TextBlock Text="{Binding Status}" Foreground="White" FontWeight="Bold" FontSize="9" TextWrapping="NoWrap" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><DataTemplate.Triggers><DataTrigger Binding="{Binding Status}" Value="READY"><Setter TargetName="StatusBadge" Property="Background" Value="#1F8B4C"/></DataTrigger><DataTrigger Binding="{Binding Status}" Value="MISSING"><Setter TargetName="StatusBadge" Property="Background" Value="#B53B3B"/></DataTrigger><DataTrigger Binding="{Binding Status}" Value="DISABLED"><Setter TargetName="StatusBadge" Property="Background" Value="#B37A18"/></DataTrigger><DataTrigger Binding="{Binding Status}" Value="OPTIONAL"><Setter TargetName="StatusBadge" Property="Background" Value="#B37A18"/></DataTrigger></DataTemplate.Triggers></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
        <DataGridTextColumn Header="LOCATION" Binding="{Binding Location}" Width="2*"/>
        <DataGridTextColumn Header="DETAILS" Binding="{Binding Details}" Width="2.4*"/>
       </DataGrid.Columns>
@@ -1207,11 +1216,11 @@
        <TextBlock Text="SERVER OPERATIONS" Foreground="White" FontSize="15" FontWeight="Bold"/>
        <TextBlock Text="Check availability, install missing components, or verify the complete server environment." Foreground="#8FB7DB" Margin="0,3,18,0"/>
       </StackPanel>
-      <WrapPanel Grid.Column="1" VerticalAlignment="Center">
-       <Button Content="↻  CHECK FOR UPDATES" Style="{StaticResource UpdateButton}" Click="CheckForUpdates_Click" ToolTip="Checks required server components for available updates."/>
+      <UniformGrid Columns="3" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}">
+       <Button Content="↻  CHECK FOR UPDATES" Style="{StaticResource UpdateButton}" Click="CheckForUpdates_Click" ToolTip="Checks the latest public MystTiq GitHub release plus required server components and locally available Workshop updates."/>
        <Button Content="⬇  INSTALL MISSING" Style="{StaticResource WarningButton}" Click="InstallRequired_Click" ToolTip="Installs required components that are currently missing, including Python when required."/>
        <Button Content="✓  VERIFY FILES" Style="{StaticResource RefreshButton}" Click="VerifyEnvironment_Click" ToolTip="Verifies required files, paths, and components without changing the server."/>
-      </WrapPanel>
+      </UniformGrid>
      </Grid>
     </Border>
 
@@ -1284,8 +1293,8 @@
         </ComboBox>
        </StackPanel>
        <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,0,0,0">
-        <Button Style="{StaticResource SuccessButton}" Width="116" Height="34" Padding="9,3" Click="ImportConfig_Click" ToolTip="Imports Palworld settings from a configuration file."><TextBlock Text="IMPORT SETTINGS" TextAlignment="Center"/></Button>
-        <Button Style="{StaticResource ConfigPrimaryButton}" Width="116" Height="34" Padding="9,3" Click="ExportConfig_Click" ToolTip="Exports the current configuration to a file for backup or reuse."><TextBlock Text="⇧  EXPORT" TextAlignment="Center"/></Button>
+        <Button Style="{StaticResource SuccessButton}" Width="104" Height="31" Padding="8,3" Click="ImportConfig_Click" ToolTip="Imports Palworld settings from a configuration file."><TextBlock Text="IMPORT SETTINGS" TextAlignment="Center"/></Button>
+        <Button Style="{StaticResource ConfigPrimaryButton}" Width="104" Height="31" Padding="8,3" Click="ExportConfig_Click" ToolTip="Exports the current configuration to a file for backup or reuse."><TextBlock Text="⇧  EXPORT" TextAlignment="Center"/></Button>
        </StackPanel>
       </Grid>
      </Border>
@@ -1465,10 +1474,10 @@
     <Border Grid.Row="0" Style="{StaticResource SectionBanner}">
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel Grid.Column="0" VerticalAlignment="Center"><TextBlock Text="Live Console &amp; RCON" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Capture persistent server logs, filter activity, and administer Palworld through RCON." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0"/></StackPanel>
-      <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+      <UniformGrid Columns="2" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}">
        <Button Content="📂  OPEN LOGS" Style="{StaticResource InfoButton}" Click="OpenLogsFolder_Click" ToolTip="Opens the MystTiq server log folder in File Explorer."/>
        <Button Content="⇩  EXPORT VIEW" Style="{StaticResource ConfigPrimaryButton}" Click="SaveVisibleLog_Click" ToolTip="Exports the currently visible console/log view to a file."/>
-      </WrapPanel>
+      </UniformGrid>
      </Grid>
     </Border>
     <Border Grid.Row="1" Background="#111922" BorderBrush="#2A394B" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,10,0,10">
@@ -1515,11 +1524,11 @@
    <Grid Margin="12">
     <Grid.Resources>
      <Style x:Key="PlayerCommandButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-      <Setter Property="Height" Value="32"/><Setter Property="MinWidth" Value="112"/><Setter Property="Margin" Value="4"/><Setter Property="Padding" Value="10,4"/><Setter Property="FontSize" Value="11.5"/>
+      <Setter Property="Height" Value="29"/><Setter Property="MinWidth" Value="101"/><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="9,4"/><Setter Property="FontSize" Value="10.5"/>
      </Style>
-     <Style x:Key="PlayerCommandSuccessButton" TargetType="Button" BasedOn="{StaticResource SuccessButton}"><Setter Property="Height" Value="32"/><Setter Property="MinWidth" Value="112"/><Setter Property="Margin" Value="4"/><Setter Property="Padding" Value="10,4"/><Setter Property="FontSize" Value="11.5"/></Style>
-     <Style x:Key="PlayerCommandDangerButton" TargetType="Button" BasedOn="{StaticResource DangerButton}"><Setter Property="Height" Value="32"/><Setter Property="MinWidth" Value="112"/><Setter Property="Margin" Value="4"/><Setter Property="Padding" Value="10,4"/><Setter Property="FontSize" Value="11.5"/></Style>
-     <Style x:Key="PlayerCommandDiagnosticButton" TargetType="Button" BasedOn="{StaticResource DiagnosticButton}"><Setter Property="Height" Value="32"/><Setter Property="MinWidth" Value="112"/><Setter Property="Margin" Value="4"/><Setter Property="Padding" Value="10,4"/><Setter Property="FontSize" Value="11.5"/></Style>
+     <Style x:Key="PlayerCommandSuccessButton" TargetType="Button" BasedOn="{StaticResource SuccessButton}"><Setter Property="Height" Value="29"/><Setter Property="MinWidth" Value="101"/><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="9,4"/><Setter Property="FontSize" Value="10.5"/></Style>
+     <Style x:Key="PlayerCommandDangerButton" TargetType="Button" BasedOn="{StaticResource DangerButton}"><Setter Property="Height" Value="29"/><Setter Property="MinWidth" Value="101"/><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="9,4"/><Setter Property="FontSize" Value="10.5"/></Style>
+     <Style x:Key="PlayerCommandDiagnosticButton" TargetType="Button" BasedOn="{StaticResource DiagnosticButton}"><Setter Property="Height" Value="29"/><Setter Property="MinWidth" Value="101"/><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="9,4"/><Setter Property="FontSize" Value="10.5"/></Style>
     </Grid.Resources>
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <Border Grid.Row="0" Style="{StaticResource SectionBanner}" Margin="0,0,0,10">
@@ -1529,11 +1538,11 @@
        <TextBlock Text="Discover, inspect, back up, administer, and track every player MystTiq has observed." Foreground="#91A3B8" Margin="0,3,0,0"/>
        <TextBlock x:Name="PlayerHistorySummaryText" Text="Player history loading..." Foreground="#76A8D8" FontSize="11" Margin="0,4,0,0"/>
       </StackPanel>
-      <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="12,0,0,0">
+      <UniformGrid Columns="3" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="12,0,0,0" Style="{StaticResource MystTiqActionGrid}">
        <Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshPlayers_Click" ToolTip="Refresh."/>
        <Button Content="⌕  DISCOVER SAVES" Style="{StaticResource RefreshButton}" Click="DiscoverPlayerSaves_Click" ToolTip="Discover Saves."/>
        <Button Content="⇩  EXPORT CSV" Style="{StaticResource PlayerCommandDiagnosticButton}" Click="ExportPlayersCsv_Click" ToolTip="Export Csv."/>
-      </WrapPanel>
+      </UniformGrid>
      </DockPanel>
     </Border>
     <Grid Grid.Row="1" Margin="0,0,0,8">
@@ -1622,11 +1631,11 @@
         <TextBlock Text="Guild Manager" FontSize="28" FontWeight="Bold" Foreground="White"/>
         <TextBlock Text="Browse guilds, inspect leaders, members and bases, identify ownership problems, and stage protected recovery operations." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/>
        </StackPanel>
-       <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+       <UniformGrid Columns="3" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}">
         <Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshGuilds_Click" ToolTip="Refresh."/>
         <Button Content="⧉  COPY DISCOVERY DIAGNOSTICS" Style="{StaticResource DiagnosticButton}" Click="CopyWorldDiscoveryDiagnostics_Click" ToolTip="Runs shared world discovery and copies detailed decoder, schema, guild, and base diagnostics to the clipboard."/>
         <Button Content="⇩  EXPORT" Style="{StaticResource DiagnosticButton}" Click="ExportGuildSnapshot_Click" ToolTip="Export."/>
-       </WrapPanel>
+       </UniformGrid>
       </Grid>
      </Border>
 
@@ -1682,7 +1691,7 @@
         <Grid>
          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
          <StackPanel><TextBlock Text="SELECTED GUILD" Foreground="#9FC4EA" FontWeight="Bold"/><TextBlock x:Name="GuildDetailText" Text="Select a guild to inspect its members and bases." Foreground="White" FontSize="18" FontWeight="Bold" TextWrapping="Wrap"/><TextBlock x:Name="GuildIdentityText" Text="Guild identifiers and ownership status will appear here." Foreground="#DCE8F5" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel>
-         <WrapPanel Grid.Column="1" VerticalAlignment="Top"><Button Content="⧉  COPY GUILD ID" Style="{StaticResource DiagnosticButton}" Click="CopyGuildId_Click" ToolTip="Copy Guild Id."/><Button Content="📂  OPEN PLAYER" Style="{StaticResource InfoButton}" Click="OpenGuildPlayer_Click" ToolTip="Open Player."/></WrapPanel>
+         <UniformGrid Columns="2" Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource MystTiqActionGrid}"><Button Content="⧉  COPY GUILD ID" Style="{StaticResource DiagnosticButton}" Click="CopyGuildId_Click" ToolTip="Copy Guild Id."/><Button Content="📂  OPEN PLAYER" Style="{StaticResource InfoButton}" Click="OpenGuildPlayer_Click" ToolTip="Open Player."/></UniformGrid>
         </Grid>
         <UniformGrid Grid.Row="1" Columns="5" Margin="0,10,0,10">
          <Button Content="＋ ADD PLAYER" Style="{StaticResource ConfigPrimaryButton}" Click="AddPlayerToGuild_Click" ToolTip="Add Player."/>
@@ -1711,7 +1720,7 @@
      <Border Style="{StaticResource SectionBanner}">
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <StackPanel Grid.Column="0" VerticalAlignment="Center"><TextBlock Text="Backup Center" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Create, verify, restore, classify, and safely retain Palworld backups." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0"/></StackPanel>
-       <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button Content="▣  CREATE BACKUP" Click="Backup_Click" Style="{StaticResource SuccessButton}" ToolTip="Create Backup."/><Button Content="✓  VERIFY SELECTED" Style="{StaticResource RefreshButton}" Click="VerifyBackup_Click" ToolTip="Verify Selected."/><Button Content="✓  VERIFY ALL" Style="{StaticResource RefreshButton}" Click="BackupCenterVerifyAll_Click" ToolTip="Verify All."/><Button Content="↥  RESTORE SELECTED" Style="{StaticResource WarningButton}" Click="Restore_Click" ToolTip="Restore Selected."/><Button Content="🗑  DELETE SELECTED" Style="{StaticResource DangerButton}" Click="DeleteBackup_Click" ToolTip="Delete Selected."/><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshBackups_Click" ToolTip="Refresh."/></WrapPanel>
+       <UniformGrid Columns="6" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}"><Button Content="▣  CREATE BACKUP" Click="Backup_Click" Style="{StaticResource SuccessButton}" ToolTip="Create Backup."/><Button Content="✓  VERIFY SELECTED" Style="{StaticResource RefreshButton}" Click="VerifyBackup_Click" ToolTip="Verify Selected."/><Button Content="✓  VERIFY ALL" Style="{StaticResource RefreshButton}" Click="BackupCenterVerifyAll_Click" ToolTip="Verify All."/><Button Content="↥  RESTORE SELECTED" Style="{StaticResource WarningButton}" Click="Restore_Click" ToolTip="Restore Selected."/><Button Content="🗑  DELETE SELECTED" Style="{StaticResource DangerButton}" Click="DeleteBackup_Click" ToolTip="Delete Selected."/><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshBackups_Click" ToolTip="Refresh."/></UniformGrid>
       </Grid>
      </Border>
 
@@ -1740,7 +1749,7 @@
       </DataGrid>
       <StackPanel Grid.Column="1" Margin="10,0,0,0">
        <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">
-        <StackPanel><TextBlock Text="RETENTION POLICY" Foreground="White" FontSize="16" FontWeight="Bold"/><TextBlock x:Name="BackupCenterPolicyText" Text="—" Foreground="#9FC4EA" TextWrapping="Wrap" Margin="0,6,0,10"/><WrapPanel><Button Content="👁  PREVIEW CLEANUP" Style="{StaticResource InfoButton}" Click="BackupCenterPreviewRetention_Click" ToolTip="Preview Cleanup."/><Button Content="✓  APPLY CLEANUP" Style="{StaticResource SuccessButton}" Click="BackupCenterApplyRetention_Click" ToolTip="Apply Cleanup."/></WrapPanel><TextBlock x:Name="BackupCenterPreviewText" Text="No cleanup preview generated." Foreground="#91A3B8" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
+        <StackPanel><TextBlock Text="RETENTION POLICY" Foreground="White" FontSize="16" FontWeight="Bold"/><TextBlock x:Name="BackupCenterPolicyText" Text="—" Foreground="#9FC4EA" TextWrapping="Wrap" Margin="0,6,0,10"/><UniformGrid Columns="2" Style="{StaticResource MystTiqActionGrid}"><Button Content="👁  PREVIEW CLEANUP" Style="{StaticResource InfoButton}" Click="BackupCenterPreviewRetention_Click" ToolTip="Preview Cleanup."/><Button Content="✓  APPLY CLEANUP" Style="{StaticResource SuccessButton}" Click="BackupCenterApplyRetention_Click" ToolTip="Apply Cleanup."/></UniformGrid><TextBlock x:Name="BackupCenterPreviewText" Text="No cleanup preview generated." Foreground="#91A3B8" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
        </Border>
        <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="14">
         <StackPanel><TextBlock Text="BACKUP LOCATIONS" Foreground="White" FontSize="16" FontWeight="Bold"/><TextBlock Text="Server backups are restorable snapshots. World archives, repair backups, and mod snapshots are tracked separately and are never deleted by server-backup retention." Foreground="#9FC4EA" TextWrapping="Wrap" Margin="0,6,0,10"/><Button Content="📂  OPEN BACKUP ROOT" Style="{StaticResource InfoButton}" Click="BackupCenterOpenFolder_Click" ToolTip="Open Backup Root."/></StackPanel>
@@ -1759,7 +1768,7 @@
      <Border Style="{StaticResource SectionBanner}">
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <StackPanel><TextBlock Text="MOD Dashboard" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Confirm that server mods are installed, enabled, and ready for runtime verification." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0"/></StackPanel>
-       <WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}"><Button Content="✓  VERIFY &amp; SCAN ALL MODS" Style="{StaticResource RefreshButton}" Click="VerifyAllMods_Click" ToolTip="Runs the authoritative MOD workflow: inventory, verification, compatibility, dependencies, runtime evidence, health, Dashboard, Library, and notifications."/><Button Content="⇩  EXPORT REPORT" Style="{StaticResource InfoButton}" Click="ExportModVerificationReport_Click" ToolTip="Exports the current MOD verification evidence and repair recommendations as human-readable TXT and structured JSON reports."/></WrapPanel>
+       <UniformGrid Columns="2" Grid.Column="1" Style="{StaticResource ModActionGrid}"><Button Content="✓  VERIFY &amp; SCAN ALL MODS" Style="{StaticResource RefreshButton}" Click="VerifyAllMods_Click" ToolTip="Runs the authoritative MOD workflow: inventory, verification, compatibility, dependencies, runtime evidence, health, Dashboard, Library, and notifications."/><Button Content="⇩  EXPORT REPORT" Style="{StaticResource InfoButton}" Click="ExportModVerificationReport_Click" ToolTip="Exports the current MOD verification evidence and repair recommendations as human-readable TXT and structured JSON reports."/></UniformGrid>
       </Grid>
      </Border>
 
@@ -1809,7 +1818,7 @@
          <TextBlock x:Name="ModDetailCompatibility" Foreground="#DCE6F2" TextWrapping="Wrap"/>
          <TextBlock Text="DETAILS / EVIDENCE" Foreground="#64B5F6" FontWeight="Bold" Margin="0,12,0,4"/>
          <TextBlock x:Name="ModDetailEvidence" Text="Select a mod to view verification evidence." Foreground="#C9D9E8" TextWrapping="Wrap"/>
-         <WrapPanel Margin="0,11,0,0"><Button Content="✓  VERIFY SELECTED" Style="{StaticResource RefreshButton}" Click="VerifySelectedMod_Click" ToolTip="Verifies the selected mod installation and runtime requirements. A successful result does not guarantee stability."/><Button Content="⇢  MIGRATE LEGACY MODS" Style="{StaticResource ModWarningButton}" Click="MigrateLegacyMods_Click" ToolTip="Safely copies user MOD files from the legacy Win64\Mods folder into the resolver-selected active UE4SS Mods root. Existing active files and legacy copies are preserved."/><Button Content="📂  OPEN MODS FOLDER" Style="{StaticResource InfoButton}" Click="OpenModsRoot_Click" ToolTip="Opens the resolver-selected active UE4SS Mods root in File Explorer."/></WrapPanel>
+         <UniformGrid Columns="3" Margin="0,11,0,0" Style="{StaticResource MystTiqActionGrid}"><Button Content="✓  VERIFY SELECTED" Style="{StaticResource RefreshButton}" Click="VerifySelectedMod_Click" ToolTip="Verifies the selected mod installation and runtime requirements. A successful result does not guarantee stability."/><Button Content="⇢  MIGRATE LEGACY MODS" Style="{StaticResource ModWarningButton}" Click="MigrateLegacyMods_Click" ToolTip="Safely copies user MOD files from the legacy Win64\Mods folder into the resolver-selected active UE4SS Mods root. Existing active files and legacy copies are preserved."/><Button Content="📂  OPEN MODS FOLDER" Style="{StaticResource InfoButton}" Click="OpenModsRoot_Click" ToolTip="Opens the resolver-selected active UE4SS Mods root in File Explorer."/></UniformGrid>
         </StackPanel>
        </ScrollViewer>
       </Border>
@@ -1823,7 +1832,7 @@
      <Border Style="{StaticResource SectionBanner}">
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <StackPanel><TextBlock Text="MOD Library" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Install, organize, update, enable, and remove server mods from one library." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0"/></StackPanel>
-       <WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}"><Button Content="＋  INSTALL MOD ZIP" Style="{StaticResource ModWarningButton}" Click="BrowseModZip_Click" ToolTip="Installs a mod package from ZIP, RAR, or 7Z using the Smart MOD installer."/></WrapPanel>
+       <UniformGrid Columns="1" Grid.Column="1" Style="{StaticResource ModActionGrid}"><Button Content="＋  INSTALL MOD ZIP" Style="{StaticResource ModWarningButton}" Click="BrowseModZip_Click" ToolTip="Installs a mod package from ZIP, RAR, or 7Z using the Smart MOD installer."/></UniformGrid>
       </Grid>
      </Border>
      <Border Background="#0D151E" BorderBrush="#263A50" BorderThickness="1" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"><TextBlock Text="Installed mods are scanned automatically and compared with the local Steam Workshop copy. Multiple option folders are grouped beneath one Workshop item instead of being displayed as unrelated mods." Foreground="#9FC4EA" TextWrapping="Wrap"/></Border>
@@ -1843,12 +1852,12 @@
         <TextBlock Text="INSTALLED SERVER MODS" Foreground="White" FontWeight="Bold" FontSize="16"/>
         <TextBlock x:Name="ModLibrarySummaryText" Text="Installed: 0  •  Enabled: 0  •  Disabled: 0" Foreground="#7FA8CE" Margin="0,3,0,8"/>
         <UniformGrid Columns="3" Rows="2" HorizontalAlignment="Stretch">
-         <Button Content="▶  ENABLE SELECTED" MinHeight="32" Margin="2" Style="{StaticResource ModSuccessButton}" Click="EnableSelectedMod_Click" ToolTip="Enables the selected managed mod."/>
-         <Button Content="▶  ENABLE ALL" MinHeight="32" Margin="2" Style="{StaticResource ModSuccessButton}" Click="EnableAllMods_Click" ToolTip="Enables all discovered mods without reinstalling them."/>
-         <Button Content="■  DISABLE SELECTED" MinHeight="32" Margin="2" Style="{StaticResource ModWarningButton}" Click="DisableSelectedMod_Click" ToolTip="Disables the selected managed mod without deleting its files."/>
-         <Button Content="■  DISABLE ALL" MinHeight="32" Margin="2" Style="{StaticResource ModWarningButton}" Click="DisableAllMods_Click" ToolTip="Disables all managed user mods. Installed files are preserved."/>
-         <Button Content="🔧  REPAIR STATES" MinHeight="32" Margin="2" Style="{StaticResource DiagnosticButton}" Click="RepairModStates_Click" ToolTip="Repairs enabled flags, deployment, manifests, and orphan states without reinstalling or updating."/>
-         <Button Content="🗑  DELETE SELECTED" MinHeight="32" Margin="2" Style="{StaticResource DangerButton}" Click="DeleteMod_Click" ToolTip="Deletes the selected managed mod after confirmation."/>
+         <Button Content="▶  ENABLE SELECTED" Margin="2" Style="{StaticResource ModSuccessButton}" Click="EnableSelectedMod_Click" ToolTip="Enables the selected managed mod."/>
+         <Button Content="▶  ENABLE ALL" Margin="2" Style="{StaticResource ModSuccessButton}" Click="EnableAllMods_Click" ToolTip="Enables all discovered mods without reinstalling them."/>
+         <Button Content="■  DISABLE SELECTED" Margin="2" Style="{StaticResource ModWarningButton}" Click="DisableSelectedMod_Click" ToolTip="Disables the selected managed mod without deleting its files."/>
+         <Button Content="■  DISABLE ALL" Margin="2" Style="{StaticResource ModWarningButton}" Click="DisableAllMods_Click" ToolTip="Disables all managed user mods. Installed files are preserved."/>
+         <Button Content="🔧  REPAIR STATES" Margin="2" Style="{StaticResource DiagnosticButton}" Click="RepairModStates_Click" ToolTip="Repairs enabled flags, deployment, manifests, and orphan states without reinstalling or updating."/>
+         <Button Content="🗑  DELETE SELECTED" Margin="2" Style="{StaticResource DangerButton}" Click="DeleteMod_Click" ToolTip="Deletes the selected managed mod after confirmation."/>
         </UniformGrid>
        </StackPanel>
       </StackPanel>
@@ -1868,10 +1877,10 @@
       <Grid DockPanel.Dock="Top" Margin="0,0,0,6" MinHeight="48">
        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <TextBlock Text="AVAILABLE LOCAL STEAM&#10;MODS" Foreground="White" FontWeight="Bold" FontSize="16" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"/>
-       <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+       <UniformGrid Columns="2" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}">
         <Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshLocalSteamMods_Click" ToolTip="Rescans local Steam Workshop mods and refreshes both the local and managed mod lists."/>
         <Button Content="⇩  IMPORT SELECTED" Style="{StaticResource ModDiagnosticButton}" Click="ImportLocalMod_Click" ToolTip="Imports the selected locally discovered Steam/Workshop mod into the dedicated server."/>
-       </WrapPanel>
+       </UniformGrid>
       </Grid>
       <DataGrid x:Name="LocalModsGrid" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single" SelectionChanged="LocalModsGrid_SelectionChanged">
        <DataGrid.Columns>
@@ -1915,12 +1924,12 @@
         <TextBlock x:Name="ModInfoDetails" Text="—" Foreground="#DCEBFA" Margin="0,5,0,14" TextWrapping="Wrap"/>
         <TextBlock Text="ONLINE INFORMATION" Foreground="#7FA8CE" FontWeight="Bold"/>
         <TextBlock x:Name="ModInfoOnlineStatus" Text="Select a Steam Workshop mod to retrieve current information." Foreground="#9FC4EA" Margin="0,5,0,14" TextWrapping="Wrap"/>
-        <WrapPanel>
+        <UniformGrid Columns="4" Style="{StaticResource MystTiqActionGrid}">
          <Button Content="↻  REFRESH INFO" Style="{StaticResource RefreshButton}" Click="RefreshSelectedModInfo_Click" ToolTip="Refreshes detected metadata and status for the selected mod."/>
          <Button Content="⌕  SEARCH ONLINE" Style="{StaticResource InfoButton}" Click="SearchSelectedModOnline_Click" ToolTip="Searches online for information about the selected mod."/>
          <Button Content="📂  OPEN FOLDER" Style="{StaticResource InfoButton}" Click="OpenSelectedModFolder_Click" ToolTip="Opens the selected mod installation folder."/>
          <Button Content="↗  OPEN WORKSHOP" Style="{StaticResource InfoButton}" Click="OpenSelectedWorkshop_Click" ToolTip="Opens the selected mod Workshop page when a Workshop ID is known."/>
-        </WrapPanel>
+        </UniformGrid>
        </StackPanel>
       </ScrollViewer>
      </Border>
@@ -1953,7 +1962,7 @@
        <TextBlock Text="Time" Foreground="#DCE8F5" VerticalAlignment="Center" Margin="0,0,6,0"/>
        <TextBox x:Name="ScheduledRestartTimeBox" Width="72" Height="32" Text="04:00" VerticalContentAlignment="Center" Margin="0,0,16,0"/>
        <CheckBox x:Name="AutoCrashRecoveryCheck" Content="Crash recovery" Foreground="White" VerticalAlignment="Center" Margin="0,0,16,0"/>
-       <Button Content="✓  SAVE AUTOMATION" Style="{StaticResource ConfigPrimaryButton}" MinWidth="172" Height="34" Padding="16,7" Margin="0" Click="SaveAutomation_Click" ToolTip="Saves scheduled restart and crash-recovery settings."/>
+       <Button Content="✓  SAVE AUTOMATION" Style="{StaticResource ConfigPrimaryButton}" MinWidth="155" Height="31" Padding="14,6" Margin="0" Click="SaveAutomation_Click" ToolTip="Saves scheduled restart and crash-recovery settings."/>
       </StackPanel>
      </Grid>
     </Border>
@@ -1987,15 +1996,15 @@
 
       <TextBlock Grid.Row="1" Text="Server root" Margin="5" VerticalAlignment="Center"/>
       <TextBox x:Name="ServerRootBox" Grid.Row="1" Grid.Column="1" Margin="5"/>
-      <Button Grid.Row="1" Grid.Column="2" Content="⌕  BROWSE" Margin="8,5,5,5" MinWidth="0" Width="126" Padding="12,10" HorizontalAlignment="Right" Click="BrowseServerRoot_Click" ToolTip="Selects the Palworld dedicated-server root folder." Style="{StaticResource InfoButton}"/>
+      <Button Grid.Row="1" Grid.Column="2" Content="⌕  BROWSE" Margin="8,5,5,5" MinWidth="0" Width="113" Padding="11,9" HorizontalAlignment="Right" Click="BrowseServerRoot_Click" ToolTip="Selects the Palworld dedicated-server root folder." Style="{StaticResource InfoButton}"/>
 
       <TextBlock Grid.Row="2" Text="SteamCMD path" Margin="5" VerticalAlignment="Center"/>
       <TextBox x:Name="SteamCmdBox" Grid.Row="2" Grid.Column="1" Margin="5"/>
-      <Button Grid.Row="2" Grid.Column="2" Content="⌕  BROWSE" Margin="8,5,5,5" MinWidth="0" Width="126" Padding="12,10" HorizontalAlignment="Right" Click="BrowseSteamCmd_Click" ToolTip="Selects the SteamCMD installation folder." Style="{StaticResource InfoButton}"/>
+      <Button Grid.Row="2" Grid.Column="2" Content="⌕  BROWSE" Margin="8,5,5,5" MinWidth="0" Width="113" Padding="11,9" HorizontalAlignment="Right" Click="BrowseSteamCmd_Click" ToolTip="Selects the SteamCMD installation folder." Style="{StaticResource InfoButton}"/>
 
       <TextBlock Grid.Row="3" Text="Backup root" Margin="5" VerticalAlignment="Center"/>
       <TextBox x:Name="BackupRootBox" Grid.Row="3" Grid.Column="1" Margin="5"/>
-      <Button Grid.Row="3" Grid.Column="2" Content="⌕  BROWSE" Margin="8,5,5,5" MinWidth="0" Width="126" Padding="12,10" HorizontalAlignment="Right" Click="BrowseBackupRoot_Click" ToolTip="Selects the folder used for MystTiq server backups." Style="{StaticResource InfoButton}"/>
+      <Button Grid.Row="3" Grid.Column="2" Content="⌕  BROWSE" Margin="8,5,5,5" MinWidth="0" Width="113" Padding="11,9" HorizontalAlignment="Right" Click="BrowseBackupRoot_Click" ToolTip="Selects the folder used for MystTiq server backups." Style="{StaticResource InfoButton}"/>
 
       <TextBlock Grid.Row="4" Text="REST API URL" Margin="5" VerticalAlignment="Center"/>
       <TextBox x:Name="ApiUrlBox" Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="5"/>
@@ -2026,7 +2035,7 @@
         <ColumnDefinition Width="Auto"/>
        </Grid.ColumnDefinitions>
        <TextBlock Grid.Column="0" Text="Path changes take effect after restarting the manager." Foreground="#91A0B4" VerticalAlignment="Center" Margin="0,0,16,0"/>
-       <Button Grid.Column="1" Content="✓  SAVE SETTINGS" Style="{StaticResource ConfigPrimaryButton}" MinWidth="154" Height="34" Padding="16,7" HorizontalAlignment="Right" Click="SaveSettings_Click" ToolTip="Saves MystTiq Palworld Server application paths and management settings."/>
+       <Button Grid.Column="1" Content="✓  SAVE SETTINGS" Style="{StaticResource ConfigPrimaryButton}" MinWidth="139" Height="31" Padding="14,6" HorizontalAlignment="Right" Click="SaveSettings_Click" ToolTip="Saves MystTiq Palworld Server application paths and management settings."/>
       </Grid>
      </Grid>
     </Border>
@@ -2041,7 +2050,7 @@
      <Border Style="{StaticResource SectionBanner}">
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <StackPanel><TextBlock Text="Server Doctor" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Diagnose server health, compare Vanilla versus UE4SS, and run timed idle-stability tests with resource history." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel>
-       <WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}"><Button Content="✚  RUN FULL DIAGNOSTIC" Style="{StaticResource ModSuccessButton}" Click="RunServerDoctor_Click" ToolTip="Runs Server Doctor diagnostics for server, runtime, mods, processes, and configuration health."/><Button Content="⚠  FORCE CLEANUP" Style="{StaticResource DangerButton}" Click="ForceCleanup_Click" ToolTip="Force-stops remaining Palworld server processes when a normal shutdown cannot complete. Use only when needed."/></WrapPanel>
+       <UniformGrid Columns="2" Grid.Column="1" Style="{StaticResource ModActionGrid}"><Button Content="✚  RUN FULL DIAGNOSTIC" Style="{StaticResource ModSuccessButton}" Click="RunServerDoctor_Click" ToolTip="Runs Server Doctor diagnostics for server, runtime, mods, processes, and configuration health."/><Button Content="⚠  FORCE CLEANUP" Style="{StaticResource DangerButton}" Click="ForceCleanup_Click" ToolTip="Force-stops remaining Palworld server processes when a normal shutdown cannot complete. Use only when needed."/></UniformGrid>
       </Grid>
      </Border>
      <Border Background="#0D1822" BorderBrush="#263A50" BorderThickness="1" CornerRadius="7" Padding="12,9" Margin="0,0,0,12">
@@ -2054,7 +2063,7 @@
        <Grid Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
         <TextBlock Text="Duration" Foreground="#D7E4F2" VerticalAlignment="Center" Margin="0,0,8,0"/>
         <ComboBox x:Name="StabilityDurationBox" Grid.Column="1" SelectedIndex="2"><ComboBoxItem Content="5 minutes" Tag="5"/><ComboBoxItem Content="10 minutes" Tag="10"/><ComboBoxItem Content="15 minutes" Tag="15"/><ComboBoxItem Content="30 minutes" Tag="30"/></ComboBox>
-        <WrapPanel Grid.Column="2" Margin="12,0,0,0"><Button x:Name="StartStabilityTestButton" Content="▶  START TEST" Style="{StaticResource ModSuccessButton}" Click="StartStabilityTest_Click" ToolTip="Starts the 15-minute Idle Stability Test and watches the server for hangs, exits, and abnormal runtime behavior."/><Button x:Name="StopStabilityTestButton" Content="■  STOP TEST" Style="{StaticResource DangerButton}" Click="StopStabilityTest_Click" IsEnabled="False" ToolTip="Stops the active stability test without stopping the Palworld server unless the test workflow requires it."/></WrapPanel>
+        <UniformGrid Columns="2" Grid.Column="2" Margin="12,0,0,0" Style="{StaticResource MystTiqActionGrid}"><Button x:Name="StartStabilityTestButton" Content="▶  START TEST" Style="{StaticResource ModSuccessButton}" Click="StartStabilityTest_Click" ToolTip="Starts the 15-minute Idle Stability Test and watches the server for hangs, exits, and abnormal runtime behavior."/><Button x:Name="StopStabilityTestButton" Content="■  STOP TEST" Style="{StaticResource DangerButton}" Click="StopStabilityTest_Click" IsEnabled="False" ToolTip="Stops the active stability test without stopping the Palworld server unless the test workflow requires it."/></UniformGrid>
         <TextBlock Grid.Column="3" x:Name="StabilityStatusText" Text="Idle test not running." Foreground="#9FC4EA" VerticalAlignment="Center" Margin="16,0,0,0" TextWrapping="Wrap"/>
        </Grid>
        <ProgressBar x:Name="StabilityProgressBar" Minimum="0" Maximum="100" Value="0" Height="8" Margin="0,10,0,10"/>
@@ -2069,7 +2078,7 @@
      <Border Background="#111922" BorderBrush="#2A394B" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <StackPanel><TextBlock Text="RUNTIME ISOLATION" Foreground="#7FB9F2" FontSize="12" FontWeight="Bold"/><TextBlock x:Name="StabilityIsolationStatusText" Text="Current configuration will be tested." Foreground="#D7E4F2" Margin="0,6,20,0" TextWrapping="Wrap"/><TextBlock Text="Prepare Vanilla disables UE4SS and all user mods. Prepare UE4SS Only disables user mods but keeps the runtime enabled. Restore returns the saved pre-test state. PalServer must be stopped." Foreground="#91A3B8" TextWrapping="Wrap" Margin="0,4,20,0"/></StackPanel>
-       <WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}"><Button Content="ℹ  VANILLA" Style="{StaticResource ModSecondaryButton}" Click="PrepareVanillaIsolation_Click" ToolTip="Prepares a vanilla isolation test by disabling UE4SS and managed user mods. Installed files and snapshots are preserved."/><Button Content="ℹ  UE4SS ONLY" Style="{StaticResource ModSecondaryButton}" Click="PrepareUe4ssIsolation_Click" ToolTip="Prepares an isolation test with UE4SS enabled and managed user mods disabled. Installed mod files are preserved."/><Button Content="↶  RESTORE STATE" Style="{StaticResource ModWarningButton}" Click="RestoreIsolationState_Click" ToolTip="Restores the runtime/mod state saved before the current isolation test."/></WrapPanel>
+       <UniformGrid Columns="3" Grid.Column="1" Style="{StaticResource ModActionGrid}"><Button Content="ℹ  VANILLA" Style="{StaticResource ModSecondaryButton}" Click="PrepareVanillaIsolation_Click" ToolTip="Prepares a vanilla isolation test by disabling UE4SS and managed user mods. Installed files and snapshots are preserved."/><Button Content="ℹ  UE4SS ONLY" Style="{StaticResource ModSecondaryButton}" Click="PrepareUe4ssIsolation_Click" ToolTip="Prepares an isolation test with UE4SS enabled and managed user mods disabled. Installed mod files are preserved."/><Button Content="↶  RESTORE STATE" Style="{StaticResource ModWarningButton}" Click="RestoreIsolationState_Click" ToolTip="Restores the runtime/mod state saved before the current isolation test."/></UniformGrid>
       </Grid>
      </Border>
 
@@ -2103,10 +2112,10 @@
        <TextBlock Text="Crash Analyzer" FontSize="28" FontWeight="Bold" Foreground="White"/>
        <TextBlock Text="Review requested shutdowns and unexpected exits using direct crash signatures, lifecycle evidence, and enabled-MOD context." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/>
       </StackPanel>
-      <WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}">
+      <UniformGrid Columns="2" Grid.Column="1" Style="{StaticResource ModActionGrid}">
        <Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshCrashAnalyzer_Click" ToolTip="Refreshes crash/hang analysis using current MystTiq diagnostic data."/>
        <Button Content="▣  OPEN DIAGNOSTICS" Style="{StaticResource InfoButton}" Click="OpenDiagnosticsFolder_Click" ToolTip="Opens the MystTiq diagnostics folder in File Explorer."/>
-      </WrapPanel>
+      </UniformGrid>
      </Grid>
     </Border>
 
@@ -2170,8 +2179,8 @@
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Border Style="{StaticResource SectionBanner}">
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-      <StackPanel><TextBlock Text="Update Center" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Review update readiness for the Palworld server, SteamCMD, UE4SS, and locally available Workshop mods from one place." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel>
-      <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button x:Name="UpdateCheckAllButton" Content="↻  CHECK ALL UPDATES" Style="{StaticResource RefreshButton}" Click="RefreshUpdateCenter_Click" ToolTip="Refreshes update information for Core Server, Dependencies, and Installed MODs."/><Button x:Name="UpdateAllAvailableButton" Content="⬇  UPDATE ALL AVAILABLE" Style="{StaticResource UpdateButton}" Click="UpdateAllAvailable_Click" ToolTip="Updates every component with a confirmed available update." IsEnabled="False"/></WrapPanel>
+      <StackPanel><TextBlock Text="Update Center" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Review update readiness for MystTiq, the Palworld server, SteamCMD, UE4SS, and locally available Workshop mods from one place." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel>
+      <UniformGrid Columns="2" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}"><Button x:Name="UpdateCheckAllButton" Content="↻  CHECK ALL UPDATES" Style="{StaticResource RefreshButton}" Click="RefreshUpdateCenter_Click" ToolTip="Refreshes update information for Core Server, Dependencies, and Installed MODs."/><Button x:Name="UpdateAllAvailableButton" Content="⬇  UPDATE ALL AVAILABLE" Style="{StaticResource UpdateButton}" Click="UpdateAllAvailable_Click" ToolTip="Updates every component with a confirmed available update." IsEnabled="False"/></UniformGrid>
      </Grid>
     </Border>
     <Border Grid.Row="1" x:Name="UpdateCenterSummaryBorder" Background="#0D1822" BorderBrush="#263A50" BorderThickness="1" CornerRadius="7" Padding="12,9" Margin="0,0,0,12">
@@ -2246,7 +2255,7 @@
       </DataGridTemplateColumn>
       <DataGridTemplateColumn Header="ACTION" Width="92">
        <DataGridTemplateColumn.CellTemplate><DataTemplate>
-        <Button x:Name="UpdateCenterActionButton" Content="{Binding Action}" Click="UpdateCenterRowAction_Click" Width="72" Height="24" MinWidth="0" MinHeight="0" Padding="3,1" Margin="2" FontSize="9.5" ToolTip="{Binding Recommendation}">
+        <Button x:Name="UpdateCenterActionButton" Content="{Binding Action}" Click="UpdateCenterRowAction_Click" Width="65" Height="22" MinWidth="0" MinHeight="0" Padding="3,1" Margin="2" FontSize="9" ToolTip="{Binding Recommendation}">
          <Button.Style>
           <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
            <Setter Property="Width" Value="72"/>
@@ -2293,7 +2302,7 @@
     <Border Grid.Row="0" Style="{StaticResource SectionBanner}">
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel><TextBlock Text="UE4SS" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Manage, test, switch, verify, back up, and recover the UE4SS runtime independently from server setup. User mods remain separate from runtime maintenance." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel>
-      <WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}"><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshModRuntime_Click" ToolTip="Refreshes UE4SS runtime detection, status, and installed-version information."/><Button Content="📂  OPEN RUNTIME" Style="{StaticResource InfoButton}" Click="OpenModRuntimeFolder_Click" ToolTip="Opens the installed UE4SS runtime folder."/></WrapPanel>
+      <UniformGrid Columns="2" Grid.Column="1" Style="{StaticResource ModActionGrid}"><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshModRuntime_Click" ToolTip="Refreshes UE4SS runtime detection, status, and installed-version information."/><Button Content="📂  OPEN RUNTIME" Style="{StaticResource InfoButton}" Click="OpenModRuntimeFolder_Click" ToolTip="Opens the installed UE4SS runtime folder."/></UniformGrid>
      </Grid>
     </Border>
 
@@ -2306,10 +2315,10 @@
        <TextBlock x:Name="ModRuntimeFlavorText" Text="Runtime profile: —" Foreground="#B8C9DB" Margin="0,3,0,0"/>
        <TextBlock x:Name="ModRuntimePathText" Text="Path: —" Foreground="#7FA8CE" Margin="0,3,0,0" TextWrapping="Wrap"/>
       </StackPanel>
-      <WrapPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+      <UniformGrid Columns="2" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Style="{StaticResource MystTiqActionGrid}">
        <Button x:Name="ModRuntimeToggleButton" Content="■  DISABLE" Style="{StaticResource ModDangerButton}" Click="ToggleModRuntime_Click" ToolTip="Enables or disables the UE4SS runtime without deleting the runtime files."/>
        <Button Content="✓  VERIFY" Style="{StaticResource RefreshButton}" Click="VerifyModRuntime_Click" ToolTip="Verifies the installed UE4SS runtime files and current enable/disable state."/>
-      </WrapPanel>
+      </UniformGrid>
      </Grid>
     </Border>
 
@@ -2328,7 +2337,7 @@
        <TextBlock x:Name="Ue4ssReleaseDetailText" Text="Select a source to load GitHub releases automatically." Foreground="#9FC4EA" Margin="0,6,0,0" TextWrapping="Wrap"/>
        <TextBlock x:Name="Ue4ssVersionVerificationText" Text="Installed version verification: Not checked" Foreground="#91A3B8" Margin="0,5,0,0" TextWrapping="Wrap"/>
       </StackPanel>
-      <WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}"><Button Content="↻  REFRESH RELEASES" Style="{StaticResource RefreshButton}" Click="CheckUe4ssVersions_Click" ToolTip="Refreshes GitHub releases and merges newly discovered versions into MystTiq’s persistent release catalog."/><Button Content="✓  VERIFY VERSION" Style="{StaticResource RefreshButton}" Click="VerifyUe4ssRuntimeVersion_Click" ToolTip="Compares the installed UE4SS runtime with the selected/detected release and checks key runtime files."/><Button Content="⬇  INSTALL SELECTED" Style="{StaticResource ModWarningButton}" Click="InstallSelectedUe4ssRelease_Click" ToolTip="Snapshots the current UE4SS runtime, then installs the selected cached/GitHub release."/><Button Content="↗  GITHUB RELEASES" Style="{StaticResource ModSecondaryButton}" Click="OpenUe4ssGithub_Click" ToolTip="Opens the GitHub releases page for the currently selected UE4SS source."/></WrapPanel>
+      <UniformGrid Columns="4" Grid.Column="1" Style="{StaticResource ModActionGrid}"><Button Content="↻  REFRESH RELEASES" Style="{StaticResource RefreshButton}" Click="CheckUe4ssVersions_Click" ToolTip="Refreshes GitHub releases and merges newly discovered versions into MystTiq’s persistent release catalog."/><Button Content="✓  VERIFY VERSION" Style="{StaticResource RefreshButton}" Click="VerifyUe4ssRuntimeVersion_Click" ToolTip="Compares the installed UE4SS runtime with the selected/detected release and checks key runtime files."/><Button Content="⬇  INSTALL SELECTED" Style="{StaticResource ModWarningButton}" Click="InstallSelectedUe4ssRelease_Click" ToolTip="Snapshots the current UE4SS runtime, then installs the selected cached/GitHub release."/><Button Content="↗  GITHUB RELEASES" Style="{StaticResource ModSecondaryButton}" Click="OpenUe4ssGithub_Click" ToolTip="Opens the GitHub releases page for the currently selected UE4SS source."/></UniformGrid>
      </Grid>
     </Border>
 
@@ -2339,11 +2348,11 @@
        <TextBlock Text="Import a UE4SS runtime ZIP or create a snapshot of the current runtime. MystTiq backs up the active runtime before an import and preserves managed user-mod folders." Foreground="#91A3B8" TextWrapping="Wrap" Margin="0,5,20,0"/>
        <TextBlock x:Name="ModRuntimeBackupText" Text="Last runtime snapshot: —" Foreground="#7FA8CE" Margin="0,7,0,0"/>
       </StackPanel>
-      <WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}">
+      <UniformGrid Columns="3" Grid.Column="1" Style="{StaticResource ModActionGrid}">
        <Button Content="⇩  IMPORT RUNTIME ZIP" Style="{StaticResource ModDiagnosticButton}" Click="ImportModRuntimeZip_Click" ToolTip="Imports a UE4SS runtime ZIP after creating a safety snapshot of the current runtime."/>
        <Button Content="▣  BACKUP CURRENT" Style="{StaticResource ModPrimaryButton}" Click="BackupModRuntime_Click" ToolTip="Creates a snapshot of the currently installed UE4SS runtime for rollback."/>
        <Button Content="↶  RESTORE SNAPSHOT" Style="{StaticResource ModWarningButton}" Click="RestoreModRuntimeSnapshot_Click" ToolTip="Replaces the current UE4SS runtime with a previously saved snapshot."/>
-      </WrapPanel>
+      </UniformGrid>
      </Grid>
     </Border>
 
@@ -2406,7 +2415,7 @@
     <Border Grid.Row="0" Style="{StaticResource SectionBanner}">
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel><TextBlock Text="World Inspector" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Inspect, validate, migrate, and plan repairs for the active Palworld world from one dark-themed management workspace. Player, guild, base, save, validator, migration, repair, and transaction areas are organized as tabs." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel>
-      <WrapPanel Grid.Column="1"><Button Content="◎  INSPECT ACTIVE WORLD" Style="{StaticResource InfoButton}" Click="InspectActiveWorld_Click" ToolTip="Inspect Active World."/><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshSaveInspector_Click" ToolTip="Refresh."/><Button Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="ExportSaveDiagnostics_Click" ToolTip="Export Report."/><Button Content="📂  OPEN WORLD FOLDER" Style="{StaticResource InfoButton}" Click="OpenInspectedWorldFolder_Click" ToolTip="Open World Folder."/></WrapPanel>
+      <UniformGrid Columns="4" Grid.Column="1" Style="{StaticResource MystTiqActionGrid}"><Button Content="◎  INSPECT ACTIVE WORLD" Style="{StaticResource InfoButton}" Click="InspectActiveWorld_Click" ToolTip="Inspect Active World."/><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshSaveInspector_Click" ToolTip="Refresh."/><Button Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="ExportSaveDiagnostics_Click" ToolTip="Export Report."/><Button Content="📂  OPEN WORLD FOLDER" Style="{StaticResource InfoButton}" Click="OpenInspectedWorldFolder_Click" ToolTip="Open World Folder."/></UniformGrid>
      </Grid>
     </Border>
 
@@ -2535,7 +2544,7 @@
       <Border Grid.Row="0" Style="{StaticResource SectionBanner}">
        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel><TextBlock Text="World Validator" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Validate players, guilds, bases and ownership relationships against the active decoded world. Findings are read-only until opened through the repair transaction workflow." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/><TextBlock x:Name="WorldValidatorWorldText" Text="No active world scanned" Foreground="#7FA8CE" FontSize="12" Margin="0,5,20,0" TextTrimming="CharacterEllipsis"/></StackPanel>
-        <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button Content="↻  VALIDATE ACTIVE WORLD" Style="{StaticResource RefreshButton}" Click="WorldValidatorRefresh_Click" ToolTip="Decode and validate the active world."/><Button Content="📂  OPEN REPAIRS" Style="{StaticResource WarningButton}" Click="WorldValidatorOpenRepair_Click" ToolTip="Open the recovery and repair transaction tools for repairable findings."/><Button Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="WorldValidatorExport_Click" ToolTip="Export the current validation report."/></WrapPanel>
+        <UniformGrid Columns="3" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}"><Button Content="↻  VALIDATE ACTIVE WORLD" Style="{StaticResource RefreshButton}" Click="WorldValidatorRefresh_Click" ToolTip="Decode and validate the active world."/><Button Content="📂  OPEN REPAIRS" Style="{StaticResource WarningButton}" Click="WorldValidatorOpenRepair_Click" ToolTip="Open the recovery and repair transaction tools for repairable findings."/><Button Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="WorldValidatorExport_Click" ToolTip="Export the current validation report."/></UniformGrid>
        </Grid>
       </Border>
       <UniformGrid Grid.Row="1" Columns="7" Margin="0,12,0,12">
@@ -2668,10 +2677,10 @@
          </DataGrid.Columns>
         </DataGrid>
         <Grid Grid.Row="3" Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-         <WrapPanel>
+         <UniformGrid Columns="2" Style="{StaticResource MystTiqActionGrid}">
           <Button Content="👁  PREVIEW SELECTED" Style="{StaticResource InfoButton}" Click="PreviewSelectedRepairs_Click" ToolTip="Build a read-only preview for the selected repair candidates."/>
           <Button Content="☐  CLEAR SELECTION" Style="{StaticResource SecondaryButton}" Click="RepairCenterClearSelection_Click" ToolTip="Clear all selected repair candidates."/>
-         </WrapPanel>
+         </UniformGrid>
          <TextBlock Grid.Column="1" x:Name="SaveInspectorRepairStatusText" Text="Preview only. No save changes are made." Foreground="#E6C56B" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"/>
         </Grid>
        </Grid>
@@ -2686,10 +2695,10 @@
            <TextBlock Text="Review durable world-change journals, import transactions, validation stages, backup references, failures, and rollback availability." Foreground="#9FC4EA" Margin="0,5,18,0" TextWrapping="Wrap"/>
            <TextBlock x:Name="TransactionStatusText" Text="Loading transaction history..." Foreground="#7FC8FF" Margin="0,7,18,0" TextWrapping="Wrap"/>
           </StackPanel>
-          <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+          <UniformGrid Columns="2" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}">
            <Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="RefreshTransactionHistory_Click" ToolTip="Reload durable transaction journals and reports."/>
            <Button Content="📂  OPEN JOURNALS" Style="{StaticResource InfoButton}" Click="OpenTransactionFolder_Click" ToolTip="Open the transaction journal folder."/>
-          </WrapPanel>
+          </UniformGrid>
          </Grid>
         </Border>
         <UniformGrid Grid.Row="1" Columns="4" Margin="0,12,0,12">
@@ -2719,10 +2728,10 @@
           <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
            <TextBlock Text="TRANSACTION DETAILS" Foreground="#7FC8FF" FontWeight="Bold"/>
            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,8,0,8"><TextBlock x:Name="TransactionDetailText" Text="Select a transaction to inspect its details." Foreground="#DCE8F5" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"/></ScrollViewer>
-           <WrapPanel Grid.Row="2">
+           <UniformGrid Columns="2" Grid.Row="2" Style="{StaticResource MystTiqActionGrid}">
             <Button x:Name="OpenTransactionBackupButton" Content="📦  OPEN BACKUP" Style="{StaticResource InfoButton}" Click="OpenTransactionBackup_Click" IsEnabled="False" ToolTip="Open or select the recorded rollback backup."/>
             <Button x:Name="OpenTransactionReportButton" Content="📄  OPEN REPORT" Style="{StaticResource SecondaryButton}" Click="OpenTransactionReport_Click" IsEnabled="False" ToolTip="Open or select the transaction report."/>
-           </WrapPanel>
+           </UniformGrid>
           </Grid>
          </Border>
         </Grid>
@@ -2752,7 +2761,7 @@
          <Border Grid.Row="0" Style="{StaticResource SectionBanner}">
           <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
            <StackPanel><TextBlock Text="Player Recovery Tools" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Inspect player save identities, identify host-migration candidates, export individual recovery packages, create safety backups and prepare validated GUID-rebinding plans. File-only renaming is intentionally blocked because Palworld also stores player, guild and ownership references inside Level.sav." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel>
-           <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button Content="↻  SCAN ACTIVE WORLD" Style="{StaticResource RefreshButton}" Click="PlayerRecoveryRefresh_Click" ToolTip="Scan Active World."/><Button Content="📂  OPEN WORLD" Style="{StaticResource InfoButton}" Click="PlayerRecoveryOpenFolder_Click" ToolTip="Open World."/></WrapPanel>
+           <UniformGrid Columns="2" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}"><Button Content="↻  SCAN ACTIVE WORLD" Style="{StaticResource RefreshButton}" Click="PlayerRecoveryRefresh_Click" ToolTip="Scan Active World."/><Button Content="📂  OPEN WORLD" Style="{StaticResource InfoButton}" Click="PlayerRecoveryOpenFolder_Click" ToolTip="Open World."/></UniformGrid>
           </Grid>
          </Border>
          <UniformGrid Grid.Row="1" Columns="5" Margin="0,12,0,12">
@@ -2775,7 +2784,7 @@
            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
             <TextBlock Text="SELECTED PLAYER" Foreground="White" FontSize="18" FontWeight="Bold"/><TextBlock x:Name="PlayerRecoveryDetailsText" Text="Select a player save to review recovery options." Foreground="#D7E4F2" TextWrapping="Wrap" Margin="0,6,0,14"/>
             <TextBlock Text="DESTINATION PLAYER GUID" Foreground="#7FA8CE" FontWeight="Bold"/><TextBox x:Name="PlayerRecoveryDestinationGuidBox" Margin="0,5,0,5"/><TextBlock Text="Enter the 32-character hexadecimal GUID assigned to the destination dedicated-server player." Foreground="#91A3B8" TextWrapping="Wrap"/>
-            <WrapPanel Margin="0,12,0,10"><Button Content="👁  PREVIEW MAPPING" Style="{StaticResource InfoButton}" Click="PlayerRecoveryPreview_Click" ToolTip="Preview Mapping."/><Button Content="▣  SAFETY BACKUP" Style="{StaticResource WarningButton}" Click="PlayerRecoveryBackup_Click" ToolTip="Safety Backup."/><Button Content="⇧  EXPORT PLAYER" Style="{StaticResource DiagnosticButton}" Click="PlayerRecoveryExport_Click" ToolTip="Export Player."/><Button Content="✓  SAVE PLAN" Style="{StaticResource ConfigPrimaryButton}" Click="PlayerRecoverySavePlan_Click" ToolTip="Save Plan."/></WrapPanel>
+            <UniformGrid Columns="4" Margin="0,12,0,10" Style="{StaticResource MystTiqActionGrid}"><Button Content="👁  PREVIEW MAPPING" Style="{StaticResource InfoButton}" Click="PlayerRecoveryPreview_Click" ToolTip="Preview Mapping."/><Button Content="▣  SAFETY BACKUP" Style="{StaticResource WarningButton}" Click="PlayerRecoveryBackup_Click" ToolTip="Safety Backup."/><Button Content="⇧  EXPORT PLAYER" Style="{StaticResource DiagnosticButton}" Click="PlayerRecoveryExport_Click" ToolTip="Export Player."/><Button Content="✓  SAVE PLAN" Style="{StaticResource ConfigPrimaryButton}" Click="PlayerRecoverySavePlan_Click" ToolTip="Save Plan."/></UniformGrid>
             <TextBlock Text="RECOVERY PLAN VALIDATION" Foreground="White" FontSize="16" FontWeight="Bold" Margin="0,4,0,6"/>
             <DataGrid x:Name="PlayerRecoveryPlanGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" MinHeight="180"><DataGrid.Columns><DataGridTextColumn Header="CHECK" Binding="{Binding Check}" Width="*"/><DataGridTextColumn Header="RESULT" Binding="{Binding Result}" Width="2*"/><DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="100"/></DataGrid.Columns></DataGrid>
             <Border Background="#211A0D" BorderBrush="#7A5B1B" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,12,0,0"><TextBlock Text="Safety boundary: character resets use the v2.11.7.0 transaction engine. Player migrations remain preview-only until their dedicated coordinated migration workflow is enabled." Foreground="#FFD56A" TextWrapping="Wrap"/></Border>
@@ -2791,7 +2800,7 @@
          <Border Grid.Row="0" Style="{StaticResource SectionBanner}">
           <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
            <StackPanel><TextBlock Text="Guild &amp; Base Recovery" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Inspect decoded guild, player-membership and base ownership relationships. Prepare explicit recovery plans for orphaned guilds, missing members and mismatched base ownership without making blind or file-only save changes." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel>
-           <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button Content="↻  SCAN ACTIVE WORLD" Style="{StaticResource RefreshButton}" Click="GuildBaseRecoveryRefresh_Click" ToolTip="Scan Active World."/><Button Content="📂  OPEN GUILD MANAGER" Style="{StaticResource InfoButton}" Click="GuildBaseRecoveryOpenGuilds_Click" ToolTip="Open Guild Manager."/></WrapPanel>
+           <UniformGrid Columns="2" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}"><Button Content="↻  SCAN ACTIVE WORLD" Style="{StaticResource RefreshButton}" Click="GuildBaseRecoveryRefresh_Click" ToolTip="Scan Active World."/><Button Content="📂  OPEN GUILD MANAGER" Style="{StaticResource InfoButton}" Click="GuildBaseRecoveryOpenGuilds_Click" ToolTip="Open Guild Manager."/></UniformGrid>
           </Grid>
          </Border>
          <UniformGrid Grid.Row="1" Columns="5" Margin="0,12,0,12">
@@ -2808,7 +2817,7 @@
             <DataGrid Grid.Row="1" x:Name="GuildBaseRecoveryGrid" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended">
              <DataGrid.Columns><DataGridCheckBoxColumn Header="SELECT" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="65"/><DataGridTextColumn Header="SEVERITY" Binding="{Binding Severity}" Width="85"/><DataGridTextColumn Header="CATEGORY" Binding="{Binding Category}" Width="90"/><DataGridTextColumn Header="ACTION" Binding="{Binding Action}" Width="150"/><DataGridTextColumn Header="TARGET" Binding="{Binding TargetName}" Width="*"/><DataGridTextColumn Header="RISK" Binding="{Binding Risk}" Width="70"/></DataGrid.Columns>
             </DataGrid>
-            <WrapPanel Grid.Row="2" Margin="0,10,0,0"><Button Content="ℹ  SELECT RECOMMENDED" Style="{StaticResource SecondaryButton}" Click="GuildBaseRecoverySelectRecommended_Click" ToolTip="Select Recommended."/><Button Content="👁  PREPARE PREVIEW" Style="{StaticResource ConfigPrimaryButton}" Click="GuildBaseRecoveryPrepare_Click" ToolTip="Prepare Preview."/></WrapPanel>
+            <UniformGrid Columns="2" Grid.Row="2" Margin="0,10,0,0" Style="{StaticResource MystTiqActionGrid}"><Button Content="ℹ  SELECT RECOMMENDED" Style="{StaticResource SecondaryButton}" Click="GuildBaseRecoverySelectRecommended_Click" ToolTip="Select Recommended."/><Button Content="👁  PREPARE PREVIEW" Style="{StaticResource ConfigPrimaryButton}" Click="GuildBaseRecoveryPrepare_Click" ToolTip="Prepare Preview."/></UniformGrid>
            </Grid>
           </Border>
           <Border Grid.Column="1" Background="#0D1822" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="14" Margin="8,0,0,0">
@@ -2816,7 +2825,7 @@
             <StackPanel><TextBlock Text="TRANSACTION PREVIEW" Foreground="White" FontSize="18" FontWeight="Bold"/><TextBlock Text="Selected operations are converted into an auditable plan. High-risk base transfers are never auto-selected." Foreground="#91A3B8" TextWrapping="Wrap" Margin="0,4,0,10"/></StackPanel>
             <DataGrid Grid.Row="1" x:Name="GuildBaseRecoveryPlanGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"><DataGrid.Columns><DataGridTextColumn Header="ACTION" Binding="{Binding Action}" Width="145"/><DataGridTextColumn Header="TARGET" Binding="{Binding TargetName}" Width="*"/><DataGridTextColumn Header="CURRENT" Binding="{Binding CurrentValue}" Width="*"/><DataGridTextColumn Header="PROPOSED" Binding="{Binding ProposedValue}" Width="*"/><DataGridTextColumn Header="RISK" Binding="{Binding Risk}" Width="65"/></DataGrid.Columns></DataGrid>
             <TextBlock Grid.Row="2" x:Name="GuildBaseRecoveryValidationText" Text="Prepare a preview to see validation requirements." Foreground="#FFD56A" TextWrapping="Wrap" Margin="0,10,0,6"/>
-            <WrapPanel Grid.Row="3"><Button Content="▣  SAFETY BACKUP" Style="{StaticResource WarningButton}" Click="GuildBaseRecoveryBackup_Click" ToolTip="Safety Backup."/><Button Content="✓  SAVE PLAN" Style="{StaticResource ConfigPrimaryButton}" Click="GuildBaseRecoverySavePlan_Click" ToolTip="Save Plan."/><Button Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="GuildBaseRecoveryExport_Click" ToolTip="Export Report."/></WrapPanel>
+            <UniformGrid Columns="3" Grid.Row="3" Style="{StaticResource MystTiqActionGrid}"><Button Content="▣  SAFETY BACKUP" Style="{StaticResource WarningButton}" Click="GuildBaseRecoveryBackup_Click" ToolTip="Safety Backup."/><Button Content="✓  SAVE PLAN" Style="{StaticResource ConfigPrimaryButton}" Click="GuildBaseRecoverySavePlan_Click" ToolTip="Save Plan."/><Button Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="GuildBaseRecoveryExport_Click" ToolTip="Export Report."/></UniformGrid>
            </Grid>
           </Border>
          </Grid>
@@ -2834,7 +2843,7 @@
     <Border Grid.Row="0" Style="{StaticResource SectionBanner}">
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel><TextBlock Text="Base Manager" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Browse every decoded base, review guild ownership, Palbox identity, coordinates and health, export inventories, and prepare ownership-recovery plans without directly changing Level.sav." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/><TextBlock x:Name="BaseManagerWorldText" Text="Active world: not scanned" Foreground="#7FA8CE" FontSize="12" Margin="0,5,20,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/></StackPanel>
-      <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button Content="↻  SCAN ACTIVE WORLD" Style="{StaticResource RefreshButton}" Click="BaseManagerRefresh_Click" ToolTip="Scan Active World."/><Button Content="📂  OPEN RECOVERY" Style="{StaticResource InfoButton}" Click="BaseManagerOpenRecovery_Click" ToolTip="Open Recovery."/></WrapPanel>
+      <UniformGrid Columns="2" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}"><Button Content="↻  SCAN ACTIVE WORLD" Style="{StaticResource RefreshButton}" Click="BaseManagerRefresh_Click" ToolTip="Scan Active World."/><Button Content="📂  OPEN RECOVERY" Style="{StaticResource InfoButton}" Click="BaseManagerOpenRecovery_Click" ToolTip="Open Recovery."/></UniformGrid>
      </Grid>
     </Border>
     <UniformGrid Grid.Row="1" Columns="6" Margin="0,12,0,12">
@@ -2850,7 +2859,7 @@
       <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="170"/></Grid.ColumnDefinitions><TextBox x:Name="BaseManagerSearchBox" TextChanged="BaseManagerSearch_TextChanged" ToolTip="Search name, IDs, guild, Palbox or coordinates"/><ComboBox Grid.Column="1" x:Name="BaseManagerStatusFilter" Margin="8,0,0,0" SelectionChanged="BaseManagerFilter_Changed"><ComboBoxItem Content="All" IsSelected="True"/><ComboBoxItem Content="Healthy"/><ComboBoxItem Content="Orphaned"/><ComboBoxItem Content="Unresolved"/></ComboBox></Grid>
        <DataGrid Grid.Row="1" x:Name="BaseManagerGrid" Margin="0,10,0,0" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" SelectionChanged="BaseManagerSelection_Changed"><DataGrid.Columns><DataGridTextColumn Header="BASE" Binding="{Binding Name}" Width="*"/><DataGridTextColumn Header="BASE ID" Binding="{Binding BaseId}" Width="200"/><DataGridTextColumn Header="GUILD" Binding="{Binding GuildName}" Width="160"/><DataGridTextColumn Header="PALBOX" Binding="{Binding PalboxDisplay}" Width="150"/><DataGridTextColumn Header="COORDINATES" Binding="{Binding Location}" Width="150"/><DataGridTextColumn Header="HEALTH" Binding="{Binding Health}" Width="90"/></DataGrid.Columns></DataGrid>
-       <WrapPanel Grid.Row="2" Margin="0,10,0,0"><Button Content="⇧  EXPORT CSV" Style="{StaticResource DiagnosticButton}" Click="BaseManagerExport_Click" ToolTip="Export Csv."/><Button Content="▣  SAFETY BACKUP" Style="{StaticResource WarningButton}" Click="BaseManagerBackup_Click" ToolTip="Safety Backup."/></WrapPanel>
+       <UniformGrid Columns="2" Grid.Row="2" Margin="0,10,0,0" Style="{StaticResource MystTiqActionGrid}"><Button Content="⇧  EXPORT CSV" Style="{StaticResource DiagnosticButton}" Click="BaseManagerExport_Click" ToolTip="Export Csv."/><Button Content="▣  SAFETY BACKUP" Style="{StaticResource WarningButton}" Click="BaseManagerBackup_Click" ToolTip="Safety Backup."/></UniformGrid>
       </Grid>
      </Border>
      <Border Grid.Column="1" Background="#0D1822" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="14" Margin="8,0,0,0">
@@ -2892,7 +2901,7 @@
   <TabItem Header="Activity &amp; Audit">
    <Grid Margin="18" Background="#08111A">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-    <Border Grid.Row="0" Style="{StaticResource SectionBanner}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Activity &amp; Audit Log" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Review persistent administrative activity, status changes, backups, imports, repairs, player actions, configuration changes, and navigation events." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel><WrapPanel Grid.Column="1"><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="AuditRefresh_Click" ToolTip="Refresh."/><Button Content="⇧  EXPORT" Style="{StaticResource DiagnosticButton}" Click="AuditExport_Click" ToolTip="Export."/><Button Content="✖  CLEAR" Style="{StaticResource DangerButton}" Click="AuditClear_Click" ToolTip="Clear."/></WrapPanel></Grid></Border>
+    <Border Grid.Row="0" Style="{StaticResource SectionBanner}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Activity &amp; Audit Log" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Review persistent administrative activity, status changes, backups, imports, repairs, player actions, configuration changes, and navigation events." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel><UniformGrid Columns="3" Grid.Column="1" Style="{StaticResource MystTiqActionGrid}"><Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="AuditRefresh_Click" ToolTip="Refresh."/><Button Content="⇧  EXPORT" Style="{StaticResource DiagnosticButton}" Click="AuditExport_Click" ToolTip="Export."/><Button Content="✖  CLEAR" Style="{StaticResource DangerButton}" Click="AuditClear_Click" ToolTip="Clear."/></UniformGrid></Grid></Border>
     <Grid Grid.Row="1" Margin="0,12,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBox x:Name="AuditSearchBox" TextChanged="AuditFilter_Changed" ToolTip="Search activity"/><ComboBox Grid.Column="1" x:Name="AuditSeverityFilter" Margin="8,0,0,0" SelectionChanged="AuditFilter_Changed"><ComboBoxItem Content="All severities" IsSelected="True"/><ComboBoxItem Content="Information"/><ComboBoxItem Content="Success"/><ComboBoxItem Content="Warning"/><ComboBoxItem Content="Critical"/></ComboBox><ComboBox Grid.Column="2" x:Name="AuditCategoryFilter" Margin="8,0,0,0" SelectionChanged="AuditFilter_Changed"><ComboBoxItem Content="All categories" IsSelected="True"/><ComboBoxItem Content="System"/><ComboBoxItem Content="Server"/><ComboBoxItem Content="World"/><ComboBoxItem Content="Players"/><ComboBoxItem Content="Backups"/><ComboBoxItem Content="Mods"/><ComboBoxItem Content="Configuration"/><ComboBoxItem Content="Navigation"/></ComboBox></Grid>
     <DataGrid Grid.Row="2" x:Name="AuditGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"><DataGrid.Columns><DataGridTextColumn Header="TIME" Binding="{Binding TimestampDisplay}" Width="145"/><DataGridTextColumn Header="SEVERITY" Binding="{Binding Severity}" Width="100"/><DataGridTextColumn Header="CATEGORY" Binding="{Binding Category}" Width="110"/><DataGridTextColumn Header="ACTION" Binding="{Binding Action}" Width="180"/><DataGridTextColumn Header="DETAILS" Binding="{Binding Details}" Width="*"/></DataGrid.Columns></DataGrid>
     <TextBlock Grid.Row="3" x:Name="AuditStatusText" Text="Activity is stored locally and persists between manager launches." Foreground="#9FC4EA" Margin="2,10,0,0" TextWrapping="Wrap"/>
@@ -2910,14 +2919,14 @@
        <TextBlock Text="Review actionable warnings, errors, successes and system information without losing the complete Activity &amp; Audit history." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/>
        <TextBlock x:Name="NotificationSummaryText" Text="0 unread • 0 critical • 0 warning • 0 pinned" Foreground="#7FC8FF" FontWeight="SemiBold" Margin="0,8,0,0"/>
       </StackPanel>
-      <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+      <UniformGrid Columns="6" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}">
        <Button Content="↻  REFRESH" Style="{StaticResource RefreshButton}" Click="NotificationRefresh_Click" ToolTip="Refresh."/>
        <Button Content="ℹ  MARK ALL READ" Style="{StaticResource SecondaryButton}" Click="NotificationMarkAllRead_Click" ToolTip="Mark All Read."/>
        <Button Content="ℹ  DISMISS READ" Style="{StaticResource NeutralButton}" Click="NotificationDismissRead_Click" ToolTip="Dismiss Read."/>
        <Button Content="⇧  EXPORT" Style="{StaticResource DiagnosticButton}" Click="NotificationExport_Click" ToolTip="Export."/>
        <Button Content="✓  RUN SELF-TEST" Style="{StaticResource RefreshButton}" Click="NotificationRunSelfTest_Click" ToolTip="Publishes information, success, warning, critical, and pinned test notifications through the real notification service, then opens the flyout."/>
        <Button Content="✖  CLEAR TESTS" Style="{StaticResource NeutralButton}" Click="NotificationClearTests_Click" ToolTip="Removes only notifications generated by the notification diagnostics self-test."/>
-      </WrapPanel>
+      </UniformGrid>
      </Grid>
     </Border>
     <Grid Grid.Row="1" Margin="0,12,0,10">
@@ -2965,9 +2974,9 @@
   <TabItem Header="Palworld Save Tools">
    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="18">
-     <Border Style="{StaticResource SectionBanner}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Palworld Save Tools" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Validate Python, pip, convert.py, and active-world conversion with complete command, output, and error diagnostics." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel><WrapPanel Grid.Column="1" Style="{StaticResource ModActionWrapPanel}"><Button Content="✓  RUN ALL TESTS" Style="{StaticResource RefreshButton}" Click="SaveToolsRunAll_Click" ToolTip="Runs Python, pip, converter, and active Level.sav conversion diagnostics."/><Button Content="ℹ  COPY DIAGNOSTICS" Style="{StaticResource DiagnosticButton}" Click="SaveToolsCopyDiagnostics_Click" ToolTip="Copies the complete Palworld Save Tools diagnostic report."/></WrapPanel></Grid></Border>
+     <Border Style="{StaticResource SectionBanner}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Palworld Save Tools" FontSize="28" FontWeight="Bold" Foreground="White"/><TextBlock Text="Validate Python, pip, convert.py, and active-world conversion with complete command, output, and error diagnostics." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/></StackPanel><UniformGrid Columns="2" Grid.Column="1" Style="{StaticResource ModActionGrid}"><Button Content="✓  RUN ALL TESTS" Style="{StaticResource RefreshButton}" Click="SaveToolsRunAll_Click" ToolTip="Runs Python, pip, converter, and active Level.sav conversion diagnostics."/><Button Content="ℹ  COPY DIAGNOSTICS" Style="{StaticResource DiagnosticButton}" Click="SaveToolsCopyDiagnostics_Click" ToolTip="Copies the complete Palworld Save Tools diagnostic report."/></UniformGrid></Grid></Border>
      <UniformGrid Columns="3" Margin="0,0,0,12"><Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="PYTHON" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="SaveToolsPythonStatus" Text="Not tested" Foreground="White" FontSize="18" FontWeight="Bold"/><TextBlock x:Name="SaveToolsPythonPath" Text="—" Foreground="#9FC4EA" TextWrapping="Wrap"/></StackPanel></Border><Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0"><StackPanel><TextBlock Text="CONVERTER" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="SaveToolsConverterStatus" Text="Not tested" Foreground="White" FontSize="18" FontWeight="Bold"/><TextBlock x:Name="SaveToolsConverterPath" Text="—" Foreground="#9FC4EA" TextWrapping="Wrap"/></StackPanel></Border><Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="12"><StackPanel><TextBlock Text="ACTIVE WORLD" Foreground="#7FA8CE" FontWeight="Bold"/><TextBlock x:Name="SaveToolsWorldStatus" Text="Not tested" Foreground="White" FontSize="18" FontWeight="Bold"/><TextBlock x:Name="SaveToolsWorldPath" Text="—" Foreground="#9FC4EA" TextWrapping="Wrap"/></StackPanel></Border></UniformGrid>
-     <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="14"><DockPanel><WrapPanel DockPanel.Dock="Top" Margin="0,0,0,10"><Button Content="🐍  TEST PYTHON" Style="{StaticResource InfoButton}" Click="SaveToolsTestPython_Click" ToolTip="Tests the configured Python executable and pip."/><Button Content="⚙  TEST CONVERTER" Style="{StaticResource InfoButton}" Click="SaveToolsTestConverter_Click" ToolTip="Runs convert.py --help using the detected Python executable."/><Button Content="◎  TEST ACTIVE WORLD" Style="{StaticResource WarningButton}" Click="SaveToolsTestWorld_Click" ToolTip="Performs a read-only conversion of the active Level.sav into the diagnostics cache."/><Button Content="📂  OPEN TOOLS FOLDER" Style="{StaticResource SecondaryButton}" Click="SaveToolsOpenFolder_Click" ToolTip="Opens the server-local palworld-save-tools folder."/><Button Content="🛠  INSTALL / REPAIR" Style="{StaticResource DiagnosticButton}" Click="SaveToolsRepair_Click" ToolTip="Installs or repairs Python package dependencies and palworld-save-tools."/></WrapPanel><TextBox x:Name="SaveToolsDiagnosticsText" Text="Run a diagnostic test to inspect the decoder environment." IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" MinHeight="360" FontFamily="Consolas"/></DockPanel></Border>
+     <Border Background="#111922" BorderBrush="#263A50" BorderThickness="1" CornerRadius="8" Padding="14"><DockPanel><UniformGrid Columns="5" DockPanel.Dock="Top" Margin="0,0,0,10" Style="{StaticResource MystTiqActionGrid}"><Button Content="🐍  TEST PYTHON" Style="{StaticResource InfoButton}" Click="SaveToolsTestPython_Click" ToolTip="Tests the configured Python executable and pip."/><Button Content="⚙  TEST CONVERTER" Style="{StaticResource InfoButton}" Click="SaveToolsTestConverter_Click" ToolTip="Runs convert.py --help using the detected Python executable."/><Button Content="◎  TEST ACTIVE WORLD" Style="{StaticResource WarningButton}" Click="SaveToolsTestWorld_Click" ToolTip="Performs a read-only conversion of the active Level.sav into the diagnostics cache."/><Button Content="📂  OPEN TOOLS FOLDER" Style="{StaticResource SecondaryButton}" Click="SaveToolsOpenFolder_Click" ToolTip="Opens the server-local palworld-save-tools folder."/><Button Content="🛠  INSTALL / REPAIR" Style="{StaticResource DiagnosticButton}" Click="SaveToolsRepair_Click" ToolTip="Installs or repairs Python package dependencies and palworld-save-tools."/></UniformGrid><TextBox x:Name="SaveToolsDiagnosticsText" Text="Run a diagnostic test to inspect the decoder environment." IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" MinHeight="360" FontFamily="Consolas"/></DockPanel></Border>
     </StackPanel>
    </ScrollViewer>
   </TabItem>
@@ -2984,10 +2993,10 @@
         <TextBlock Text="Workspace Manager" FontSize="24" FontWeight="Bold" Foreground="White"/>
         <TextBlock Text="Review, validate, and open every MystTiq working location from one place. Portable mode keeps the workspace beside the application; installed mode preserves normal Windows application-data locations." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/>
        </StackPanel>
-       <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+       <UniformGrid Columns="2" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}">
         <Button Content="↻  REFRESH" Style="{StaticResource WorkspaceRefreshButton}" Click="WorkspaceRefresh_Click" ToolTip="Refresh workspace paths and validation results."/>
         <Button Content="✓  VALIDATE ALL" Style="{StaticResource WorkspaceSuccessButton}" Click="WorkspaceValidate_Click" ToolTip="Validate required folders, server files, SteamCMD, and write access without changing server data."/>
-       </WrapPanel>
+       </UniformGrid>
       </Grid>
      </Border>
 
@@ -3034,11 +3043,11 @@
         <TextBlock Text="Diagnostics Center" FontSize="28" FontWeight="Bold" Foreground="White"/>
         <TextBlock Text="Run a read-only health audit across MystTiq, the workspace, PalServer, the active world, backups, MODs, transaction journals, and notification storage." Foreground="#9FC4EA" FontSize="15" Margin="0,5,20,0" TextWrapping="Wrap"/>
        </StackPanel>
-       <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+       <UniformGrid Columns="3" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource MystTiqActionGrid}">
         <Button x:Name="DiagnosticsRunButton" Content="✓  RUN FULL DIAGNOSTICS" Style="{StaticResource RefreshButton}" Click="RunFullDiagnostics_Click" ToolTip="Run all registered diagnostic providers without modifying server or world data."/>
         <Button x:Name="DiagnosticsExportButton" Content="⇧  EXPORT REPORT" Style="{StaticResource DiagnosticButton}" Click="ExportDiagnostics_Click" IsEnabled="False" ToolTip="Export the latest diagnostics as JSON and text."/>
         <Button x:Name="DiagnosticsSupportButton" Content="▣  SUPPORT PACKAGE" Style="{StaticResource WarningButton}" Click="CreateSupportPackage_Click" IsEnabled="False" ToolTip="Create a redacted ZIP containing diagnostics, configuration metadata, and recent size-limited logs."/>
-       </WrapPanel>
+       </UniformGrid>
       </Grid>
      </Border>
 
@@ -3071,10 +3080,10 @@
      <Border Background="#101A24" BorderBrush="#31506C" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,12,0,0">
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <TextBlock Text="Support packages redact the protected password value. Review the ZIP before attaching it to a public GitHub issue because logs can still contain server paths, player IDs, or other environment details." Foreground="#E6C56B" TextWrapping="Wrap" Margin="0,0,18,0"/>
-       <WrapPanel Grid.Column="1">
+       <UniformGrid Columns="2" Grid.Column="1" Style="{StaticResource MystTiqActionGrid}">
         <Button Content="ℹ  COPY SUMMARY" Style="{StaticResource SecondaryButton}" Click="CopyDiagnosticsSummary_Click" ToolTip="Copy the latest diagnostics summary to the clipboard."/>
         <Button Content="📂  OPEN DIAGNOSTICS" Style="{StaticResource InfoButton}" Click="OpenDiagnosticsCenterFolder_Click" ToolTip="Open the diagnostics and support-package folder."/>
-       </WrapPanel>
+       </UniformGrid>
       </Grid>
      </Border>
     </StackPanel>

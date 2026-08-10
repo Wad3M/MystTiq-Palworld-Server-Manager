@@ -8,11 +8,16 @@ public sealed class SaveInspectorService
     private readonly IPalworldSaveCodec codec;
     private readonly Plm1SaveDecoder decoder;
     private readonly ActiveWorldContextService? worldContext;
+    private readonly SafeWorldSaveSnapshotService snapshotService;
 
-    public SaveInspectorService(AppSettings settings, ActiveWorldContextService? worldContext = null)
+    public SaveInspectorService(
+        AppSettings settings,
+        ActiveWorldContextService? worldContext = null,
+        SafeWorldSaveSnapshotService? snapshotService = null)
     {
         this.settings = settings;
         this.worldContext = worldContext;
+        this.snapshotService = snapshotService ?? new SafeWorldSaveSnapshotService();
         codec = new ProcessPalworldSaveCodec(settings);
         decoder = new Plm1SaveDecoder(codec);
     }
@@ -32,18 +37,36 @@ public sealed class SaveInspectorService
     {
         var worldPath = ResolveWorldPath(selectedPath);
         var levelPath = Path.Combine(worldPath, "Level.sav");
+        WorldSaveSnapshot? safeSnapshot = null;
+        PalworldSaveHeader header;
+        DateTime stableWriteUtc;
+        try
+        {
+            safeSnapshot = snapshotService.CreateSnapshot(levelPath);
+            header = decoder.Inspect(safeSnapshot.SnapshotPath);
+            header.Path = levelPath;
+            stableWriteUtc = safeSnapshot.SourceWriteUtc;
+        }
+        finally
+        {
+            snapshotService.Release(safeSnapshot);
+        }
+
         var summary = new SaveInspectorSummary
         {
             WorldPath = worldPath,
             WorldId = Path.GetFileName(worldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
             LevelSavePath = levelPath,
-            Header = decoder.Inspect(levelPath),
+            Header = header,
             CodecAvailable = codec.IsAvailable(),
-            LastWriteUtc = File.GetLastWriteTimeUtc(levelPath),
+            LastWriteUtc = stableWriteUtc,
             HasLevelMeta = File.Exists(Path.Combine(worldPath, "LevelMeta.sav")),
             HasLocalData = File.Exists(Path.Combine(worldPath, "LocalData.sav")),
             HasWorldOption = File.Exists(Path.Combine(worldPath, "WorldOption.sav"))
         };
+
+        if (safeSnapshot?.RequiredRetry == true)
+            summary.Warnings.Add($"Live-save read stabilized after {safeSnapshot.AttemptCount} attempts.");
 
         summary.CodecStatus = summary.CodecAvailable
             ? "Configured and available"

@@ -12,6 +12,11 @@ public sealed record ServerPlatformProfile(
     string SteamCmdExecutableName,
     IReadOnlyList<int> GuardedPorts)
 {
+    public string RootServerExecutableName =>
+        ServerExecutableRelativePaths
+            .FirstOrDefault(path => string.IsNullOrWhiteSpace(Path.GetDirectoryName(path)))
+        ?? Path.GetFileName(ServerExecutableRelativePaths.First());
+
     public static ServerPlatformProfile Windows { get; } = new(
         "windows",
         [
@@ -30,4 +35,10 @@ public sealed record ServerPlatformProfile(
         ],
         "steamcmd.exe",
         [8211, 8212, 25575]);
+
+    public static ServerPlatformProfile ForCurrentPlatform() =>
+        OperatingSystem.IsWindows()
+            ? Windows
+            : throw new PlatformNotSupportedException(
+                "MystTiq server platform naming is implemented for Windows in the v0.2.16 series. Linux implementation begins in v0.3.");
 }

@@ -9,6 +9,8 @@ namespace PalworldManager.Services;
 /// </summary>
 public sealed class ApplicationServiceComposition
 {
+    public required IServerPathProfile ServerPaths { get; init; }
+    public required IServerDistributionPlatformService ServerDistribution { get; init; }
     public required Ue4ssRuntimeResolver Ue4ssRuntimeResolver { get; init; }
     public required RuntimeStateService RuntimeState { get; init; }
     public required ServerService Server { get; init; }
@@ -30,26 +32,29 @@ public sealed class ApplicationServiceComposition
     public required CrashAnalyzerService CrashAnalyzer { get; init; }
     public required ServerDoctorService ServerDoctor { get; init; }
     public required WorldTelemetryService WorldTelemetry { get; init; }
+    public required MystTiqReleaseService MystTiqReleases { get; init; }
 
     public static ApplicationServiceComposition Create(AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        var ue4ssRuntimeResolver = new Ue4ssRuntimeResolver(settings);
+        var serverPaths = ServerPathProfile.ForCurrentPlatform(settings);
+        var serverDistribution = ServerDistributionPlatformService.ForCurrentPlatform();
+        var ue4ssRuntimeResolver = new Ue4ssRuntimeResolver(settings, serverPaths);
         var runtimeState = new RuntimeStateService();
-        var server = new ServerService(settings);
+        var server = new ServerService(settings, distributionPlatform: serverDistribution);
         var backups = new BackupService(settings);
         var config = new ConfigService(settings);
         var modHealthEvaluation = new ModHealthEvaluationService();
         var modPlatformHealth = new ModPlatformHealthService();
         var modRepairRecommendations = new ModRepairRecommendationEngine();
         var modVerificationReportExporter = new ModVerificationReportExportService();
-        var mods = new ModService(settings, ue4ssRuntimeResolver, runtimeState);
-        var modVerification = new ModVerificationService(settings, runtimeState, server, modHealthEvaluation);
+        var mods = new ModService(settings, ue4ssRuntimeResolver, runtimeState, serverPaths);
+        var modVerification = new ModVerificationService(settings, runtimeState, server, modHealthEvaluation, serverPaths);
         var modDashboardState = new ModDashboardStateService(modHealthEvaluation);
         var modLifecycle = new ModLifecycleCoordinator(mods, modRepairRecommendations);
-        var modCompatibility = new ModCompatibilityService(settings);
-        var environment = new EnvironmentService(settings);
+        var modCompatibility = new ModCompatibilityService(settings, serverPaths);
+        var environment = new EnvironmentService(settings, serverPaths);
         var modInventory = new ModInventorySnapshotService(mods, environment);
         var modCoordinator = new ModCoordinator(
             modInventory,
@@ -61,6 +66,8 @@ public sealed class ApplicationServiceComposition
 
         return new ApplicationServiceComposition
         {
+            ServerPaths = serverPaths,
+            ServerDistribution = serverDistribution,
             Ue4ssRuntimeResolver = ue4ssRuntimeResolver,
             RuntimeState = runtimeState,
             Server = server,
@@ -78,10 +85,11 @@ public sealed class ApplicationServiceComposition
             Environment = environment,
             ModInventory = modInventory,
             ModCoordinator = modCoordinator,
-            Installer = new InstallerService(settings),
+            Installer = new InstallerService(settings, serverPaths, serverDistribution),
             CrashAnalyzer = new CrashAnalyzerService(settings),
-            ServerDoctor = new ServerDoctorService(settings),
-            WorldTelemetry = new WorldTelemetryService()
+            ServerDoctor = new ServerDoctorService(settings, serverPaths),
+            WorldTelemetry = new WorldTelemetryService(),
+            MystTiqReleases = new MystTiqReleaseService()
         };
     }
 }

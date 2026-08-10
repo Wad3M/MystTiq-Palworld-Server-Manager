@@ -26,8 +26,14 @@ public sealed class ApplicationPathService
         ? Path.Combine(ServersRoot, "Palworld")
         : @"C:\GameServers\Palworld\Server";
     public string DefaultSteamCmdPath => IsPortable
-        ? Path.Combine(SteamCmdRoot, "steamcmd.exe")
-        : @"C:\GameServers\Palworld\SteamCMD\steamcmd.exe";
+        ? Path.Combine(SteamCmdRoot, SteamCmdExecutableName)
+        : Path.Combine(@"C:\GameServers\Palworld\SteamCMD", SteamCmdExecutableName);
+
+    private static ServerPlatformProfile PlatformProfile =>
+        ServerPlatformProfile.ForCurrentPlatform();
+
+    private static string SteamCmdExecutableName => PlatformProfile.SteamCmdExecutableName;
+    private static string RootServerExecutableName => PlatformProfile.RootServerExecutableName;
 
     private ApplicationPathService()
     {
@@ -93,23 +99,24 @@ public sealed class ApplicationPathService
         {
             var detected = FindSteamCmdPath();
             if (!string.IsNullOrWhiteSpace(detected)) settings.SteamCmdPath = detected;
-            else if (string.IsNullOrWhiteSpace(settings.SteamCmdPath) || IsLegacyDefault(settings.SteamCmdPath, @"C:\GameServers\Palworld\SteamCMD\steamcmd.exe"))
+            else if (string.IsNullOrWhiteSpace(settings.SteamCmdPath) ||
+                     IsLegacyDefault(settings.SteamCmdPath, Path.Combine(@"C:\GameServers\Palworld\SteamCMD", SteamCmdExecutableName)))
                 settings.SteamCmdPath = DefaultSteamCmdPath;
         }
     }
 
     public string? FindServerRoot()
     {
-        return FindFirstFile(ServersRoot, "PalServer.exe") is { } serverExe
+        return FindFirstFile(ServersRoot, RootServerExecutableName) is { } serverExe
             ? Path.GetDirectoryName(serverExe)
             : null;
     }
 
-    public string? FindSteamCmdPath() => FindFirstFile(SteamCmdRoot, "steamcmd.exe")
-                                         ?? FindFirstFile(WorkspaceRoot, "steamcmd.exe");
+    public string? FindSteamCmdPath() => FindFirstFile(SteamCmdRoot, SteamCmdExecutableName)
+                                         ?? FindFirstFile(WorkspaceRoot, SteamCmdExecutableName);
 
     private static bool IsConfiguredServerValid(string? serverRoot) =>
-        !string.IsNullOrWhiteSpace(serverRoot) && File.Exists(Path.Combine(serverRoot, "PalServer.exe"));
+        !string.IsNullOrWhiteSpace(serverRoot) && File.Exists(Path.Combine(serverRoot, RootServerExecutableName));
 
     private static bool IsLegacyDefault(string value, string legacyDefault)
     {

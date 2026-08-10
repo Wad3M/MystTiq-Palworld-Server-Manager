@@ -17,10 +17,15 @@ public sealed class Ue4ssRuntimeResolver
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private readonly AppSettings settings;
+    private readonly IServerPathProfile paths;
     private readonly object sync = new();
     private Ue4ssRuntimeInfo? cached;
 
-    public Ue4ssRuntimeResolver(AppSettings settings) => this.settings = settings;
+    public Ue4ssRuntimeResolver(AppSettings settings, IServerPathProfile? paths = null)
+    {
+        this.settings = settings;
+        this.paths = paths ?? ServerPathProfile.ForCurrentPlatform(settings);
+    }
 
     /// <summary>
     /// Returns the session-cached runtime snapshot. Call Refresh only when configuration or runtime state changes.
@@ -73,10 +78,10 @@ public sealed class Ue4ssRuntimeResolver
 
     private Ue4ssRuntimeInfo ResolveCore()
     {
-        var win64Root = Path.GetFullPath(Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64"));
-        var ue4ssRoot = Path.Combine(win64Root, "ue4ss");
-        var modernRoot = Path.Combine(ue4ssRoot, "Mods");
-        var legacyRoot = Path.Combine(win64Root, "Mods");
+        var win64Root = paths.RuntimeBinaryRoot;
+        var ue4ssRoot = paths.Ue4ssRoot;
+        var modernRoot = paths.Ue4ssModsRoot;
+        var legacyRoot = paths.LegacyUe4ssModsRoot;
 
         var hasUe4ssRoot = Directory.Exists(ue4ssRoot);
         var hasModernRoot = Directory.Exists(modernRoot);

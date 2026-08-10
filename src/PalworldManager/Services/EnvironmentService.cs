@@ -7,7 +7,12 @@ namespace PalworldManager.Services;
 public sealed class EnvironmentService
 {
     private readonly AppSettings settings;
-    public EnvironmentService(AppSettings settings) => this.settings = settings;
+    private readonly IServerPathProfile paths;
+    public EnvironmentService(AppSettings settings, IServerPathProfile? paths = null)
+    {
+        this.settings = settings;
+        this.paths = paths ?? ServerPathProfile.ForCurrentPlatform(settings);
+    }
 
     public string? FindSteamRoot()
     {
@@ -72,7 +77,7 @@ public sealed class EnvironmentService
         "LineTraceMod", "SplitScreenMod", "shared"
     };
 
-    private string Ue4ssWin64Folder => Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64");
+    private string Ue4ssWin64Folder => paths.RuntimeBinaryRoot;
 
     public (bool Installed, bool Enabled, string Detail) GetUe4ssRuntimeState()
     {
@@ -434,9 +439,9 @@ public sealed class EnvironmentService
             File.Exists(settings.SteamCmdPath) ? "Ready for install, update, and repair operations." : "Required for automated dedicated-server installation and updates.",
             File.Exists(settings.SteamCmdPath) ? "VERIFY" : "INSTALL");
 
-        Add(rows, "Palworld Dedicated Server", File.Exists(settings.ServerExe) ? "READY" : "MISSING", settings.ServerExe,
-            File.Exists(settings.ServerExe) ? "Server executable detected." : "Dedicated server App ID 2394010 is not installed at the configured location.",
-            File.Exists(settings.ServerExe) ? "VERIFY" : "INSTALL");
+        Add(rows, "Palworld Dedicated Server", File.Exists(paths.ServerExecutable) ? "READY" : "MISSING", paths.ServerExecutable,
+            File.Exists(paths.ServerExecutable) ? "Server executable detected." : "Dedicated server App ID 2394010 is not installed at the configured location.",
+            File.Exists(paths.ServerExecutable) ? "VERIFY" : "INSTALL");
 
         var ue4ssFolder = Ue4ssWin64Folder;
         var ue4ssState = GetUe4ssRuntimeState();
@@ -623,8 +628,14 @@ public sealed class EnvironmentService
             "Steam Client" => (FindSteamRoot() is not null, FindSteamRoot() is not null ? "Steam installation verified." : "Steam installation was not found."),
             "Palworld Client" => (FindPalworldClient() is not null, FindPalworldClient() is not null ? "Palworld client App ID 1623730 verified." : "Palworld client was not found in the detected Steam libraries."),
             "Python Runtime" => VerifyPython(),
-            "SteamCMD" => (File.Exists(settings.SteamCmdPath), File.Exists(settings.SteamCmdPath) ? "steamcmd.exe verified." : "steamcmd.exe is missing."),
-            "Palworld Dedicated Server" => (File.Exists(settings.ServerExe), File.Exists(settings.ServerExe) ? "PalServer.exe verified." : "PalServer.exe is missing."),
+            "SteamCMD" => (File.Exists(settings.SteamCmdPath), File.Exists(settings.SteamCmdPath)
+                ? $"{ServerPlatformProfile.ForCurrentPlatform().SteamCmdExecutableName} verified."
+                : $"{ServerPlatformProfile.ForCurrentPlatform().SteamCmdExecutableName} is missing."),
+            "Palworld Dedicated Server" => (
+                File.Exists(paths.ServerExecutable),
+                File.Exists(paths.ServerExecutable)
+                    ? $"{Path.GetFileName(paths.ServerExecutable)} verified."
+                    : $"{Path.GetFileName(paths.ServerExecutable)} is missing."),
             "UE4SS Runtime" => VerifyUe4ss(),
             "Palworld Save Tools" => VerifySaveTools(),
             "Microsoft C++ Build Tools" => (IsCppBuildToolsInstalled(), IsCppBuildToolsInstalled() ? "MSVC C++ compiler verified." : "Microsoft C++ Build Tools are missing."),
@@ -739,7 +750,7 @@ public sealed class EnvironmentService
     {
         var issues = new List<string>();
         if (!File.Exists(settings.SteamCmdPath)) issues.Add("SteamCMD is missing.");
-        if (!File.Exists(settings.ServerExe)) issues.Add("Palworld dedicated server is missing.");
+        if (!File.Exists(paths.ServerExecutable)) issues.Add("Palworld dedicated server is missing.");
         if (!File.Exists(settings.ConfigFile)) issues.Add("PalWorldSettings.ini is missing.");
         try
         {

@@ -5,6 +5,7 @@ namespace PalworldManager.Services;
 public sealed class ModVerificationService
 {
     private readonly AppSettings settings;
+    private readonly IServerPathProfile paths;
     private readonly List<IModVerifier> verifiers;
     private readonly ModHealthEvaluationService healthEvaluator;
     private readonly RuntimeStateService runtimeState;
@@ -12,9 +13,10 @@ public sealed class ModVerificationService
     private readonly ModCapabilityAnalysisService capabilityAnalysis;
     private readonly NativeModuleEvidenceService nativeModuleEvidence;
 
-    public ModVerificationService(AppSettings settings, RuntimeStateService runtimeState, ServerService server, ModHealthEvaluationService? healthEvaluator = null)
+    public ModVerificationService(AppSettings settings, RuntimeStateService runtimeState, ServerService server, ModHealthEvaluationService? healthEvaluator = null, IServerPathProfile? paths = null)
     {
         this.settings = settings;
+        this.paths = paths ?? ServerPathProfile.ForCurrentPlatform(settings);
         this.runtimeState = runtimeState ?? throw new ArgumentNullException(nameof(runtimeState));
         this.healthEvaluator = healthEvaluator ?? new ModHealthEvaluationService();
         runtimeEvidence = new ModRuntimeEvidenceEngine();
@@ -77,8 +79,8 @@ public sealed class ModVerificationService
         var roots = new[]
         {
             settings.LogsRoot,
-            Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64"),
-            Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64", "UE4SS")
+            paths.RuntimeBinaryRoot,
+            paths.Ue4ssRoot
         };
 
         var files = new List<string>();

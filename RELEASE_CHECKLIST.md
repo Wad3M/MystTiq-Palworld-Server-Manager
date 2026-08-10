@@ -1,192 +1,94 @@
 # MystTiq Release Checklist
 
+This is the active release checklist for MystTiq Palworld Server Manager. Historical version-specific acceptance criteria are archived under [`docs/history/`](docs/history/).
+
+## Current release state
+
+- **Official validated baseline:** v0.2.16.3 FIX2
+- **Current release candidate:** v0.2.16.4 — SteamCMD Distribution Abstraction & Final Windows Platform Audit
+- **Supported application platform:** Windows 10/11 x64
+- **Linux support:** planned for v0.3; not released in v0.2.16.x
+
 ## Source and version
-- [ ] `Directory.Build.props`, assembly metadata, installer metadata, README, and active documentation contain the intended version.
-- [ ] Release notes, build test plan, and apply instructions exist under `release-notes/`.
-- [ ] `.\Build.ps1 Validate` passes; use `-StrictValidation` for final release auditing.
-- [ ] No `bin`, `obj`, `.vs`, `artifacts`, logs, saves, backups, credentials, signing keys, or private data are included.
+
+- [ ] `Directory.Build.props` contains the current application version.
+- [ ] `src/PalworldManager/app.manifest` is synchronized.
+- [ ] `README.md` and `docs/index.html` identify the current release candidate accurately.
+- [ ] Only the current release logic harness remains active in `scripts/`.
+- [ ] `SOURCE_MANIFEST_SHA256.txt` is regenerated after final changes.
+- [ ] No stale current-series version references remain in active source/build scripts.
 
 ## Required build sequence
-- [ ] `.\Build.ps1 Clean` succeeds.
-- [ ] `.\Build.ps1 Validate` succeeds.
-- [ ] `.\Build.ps1 All` succeeds.
-- [ ] If installer tooling is intentionally unavailable, `.\Build.ps1 All -SkipInstaller` is documented as a non-release test only.
+
+```powershell
+Get-ChildItem . -Recurse -Filter *.ps1 | Unblock-File
+
+.\Build.ps1 Clean
+.\Build.ps1 Validate
+.\Build.ps1 All
+
+.\scripts\Test-v0.2.16.4-Logic.ps1 -ProjectRoot . -RunBuild -ExportJson
+```
+
+- [ ] Clean succeeds.
+- [ ] Validate succeeds with 0 errors and 0 warnings.
+- [ ] All succeeds.
+- [ ] v0.2.16.4 logic harness passes with zero failures.
 
 ## Release assets
-- [ ] Portable ZIP launches from a fresh extracted folder and retains portable data locally.
-- [ ] Installer compiles with Inno Setup 6 or 7 and installs, upgrades, launches, and uninstalls correctly.
-- [ ] Inno Setup detection is tested through the installed environment (PATH, registry, or standard location).
-- [ ] `artifacts/SHA256SUMS.txt` contains every distributed ZIP and EXE.
-- [ ] `.\scripts\Build-Checksums.ps1 -Verify` succeeds.
-- [ ] Asset names and embedded versions match the release tag.
+
+- [ ] Windows x64 portable ZIP is produced.
+- [ ] Windows installer is produced.
+- [ ] `SHA256SUMS.txt` is generated.
+- [ ] Release asset checksums verify successfully.
+- [ ] Changed-files ZIP and complete-source ZIP are retained for development handoff.
 
 ## Runtime regression
-- [ ] Installed and portable startup pass.
-- [ ] Immediate-close startup test passes.
-- [ ] Dashboard, server controls, workspace, backups, players, guilds, bases, MODs, and configuration pass.
-- [ ] World Management, Repair Center, Transaction Center, and Diagnostics Center pass.
-- [ ] Notification self-test passes and final notification hides the bell.
-- [ ] Support package is reviewed for redaction and privacy.
+
+- [ ] Start / Stop / Restart / Force Stop work.
+- [ ] Running-server adoption works.
+- [ ] CPU/RAM/session monitoring follows the active PalServer session.
+- [ ] Backup and restore workflows remain functional.
+- [ ] World Inspector live-save snapshot handling works while PalServer is saving.
+- [ ] WORLD PULSE remains accurate and informational.
+- [ ] MOD Library inventory/state is correct.
+- [ ] Native UE4SS module evidence remains functional.
+- [ ] Disabled and Active / Unverified MODs remain neutral to Overall Health.
+- [ ] Confirmed MOD failures/errors reduce health appropriately.
+- [ ] Start Without MODs remains functional.
+
+## v0.2.16.4 distribution/platform acceptance
+
+- [ ] Existing SteamCMD installation is detected.
+- [ ] SteamCMD install/repair and self-update work.
+- [ ] Palworld Dedicated Server install with validation works.
+- [ ] Fallback install without validation works when required.
+- [ ] Default Steam library recovery still works when SteamCMD ignores `force_install_dir`.
+- [ ] Server Update works while the server is stopped.
+- [ ] Update cancellation terminates the SteamCMD process tree.
+- [ ] SteamCMD package/App-ID/argument policy is owned by `IServerDistributionPlatformService`.
+- [ ] No Linux support is implied or advertised as released.
 
 ## UI
-- [ ] Pages reviewed at 100%, 125%, and 150% scaling.
-- [ ] Buttons, tooltips, cards, dialogs, and status colors follow MystTiq standards.
-- [ ] No dead controls, duplicate navigation entries, clipped labels, or placeholder actions remain.
+
+- [ ] MystTiq dark-theme standards are preserved.
+- [ ] Button semantic colors remain correct.
+- [ ] Buttons remain compact, readable, and grid-aligned.
+- [ ] Tooltips are present and useful on non-obvious controls.
+- [ ] Common window/DPI sizes show no clipping or overflow.
+- [ ] Server Setup status badges remain compact and aligned.
 
 ## Documentation and GitHub
-- [ ] README and contributor build instructions match the current scripts.
-- [ ] CHANGELOG is consolidated only during the explicit “wrap it up” closeout.
-- [ ] GitHub Pages, release assets, tag decision, commit message, and GitHub Release checklist are finalized only during closeout.
-- [ ] The validated release is promoted as the official baseline only after compile and runtime approval.
 
+- [ ] README describes the current product rather than duplicating release history.
+- [ ] CHANGELOG contains the complete release history.
+- [ ] Version-specific release notes remain under `release-notes/`.
+- [ ] Historical architecture/design notes remain under `docs/history/`.
+- [ ] Current architecture documentation remains under `docs/architecture/`.
+- [ ] Public GitHub Pages documentation reflects the supported Windows status and planned Linux direction.
+- [ ] Release description is prepared.
+- [ ] Portable ZIP, installer, and checksums are attached to the GitHub release.
 
-## Current baseline / target validation
-- Official baseline: v0.2.15.7 — Unified Runtime State Architecture.
-- Current target: v0.2.15.8 — Runtime Evidence Engine Refinement.
-- [ ] `ModRuntimeEvidenceEngine` is the single verification interpreter for UE4SS/Lua positive runtime evidence.
-- [ ] AntiDupe and PalImportFilter no longer remain Runtime Unverified when the MOD Library has authoritative Loaded evidence.
-- [ ] Expanded positive signatures are session-scoped through `RuntimeStateService`; historical logs cannot create cross-session Loaded state.
-- [ ] RuntimeStateService evidence changes synchronize Library and Dashboard without requiring a manual Verify All timing window.
-- [ ] Verification details/export identify the runtime evidence source and matched alias where available.
-- [ ] Stop clears runtime state; next start reacquires evidence without prior-session leakage.
-- [ ] REFRESH INFO remains a local metadata/runtime refresh and SEARCH ONLINE remains the only browser-search action.
-- [ ] Build Clean / Validate / All passes.
-- [ ] v0.2.15.8 logic harness passes with zero failures.
-- Phase-specific release notes, build test plan, and apply instructions are maintained under `release-notes/`.
+## Promotion gate
 
-
-## v0.2.15.8 FIX1 acceptance
-- [ ] 0 build errors / 0 warnings
-- [ ] Missing positive evidence displays Active / Unverified, not Not loaded
-- [ ] Positive current-session evidence produces Loaded / Healthy
-- [ ] AntiDupe and PalImportFilter semantics verified
-- [ ] Export includes confidence/source detail
-
-
-## v0.2.15.9 acceptance
-- [ ] Clean / Validate / All pass with zero errors and warnings.
-- [ ] Logic harness passes.
-- [ ] UE4SS verification details include capability profile.
-- [ ] Active / Unverified remains non-failure for quiet mods.
-- [ ] Observed functional activity can promote a mod to Confirmed Running.
-- [ ] Export contains capability/evidence details.
-
-
-## v0.2.15.10 acceptance
-- [ ] Clean / Validate / All: zero errors/warnings.
-- [ ] Native runtime logic harness passes.
-- [ ] AntiDupe exact DLL path confirms Loaded.
-- [ ] PalImportFilter exact DLL path confirms Loaded.
-- [ ] Duplicate `main.dll` filenames do not cross-confirm.
-- [ ] Stop/start clears old session proof.
-- [ ] Disabled native mod is not confirmed.
-- [ ] Module inspection unavailable => Active / Unverified.
-- [ ] Lua evidence behavior unchanged.
-
-
-## v0.2.15.10 FIX1 release synchronization
-- [ ] `Build.ps1 Validate` reports 0 errors / 0 warnings.
-- [ ] Only the v0.2.15.10 logic harness remains active under `scripts`.
-- [ ] `docs/index.html` references v0.2.15.10.
-- [ ] `src/PalworldManager/app.manifest` references v0.2.15.10.
-- [ ] v0.2.15.10 harness passes without PowerShell alias collisions.
-- [ ] Native runtime module detection behavior remains unchanged from v0.2.15.10.
-
-
-## v0.2.15.11 modularization acceptance
-- [ ] Clean / Validate / All passes with 0 errors and 0 warnings.
-- [ ] v0.2.15.11 architecture harness passes.
-- [ ] MOD Library scan behavior matches v0.2.15.10 FIX1.
-- [ ] Verify All, Verify Selected, compatibility scan, and export behave identically.
-- [ ] Native module evidence still confirms AntiDupe/PalImportFilter when mapped.
-- [ ] Runtime-state event updates still synchronize Library/Dashboard.
-- [ ] MOD enable/disable/install/delete/repair flows remain unchanged.
-- [ ] MystTiq dark-theme/button/tooltip standards unchanged.
-
-## v0.2.15.11 FIX1 compile-hotfix acceptance
-- [ ] Clean / Validate / All pass.
-- [ ] No multiline-string parser errors in MainWindow.ModCenter.cs.
-- [ ] v0.2.15.11 logic harness passes.
-- [ ] MOD workflows remain behaviorally equivalent to v0.2.15.10 FIX1.
-
-## v0.2.15.12 acceptance
-- [ ] Clean / Validate / All: 0 errors / 0 warnings.
-- [ ] v0.2.15.12 architecture harness passes.
-- [ ] Start / stop / restart behavior unchanged.
-- [ ] Existing running PalServer adoption works.
-- [ ] Resource and I/O monitoring work.
-- [ ] Session ID/PID changes on restart; stale session evidence is cleared.
-- [ ] AntiDupe and PalImportFilter native module evidence remains functional.
-- [ ] Server update behavior remains unchanged.
-- [ ] MystTiq UI/theme/button/tooltip behavior unchanged.
-
-## v0.2.15.12 FIX1 compile-hotfix acceptance
-- [ ] Validation reports 0 errors / 0 warnings.
-- [ ] ServerService contains no stale extracted process/session helper calls.
-- [ ] Clean / Validate / All pass.
-- [ ] v0.2.15.12 logic harness passes.
-- [ ] Runtime behavior remains equivalent to v0.2.15.11 FIX1.
-
-## v0.2.15.13 operational-health acceptance
-- [ ] Clean / Validate / All: 0 errors / 0 warnings.
-- [ ] v0.2.15.13 logic harness passes.
-- [ ] All-disabled MOD set causes no MOD health deduction.
-- [ ] Active / Unverified causes no MOD health deduction.
-- [ ] Enabled Failed/Error MOD reduces Overall Health.
-- [ ] Enabled confirmed conflict/missing dependency reduces Overall Health.
-- [ ] MOD card and compact health strip use centralized health wording.
-- [ ] Overall Health tooltip marks neutral MOD state informationally.
-- [ ] Start/stop/restart/native runtime evidence remain functional.
-
-## v0.2.15.13 FIX1 conflict-health acceptance
-- [ ] 8 Healthy MODs with `No known conflict` => 0 confirmed MOD issues.
-- [ ] Disabled MODs remain neutral to Overall Health.
-- [ ] Explicit `Confirmed conflict` still counts as a real issue.
-- [ ] Runtime errors / failed / missing / misconfigured / missing dependency behavior remains intact.
-- [ ] Clean / Validate / All and logic harness pass.
-
-## v0.2.15.14 acceptance
-- [ ] Clean / Validate / All: 0 errors / 0 warnings.
-- [ ] v0.2.15.14 architecture harness passes.
-- [ ] MainWindow no longer constructs core server/MOD graph directly.
-- [ ] ApplicationServiceComposition constructs core graph.
-- [ ] ServerService depends on IServerSessionInspector.
-- [ ] Windows ServerSessionInspector behavior unchanged.
-- [ ] Start / stop / restart / adoption work.
-- [ ] Native MOD evidence remains functional.
-- [ ] v0.2.15.13 operational-health behavior remains intact.
-
-## v0.2.15.15 acceptance
-- [ ] Clean / Validate / All: 0 errors / 0 warnings.
-- [ ] v0.2.15.15 platform-abstraction harness passes.
-- [ ] ServerService depends on IServerPlatformOperations.
-- [ ] WindowsServerPlatformOperations preserves executable resolution and launch settings.
-- [ ] Normal start / stop / restart work.
-- [ ] Force Stop removes the owned process tree.
-- [ ] Existing running PalServer adoption works.
-- [ ] Native MOD evidence remains functional.
-- [ ] Operational Health behavior remains unchanged.
-
-## v0.2.15.16 acceptance
-- [ ] Clean / Validate / All: 0 errors / 0 warnings.
-- [ ] v0.2.15.16 harness passes.
-- [ ] ServerService contains no hard-coded PalServer-Win64 process names.
-- [ ] Windows profile preserves existing process/executable conventions.
-- [ ] Start / stop / restart / force-stop / adoption work.
-- [ ] CPU/RAM and port detection remain correct.
-- [ ] Native MOD evidence and operational health remain unchanged.
-- [ ] README contains one authoritative current baseline/RC statement.
-- [ ] README has no duplicate Feature Matrix or appended release diary.
-- [ ] README does not claim Linux support is currently released.
-
-## v0.2.15.17 acceptance
-- [ ] Clean / Validate / All: 0 errors / 0 warnings.
-- [ ] v0.2.15.17 logic harness passes.
-- [ ] WORLD PULSE renders within the existing Dashboard without clipping.
-- [ ] Saved world day/time agrees with the in-game clock after a save.
-- [ ] World clock shows unavailable rather than estimating when evidence is absent.
-- [ ] PalServer session uptime is correct and resets on restart.
-- [ ] Player peak/joins/leaves/unique counters are session-scoped and do not double-count refreshes.
-- [ ] Save freshness and latest backup age are correct.
-- [ ] Join/leave/day-transition Activity events do not duplicate.
-- [ ] MOD runtime evidence and Overall Health remain unchanged.
+Promote v0.2.16.4 only after the build, logic harness, runtime regression, distribution tests, documentation review, and release assets are all accepted.

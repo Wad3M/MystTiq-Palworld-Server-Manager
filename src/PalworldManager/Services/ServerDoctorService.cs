@@ -2,8 +2,16 @@ using PalworldManager.Models;
 
 namespace PalworldManager.Services;
 
-public sealed class ServerDoctorService(AppSettings settings)
+public sealed class ServerDoctorService
 {
+    private readonly AppSettings settings;
+    private readonly IServerPathProfile paths;
+
+    public ServerDoctorService(AppSettings settings, IServerPathProfile? paths = null)
+    {
+        this.settings = settings;
+        this.paths = paths ?? ServerPathProfile.ForCurrentPlatform(settings);
+    }
     public async Task<IReadOnlyList<DoctorCheckRow>> RunAsync(ServerService server, CancellationToken token)
     {
         var rows = new List<DoctorCheckRow>();
@@ -12,11 +20,11 @@ public sealed class ServerDoctorService(AppSettings settings)
             Component = component, Status = ok ? "Healthy" : "Attention", Detail = detail, Recommendation = recommendation
         });
 
-        Add("Server files", File.Exists(settings.ServerExe),
-            File.Exists(settings.ServerExe) ? "PalServer.exe is present." : $"Missing: {settings.ServerExe}",
+        Add("Server files", File.Exists(paths.ServerExecutable),
+            File.Exists(paths.ServerExecutable) ? "PalServer.exe is present." : $"Missing: {paths.ServerExecutable}",
             "Use Server Setup to install or verify Palworld Dedicated Server.");
-        Add("SteamCMD", File.Exists(settings.SteamCmdPath),
-            File.Exists(settings.SteamCmdPath) ? "SteamCMD is available." : $"Missing: {settings.SteamCmdPath}",
+        Add("SteamCMD", File.Exists(paths.SteamCmdExecutable),
+            File.Exists(paths.SteamCmdExecutable) ? "SteamCMD is available." : $"Missing: {paths.SteamCmdExecutable}",
             "Install SteamCMD or correct the configured path.");
         Add("Configuration", File.Exists(settings.ConfigFile),
             File.Exists(settings.ConfigFile) ? "PalWorldSettings.ini is present." : "PalWorldSettings.ini was not found.",
@@ -27,8 +35,8 @@ public sealed class ServerDoctorService(AppSettings settings)
         Add("Process state", processHealthy, $"{health.State}: {health.Detail}",
             "Use Scan Processes / Force Cleanup if Palworld is hung or orphaned.");
 
-        var win64 = Path.Combine(settings.ServerRoot, "Pal", "Binaries", "Win64");
-        var ue4ssResolver = new Ue4ssRuntimeResolver(settings);
+        var win64 = paths.RuntimeBinaryRoot;
+        var ue4ssResolver = new Ue4ssRuntimeResolver(settings, paths);
         var ue4ssInfo = ue4ssResolver.Resolve();
         var ue4ss = File.Exists(Path.Combine(win64, "UE4SS.dll")) ||
                     File.Exists(Path.Combine(ue4ssInfo.Ue4ssRoot, "UE4SS.dll")) ||
@@ -42,7 +50,7 @@ public sealed class ServerDoctorService(AppSettings settings)
         var modService = new ModService(settings, ue4ssResolver);
         var installedMods = modService.Scan();
         var enabledMods = installedMods.Count(m => m.Enabled);
-        var compatibility = new ModCompatibilityService(settings).Scan(installedMods);
+        var compatibility = new ModCompatibilityService(settings, paths).Scan(installedMods);
         var modHealthy = compatibility.Conflicts == 0 && compatibility.MissingDependencies == 0;
         Add("Mods", modHealthy, $"{installedMods.Count} installed, {enabledMods} enabled, {compatibility.Conflicts} conflicts, {compatibility.MissingDependencies} missing dependencies.",
             "Open MOD Dashboard and run Verify All / Scan Compatibility.");

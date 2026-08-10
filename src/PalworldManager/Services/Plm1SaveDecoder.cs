@@ -9,7 +9,11 @@ public sealed class Plm1SaveDecoder
     public PalworldSaveHeader Inspect(string savePath)
     {
         if (!File.Exists(savePath)) throw new FileNotFoundException("Palworld save was not found.", savePath);
-        using var stream = File.OpenRead(savePath);
+        using var stream = new FileStream(
+            savePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
         var bytes = new byte[Math.Min(16, (int)stream.Length)];
         _ = stream.Read(bytes, 0, bytes.Length);
         var text = ToDisplayText(bytes);

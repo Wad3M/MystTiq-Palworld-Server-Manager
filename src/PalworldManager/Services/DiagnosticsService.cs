@@ -212,10 +212,24 @@ public sealed class DiagnosticsService
         {
             var rows = new List<DiagnosticResultRow>
             {
-                File.Exists(settings.ServerExe) ? Pass(Category, "PalServer executable", settings.ServerExe) : Fail(Category, "PalServer executable", $"Missing: {settings.ServerExe}", "Select the folder containing PalServer.exe."),
-                File.Exists(settings.SteamCmdPath) ? Pass(Category, "SteamCMD", settings.SteamCmdPath) : Warn(Category, "SteamCMD", $"Missing: {settings.SteamCmdPath}", "Configure steamcmd.exe to enable server updates.")
+                File.Exists(settings.ServerExe)
+                    ? Pass(Category, "PalServer executable", settings.ServerExe)
+                    : Fail(Category, "PalServer executable", $"Missing: {settings.ServerExe}",
+                        $"Select the folder containing {ServerPlatformProfile.ForCurrentPlatform().RootServerExecutableName}."),
+                File.Exists(settings.SteamCmdPath)
+                ? Pass(Category, "SteamCMD", settings.SteamCmdPath)
+                : Warn(Category, "SteamCMD", $"Missing: {settings.SteamCmdPath}",
+                    $"Configure {ServerPlatformProfile.ForCurrentPlatform().SteamCmdExecutableName} to enable server updates.")
             };
-            var running = Process.GetProcessesByName("PalServer-Win64-Test-Cmd").Length > 0 || Process.GetProcessesByName("PalServer").Length > 0;
+            var running = ServerPlatformProfile.ForCurrentPlatform().ProcessNames
+                .Any(name => Process.GetProcessesByName(name).Any(process =>
+                {
+                    using (process)
+                    {
+                        try { return !process.HasExited; }
+                        catch { return false; }
+                    }
+                }));
             rows.Add(Pass(Category, "Process state", running ? "PalServer is currently running." : "PalServer is intentionally stopped or not running."));
             try
             {

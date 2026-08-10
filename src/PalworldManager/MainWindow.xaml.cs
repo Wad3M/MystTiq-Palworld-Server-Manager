@@ -33,6 +33,7 @@ public partial class MainWindow : Window
     private readonly CrashAnalyzerService crashAnalyzer;
     private readonly ServerDoctorService serverDoctor;
     private readonly WorldTelemetryService worldTelemetry;
+    private readonly MystTiqReleaseService mystTiqReleases;
     private readonly Ue4ssReleaseService ue4ssReleases = new();
     private readonly RconClient rcon = new();
     private readonly PlayerHistoryService playerHistory;
@@ -148,6 +149,7 @@ public partial class MainWindow : Window
         crashAnalyzer = coreServices.CrashAnalyzer;
         serverDoctor = coreServices.ServerDoctor;
         worldTelemetry = coreServices.WorldTelemetry;
+        mystTiqReleases = coreServices.MystTiqReleases;
         runtimeState.StateChanged += HandleRuntimeStateChanged;
         foreach (var line in ue4ssRuntimeResolver.BuildDiagnosticLines())
             Log(line);
@@ -4468,25 +4470,65 @@ public partial class MainWindow : Window
     }
 
 
-    private void CheckForUpdates_Click(object sender, RoutedEventArgs e)
+    private async void CheckForUpdates_Click(object sender, RoutedEventArgs e)
     {
-        SetSetupOperationState("RUNNING", "Checking for updates", "Comparing installed components and local Workshop content.", 20);
+        SetSetupOperationState(
+            "RUNNING",
+            "Checking for updates",
+            "Checking MystTiq GitHub releases plus installed server components and local Workshop content.",
+            20);
+
         RefreshEnvironment();
         RefreshMods();
+
         var workshopUpdates = localModRows.Count(row => row.UpdateStatus == "UPDATE AVAILABLE");
         var workshopMissing = localModRows.Count(row => row.UpdateStatus == "NOT INSTALLED");
         var serverReady = File.Exists(settings.ServerExe);
         var steamReady = File.Exists(settings.SteamCmdPath);
         var ue4ss = environment.VerifyComponent("UE4SS Runtime");
-        SetSetupOperationState("COMPLETE", "Update check complete", $"Steam Workshop updates: {workshopUpdates}; available but not installed: {workshopMissing}.", 100, completed: true);
+
+        MystTiqReleaseCheckResult? managerRelease = null;
+        string managerSummary;
+        try
+        {
+            managerRelease = await mystTiqReleases.CheckLatestAsync();
+            managerSummary = managerRelease.Comparison switch
+            {
+                MystTiqReleaseComparison.UpdateAvailable =>
+                    $"UPDATE AVAILABLE — installed v{managerRelease.InstalledVersion}; latest v{managerRelease.LatestVersion}",
+                MystTiqReleaseComparison.UpToDate =>
+                    $"UP TO DATE — v{managerRelease.InstalledVersion}",
+                MystTiqReleaseComparison.NewerThanPublicRelease =>
+                    $"DEVELOPMENT BUILD — installed v{managerRelease.InstalledVersion}; latest public v{managerRelease.LatestVersion}",
+                _ => $"Installed v{managerRelease.InstalledVersion}; release status unavailable"
+            };
+        }
+        catch (Exception ex)
+        {
+            managerSummary = $"CHECK FAILED — installed {ApplicationVersion.DisplayVersion}; {ex.Message}";
+            Log("[UPDATE] MystTiq GitHub release check failed: " + ex.Message);
+        }
+
+        var hasUpdates = workshopUpdates > 0 || managerRelease?.UpdateAvailable == true;
+        SetSetupOperationState(
+            "COMPLETE",
+            "Update check complete",
+            $"MystTiq: {managerSummary}; Workshop updates: {workshopUpdates}; available but not installed: {workshopMissing}.",
+            100,
+            completed: true);
+
         AppDialog.Show(
+            $"MystTiq Server Manager: {managerSummary}\n" +
+            $"Release source: github.com/Wad3M/MystTiq-Palworld-Server-Manager/releases\n\n" +
             $"SteamCMD: {(steamReady ? "Installed" : "Missing")}\n" +
             $"Palworld Dedicated Server: {(serverReady ? "Installed" : "Missing")}\n" +
             $"UE4SS: {(ue4ss.Success ? "Ready" : "Needs attention")}\n" +
             $"Workshop mod updates: {workshopUpdates}\n" +
             $"Workshop mods not installed: {workshopMissing}\n\n" +
-            "Steam Workshop comparison uses the newest local Steam copy and the server import timestamp.",
-            "Check for Updates", MessageBoxButton.OK, workshopUpdates > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+            "MystTiq checks the latest published full GitHub release. Steam Workshop comparison uses the newest local Steam copy and the server import timestamp.",
+            "Check for Updates",
+            MessageBoxButton.OK,
+            hasUpdates ? MessageBoxImage.Warning : MessageBoxImage.Information);
     }
 
     private async void RefreshUpdateCenter_Click(object sender, RoutedEventArgs e)
@@ -4554,7 +4596,16 @@ public partial class MainWindow : Window
         rows.Add(new UpdateCenterRow { Group = "Save & Runtime Dependencies", Component = "pip", Installed = pipVersion ?? "Not installed", Available = "Check PyPI", Status = pipVersion is null ? "NOT INSTALLED" : "NOT CHECKED", Source = "PyPI", Recommendation = pipVersion is null ? "Repair Python to restore pip." : "Managed with the selected Python runtime." });
         AddFileBackedUpdateRow(rows, "Save & Runtime Dependencies", "Palworld Save Tools", Path.Combine(settings.ServerRoot, "Tools", "palworld-save-tools", "convert.py"), "cheahjs/palworld-save-tools");
         AddFileBackedUpdateRow(rows, "Save & Runtime Dependencies", "PlM/Oodle Decoder", Path.Combine(settings.ServerRoot, "Tools", "palworld-plm-tools", ".myst-install.json"), "deafdudecomputers/PalworldSaveTools + pyooz");
-        rows.Add(new UpdateCenterRow { Group = "Core Server", Component = "MystTiq Server Manager", Installed = typeof(MainWindow).Assembly.GetName().Version?.ToString() ?? "Unknown", Available = "Check release source", Status = "NOT CHECKED", Source = "MystTiq", Recommendation = "Use the current approved MystTiq release package." });
+        rows.Add(new UpdateCenterRow
+        {
+            Group = "Core Server",
+            Component = "MystTiq Server Manager",
+            Installed = ApplicationVersion.DisplayVersion,
+            Available = "Check GitHub",
+            Status = "NOT CHECKED",
+            Source = "Wad3M/MystTiq-Palworld-Server-Manager",
+            Recommendation = "Check the public GitHub Releases catalog for the latest published MystTiq version."
+        });
         rows.Add(new UpdateCenterRow { Group = "Save & Runtime Dependencies", Component = ".NET Runtime", Installed = Environment.Version.ToString(), Available = "Check Microsoft", Status = "NOT CHECKED", Source = "Microsoft", Recommendation = "The manager is currently running on this .NET runtime." });
         rows.Add(new UpdateCenterRow { Group = "Save & Runtime Dependencies", Component = "Visual C++ Runtime", Installed = "Detected by Windows", Available = "Check Microsoft", Status = "NOT CHECKED", Source = "Microsoft", Recommendation = "Required by PalServer and native runtime components." });
         var cppTools = environment.VerifyComponent("Microsoft C++ Build Tools");
@@ -4707,9 +4758,26 @@ public partial class MainWindow : Window
         await CheckDotNetRuntimeAsync(rows.First(r => r.Component == ".NET Runtime"), client);
 
         var manager = rows.First(r => r.Component == "MystTiq Server Manager");
-        manager.Status = "RELEASE SOURCE NOT CONFIGURED";
-        manager.Available = "No release catalog";
-        manager.Recommendation = "Configure a MystTiq release catalog before automatic manager updates can be checked.";
+        try
+        {
+            var release = await mystTiqReleases.CheckLatestAsync();
+            manager.Installed = "v" + release.InstalledVersion;
+            manager.Available = "v" + release.LatestVersion;
+            manager.Status = release.Comparison switch
+            {
+                MystTiqReleaseComparison.UpdateAvailable => "UPDATE AVAILABLE",
+                MystTiqReleaseComparison.UpToDate => "UP TO DATE",
+                MystTiqReleaseComparison.NewerThanPublicRelease => "DEVELOPMENT BUILD",
+                _ => "UNABLE TO CHECK"
+            };
+            manager.Recommendation = release.Detail + " Source: " + release.ReleaseUrl;
+        }
+        catch (Exception ex)
+        {
+            manager.Status = "CHECK FAILED";
+            manager.Available = "Check failed";
+            manager.Recommendation = "GitHub release comparison failed: " + ex.Message;
+        }
     }
 
     private static async Task CheckPythonRuntimeAsync(UpdateCenterRow row, HttpClient client)
@@ -4847,9 +4915,12 @@ public partial class MainWindow : Window
                     row.Recommendation = "The Visual C++ runtime was detected by Windows. Microsoft does not expose a reliable per-machine latest-version comparison here.";
                     break;
                 case "MystTiq Server Manager":
-                    row.Status = "RELEASE SOURCE NOT CONFIGURED";
-                    row.Available = "No release catalog";
-                    row.Recommendation = "Configure a MystTiq release catalog before automatic manager updates can be checked.";
+                    // MystTiq has a configured GitHub release source. If the online
+                    // comparison does not complete, keep the row retryable.
+                    row.Status = "UNABLE TO CHECK";
+                    row.Available = "Check unavailable";
+                    row.Recommendation =
+                        "MystTiq could not complete the GitHub release comparison. Retry the update check or open the official Releases page.";
                     break;
                 default:
                     row.Status = "UNABLE TO CHECK";
@@ -4866,7 +4937,7 @@ public partial class MainWindow : Window
         "UPDATE AVAILABLE" => "UPDATE",
         "NOT INSTALLED" or "MISSING" => "INSTALL",
         "CHECK FAILED" or "UNABLE TO CHECK" => "RETRY",
-        "MANUAL CHECK REQUIRED" or "RELEASE SOURCE NOT CONFIGURED" => "SOURCE",
+        "MANUAL CHECK REQUIRED" or "DEVELOPMENT BUILD" => "SOURCE",
         "UP TO DATE" or "CURRENT" or "READY" or "INSTALLED / VERIFIED" => "VERIFY",
         _ => "CHECK"
     };
@@ -4899,15 +4970,28 @@ public partial class MainWindow : Window
         var unavailable = rows.Count(r => r.Status.Equals("UNABLE TO CHECK", StringComparison.OrdinalIgnoreCase));
         var manual = rows.Count(r => r.Status.Equals("MANUAL CHECK REQUIRED", StringComparison.OrdinalIgnoreCase));
         var attention = rows.Count(r => r.Status is "NOT INSTALLED" or "ATTENTION" or "MISSING");
-        var current = rows.Count(r => r.Status is "UP TO DATE" or "CURRENT" or "READY" or "INSTALLED / VERIFIED");
-        UpdateCenterSummaryText.Text = $"{rows.Count} checked · {current} up to date/verified · {updates} update(s) available · {attention} not installed/attention · {failures} failed · {manual + unavailable} manual/unavailable. Last checked {checkedAt:g}.";
-        UpdateCenterCheckedBadge.Text = updates > 0 ? $"{updates} UPDATE{(updates == 1 ? "" : "S")}" : failures > 0 ? "CHECK FAILED" : attention > 0 ? "NEEDS ATTENTION" : manual + unavailable > 0 ? "CHECK COMPLETE — REVIEW" : "UP TO DATE ✓";
+        var development = rows.Count(r => r.Status == "DEVELOPMENT BUILD");
+        var current = rows.Count(r => r.Status is "UP TO DATE" or "CURRENT" or "READY" or "INSTALLED / VERIFIED" or "DEVELOPMENT BUILD");
+        UpdateCenterSummaryText.Text = $"{rows.Count} checked · {current} current/verified · {updates} update(s) available · {attention} not installed/attention · {failures} failed · {manual + unavailable} manual/unavailable. Last checked {checkedAt:g}.";
+        UpdateCenterCheckedBadge.Text = updates > 0
+            ? $"{updates} UPDATE{(updates == 1 ? "" : "S")}"
+            : failures > 0 ? "CHECK FAILED"
+            : attention > 0 ? "NEEDS ATTENTION"
+            : manual + unavailable > 0 ? "CHECK COMPLETE — REVIEW"
+            : development > 0 ? "DEVELOPMENT BUILD"
+            : "UP TO DATE ✓";
         UpdateCenterCheckedBadge.Foreground = new SolidColorBrush(updates > 0
             ? Color.FromRgb(240, 180, 77)
-            : failures > 0 ? Color.FromRgb(224, 106, 106) : attention > 0 || manual + unavailable > 0 ? Color.FromRgb(230, 197, 107) : Color.FromRgb(84, 217, 140));
+            : failures > 0 ? Color.FromRgb(224, 106, 106)
+            : attention > 0 || manual + unavailable > 0 ? Color.FromRgb(230, 197, 107)
+            : development > 0 ? Color.FromRgb(127, 200, 255)
+            : Color.FromRgb(84, 217, 140));
         UpdateCenterSummaryBorder.BorderBrush = new SolidColorBrush(updates > 0
             ? Color.FromRgb(179, 122, 24)
-            : failures > 0 ? Color.FromRgb(181, 59, 59) : attention > 0 || manual + unavailable > 0 ? Color.FromRgb(106, 84, 36) : Color.FromRgb(31, 139, 76));
+            : failures > 0 ? Color.FromRgb(181, 59, 59)
+            : attention > 0 || manual + unavailable > 0 ? Color.FromRgb(106, 84, 36)
+            : development > 0 ? Color.FromRgb(53, 101, 141)
+            : Color.FromRgb(31, 139, 76));
     }
 
 
@@ -4939,6 +5023,7 @@ public partial class MainWindow : Window
     {
         if ((sender as FrameworkElement)?.DataContext is not UpdateCenterRow row) return;
         if (row.Action is "CHECK" or "RETRY") { RefreshUpdateCenter_Click(sender, e); return; }
+        if (row.Component == "MystTiq Server Manager" && row.Action == "UPDATE") { OpenUpdateSource(row); return; }
         if (row.Component == "Palworld Dedicated Server" && row.Action == "UPDATE") { UpdateServerFromCenter_Click(sender, e); return; }
         if (row.Component == "UE4SS Runtime" && row.Action == "UPDATE") { NavigateToPage(MainPageIndex.ModRuntime); RefreshModRuntime(); return; }
         if (row.Group == "Installed MODs" && row.Action == "UPDATE") { NavigateToPage(MainPageIndex.ModLibrary); RefreshMods(); return; }
@@ -5008,7 +5093,7 @@ public partial class MainWindow : Window
             "PlM/Oodle Decoder" => "https://github.com/deafdudecomputers/PalworldSaveTools",
             ".NET Runtime" => "https://dotnet.microsoft.com/download/dotnet",
             "Visual C++ Runtime" => "https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist",
-            "MystTiq Server Manager" => null,
+            "MystTiq Server Manager" => MystTiqReleaseService.ReleasesPage,
             _ => null
         };
         if (string.IsNullOrWhiteSpace(url))
@@ -5025,9 +5110,11 @@ public partial class MainWindow : Window
         var rows = (UpdateCenterGrid.ItemsSource as ICollectionView)?.SourceCollection?.Cast<UpdateCenterRow>().ToList() ?? [];
         var available = rows.Where(r => r.Status.Equals("UPDATE AVAILABLE", StringComparison.OrdinalIgnoreCase)).ToList();
         if (available.Count == 0) { AppDialog.Show("No confirmed updates are currently available.", "Update Center", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (available.Any(r => r.Component == "MystTiq Server Manager"))
+            OpenUpdateSource(available.First(r => r.Component == "MystTiq Server Manager"));
         if (available.Any(r => r.Component == "Palworld Dedicated Server")) UpdateServerFromCenter_Click(sender, e);
         if (available.Any(r => r.Component == "UE4SS Runtime" || r.Group == "Installed MODs"))
-            AppDialog.Show("Server updates have been started. UE4SS and MOD updates require selecting the desired release/package, so MystTiq will open their management pages rather than guessing.", "Update All Available", MessageBoxButton.OK, MessageBoxImage.Information);
+            AppDialog.Show("MystTiq application updates open the official GitHub Releases page. Server updates have been started where applicable. UE4SS and MOD updates require selecting the desired release/package, so MystTiq will open their management pages rather than guessing.", "Update All Available", MessageBoxButton.OK, MessageBoxImage.Information);
         await Task.CompletedTask;
     }
 

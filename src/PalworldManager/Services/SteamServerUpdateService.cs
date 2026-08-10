@@ -12,12 +12,18 @@ public sealed class SteamServerUpdateService
     private readonly AppSettings settings;
     private readonly Func<bool> isServerRunning;
     private readonly Action<string>? output;
+    private readonly IServerDistributionPlatformService distribution;
 
-    public SteamServerUpdateService(AppSettings settings, Func<bool> isServerRunning, Action<string>? output)
+    public SteamServerUpdateService(
+        AppSettings settings,
+        Func<bool> isServerRunning,
+        Action<string>? output,
+        IServerDistributionPlatformService? distribution = null)
     {
         this.settings = settings;
         this.isServerRunning = isServerRunning;
         this.output = output;
+        this.distribution = distribution ?? ServerDistributionPlatformService.ForCurrentPlatform();
     }
 
     public async Task<ServerUpdateResult> UpdateAsync(
@@ -34,7 +40,11 @@ public sealed class SteamServerUpdateService
             return Error("The Palworld server folder is not configured.");
 
         Directory.CreateDirectory(settings.ServerRoot);
-        var startInfo = BuildStartInfo();
+        var steamCmdDirectory = Path.GetDirectoryName(settings.SteamCmdPath) ?? settings.ServerRoot;
+        var startInfo = distribution.CreateSteamCmdStartInfo(
+            settings.SteamCmdPath,
+            steamCmdDirectory,
+            distribution.BuildPalworldServerInstallArguments(settings.ServerRoot, validate: true));
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         var outputLines = new ConcurrentQueue<string>();
         var sawUpdating = false;
@@ -113,30 +123,6 @@ public sealed class SteamServerUpdateService
             sawUpdating
                 ? "Server update and validation completed successfully."
                 : "Server update check and validation completed successfully.");
-    }
-
-    private ProcessStartInfo BuildStartInfo()
-    {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = settings.SteamCmdPath,
-            WorkingDirectory = Path.GetDirectoryName(settings.SteamCmdPath) ?? settings.ServerRoot,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WindowStyle = ProcessWindowStyle.Hidden,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-
-        startInfo.ArgumentList.Add("+force_install_dir");
-        startInfo.ArgumentList.Add(settings.ServerRoot);
-        startInfo.ArgumentList.Add("+login");
-        startInfo.ArgumentList.Add("anonymous");
-        startInfo.ArgumentList.Add("+app_update");
-        startInfo.ArgumentList.Add("2394010");
-        startInfo.ArgumentList.Add("validate");
-        startInfo.ArgumentList.Add("+quit");
-        return startInfo;
     }
 
     private static ServerUpdateResult Error(string message) =>

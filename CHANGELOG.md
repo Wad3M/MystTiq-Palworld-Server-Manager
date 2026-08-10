@@ -1,5 +1,71 @@
 # Changelog
 
+## v0.2.16.4 — SteamCMD Distribution Abstraction & Final Windows Platform Audit
+
+- Added `IServerDistributionPlatformService` as the platform boundary for SteamCMD package source, extraction, command arguments, process startup policy, and default Palworld install recovery.
+- Added `WindowsServerDistributionPlatformService`, preserving the validated Windows SteamCMD behavior and Palworld Dedicated Server App ID 2394010.
+- Added `ServerDistributionPlatformService.ForCurrentPlatform()` so higher-level installer/update services no longer construct the Windows implementation directly.
+- Migrated `InstallerService` SteamCMD install/self-update and Palworld server install/retry/recovery logic to the shared distribution service.
+- Migrated `SteamServerUpdateService` command construction and SteamCMD process startup to the shared distribution service.
+- Application composition now creates one shared distribution service for server update and installer workflows.
+- Centralized remaining core-service SteamCMD executable-name usage through `ServerPlatformProfile`.
+- `ApplicationPathService` workspace/default SteamCMD discovery now uses the platform executable name instead of embedding `steamcmd.exe`.
+- Server diagnostics now consume platform process names instead of hard-coded PalServer process names.
+- Completed a final Windows platform audit and documented remaining WPF/UI-specific assumptions for the v0.3 Linux foundation.
+- No intended changes to current Windows install/update semantics, server lifecycle, MOD evidence, Operational Health, World Inspector safety, or WORLD PULSE.
+- Completed a documentation closeout after successful v0.2.16.4 build/runtime validation: removed historical implementation notes from the repository root, archived them under `docs/history/`, moved the current platform audit under `docs/architecture/`, moved publication-process material under `docs/release/`, and rebuilt README/RELEASE_CHECKLIST as current-state documents.
+- Updated the public `docs/index.html` baseline/RC wording and Linux-support statement.
+
+
+## v0.2.16.3 FIX2 — Legacy MystTiq Release-Source State Removal
+
+- Removed the obsolete MystTiq release-source fallback from `FinalizeUpdateCheckResults()`.
+- Removed the obsolete status from the generic Update Center action mapper.
+- GitHub comparison failures now use the retryable `UNABLE TO CHECK` state.
+- Strengthened regression coverage so the legacy state cannot silently return.
+- No unrelated runtime behavior changed.
+
+
+## v0.2.16.3 FIX1 — Update Center Regression Harness False-Positive Hotfix
+
+- Corrected the v0.2.16.3 logic harness so the obsolete manager release-source placeholder check is scoped specifically to the `MystTiq Server Manager` component branch.
+- Generic Update Center fallback compatibility text no longer causes a false failure.
+- No application source, UI, update behavior, or runtime logic changed.
+
+
+## v0.2.16.3 — Application Update Awareness & Server Setup Polish
+
+- Added `MystTiqReleaseService` backed by the public GitHub `releases/latest` endpoint for `Wad3M/MystTiq-Palworld-Server-Manager`.
+- Added numeric MystTiq version parsing/comparison with explicit `UPDATE AVAILABLE`, `UP TO DATE`, and `DEVELOPMENT BUILD` states.
+- Server Setup `CHECK FOR UPDATES` now includes the installed MystTiq version and latest public GitHub release alongside SteamCMD, Palworld, UE4SS, and Workshop information.
+- Update Center now performs the same MystTiq GitHub release check and opens the official Releases page when a newer manager release is available.
+- GitHub/network failures are fail-soft and do not prevent the remaining component update checks.
+- Reduced the Server Environment status badge column, padding, and font size; READY/MISSING/DISABLED/OPTIONAL badges now share compact centered geometry.
+- Preserved existing button/theme/tooltip semantics, server lifecycle logic, live-save safety, MOD runtime evidence, Operational Health, and WORLD PULSE behavior.
+
+
+## v0.2.16.2 — Live Save Read Safety & UI Button Standardization
+
+- Added `SafeWorldSaveSnapshotService` to create stable temporary snapshots of live Palworld save files using `FileShare.ReadWrite | FileShare.Delete`.
+- Snapshot creation verifies source length and last-write stability and retries around PalServer save/write windows.
+- World Inspector header inspection now reads the stable snapshot instead of opening active `Level.sav` directly.
+- Recoverable live-save contention is reported in the Inspector status area without a blocking modal error.
+- Hardened `Plm1SaveDecoder` header reads with shared file access for other read-only callers.
+- Reduced the shared MystTiq button footprint by approximately 10% while preserving semantic colors, common template behavior, tooltip standards, borders, rounded corners, hover/pressed behavior, and typography hierarchy.
+- Normalized Workspace, MOD, Player, Config, icon, and DataGrid button variants to the shared density standard.
+- Converted 42 button-only horizontal action clusters to equal-cell `UniformGrid` layouts for consistent grid alignment.
+- Removed common per-button size overrides where the semantic/shared style should be authoritative.
+- No intended changes to server lifecycle, MOD runtime evidence, Operational Health, World Pulse semantics, save contents, or destructive world-repair behavior.
+
+
+## v0.2.16.1 — Runtime Path & Deployment Abstraction
+
+- Introduced `IServerPathProfile` and `WindowsServerPathProfile`.
+- Centralized deployment/runtime path construction and shared it through the composition root.
+- Migrated core UE4SS/MOD/environment/installer/doctor services from direct Win64 path construction.
+- Preserved validated Windows behavior; Linux implementation remains deferred.
+
+
 ## v0.2.15.17 — Live World Telemetry & Dashboard Pulse
 
 - Added `WorldTelemetryService` with server-session-scoped player metrics: current online, peak online, joins, leaves, unique players, and last player transition.

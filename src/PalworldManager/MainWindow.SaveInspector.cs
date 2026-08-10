@@ -266,6 +266,14 @@ public partial class MainWindow
     {
         SaveInspectorStatusText.Text = ex.Message;
         SaveInspectorStatusText.Foreground = Brushes.OrangeRed;
+
+        if (ex is IOException &&
+            (ex.Message.Contains("currently being written", StringComparison.OrdinalIgnoreCase) ||
+             ex.Message.Contains("being used by another process", StringComparison.OrdinalIgnoreCase)))
+        {
+            return; // live-save contention is recoverable; keep it in the Inspector status surface
+        }
+
         AppDialog.Show(ex.Message, "World Inspector", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 }

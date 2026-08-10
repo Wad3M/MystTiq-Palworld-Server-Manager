@@ -124,7 +124,8 @@ public sealed class ServerService : IDisposable
         AppSettings settings,
         IServerSessionInspector? sessionInspector = null,
         IServerPlatformOperations? platformOperations = null,
-        ServerPlatformProfile? platformProfile = null)
+        ServerPlatformProfile? platformProfile = null,
+        IServerDistributionPlatformService? distributionPlatform = null)
     {
         this.settings = settings;
         this.platformProfile = platformProfile ?? ServerPlatformProfile.Windows;
@@ -140,7 +141,8 @@ public sealed class ServerService : IDisposable
         updateService = new SteamServerUpdateService(
             settings,
             IsRunning,
-            message => OutputReceived?.Invoke(message));
+            message => OutputReceived?.Invoke(message),
+            distributionPlatform ?? ServerDistributionPlatformService.ForCurrentPlatform(this.platformProfile));
     }
 
     public bool HasActiveSession => Volatile.Read(ref activeSessionId) > 0;
