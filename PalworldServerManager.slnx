@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="src/PalworldManager/PalworldManager.csproj" />
+  <Project Path="src/MystTiq.Core/MystTiq.Core.csproj" />
+  <Project Path="src/MystTiq.HeadlessHost/MystTiq.HeadlessHost.csproj" />
 </Solution>

@@ -20,7 +20,7 @@ $version = & (Join-Path $PSScriptRoot 'Get-ProjectVersion.ps1')
 Write-Host "==> Validating MystTiq v$version release candidate..." -ForegroundColor Cyan
 if ($version -notmatch '^\d+\.\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') { Add-Issue Error 'Version format' "VersionPrefix is not a supported four-part version: $version" }
 
-@('Directory.Build.props','Build.ps1','README.md','CONTRIBUTING.md','CHANGELOG.md','LICENSE','RELEASE_CHECKLIST.md','PalworldServerManager.slnx','scripts\Build.ps1','scripts\Build-Release.ps1','scripts\Build-Installer.ps1','scripts\Build-Checksums.ps1','scripts\Validate-Release.ps1','scripts\Package-Portable.ps1','installer\MystTiqPalworldServer.iss','src\PalworldManager\PalworldManager.csproj','src\PalworldManager\MainWindow.xaml') | ForEach-Object { Test-RequiredPath $_ File }
+@('Directory.Build.props','Build.ps1','README.md','CONTRIBUTING.md','CHANGELOG.md','LICENSE','RELEASE_CHECKLIST.md','PalworldServerManager.slnx','scripts\Build.ps1','scripts\Build-Release.ps1','scripts\Build-Installer.ps1','scripts\Build-Checksums.ps1','scripts\Validate-Release.ps1','scripts\Package-Portable.ps1','installer\MystTiqPalworldServer.iss','src\PalworldManager\PalworldManager.csproj','src\PalworldManager\MainWindow.xaml','src\MystTiq.Core\MystTiq.Core.csproj','src\MystTiq.HeadlessHost\MystTiq.HeadlessHost.csproj','scripts\Build-LinuxHeadless.ps1','docs\linux\TESTED_ENVIRONMENT.md','docs\roadmap\WINDOWS_BACKPORT_REGISTRY.md') | ForEach-Object { Test-RequiredPath $_ File }
 Test-RequiredPath 'release-notes' Directory
 
 $blockedDirectoryNames = @('.git','.vs','bin','obj','artifacts','publish','Backups','Logs')

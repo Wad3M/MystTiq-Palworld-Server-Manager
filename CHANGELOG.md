@@ -1,5 +1,73 @@
 # Changelog
 
+## v0.3.0.2 FIX1 — systemd Unit Raw-String Compile Hotfix
+
+- Replaced the malformed raw-string `BuildUnit()` implementation with compile-safe string construction.
+- Preserved the exact v0.3.0.2 systemd unit policy and lifecycle behavior.
+- Strengthened the v0.3.0.2 harness to detect raw-string regression and verify generated unit sections.
+- No Windows WPF behavior changed.
+
+
+## v0.3.0.2 — Linux Service & Automatic Recovery Foundation
+
+- Added systemd service models and `LinuxSystemdServiceManager`.
+- Added `service-status`, `service-install`, `service-uninstall`, and internal `service-run` headless commands.
+- Service installation copies the current self-contained headless host to `/opt/mysttiq/bin/mysttiq-server`, writes `/etc/systemd/system/mysttiq-palworld.service`, reloads systemd, and enables boot startup.
+- Service start remains explicit unless `--start-now` is supplied.
+- Added a long-running `LinuxHeadlessSupervisor` that starts/adopts PalServer, monitors lifecycle state, and performs bounded automatic crash recovery with configurable backoff/restart windows.
+- Added SIGTERM/SIGINT handling so systemd shutdown asks MystTiq to perform the existing graceful PalServer shutdown policy.
+- The service runs as the selected non-root service account, with `NoNewPrivileges=true`, `Restart=on-failure`, restart delay, and systemd start-rate limits.
+- systemd journal output now captures MystTiq service/supervisor logs while PalServer console output remains under `/opt/mysttiq/runtime`.
+- Promoted v0.3.0.1 FIX1 as the official Linux/headless baseline.
+- Added v0.4 backport candidates for Windows Service supervision, automatic recovery throttling, background journal/event logging, and UI-independent startup recovery.
+
+
+## v0.3.0.1 FIX1 — Linux Lifecycle Compile Contract Hotfix
+
+- Added `FindProcessesByName(...)` to the shared `IServerSessionInspector` contract; the Linux implementation already provided the method and the lifecycle layer consumes it.
+- Marked `LinuxServerLifecycleService` with `[SupportedOSPlatform("linux")]` so .NET platform analysis recognizes intentional Unix-only API use such as `File.SetUnixFileMode`.
+- Strengthened the v0.3.0.1 harness to validate the shared process-discovery contract and Linux platform annotation.
+- No lifecycle semantics or Windows behavior changed.
+
+
+## v0.3.0.1 — Linux Server Lifecycle Control
+
+- Added shared lifecycle phase, operation-result, persisted-state, and stable headless exit-code models.
+- Added `LinuxServerLifecycleService` with `start`, `stop`, `restart`, and lifecycle-aware `status`.
+- Linux start blocks duplicate PalServer instances, launches the server detached from the SSH terminal, observes the native `PalServer-Linux-Shipping` process, and verifies UDP 8211 before reporting ready.
+- Detached PalServer stdout/stderr is written to `/opt/mysttiq/runtime/palserver-console.log`.
+- Added persisted lifecycle state under `/opt/mysttiq/runtime/lifecycle-state.json` for transition/crash evidence across short-lived CLI invocations.
+- Linux stop sends SIGTERM first and escalates to SIGKILL only after the graceful timeout; force escalation is surfaced in the operation result.
+- Restart safely stops an active server before starting it; restart from stopped/crashed state proceeds as a start.
+- Added Ctrl+C cancellation handling and configurable startup/stop timeouts to the headless CLI.
+- Corrected Linux kernel reporting to read `/proc/sys/kernel/osrelease`; the validated host previously exposed distro text through `RuntimeInformation.OSDescription`.
+- Preserved `probe` and informational `install-plan`, including the validated SteamCMD `+@sSteamCmdForcePlatformType linux` requirement.
+- Windows WPF behavior remains unchanged; lifecycle/service backport opportunities are recorded for v0.4.
+
+## v0.3.0.0 FIX1 — Regression Harness Reserved Variable Hotfix
+
+- Corrected the v0.3.0.0 PowerShell harness to avoid the read-only built-in `$Host` variable by using `$headlessHostSource`.
+- Runtime validation then passed 55/55 and the self-contained Linux host successfully detected Ubuntu, SteamCMD, `PalServer-Linux-Shipping`, and UDP 8211.
+
+
+## v0.3.0.0 — Headless Core Foundation & Linux Platform Base
+
+- Added `MystTiq.Core` as a new `net10.0` cross-platform project with no WPF dependency.
+- Added `MystTiq.HeadlessHost` as a no-GUI command-line host for Linux/headless development.
+- Added platform-neutral runtime configuration separate from the Windows WPF `AppSettings` model.
+- Added Linux distribution detection through `/etc/os-release` plus kernel/architecture reporting.
+- Added Linux server path profile using `/opt/mysttiq/palserver`, `/opt/mysttiq/steamcmd/steamcmd.sh`, LinuxServer config paths, logs, saves, and backup roots.
+- Added Linux process/executable profile for `PalServer.sh` and `Pal/Binaries/Linux/PalServer-Linux-Shipping`.
+- Added `LinuxServerDistributionPlatformService` with Valve Linux SteamCMD package handling and Palworld App `2394010`.
+- Baked the validated `+@sSteamCmdForcePlatformType linux` SteamCMD override into Linux install/update argument generation after the reference environment returned `Missing configuration` without it.
+- Added read-only Linux procfs session inspection for process trees, mapped files, and guarded TCP/UDP port observation.
+- Added non-destructive headless commands: `probe`, `status`, and `install-plan`; v0.3.0.0 does not yet grant the headless host start/stop/install/update authority.
+- Added a dedicated Linux self-contained publish workflow through `Build.ps1 LinuxHeadless`.
+- Added Linux tested-environment documentation for Ubuntu Server 24.04.4 LTS x86_64, kernel `6.8.0-137-generic`, Valve Linux SteamCMD, and native PalServer validation.
+- Added the formal SHARED / LINUX / WINDOWS-BACKPORT registry; Windows headless/service/minimized-resource improvements are reserved for v0.4 unless shared-core correctness requires earlier work.
+- Preserved v0.2.16.4 as the frozen validated Windows baseline; no intentional WPF behavior changes are included in this phase.
+
+
 ## v0.2.16.4 — SteamCMD Distribution Abstraction & Final Windows Platform Audit
 
 - Added `IServerDistributionPlatformService` as the platform boundary for SteamCMD package source, extraction, command arguments, process startup policy, and default Palworld install recovery.

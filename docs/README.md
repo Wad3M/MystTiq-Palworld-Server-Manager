@@ -7,6 +7,8 @@ This directory contains current architecture/reference documentation and archive
 - [`architecture/`](architecture/) — current architecture and platform-completion documents
 - [`release/`](release/) — publication/release-process documents
 - [`history/`](history/) — historical version-specific architecture and feature notes
+- [`linux/`](linux/) — Linux test environment and headless implementation documentation
+- [`roadmap/`](roadmap/) — cross-platform/backport planning registries
 - [`index.html`](index.html) — public GitHub Pages landing page
 - [`images/`](images/) — README/public documentation screenshots
 - [`assets/`](assets/) — GitHub Pages assets

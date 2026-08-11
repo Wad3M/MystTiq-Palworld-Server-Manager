@@ -1,6 +1,6 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
-    [ValidateSet('Build','Package','Installer','InstallerTools','Checksums','Release','All','Clean','Version','Validate')]
+    [ValidateSet('Build','Package','Installer','InstallerTools','Checksums','Release','All','Clean','Version','Validate','LinuxHeadless')]
     [string]$Action = 'All',
     [ValidateSet('Debug','Release')]
     [string]$Configuration = 'Release',
@@ -34,6 +34,7 @@ switch ($Action) {
         Write-Host 'Clean complete.' -ForegroundColor Green
     }
     'Build' { Invoke-Script 'Build.ps1' @{ Configuration = $Configuration } }
+    'LinuxHeadless' { Invoke-Script 'Build-LinuxHeadless.ps1' @{ Configuration = $Configuration } }
     'Package' {
         Invoke-Script 'Build.ps1' @{ Configuration = $Configuration }
         Invoke-Script 'Package-Portable.ps1'

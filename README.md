@@ -31,10 +31,11 @@ MystTiq Palworld Server Manager is a free and open-source Windows desktop applic
 
 It combines server lifecycle controls, configuration, backups, world inspection, SteamCMD management, Steam Workshop and UE4SS MOD workflows, diagnostics, health reporting, and live world telemetry in one interface.
 
-> **Current development candidate:** v0.2.16.4  
-> **Official validated baseline:** v0.2.16.3 FIX2
+> **Current development candidate:** v0.3.0.2  
+> **Official validated Windows baseline:** v0.2.16.4
+> **Official Linux/headless baseline:** v0.3.0.1 FIX1
 
-Windows 10/11 x64 is the supported application platform today. The v0.2.16 series completes the major backend platform-abstraction seams required before Linux work begins. **Linux support is not released in v0.2.16.x.**
+Windows 10/11 x64 remains the supported GUI application platform. v0.3 begins the Linux/headless implementation on top of the frozen v0.2.16.4 Windows baseline. **Linux support remains experimental throughout the v0.3 implementation/parity line and is not yet a production release.**
 
 ## Highlights
 
@@ -86,6 +87,98 @@ MystTiq separates **deployment/configuration health** from **runtime proof**.
 - **Failed / Error** — a confirmed actionable failure that can reduce MOD Platform and Overall Health.
 
 Runtime evidence can include supported UE4SS log signals and native DLL/module evidence. Normal modded starts use pre-start reconciliation and a startup health gate. **Start Without MODs** remains an intentional recovery/isolation path.
+
+
+
+## Linux systemd Service & Automatic Recovery
+
+v0.3.0.2 moves the Linux headless host from an SSH-invoked tool toward a real background service.
+
+The new service commands are:
+
+```bash
+./mysttiq-server service-status
+sudo ./mysttiq-server service-install
+sudo ./mysttiq-server service-install --start-now
+sudo ./mysttiq-server service-uninstall
+```
+
+`service-install` copies the current self-contained host to `/opt/mysttiq/bin/mysttiq-server`, creates `mysttiq-palworld.service`, reloads systemd, and enables boot startup. Starting the service remains explicit unless `--start-now` is supplied.
+
+The installed service runs the long-lived `service-run` supervisor. MystTiq—not systemd directly—continues to own PalServer lifecycle policy. The supervisor:
+
+- starts or adopts the native Linux PalServer
+- polls observed lifecycle/process/port state
+- detects unexpected PalServer disappearance
+- attempts bounded automatic recovery with backoff
+- exits on repeated recovery failure so systemd's own `Restart=on-failure` policy can take over
+- catches SIGTERM/SIGINT and requests graceful PalServer shutdown before the service exits
+- logs service-level output through the systemd journal while preserving PalServer's detached console log
+
+The systemd unit uses `Restart=on-failure`, a 10-second restart delay, bounded systemd start attempts, `NoNewPrivileges=true`, and a dedicated non-root service user selected at installation time.
+
+## Linux Headless Lifecycle Control
+
+v0.3.0.1 grants the experimental Linux headless host its first controlled lifecycle authority.
+
+```bash
+./mysttiq-server status
+./mysttiq-server start
+./mysttiq-server stop
+./mysttiq-server restart
+```
+
+The lifecycle layer:
+
+- blocks duplicate starts
+- launches `PalServer.sh` detached from the interactive SSH session
+- observes the real `PalServer-Linux-Shipping` process
+- verifies UDP `8211` before declaring startup ready
+- records lifecycle state under `/opt/mysttiq/runtime`
+- sends **SIGTERM first** for graceful shutdown
+- escalates to **SIGKILL only after the configured graceful timeout**
+- detects disappearance of a previously observed/managed process as a possible crash
+- writes detached console output to `/opt/mysttiq/runtime/palserver-console.log`
+- returns stable headless exit codes suitable for future service/automation integration
+
+The Windows WPF application is not migrated to this lifecycle host in v0.3.0.1. Windows headless/service and low-resource UI adoption remains scheduled for the v0.4 line.
+
+## Headless Core & Linux Foundation
+
+v0.3.0.0 introduces two new cross-platform projects without replacing the proven Windows WPF application:
+
+```text
+MystTiq.Core
+    └── platform-neutral models, profiles, Linux distribution detection,
+        SteamCMD distribution policy, and Linux read-only session inspection
+
+MystTiq.HeadlessHost
+    └── no-WPF command-line host for probe/status/install-plan operations
+```
+
+The initial headless host is intentionally **non-destructive**. It can detect the Linux distribution, resolve Linux PalServer/SteamCMD paths, discover native PalServer processes, inspect guarded ports, and display the Linux SteamCMD install/update plan without starting, stopping, installing, or updating anything. Lifecycle authority is reserved for a later v0.3 phase.
+
+The Linux SteamCMD policy includes:
+
+```text
++@sSteamCmdForcePlatformType linux
+```
+
+This is required by the validated reference environment; without the explicit platform override SteamCMD returned `Missing configuration` for App `2394010` even though the Linux depot was available.
+
+### Linux reference environment
+
+The v0.3.0.0 Linux foundation was validated against:
+
+- **Ubuntu Server 24.04.4 LTS (Noble Numbat)**
+- **x86_64 / amd64**
+- **Linux kernel 6.8.0-137-generic**
+- Valve Linux SteamCMD
+- Palworld Dedicated Server Steam App `2394010`
+- native Linux server executable `Pal/Binaries/Linux/PalServer-Linux-Shipping`
+- validated game listener: UDP `8211`
+
+Detailed environment notes are maintained in [`docs/linux/TESTED_ENVIRONMENT.md`](docs/linux/TESTED_ENVIRONMENT.md).
 
 ## Features
 
@@ -209,28 +302,39 @@ Get-ChildItem . -Recurse -Filter *.ps1 | Unblock-File
 .\Build.ps1 All
 ```
 
-The current release build targets Windows x64.
+The standard release build continues to target Windows x64. The experimental Linux headless host can be cross-published separately with:
+
+```powershell
+.\Build.ps1 LinuxHeadless
+```
 
 ## Architecture and Platform Direction
 
-The current application is WPF/Windows, while backend server responsibilities are increasingly isolated behind explicit platform contracts.
+The supported GUI application remains WPF/Windows. v0.3 adds a separate cross-platform core and headless host so Linux can run without any GUI dependency while Windows behavior remains protected by the v0.2.16.4 baseline.
 
-Major platform seams now include:
+The repository now has two architectural tracks:
 
 ```text
-ApplicationServiceComposition
-  ├── IServerPathProfile
-  │    └── WindowsServerPathProfile
-  ├── ServerPlatformProfile
-  ├── IServerSessionInspector
-  │    └── ServerSessionInspector
-  ├── IServerPlatformOperations
-  │    └── WindowsServerPlatformOperations
-  └── IServerDistributionPlatformService
-       └── WindowsServerDistributionPlatformService
+Windows GUI (validated baseline)
+PalworldManager / WPF
+  ├── existing v0.2.16.4 platform boundaries
+  └── preserved as the Windows regression reference
+
+Headless / cross-platform foundation
+MystTiq.HeadlessHost
+  └── MystTiq.Core
+       ├── ServerPlatformProfile
+       ├── IServerPathProfile
+       │    ├── WindowsServerPathProfile
+       │    └── LinuxServerPathProfile
+       ├── IServerDistributionPlatformService
+       │    ├── WindowsServerDistributionPlatformService
+       │    └── LinuxServerDistributionPlatformService
+       ├── LinuxDistributionService
+       └── LinuxServerSessionInspector
 ```
 
-These boundaries cover deployment paths, process/session inspection, server launch/termination behavior, and SteamCMD distribution/install/update policy.
+The v0.3 core begins with Linux observation, paths, and distribution policy. Proven Windows services will migrate into the shared core incrementally only when the move can remain behavior-neutral.
 
 The remaining Windows-specific work is primarily the desktop UI/host layer, file/folder integration, and Windows-only dependency tooling. Detailed platform-audit information is maintained in [`docs/architecture/`](docs/architecture/).
 
@@ -238,9 +342,10 @@ The remaining Windows-specific work is primarily the desktop UI/host layer, file
 
 | Version | Status | Focus |
 |---|:---:|---|
-| **v0.2.16.3 FIX2** | Official baseline | Application Update Awareness & Server Setup Polish |
-| **v0.2.16.4** | Current RC | SteamCMD Distribution Abstraction & Final Windows Platform Audit |
-| **v0.3.0.0** | Planned | Linux foundation on the completed platform boundaries |
+| **v0.2.16.4** | Official Windows baseline | Final Windows platform-preparation baseline |
+| **v0.3.0.0** | Current RC | Headless Core Foundation & Linux Platform Base |
+| **v0.3.x** | Planned | Linux lifecycle, SteamCMD execution, systemd, API/configuration, parity and hardening |
+| **v0.4.x** | Planned | Windows headless/service/low-resource improvements plus Windows backports discovered during v0.3 |
 | **v1.0** | Goal | Stable production release |
 
 Historical release implementation detail belongs in [`CHANGELOG.md`](CHANGELOG.md), [`release-notes/`](release-notes/), and [`docs/history/`](docs/history/) rather than being duplicated here.
@@ -254,6 +359,8 @@ The documentation layout is intentionally separated by purpose:
 - [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) — active release/promotion checklist
 - [`docs/README.md`](docs/README.md) — documentation index
 - [`docs/architecture/`](docs/architecture/) — current architecture/audit documents
+- [`docs/linux/`](docs/linux/) — Linux reference environment and headless implementation notes
+- [`docs/roadmap/WINDOWS_BACKPORT_REGISTRY.md`](docs/roadmap/WINDOWS_BACKPORT_REGISTRY.md) — improvements discovered during Linux work for shared/core or v0.4 Windows backport
 - [`docs/history/`](docs/history/) — archived architecture and feature implementation notes
 - [`docs/release/`](docs/release/) — publication/release process documents
 - [`release-notes/`](release-notes/) — version-specific build, test, apply, and release notes
