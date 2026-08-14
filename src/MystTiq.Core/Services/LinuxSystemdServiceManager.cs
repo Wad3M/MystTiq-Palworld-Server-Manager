@@ -7,7 +7,7 @@ namespace MystTiq.Core.Services;
 public interface ILinuxServiceManager
 {
     Task<LinuxServiceStatus> GetStatusAsync(CancellationToken cancellationToken = default);
-    Task<LinuxServiceInstallResult> InstallAsync(string sourceExecutable, string serviceUser, bool startNow, CancellationToken cancellationToken = default);
+    Task<LinuxServiceInstallResult> InstallAsync(string sourceExecutable, string serviceUser, string configurationPath, bool startNow, CancellationToken cancellationToken = default);
     Task<bool> UninstallAsync(CancellationToken cancellationToken = default);
 }
 
@@ -65,14 +65,17 @@ public sealed class LinuxSystemdServiceManager : ILinuxServiceManager
     public async Task<LinuxServiceInstallResult> InstallAsync(
         string sourceExecutable,
         string serviceUser,
+        string configurationPath,
         bool startNow,
         CancellationToken cancellationToken = default)
     {
         EnsureRoot();
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceExecutable);
         ArgumentException.ThrowIfNullOrWhiteSpace(serviceUser);
+        ArgumentException.ThrowIfNullOrWhiteSpace(configurationPath);
 
         sourceExecutable = Path.GetFullPath(sourceExecutable);
+        configurationPath = Path.GetFullPath(configurationPath);
         if (!File.Exists(sourceExecutable))
             throw new FileNotFoundException("Headless host executable was not found.", sourceExecutable);
 
@@ -81,8 +84,9 @@ public sealed class LinuxSystemdServiceManager : ILinuxServiceManager
                 Path.GetFullPath(InstalledExecutable),
                 StringComparison.Ordinal))
         {
-            File.Copy(sourceExecutable, InstalledExecutable, overwrite: true);
+            await ReplaceInstalledExecutableAsync(sourceExecutable, cancellationToken);
         }
+
         File.SetUnixFileMode(
             InstalledExecutable,
             UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
@@ -95,7 +99,7 @@ public sealed class LinuxSystemdServiceManager : ILinuxServiceManager
             [$"{serviceUser}:{serviceUser}", paths.ManagerRuntimeRoot],
             cancellationToken);
 
-        File.WriteAllText(UnitPath, BuildUnit(serviceUser));
+        File.WriteAllText(UnitPath, BuildUnit(serviceUser, configurationPath));
 
         await RunSystemctlAsync(["daemon-reload"], cancellationToken);
         await RunSystemctlAsync(["enable", UnitName], cancellationToken);
@@ -129,29 +133,83 @@ public sealed class LinuxSystemdServiceManager : ILinuxServiceManager
         return !File.Exists(UnitPath);
     }
 
-    private static string BuildUnit(string serviceUser) =>
+    private static async Task ReplaceInstalledExecutableAsync(
+        string sourceExecutable,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var stagedExecutable = Path.Combine(
+            InstallDirectory,
+            $".mysttiq-server.update-{Environment.ProcessId}-{Guid.NewGuid():N}");
+
+        try
+        {
+            File.Copy(sourceExecutable, stagedExecutable, overwrite: false);
+
+            File.SetUnixFileMode(
+                stagedExecutable,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Linux returns ETXTBSY ("Text file busy") when an executing binary
+            // is opened for in-place overwrite. Stage the new binary in the same
+            // directory and atomically rename it over the installed path instead.
+            // The running process continues on its previous inode until systemd
+            // performs the normal restart later in InstallAsync.
+            File.Move(stagedExecutable, InstalledExecutable, overwrite: true);
+
+            await Task.Yield();
+        }
+        finally
+        {
+            if (File.Exists(stagedExecutable))
+                File.Delete(stagedExecutable);
+        }
+    }
+
+    private static string BuildUnit(string serviceUser, string configurationPath) =>
         "[Unit]\n" +
         "Description=MystTiq Palworld Headless Server Manager\n" +
         "Documentation=https://github.com/Wad3M/MystTiq-Palworld-Server-Manager\n" +
         "After=network-online.target\n" +
         "Wants=network-online.target\n" +
+        "StartLimitIntervalSec=300\n" +
+        "StartLimitBurst=5\n" +
         "\n" +
         "[Service]\n" +
         "Type=simple\n" +
         $"User={serviceUser}\n" +
         "WorkingDirectory=/opt/mysttiq\n" +
-        $"ExecStart={InstalledExecutable} service-run\n" +
+        $"ExecStart={InstalledExecutable} service-run --config {QuoteSystemdArgument(configurationPath)}\n" +
         "ExecStop=/bin/kill -s TERM $MAINPID\n" +
         "Restart=on-failure\n" +
         "RestartSec=10\n" +
-        "StartLimitIntervalSec=300\n" +
-        "StartLimitBurst=5\n" +
         "TimeoutStopSec=60\n" +
         "KillMode=process\n" +
         "NoNewPrivileges=true\n" +
         "\n" +
         "[Install]\n" +
         "WantedBy=multi-user.target\n";
+
+    private static string QuoteSystemdArgument(string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
+        if (value.Contains('\n') || value.Contains('\r'))
+            throw new ArgumentException(
+                "systemd argument cannot contain newline characters.",
+                nameof(value));
+
+        return "\"" +
+               value
+                   .Replace("\\", "\\\\", StringComparison.Ordinal)
+                   .Replace("\"", "\\\"", StringComparison.Ordinal) +
+               "\"";
+    }
 
     private static void EnsureRoot()
     {

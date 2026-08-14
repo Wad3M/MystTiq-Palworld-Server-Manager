@@ -26,6 +26,6 @@
     <Resource Include="Assets\PalworldServerManager.ico" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="SharpCompress" Version="0.50.4" />
+    <PackageReference Include="SharpCompress" Version="0.50.3" />
   </ItemGroup>
 </Project>

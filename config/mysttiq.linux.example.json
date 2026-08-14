@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 2,
+  "api": {
+    "enabled": true,
+    "bindAddress": "127.0.0.1",
+    "port": 8213,
+    "authentication": {
+      "enabled": false,
+      "tokenFile": "/etc/mysttiq/secrets/api-token"
+    },
+    "tls": {
+      "enabled": false,
+      "certificatePath": "/etc/mysttiq/certs/mysttiq.pfx",
+      "certificatePasswordFile": "/etc/mysttiq/secrets/certificate-password"
+    }
+  },
+  "lifecycle": {
+    "startupTimeoutSeconds": 90,
+    "stopTimeoutSeconds": 30,
+    "servicePollSeconds": 5,
+    "recoveryBackoffSeconds": 10,
+    "maximumRecoveryAttempts": 5,
+    "recoveryWindowSeconds": 300
+  },
+  "server": {
+    "serverRoot": "/opt/mysttiq/palserver",
+    "steamCmdPath": "/opt/mysttiq/steamcmd/steamcmd.sh",
+    "backupRoot": "/opt/mysttiq/backups",
+    "runtimeRoot": "/opt/mysttiq/runtime",
+    "launchArguments": [
+      "EpicApp=PalServer",
+      "-useperfthreads",
+      "-NoAsyncLoadingThread",
+      "-UseMultithreadForDS"
+    ]
+  }
+}

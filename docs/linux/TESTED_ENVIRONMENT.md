@@ -102,3 +102,85 @@ The systemd/service phase targets the same reference host:
 - runtime state/log root: `/opt/mysttiq/runtime`
 
 v0.3.0.2 acceptance must verify install/enable, boot-capable service state, start, journal output, PalServer adoption/startup, automatic crash recovery, graceful service stop, and clean uninstall.
+
+## v0.3.0.3 configuration/API validation target
+
+The phase continues to target:
+
+- Ubuntu Server 24.04.4 LTS (Noble)
+- x86_64 / amd64
+- observed kernel 6.8.0-137-generic
+- systemd
+- service account `mystroth`
+- default config `/etc/mysttiq/mysttiq.json`
+- loopback management API `127.0.0.1:8213`
+- PalServer `/opt/mysttiq/palserver`
+- runtime root `/opt/mysttiq/runtime`
+
+Acceptance must verify config creation/validation, service consumption of config values, loopback-only API binding, health/status endpoints, serialized start/stop/restart actions, service restart/reboot retention, and continued UDP 8211 readiness.
+
+
+## v0.3.0.4 security/automation validation target
+
+Reference environment remains:
+
+- Ubuntu Server 24.04.4 LTS (Noble)
+- x86_64 / amd64
+- observed kernel 6.8.0-137-generic
+- systemd
+- service account `mystroth`
+- default config `/etc/mysttiq/mysttiq.json`
+- default local API `127.0.0.1:8213`
+- PalServer `/opt/mysttiq/palserver`
+- runtime root `/opt/mysttiq/runtime`
+
+v0.3.0.4 acceptance adds schema-v1→v2 migration, protected bearer-token files, fail-closed remote-bind validation, authenticated API requests, TLS configuration contracts and one-command Linux acceptance reporting.
+
+
+## v0.3.0.5 deployment validation target
+
+Reference Linux environment remains:
+
+- Ubuntu Server 24.04.4 LTS
+- x86_64 / amd64
+- observed kernel 6.8.0-137-generic
+- test user `mystroth`
+- current test VM IPv4 `192.168.1.248`
+
+Deployment acceptance adds:
+
+- dedicated Ed25519 SSH identity creation
+- public-key installation into the test account
+- key-only SSH preflight
+- SCP with the same identity
+- zero normal password prompts after bootstrap
+- explicit-only password fallback
+- unchanged archive SHA-256 and Linux acceptance verification
+
+
+## v0.3.0.6 remote API validation target
+
+Primary target remains:
+
+- Ubuntu Server 24.04.4 LTS
+- x86_64 / amd64
+- observed kernel 6.8.0-137-generic
+- test user `mystroth`
+- current test IPv4 `192.168.1.248`
+- systemd-managed MystTiq headless host
+
+Additional acceptance:
+
+- protected bearer token is service-user readable only
+- self-signed PFX and password secret are generated automatically
+- certificate contains the selected IP SAN and optional DNS SAN
+- remote configuration requires authentication + TLS
+- service starts successfully while bound to the LAN IP
+- Windows can reach HTTPS on port 8213
+- unauthenticated management request receives HTTP 401
+- bearer-authenticated management request receives HTTP 200
+- loopback configuration can be restored with one command
+
+## v0.3.0.7 production-readiness target
+
+Upgrade-path and clean-install acceptance target remain Ubuntu Server 24.04.4 LTS x86_64. v0.3.0.7 adds the production Doctor/readiness evidence gate and first-run/upgrade automation.

@@ -1,5 +1,188 @@
 # Changelog
 
+## v0.3.0.7 FIX3 — Production Readiness Result Accounting Hotfix
+
+- Fixed Bash post-increment exit-status behavior causing PASS checks to also execute FAIL branches.
+- `record` now uses assignment-based counter increments and explicitly returns success.
+- Executable and disk-reserve checks now use explicit `if / elif / else` control flow.
+- Added regression coverage for production-readiness result accounting.
+- The underlying Production Doctor remains unchanged and had already passed 9/9 checks.
+
+
+## v0.3.0.7 FIX2 — Extended Production-Readiness Integration Hotfix
+
+- Fixed extended Linux acceptance not invoking the packaged v0.3.0.7 production-readiness runner.
+- Extended acceptance now passes the active executable and config paths into the production-readiness test.
+- Production-readiness output is captured in the timestamped Linux acceptance report.
+- A readiness failure now increments the Linux acceptance failure count and blocks promotion.
+- No runtime/API/lifecycle/systemd/TLS/PalServer/Windows WPF behavior changed.
+
+
+## v0.3.0.7 FIX1 — Production Doctor Compile & Release-Gate Hotfix
+
+- Fixed Production Doctor references to the existing `IServerPathProfile` contract.
+- Routed PalServer readiness through the established `LinuxServerLifecycleService`.
+- Fixed the v0.3.0.7 logic harness architecture path.
+- Removed active stale v0.3.0.6 HeadlessHost wording.
+- Prevented the cleanup helper from creating stale-version warnings.
+- Corrected apply order: Unblock PowerShell scripts before running cleanup.
+
+
+## v0.3.0.7 — Linux Integration & Production Readiness
+
+- Added production-doctor with evidence/recommendation output.
+- Added first-run and safe-upgrade Linux automation.
+- Added one-command production-readiness reporting.
+- Integrated production readiness into extended Linux acceptance.
+- Reserved v0.3.0.8+ for stabilization only.
+
+
+## v0.3.0.6 FIX5 — Acceptance Harness Consistency Hotfix
+
+- Fixed two false-negative logic-harness checks after successful real-world remote API acceptance.
+- Enrollment-version validation now matches the stable v0.3.0.6 base contract instead of exact decorated FIX text.
+- Token-persistence validation now checks stable semantic markers rather than exact spacing-sensitive output.
+- Synchronized Linux enrollment and Windows remote-acceptance display labels to FIX5.
+- No runtime/API/TLS/auth/systemd/PalServer/Windows WPF behavior changed.
+
+
+## v0.3.0.6 FIX4 — Running-Binary Service Install Hotfix
+
+- Fixed Linux `service-install` failing with `Text file busy` while `/opt/mysttiq/bin/mysttiq-server` was running.
+- Replaced in-place executable overwrite with same-directory staged copy plus atomic rename.
+- Existing systemd restart behavior now launches the replaced binary while the old process can finish on its previous inode.
+- Added regression coverage for staged executable replacement.
+- No API, TLS, authentication, configuration schema, PalServer lifecycle policy, or Windows WPF behavior changed.
+
+
+## v0.3.0.6 FIX3 — Protected Secrets Directory Ownership Hotfix
+
+- Fixed `/etc/mysttiq/secrets` being created as root-only while MystTiq secrets were owned by the non-root service user.
+- Secrets directory is now owned by the selected service account with mode 0700.
+- Enrollment explicitly verifies secrets-directory owner/mode.
+- Token/certificate existence checks now use privilege-safe `sudo test -s` checks.
+- Preserved per-file mode 0600 and pre-commit rollback behavior.
+- No runtime/API/security-policy/lifecycle/PalServer/Windows WPF behavior changed.
+
+
+## v0.3.0.6 FIX2 — Linux Remote-Tool Packaging Hotfix
+
+- Fixed Linux headless archives omitting the v0.3.0.6 remote-enrollment and rollback scripts.
+- `Build-LinuxHeadless.ps1` now packages the acceptance runner, remote enrollment script, and remote disable script.
+- Missing required Linux-side scripts now fail the package build instead of producing an incomplete archive.
+- Added regression coverage for all required Linux operational scripts.
+- No runtime, API, security, lifecycle, systemd, PalServer, or Windows WPF behavior changed.
+
+
+## v0.3.0.6 FIX1 — Remote Enrollment Reliability Hotfix
+
+- Fixed remote enrollment leaving MystTiq on the previous loopback/schema-v1 configuration.
+- Reworked Linux enrollment into a staged fail-fast workflow with prerequisite, file, ownership, configuration, service, listener, HTTPS and authentication verification.
+- Added automatic pre-enrollment configuration backup and pre-commit rollback.
+- Enrollment now verifies token/PFX/password creation instead of assuming commands succeeded.
+- Enrollment now reads the effective config back and requires the requested bind plus auth/TLS before restarting.
+- Enrollment now verifies the exact LAN listener before reporting success.
+- Windows remote acceptance now validates effective config, token and listener prerequisites before attempting HTTPS.
+- Missing token/listener/connectivity now produces explicit `[FAIL]` output instead of null-reference PowerShell exceptions.
+- No core API security policy, configuration schema, lifecycle, systemd, PalServer, or Windows WPF behavior changed.
+
+
+## v0.3.0.6 — Secure Remote API Enrollment & TLS Provisioning
+
+- Promoted v0.3.0.5 as the official Linux/headless baseline.
+- Added `HeadlessCertificateService` for self-signed TLS server certificate provisioning.
+- Generated certificates use RSA 3072, SHA-256, server-auth EKU, selected IP SAN, localhost SAN, optional DNS SAN, and a maximum 825-day validity.
+- PFX passwords are generated separately using the existing protected-secret service.
+- Added `HeadlessRemoteApiEnrollmentService` for typed remote enable/disable configuration updates.
+- Added `api-tls-create`, `api-remote-enable`, and `api-remote-disable`.
+- Remote enable requires an explicit non-loopback literal IP and produces an auth+TLS configuration; remote disable returns to loopback defaults.
+- Added `scripts/Configure-MystTiqRemoteApi.sh` for one-command Linux enrollment with confirmation, one sudo authorization, secret/certificate provisioning, service-user ownership hardening, systemd restart and HTTPS/auth validation.
+- Added `scripts/Disable-MystTiqRemoteApi.sh` for one-command return to local-only management.
+- Added `scripts/Test-MystTiqRemoteApi.ps1` for Windows-over-LAN HTTPS/401/bearer-auth acceptance using the dedicated SSH trust channel.
+- Linux enrollment intentionally does not alter firewall rules.
+- Extended the Linux acceptance runner with temporary TLS certificate creation and explicit secured remote-config/rollback tests.
+- Windows WPF behavior remains unchanged.
+
+
+## v0.3.0.5 — Passwordless Linux Deployment & SSH Trust Foundation
+
+- Promoted v0.3.0.4 FIX1 as the official Linux/headless baseline.
+- Added `scripts/Initialize-MystTiqLinuxSSH.ps1` for one-time dedicated Ed25519 deployment-key setup.
+- The SSH bootstrap installs only the public key into `~/.ssh/authorized_keys`; the private key remains on Windows.
+- Added passwordless-key verification using OpenSSH batch/public-key-only authentication.
+- Reworked `scripts/Deploy-Test-MystTiqLinux.ps1` to prefer the dedicated MystTiq SSH key automatically.
+- Deployment now uses the same dedicated identity for SSH and SCP.
+- Interactive password deployment is disabled by default and available only through explicit `-AllowPasswordFallback`.
+- Removed normal dependence on Posh-SSH/password caching from the deployment workflow.
+- Preserved SHA-256 transfer validation, versioned extraction, and automated Linux acceptance invocation.
+- Carried the version-matched Linux acceptance runner forward as `scripts/Test-v0.3.0.5-LinuxAcceptance.sh`.
+- No management API, configuration schema, TLS/authentication, PalServer lifecycle, systemd, or Windows WPF behavior changed.
+
+
+## v0.3.0.4 FIX1 — HeadlessHost Compile & Automation Harness Hotfix
+
+- Fixed CS1929 by invoking `WaitForShutdownAsync(CancellationToken)` through the `IHost` generic-host interface.
+- Corrected the deployment harness literal for the actual `& .\Build.ps1 LinuxHeadless` invocation.
+- Prevented the release validator from treating the versioned Linux acceptance-script filename as a stale-version suffix.
+- Added regression coverage for the `IHost` shutdown bridge.
+- No security model, configuration schema, API behavior, lifecycle policy, Linux acceptance behavior, or Windows WPF behavior changed.
+
+
+## v0.3.0.4 — Secure Management API & Automated Linux Acceptance Foundation
+
+- Promoted v0.3.0.3 FIX1 as the official Linux/headless baseline.
+- Advanced headless configuration to schema version 2 with API authentication and TLS settings.
+- Added supported in-memory migration from schema v1 plus `config-migrate` persistence and automatic migration during `service-install`.
+- Added protected secret-file service with cryptographically random bearer-token generation and Linux owner-only token permissions.
+- Added `api-token-create` command.
+- Added bearer-token authentication for `/api/v1/*` while keeping `/healthz` intentionally minimal and unauthenticated.
+- Added fixed-time token comparison.
+- Added TLS certificate/password-file support for Kestrel.
+- Non-loopback API configuration now fails closed unless authentication and TLS are both enabled; the runtime API host independently enforces the same condition.
+- Default configuration remains loopback-only and does not require authentication/TLS.
+- Added version-matched `scripts/Test-v0.3.0.4-LinuxAcceptance.sh` with consolidated PASS/FAIL/WARN output plus timestamped raw evidence.
+- Added `scripts/Deploy-Test-MystTiqLinux.ps1` to build, verify, copy, extract and invoke Linux acceptance in one workflow; default Linux test host is `192.168.1.248`.
+- Linux publish archives now include their version-matched Linux acceptance runner.
+- Added the detailed product roadmap through v0.8, including v0.4 character migration/Doctor/UI consolidation, v0.5 advanced administration, v0.6 multi-server, v0.7 themes/icon set and v0.8 adaptive efficiency.
+- Windows WPF behavior remains unchanged.
+
+
+## v0.3.0.3 FIX1 — Configuration Compile & systemd Argument-Quoting Hotfix
+
+- Corrected Linux absolute-path validation to use `StartsWith("/", StringComparison.Ordinal)` instead of the invalid char/StringComparison overload.
+- Added the missing `QuoteSystemdArgument(string value)` helper used by systemd `ExecStart` configuration-path generation.
+- Added newline-injection rejection to the systemd argument-quoting helper.
+- Strengthened the v0.3.0.3 harness to cover both compile contracts.
+- No configuration schema, API, lifecycle, recovery, or Windows WPF behavior changed.
+
+
+## v0.3.0.3 — Headless Configuration & Local Management API Foundation
+
+- Promoted v0.3.0.2 FIX2 as the official Linux/headless baseline.
+- Added schema-versioned persistent headless configuration with Linux defaults under `/etc/mysttiq/mysttiq.json`.
+- Added configuration validation for paths, lifecycle/recovery values, API port, and API bind scope.
+- v0.3.0.3 rejects non-loopback API binding by design.
+- Added `config-show`, `config-validate`, and `config-write-default`.
+- Added `config/mysttiq.linux.example.json`.
+- Lifecycle CLI and service supervisor now consume configured timeouts, paths, recovery settings, and PalServer launch arguments.
+- Added ASP.NET Core/Kestrel local management API support to the headless host.
+- Added loopback-only health, lifecycle status, systemd status, configuration, and start/stop/restart endpoints.
+- Lifecycle-changing API calls are serialized to prevent competing operations.
+- `service-run` starts/stops the local API with the supervisor when API support is enabled.
+- Added standalone `api-run` for local API testing without systemd.
+- `service-install` creates a default configuration when one does not exist and preserves a custom `--config` path in systemd `ExecStart`.
+- No remote/LAN API exposure, authentication secrets, or Windows WPF changes are introduced in this phase.
+- Added Windows v0.4 backport candidates for shared configuration, local service IPC/API, and UI-to-background-service control.
+
+
+## v0.3.0.2 FIX2 — systemd Start-Limit Section Hotfix
+
+- Moved `StartLimitIntervalSec=300` and `StartLimitBurst=5` from `[Service]` to `[Unit]`.
+- Preserved `Restart=on-failure` and `RestartSec=10` under `[Service]`.
+- Added regression coverage for correct directive ordering.
+- No lifecycle, recovery algorithm, PalServer launch, or Windows WPF behavior changed.
+
+
 ## v0.3.0.2 FIX1 — systemd Unit Raw-String Compile Hotfix
 
 - Replaced the malformed raw-string `BuildUnit()` implementation with compile-safe string construction.

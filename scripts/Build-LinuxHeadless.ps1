@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [ValidateSet('Debug','Release')][string]$Configuration='Release',
     [string]$Runtime='linux-x64'
@@ -17,6 +17,30 @@ Write-Host "==> Publishing MystTiq Headless Host v$version for $Runtime" -Foregr
     -p:PublishSingleFile=true -p:PublishTrimmed=false -o $publish
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
+}
+
+# Ship all Linux-side operational/test scripts required by this release.
+$publishScripts = Join-Path $publish 'scripts'
+New-Item -ItemType Directory -Force $publishScripts | Out-Null
+
+$linuxScripts = @(
+    "Test-v$version-LinuxAcceptance.sh",
+    "Configure-MystTiqRemoteApi.sh",
+    "Disable-MystTiqRemoteApi.sh",
+    "Install-MystTiqLinux.sh",
+    "Upgrade-MystTiqLinux.sh",
+    "Test-v$version-ProductionReadiness.sh"
+)
+
+foreach ($scriptName in $linuxScripts) {
+    $source = Join-Path $PSScriptRoot $scriptName
+
+    if (-not (Test-Path $source -PathType Leaf)) {
+        throw "Required Linux publish script was not found: $source"
+    }
+
+    Copy-Item $source (Join-Path $publishScripts $scriptName) -Force
+    Write-Host "Included Linux script: $scriptName" -ForegroundColor Green
 }
 
 $tar=Get-Command tar -ErrorAction SilentlyContinue

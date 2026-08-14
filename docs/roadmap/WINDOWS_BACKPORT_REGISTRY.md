@@ -84,3 +84,105 @@ Target: v0.4.x
 - Windows Event Log or structured background-service logging separate from UI logs.
 - Service installation should copy a stable executable into an application-owned service location.
 - WPF should be able to attach to/adopt an already-running background MystTiq service.
+
+## v0.3.0.3 discoveries
+
+### SHARED
+
+- Schema-versioned headless configuration should own paths, lifecycle timeouts, recovery policy, and launch arguments.
+- Management/control operations should be serialized independently of any UI.
+- A small health/status/control API provides a clean boundary between background management and future clients.
+- Configuration validation should fail closed for unsafe network exposure.
+
+### LINUX
+
+- Default system configuration under `/etc/mysttiq/mysttiq.json`.
+- Kestrel loopback listener on `127.0.0.1:8213`.
+- systemd `ExecStart` must preserve the selected configuration file path.
+
+### WINDOWS-BACKPORT
+
+Target: v0.4.x
+
+- Move Windows service/headless configuration into the same schema rather than WPF-owned settings.
+- Let WPF communicate with the background service through a local authenticated IPC/API boundary.
+- Preserve service configuration independently of whether the WPF UI is running.
+- Serialize Windows UI lifecycle commands through the same background control plane.
+- Add low-resource/minimized UI behavior by reducing UI polling while the service remains authoritative.
+
+
+## v0.3.0.4 discoveries
+
+### SHARED
+
+- API authentication secrets belong in protected secret files rather than ordinary configuration.
+- Non-loopback management endpoints should fail closed unless authentication and transport encryption are both configured.
+- Constant-time bearer-token comparison avoids simple timing-sensitive secret comparison.
+- Automated platform acceptance should produce one consolidated PASS/FAIL report plus raw diagnostic evidence.
+
+### LINUX
+
+- Protected API-token/certificate-secret files under `/etc/mysttiq` with owner-only permissions.
+- Version-matched Bash acceptance runner packaged with the Linux self-contained build.
+- PowerShell deployment wrapper can copy/extract/invoke Linux acceptance in one workflow.
+
+### WINDOWS-BACKPORT
+
+Target: v0.4.x
+
+- Use the same protected-secret/authentication boundary for the future Windows background service API/IPC.
+- Add a one-command Windows service acceptance harness with raw result capture, matching the Linux test philosophy.
+- Keep remote management disabled by default and require explicit authenticated/encrypted exposure.
+
+
+## v0.3.0.5 discoveries
+
+### SHARED
+
+- Deployment trust should use dedicated revocable identities rather than reusable passwords.
+- Authentication preflight should fail closed before copy/deployment work begins.
+- Password fallback should require explicit operator intent.
+
+### LINUX
+
+- Dedicated Ed25519 deployment identity for the Windows-host → Linux-node path.
+- One-time authorized-key bootstrap followed by key-only SSH/SCP.
+- Future multi-node management should plan for per-node trust enrollment and key rotation.
+
+### WINDOWS-BACKPORT
+
+Target: v0.4.x
+
+- Use dedicated authenticated service/client identities for future Windows background-service remote administration.
+- Avoid reusable plaintext/shared passwords for machine-to-machine management.
+
+
+## v0.3.0.6 discoveries
+
+### SHARED
+
+- Secure remote exposure should be an explicit enrollment workflow rather than a raw configuration edit.
+- Certificate generation, secret ownership and endpoint validation should be automated together.
+- A safe one-command rollback to local-only management should always exist.
+- Test tooling should distinguish transport encryption from certificate-chain trust.
+
+### LINUX
+
+- Root-created secrets must be chowned to the non-root service account while remaining mode 0600.
+- Remote API enrollment should never silently change host firewall policy.
+- Linux-local acceptance and Windows-over-LAN acceptance are separate gates.
+
+### WINDOWS-BACKPORT
+
+Target: v0.4.x / v0.5.x
+
+- Use explicit enrollment for future remote Windows service access.
+- Provide certificate provisioning/trust diagnostics rather than silently disabling certificate validation in production.
+- Preserve a local-only rollback mode.
+
+
+## v0.3.0.7 discoveries
+
+- SHARED: production Doctor results should expose state, evidence and ordered recommendation rather than only a health percentage.
+- SHARED: installation/upgrade workflows must preserve user configuration and secrets by default.
+- WINDOWS-BACKPORT: reuse the v0.3.0.7 production-readiness result model when Server Doctor consolidation lands in v0.4.

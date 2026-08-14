@@ -31,9 +31,9 @@ MystTiq Palworld Server Manager is a free and open-source Windows desktop applic
 
 It combines server lifecycle controls, configuration, backups, world inspection, SteamCMD management, Steam Workshop and UE4SS MOD workflows, diagnostics, health reporting, and live world telemetry in one interface.
 
-> **Current development candidate:** v0.3.0.2  
+> **Current development candidate:** v0.3.0.7  
 > **Official validated Windows baseline:** v0.2.16.4
-> **Official Linux/headless baseline:** v0.3.0.1 FIX1
+> **Official Linux/headless baseline:** v0.3.0.5
 
 Windows 10/11 x64 remains the supported GUI application platform. v0.3 begins the Linux/headless implementation on top of the frozen v0.2.16.4 Windows baseline. **Linux support remains experimental throughout the v0.3 implementation/parity line and is not yet a production release.**
 
@@ -89,6 +89,144 @@ MystTiq separates **deployment/configuration health** from **runtime proof**.
 Runtime evidence can include supported UE4SS log signals and native DLL/module evidence. Normal modded starts use pre-start reconciliation and a startup health gate. **Start Without MODs** remains an intentional recovery/isolation path.
 
 
+
+
+
+
+## Secure Remote API Enrollment & TLS Provisioning
+
+v0.3.0.7 turns the existing authentication/TLS boundary into an explicit, testable LAN enrollment workflow while preserving loopback-only operation as the default.
+
+New headless commands:
+
+```bash
+./mysttiq-server api-tls-create ...
+./mysttiq-server api-remote-enable ...
+./mysttiq-server api-remote-disable ...
+```
+
+The self-signed certificate generator creates a 3072-bit RSA server certificate with:
+
+- SHA-256 signature
+- TLS Web Server Authentication EKU
+- IP SAN for the selected bind address
+- `localhost` SAN
+- optional DNS SAN
+- validity limited to 825 days
+- password stored in a separate protected secret file
+
+Remote API exposure remains explicit. `api-remote-enable` requires a non-loopback literal IP and writes a configuration where both bearer authentication and TLS are enabled. `api-remote-disable` returns the API to the safe `127.0.0.1:8213` default.
+
+One-command Linux enrollment:
+
+```bash
+bash ./scripts/Configure-MystTiqRemoteApi.sh \
+  --bind 192.168.1.248
+```
+
+The script prompts for confirmation, performs one `sudo` authorization, creates/reuses the token and certificate, fixes service-user ownership/permissions, updates the configuration, reinstalls/restarts the service, validates systemd, and tests authenticated HTTPS locally.
+
+Windows LAN acceptance:
+
+```powershell
+.\scripts\Test-MystTiqRemoteApi.ps1
+```
+
+The Windows test retrieves the bearer token through the existing trusted SSH-key channel into process memory only and verifies:
+
+- HTTPS reachability from Windows
+- `/healthz` returns HTTP 200
+- unauthenticated management access returns HTTP 401
+- valid bearer authentication returns HTTP 200
+- lifecycle JSON is returned
+
+MystTiq does **not** automatically change Linux firewall rules during enrollment.
+
+## Passwordless Linux Deployment & SSH Trust
+
+v0.3.0.5 makes a dedicated SSH key the normal MystTiq deployment path.
+
+One-time setup from Windows PowerShell:
+
+```powershell
+.\scripts\Initialize-MystTiqLinuxSSH.ps1
+```
+
+The helper creates a dedicated Ed25519 key under the current user's `.ssh` directory when needed, installs **only the public key** into the Linux account's `authorized_keys`, and verifies passwordless login.
+
+Normal deployment then becomes:
+
+```powershell
+.\scripts\Deploy-Test-MystTiqLinux.ps1 -Extended
+```
+
+The deployment wrapper:
+
+- prefers the dedicated MystTiq SSH identity automatically
+- uses OpenSSH `BatchMode=yes` with password authentication disabled while key authentication is active
+- uses the same identity for `ssh` and `scp`
+- fails with a clear setup instruction if the dedicated key is missing or invalid
+- allows interactive password prompting only when `-AllowPasswordFallback` is explicitly requested
+- never copies the private SSH key to Linux
+- continues to verify the transferred archive by SHA-256 before extraction
+- invokes the version-matched Linux acceptance runner automatically
+
+The default test target remains `mystroth@192.168.1.248`.
+
+## Headless Configuration & Local Management API
+
+v0.3.0.3 introduces persistent Linux headless configuration and the first management API boundary.
+
+Default configuration:
+
+```text
+/etc/mysttiq/mysttiq.json
+```
+
+Example configuration:
+
+```text
+config/mysttiq.linux.example.json
+```
+
+Configuration commands:
+
+```bash
+./mysttiq-server config-show
+./mysttiq-server config-validate
+sudo ./mysttiq-server config-write-default
+```
+
+The configuration currently owns:
+
+- PalServer / SteamCMD / backup / runtime paths
+- PalServer launch arguments
+- startup and graceful-stop timeouts
+- service polling
+- automatic-recovery backoff, budget, and window
+- local API enablement, bind address, and port
+
+The default local management endpoint is:
+
+```text
+http://127.0.0.1:8213
+```
+
+v0.3.0.3 deliberately rejects non-loopback API bindings. Remote/LAN exposure and authentication are not enabled in this phase.
+
+Local API endpoints:
+
+```text
+GET  /healthz
+GET  /api/v1/status
+GET  /api/v1/service
+GET  /api/v1/config
+POST /api/v1/server/start
+POST /api/v1/server/stop
+POST /api/v1/server/restart
+```
+
+The service host starts the API alongside the existing `LinuxHeadlessSupervisor`. Lifecycle POST operations are serialized so simultaneous start/stop/restart requests cannot race each other.
 
 ## Linux systemd Service & Automatic Recovery
 
@@ -343,9 +481,13 @@ The remaining Windows-specific work is primarily the desktop UI/host layer, file
 | Version | Status | Focus |
 |---|:---:|---|
 | **v0.2.16.4** | Official Windows baseline | Final Windows platform-preparation baseline |
-| **v0.3.0.0** | Current RC | Headless Core Foundation & Linux Platform Base |
+| **v0.3.0.7** | Current RC | Linux Integration & Production Readiness |
 | **v0.3.x** | Planned | Linux lifecycle, SteamCMD execution, systemd, API/configuration, parity and hardening |
-| **v0.4.x** | Planned | Windows headless/service/low-resource improvements plus Windows backports discovered during v0.3 |
+| **v0.4.x** | Planned | Windows service/headless improvements, character/account migration, Server Doctor consolidation, setup/update cleanup |
+| **v0.5.x** | Planned | Advanced administration, automation, secure remote management, analytics, backups, guild/player tools |
+| **v0.6.x** | Planned | Multi-server / multi-instance Palworld management |
+| **v0.7.x** | Planned | Themes, skins, UI personalization and original Palworld-inspired MystTiq icon set |
+| **v0.8.x** | Planned | Adaptive application/server/network efficiency, priorities, eco modes and host/per-server dashboards |
 | **v1.0** | Goal | Stable production release |
 
 Historical release implementation detail belongs in [`CHANGELOG.md`](CHANGELOG.md), [`release-notes/`](release-notes/), and [`docs/history/`](docs/history/) rather than being duplicated here.
@@ -361,6 +503,7 @@ The documentation layout is intentionally separated by purpose:
 - [`docs/architecture/`](docs/architecture/) — current architecture/audit documents
 - [`docs/linux/`](docs/linux/) — Linux reference environment and headless implementation notes
 - [`docs/roadmap/WINDOWS_BACKPORT_REGISTRY.md`](docs/roadmap/WINDOWS_BACKPORT_REGISTRY.md) — improvements discovered during Linux work for shared/core or v0.4 Windows backport
+- [`docs/roadmap/PRODUCT_ROADMAP.md`](docs/roadmap/PRODUCT_ROADMAP.md) — detailed roadmap through v0.8
 - [`docs/history/`](docs/history/) — archived architecture and feature implementation notes
 - [`docs/release/`](docs/release/) — publication/release process documents
 - [`release-notes/`](release-notes/) — version-specific build, test, apply, and release notes

@@ -12,4 +12,9 @@
   <ItemGroup>
     <ProjectReference Include="..\MystTiq.Core\MystTiq.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
 </Project>

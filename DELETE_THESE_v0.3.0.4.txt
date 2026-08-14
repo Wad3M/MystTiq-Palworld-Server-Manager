@@ -1,0 +1,2 @@
+Delete obsolete active regression harness when applying ChangedFiles:
+scripts\Test-v0.3.0.3-Logic.ps1
