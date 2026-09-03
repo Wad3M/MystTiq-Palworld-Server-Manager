@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param([switch]$Strict)
 
 $ErrorActionPreference = 'Stop'
@@ -49,7 +49,11 @@ $activeFiles = Get-ChildItem $root -File -Recurse -Include *.cs,*.xaml,*.csproj,
     $relativePath = $_.FullName.Substring($root.Length + 1)
     $_.FullName -notlike "*\release-notes\*" -and
     $_.Name -ne 'CHANGELOG.md' -and
-    $relativePath -ne 'docs\index.html'
+    $relativePath -ne 'docs\index.html' -and
+    -not ($relativePath -like 'scripts\Test-v*-Logic.ps1') -and
+    -not ($relativePath -like 'scripts\Test-v*-RuntimeSmoke.ps1') -and
+    -not ($relativePath -like 'scripts\Test-v*-LinuxAcceptance.sh') -and
+    -not ($relativePath -like 'scripts\Test-v*-ProductionReadiness.sh')
 }
 $versionParts = $version.Split('.')
 $releaseLinePrefix = [regex]::Escape(($versionParts[0..2] -join '.'))

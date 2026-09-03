@@ -1,0 +1,1091 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <Color x:Key="Bg0">#07111D</Color>
+    <Color x:Key="Bg1">#0A1624</Color>
+    <Color x:Key="Bg2">#0E1D2E</Color>
+    <Color x:Key="Card">#E6112235</Color>
+    <Color x:Key="CardStrong">#F0122539</Color>
+    <Color x:Key="Border">#365C78</Color>
+    <Color x:Key="BorderSoft">#223D55</Color>
+    <Color x:Key="Blue">#2EA8FF</Color>
+    <Color x:Key="Cyan">#35D5E8</Color>
+    <Color x:Key="Green">#63DF7B</Color>
+    <Color x:Key="Amber">#F4B83F</Color>
+    <Color x:Key="Orange">#FF9558</Color>
+    <Color x:Key="Violet">#A96DFF</Color>
+    <Color x:Key="Magenta">#E676FF</Color>
+    <Color x:Key="Red">#FF646D</Color>
+    <Color x:Key="Muted">#91A8BF</Color>
+    <Color x:Key="Text">#F4F8FC</Color>
+
+    <SolidColorBrush x:Key="Bg0Brush" Color="{DynamicResource Bg0}"/>
+    <SolidColorBrush x:Key="Bg1Brush" Color="{DynamicResource Bg1}"/>
+    <SolidColorBrush x:Key="Bg2Brush" Color="{DynamicResource Bg2}"/>
+    <SolidColorBrush x:Key="CardBrush" Color="{DynamicResource Card}"/>
+    <SolidColorBrush x:Key="CardStrongBrush" Color="{DynamicResource CardStrong}"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="{DynamicResource Border}"/>
+    <SolidColorBrush x:Key="BorderSoftBrush" Color="{DynamicResource BorderSoft}"/>
+    <SolidColorBrush x:Key="BlueBrush" Color="{DynamicResource Blue}"/>
+    <SolidColorBrush x:Key="CyanBrush" Color="{DynamicResource Cyan}"/>
+    <SolidColorBrush x:Key="GreenBrush" Color="{DynamicResource Green}"/>
+    <SolidColorBrush x:Key="AmberBrush" Color="{DynamicResource Amber}"/>
+    <SolidColorBrush x:Key="OrangeBrush" Color="{DynamicResource Orange}"/>
+    <SolidColorBrush x:Key="VioletBrush" Color="{DynamicResource Violet}"/>
+    <SolidColorBrush x:Key="MagentaBrush" Color="{DynamicResource Magenta}"/>
+    <SolidColorBrush x:Key="RedBrush" Color="{DynamicResource Red}"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="{DynamicResource Muted}"/>
+    <SolidColorBrush x:Key="TextBrush" Color="{DynamicResource Text}"/>
+
+    <LinearGradientBrush x:Key="ButtonGradient" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#27455E"/>
+      <GradientStop Offset="0.48" Color="#183248"/>
+      <GradientStop Offset="1" Color="#102537"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ButtonGradientHover" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#356886"/>
+      <GradientStop Offset="0.48" Color="#22516E"/>
+      <GradientStop Offset="1" Color="#173C56"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ButtonGradientPressed" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#173A50"/>
+      <GradientStop Offset="0.48" Color="#102D42"/>
+      <GradientStop Offset="1" Color="#0A2032"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="SuccessGradient" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#3FCB8C"/>
+      <GradientStop Offset="0.48" Color="#23A96F"/>
+      <GradientStop Offset="1" Color="#14724A"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="SuccessGradientHover" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#5EE0AA"/>
+      <GradientStop Offset="0.48" Color="#34C482"/>
+      <GradientStop Offset="1" Color="#1C8F5C"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="SuccessGradientPressed" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#14724A"/>
+      <GradientStop Offset="0.48" Color="#0F5C3C"/>
+      <GradientStop Offset="1" Color="#0B4630"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="WarningGradient" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#FFCB5C"/>
+      <GradientStop Offset="0.48" Color="#F0B02E"/>
+      <GradientStop Offset="1" Color="#B87A10"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="WarningGradientHover" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#FFDE8A"/>
+      <GradientStop Offset="0.48" Color="#FFC454"/>
+      <GradientStop Offset="1" Color="#D4941C"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="WarningGradientPressed" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#B87A10"/>
+      <GradientStop Offset="0.48" Color="#96630D"/>
+      <GradientStop Offset="1" Color="#744C09"/>
+    </LinearGradientBrush>
+    <!-- Directional option sheen from the approved mockup: a bright glass lip over a
+         translucent blue face, with enough lower-edge depth to avoid a flat fill. -->
+    <LinearGradientBrush x:Key="GlassOptionHoverGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#C15FA9D8"/>
+      <GradientStop Offset="0.08" Color="#9A3277A8"/>
+      <GradientStop Offset="0.26" Color="#7A1F567E"/>
+      <GradientStop Offset="0.62" Color="#D0143855"/>
+      <GradientStop Offset="1" Color="#ED081A2C"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#20A9FF"/>
+      <GradientStop Offset="0.55" Color="#2584E8"/>
+      <GradientStop Offset="1" Color="#5C4DE4"/>
+    </LinearGradientBrush>
+    <!-- Resting-state glass treatment for primary buttons: a bright translucent lip over a
+         softly-tinted blue face, matching the glass look the hover states already use. -->
+    <LinearGradientBrush x:Key="PrimaryGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#9A6FC2F5"/>
+      <GradientStop Offset="0.22" Color="#7A4498D8"/>
+      <GradientStop Offset="0.6" Color="#682D6ED0"/>
+      <GradientStop Offset="1" Color="#7A6B4DE4"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="PrimaryGlassHoverGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#C48ED4FF"/>
+      <GradientStop Offset="0.22" Color="#9E5FB0F0"/>
+      <GradientStop Offset="0.6" Color="#8A3E8CE8"/>
+      <GradientStop Offset="1" Color="#9C7F5EEE"/>
+    </LinearGradientBrush>
+
+    <!-- v0.5.0.8 surface lighting: brighter upper-left edge, deeper lower-right face. -->
+    <LinearGradientBrush x:Key="CommandSurfaceGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F3173048"/>
+      <GradientStop Offset="0.36" Color="#F111263B"/>
+      <GradientStop Offset="0.72" Color="#F00B1B2D"/>
+      <GradientStop Offset="1" Color="#F006121F"/>
+    </LinearGradientBrush>
+    <!-- Selected-state glass. A near-white specular lip at the top-left is what actually reads as
+         "glass" against a same-hue backdrop: pure alpha-blended blue over a blue navbar just looks
+         like a richer blue, not translucent, so the highlight has to carry its own contrast. -->
+    <LinearGradientBrush x:Key="CategoryActiveGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#CCA8C0E8"/>
+      <GradientStop Offset="0.38" Color="#C088D0FC"/>
+      <GradientStop Offset="0.66" Color="#8A3F94E0"/>
+      <GradientStop Offset="0.88" Color="#521E5A9E"/>
+      <GradientStop Offset="1" Color="#260E2648"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="NavSelectedGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#C0A0B0D8"/>
+      <GradientStop Offset="0.38" Color="#B078BEEC"/>
+      <GradientStop Offset="0.68" Color="#7C4076C8"/>
+      <GradientStop Offset="0.9" Color="#48285690"/>
+      <GradientStop Offset="1" Color="#220E2648"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="NavHoverGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#A882C0E0"/>
+      <GradientStop Offset="0.4" Color="#7C4E8EC4"/>
+      <GradientStop Offset="0.72" Color="#582C5C90"/>
+      <GradientStop Offset="1" Color="#2A122850"/>
+    </LinearGradientBrush>
+    <!-- Selected AND hovered at once: hovering an already-checked nav item must still visibly
+         shift (checked's own Background otherwise wins over pointerover's with no change at all),
+         so this is a uniformly lightened pass of NavSelectedGlassGradient's stops. -->
+    <LinearGradientBrush x:Key="NavSelectedHoverGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#D8C0CEE8"/>
+      <GradientStop Offset="0.38" Color="#CC98D0FC"/>
+      <GradientStop Offset="0.68" Color="#9C5C96E0"/>
+      <GradientStop Offset="0.9" Color="#6C3C6CA8"/>
+      <GradientStop Offset="1" Color="#3C1C3C68"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="DashboardGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#4C1C3D62"/>
+      <GradientStop Offset="0.35" Color="#300B1B2C"/>
+      <GradientStop Offset="0.70" Color="#301B3260"/>
+      <GradientStop Offset="1" Color="#26071120"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ContextBlueGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#3B174B78"/>
+      <GradientStop Offset="1" Color="#CA0D2033"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ContextVioletGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#442B245A"/>
+      <GradientStop Offset="1" Color="#CA11182B"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ContextAmberGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#46392D19"/>
+      <GradientStop Offset="1" Color="#CA171A1D"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ContextMagentaGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#42362755"/>
+      <GradientStop Offset="1" Color="#CA171727"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ContextOrangeGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#463A271E"/>
+      <GradientStop Offset="1" Color="#CA17191E"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="NavSurfaceGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F1122536"/>
+      <GradientStop Offset="0.55" Color="#F00A1826"/>
+      <GradientStop Offset="1" Color="#F0071320"/>
+    </LinearGradientBrush>
+    <!-- Glass treatment for the sidebar surface. The panel is tall and narrow, so a corner-to-corner
+         diagonal squeezes the highlight into a sliver; a top-to-bottom gradient with a genuinely
+         bright cap reads as glass lit from above, matching how the tabs/buttons read once their
+         bright stop was given real area instead of a thin corner lip. -->
+    <LinearGradientBrush x:Key="NavGlassSurfaceGradient" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#8C4E80AC"/>
+      <GradientStop Offset="0.12" Color="#6C386896"/>
+      <GradientStop Offset="0.3" Color="#582A5678"/>
+      <GradientStop Offset="0.65" Color="#4A17324C"/>
+      <GradientStop Offset="1" Color="#4A0A1826"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="StatusSurfaceGradient" StartPoint="0%,0%" EndPoint="1,0">
+      <GradientStop Offset="0" Color="#F1112639"/>
+      <GradientStop Offset="0.55" Color="#F0091725"/>
+      <GradientStop Offset="1" Color="#F00C1A2A"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CardGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F51C3B55"/>
+      <GradientStop Offset="0.16" Color="#F2163048"/>
+      <GradientStop Offset="0.58" Color="#F00D2032"/>
+      <GradientStop Offset="1" Color="#F0081422"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CardGreenGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0183B3D"/>
+      <GradientStop Offset="0.28" Color="#F0122B3C"/>
+      <GradientStop Offset="1" Color="#F00A1726"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CardCyanGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0183850"/>
+      <GradientStop Offset="0.34" Color="#F0122A40"/>
+      <GradientStop Offset="1" Color="#F00A1828"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CardVioletGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0282850"/>
+      <GradientStop Offset="0.35" Color="#F0172442"/>
+      <GradientStop Offset="1" Color="#F00B182A"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CardRedGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0602828"/>
+      <GradientStop Offset="0.35" Color="#F0481E1E"/>
+      <GradientStop Offset="1" Color="#F0200E10"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CardNeutralGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0335370"/>
+      <GradientStop Offset="0.35" Color="#F0294460"/>
+      <GradientStop Offset="1" Color="#F0142A3E"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CardAmberGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0654420"/>
+      <GradientStop Offset="0.35" Color="#F04C3418"/>
+      <GradientStop Offset="1" Color="#F02A1F10"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CardDarkGreenGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F01F4C32"/>
+      <GradientStop Offset="0.35" Color="#F0173D28"/>
+      <GradientStop Offset="1" Color="#F00E2418"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CardPurpleGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0553076"/>
+      <GradientStop Offset="0.35" Color="#F0442760"/>
+      <GradientStop Offset="1" Color="#F0261640"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ServerTabGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0071523"/>
+      <GradientStop Offset="0.58" Color="#E90D2236"/>
+      <GradientStop Offset="1" Color="#E712304A"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ServerTabHoverGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0091C2D"/>
+      <GradientStop Offset="0.58" Color="#E9163D5C"/>
+      <GradientStop Offset="1" Color="#E91B5F8B"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ServerTabActiveGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0061321"/>
+      <GradientStop Offset="0.55" Color="#F0092035"/>
+      <GradientStop Offset="0.86" Color="#F00D3655"/>
+      <GradientStop Offset="1" Color="#F0105D86"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="BlueGraphFill" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#7052C4FF"/>
+      <GradientStop Offset="0.62" Color="#2839A6D8"/>
+      <GradientStop Offset="1" Color="#0039A6D8"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CyanGraphFill" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#7035D5E8"/>
+      <GradientStop Offset="0.62" Color="#2535D5E8"/>
+      <GradientStop Offset="1" Color="#0035D5E8"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="VioletGraphFill" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#70C377FF"/>
+      <GradientStop Offset="0.62" Color="#25A96DFF"/>
+      <GradientStop Offset="1" Color="#00A96DFF"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GreenGraphFill" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#707ED45C"/>
+      <GradientStop Offset="0.62" Color="#257ED45C"/>
+      <GradientStop Offset="1" Color="#007ED45C"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="AmberGraphFill" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#70F4B83F"/>
+      <GradientStop Offset="0.62" Color="#25F4B83F"/>
+      <GradientStop Offset="1" Color="#00F4B83F"/>
+    </LinearGradientBrush>
+
+    <!-- v0.5.0.8 contextual/data-surface gradients -->
+    <LinearGradientBrush x:Key="BackupContextGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#5C4B3518"/>
+      <GradientStop Offset="0.45" Color="#E21C2630"/>
+      <GradientStop Offset="1" Color="#D70C1723"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BackupProtectionGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F02F3822"/>
+      <GradientStop Offset="0.4" Color="#F0172B30"/>
+      <GradientStop Offset="1" Color="#F00A1724"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BackupStorageGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F0193851"/>
+      <GradientStop Offset="0.45" Color="#F00F273B"/>
+      <GradientStop Offset="1" Color="#F0091726"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BackupRetentionGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F03B2D1B"/>
+      <GradientStop Offset="0.45" Color="#F024221E"/>
+      <GradientStop Offset="1" Color="#F00B1723"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="RestoreGradient" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#5A8B5A23"/>
+      <GradientStop Offset="0.48" Color="#C64B351A"/>
+      <GradientStop Offset="1" Color="#D6231D18"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="RestoreGradientHover" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#8ABF7A2B"/>
+      <GradientStop Offset="0.48" Color="#E2714E1D"/>
+      <GradientStop Offset="1" Color="#E83A2718"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="DangerGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#F06469"/>
+      <GradientStop Offset="1" Color="#A92E43"/>
+    </LinearGradientBrush>
+  </Styles.Resources>
+
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource Bg0Brush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+    <Setter Property="FontFamily" Value="Inter, Segoe UI"/>
+    <Setter Property="FontSize" Value="13"/>
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+  </Style>
+  <Style Selector="TextBlock.display">
+    <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+  </Style>
+  <Style Selector="TextBlock.ellipsis">
+    <Setter Property="TextWrapping" Value="NoWrap"/>
+    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+  </Style>
+  <Style Selector="TextBlock.path">
+    <Setter Property="TextWrapping" Value="NoWrap"/>
+    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Inter"/>
+    <Setter Property="FontSize" Value="12"/>
+  </Style>
+  <Style Selector="TextBlock.flatIcon">
+    <Setter Property="FontFamily" Value="Segoe UI Symbol, Segoe UI, Inter"/>
+    <Setter Property="FontWeight" Value="Bold"/>
+    <Setter Property="FontSize" Value="20"/>
+    <Setter Property="HorizontalAlignment" Value="Center"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="TextAlignment" Value="Center"/>
+  </Style>
+
+  <Style Selector="Button">
+    <Setter Property="MinHeight" Value="34"/>
+    <Setter Property="Padding" Value="12,6"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="Background" Value="{DynamicResource ButtonGradient}"/>
+    <Setter Property="BorderBrush" Value="#5F7F98"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Foreground" Value="White"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <Style Selector="Button:pointerover">
+    <Setter Property="Background" Value="{DynamicResource ButtonGradientHover}"/>
+    <Setter Property="BorderBrush" Value="#72D0FF"/>
+  </Style>
+  <Style Selector="Button:pointerover Border.iconTile">
+    <Setter Property="BoxShadow" Value="0 0 15 1 #6649BFFF"/>
+  </Style>
+  <Style Selector="Button:pointerover Border.navIcon">
+    <Setter Property="BoxShadow" Value="0 0 11 0 #5549BFFF"/>
+  </Style>
+  <Style Selector="Button:pressed">
+    <Setter Property="Opacity" Value="0.92"/>
+    <Setter Property="Background" Value="{DynamicResource ButtonGradientPressed}"/>
+    <Setter Property="BorderBrush" Value="#5AAED4"/>
+  </Style>
+  <Style Selector="Button:disabled">
+    <Setter Property="Opacity" Value="0.38"/>
+  </Style>
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource PrimaryGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="#7DD9FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#35B9FF" Opacity="0.32"/></Setter>
+  </Style>
+  <Style Selector="Button.primary:pointerover">
+    <Setter Property="Background" Value="{DynamicResource PrimaryGlassHoverGradient}"/>
+    <Setter Property="BorderBrush" Value="#C4F1FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="#35B9FF" Opacity="0.62"/></Setter>
+  </Style>
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{DynamicResource DangerGradient}"/>
+    <Setter Property="BorderBrush" Value="#FF858C"/>
+  </Style>
+  <Style Selector="Button.danger:pointerover">
+    <Setter Property="Background" Value="{DynamicResource DangerGradient}"/>
+    <Setter Property="BorderBrush" Value="#FFC0C4"/>
+  </Style>
+  <Style Selector="Button.success">
+    <Setter Property="Background" Value="{DynamicResource SuccessGradient}"/>
+    <Setter Property="BorderBrush" Value="#5EE0AA"/>
+    <Setter Property="Foreground" Value="White"/>
+  </Style>
+  <Style Selector="Button.success:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SuccessGradientHover}"/>
+    <Setter Property="BorderBrush" Value="#9AF0C8"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="#63DF7B" Opacity="0.5"/></Setter>
+  </Style>
+  <Style Selector="Button.success:pressed">
+    <Setter Property="Background" Value="{DynamicResource SuccessGradientPressed}"/>
+    <Setter Property="BorderBrush" Value="#2E9E6C"/>
+  </Style>
+  <Style Selector="Button.warning">
+    <Setter Property="Background" Value="{DynamicResource WarningGradient}"/>
+    <Setter Property="BorderBrush" Value="#FFDE8A"/>
+    <Setter Property="Foreground" Value="#2A1B04"/>
+  </Style>
+  <Style Selector="Button.warning:pointerover">
+    <Setter Property="Background" Value="{DynamicResource WarningGradientHover}"/>
+    <Setter Property="BorderBrush" Value="#FFEBB0"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="#F4B83F" Opacity="0.5"/></Setter>
+  </Style>
+  <Style Selector="Button.warning:pressed">
+    <Setter Property="Background" Value="{DynamicResource WarningGradientPressed}"/>
+    <Setter Property="BorderBrush" Value="#C4841A"/>
+  </Style>
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+  </Style>
+  <Style Selector="Button.ghost:pointerover">
+    <Setter Property="Background" Value="#25334C61"/>
+    <Setter Property="BorderBrush" Value="#466987"/>
+  </Style>
+  <Style Selector="Button.ribbon">
+    <Setter Property="MinWidth" Value="68"/>
+    <Setter Property="Height" Value="70"/>
+    <Setter Property="Padding" Value="8,5"/>
+    <Setter Property="Background" Value="{DynamicResource ButtonGradient}"/>
+    <Setter Property="BorderBrush" Value="#385B73"/>
+  </Style>
+  <Style Selector="Button.ribbon:pointerover">
+    <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
+    <Setter Property="BorderBrush" Value="#91E4FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="13" Color="#35B9FF" Opacity="0.5"/></Setter>
+  </Style>
+  <Style Selector="Button.ribbon:pointerover Border.iconTile">
+    <Setter Property="BoxShadow" Value="0 0 18 2 #7749BFFF"/>
+  </Style>
+  <!-- Ribbon buttons that are also primary (e.g. Start) must re-assert the glass treatment here:
+       Button.ribbon's own Background/hover setters above are declared later than Button.primary's
+       and win ties on equal (single-class) specificity, so without this the ribbon flat fill
+       silently wins over the primary glass look for any button carrying both classes. -->
+  <Style Selector="Button.ribbon.primary">
+    <Setter Property="Background" Value="{DynamicResource PrimaryGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="#7DD9FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#35B9FF" Opacity="0.32"/></Setter>
+  </Style>
+  <Style Selector="Button.ribbon.primary:pointerover">
+    <Setter Property="Background" Value="{DynamicResource PrimaryGlassHoverGradient}"/>
+    <Setter Property="BorderBrush" Value="#C4F1FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="18" Color="#35B9FF" Opacity="0.72"/></Setter>
+  </Style>
+  <!-- Same fix for ribbon+danger (Stop): without this, the ribbon flat fill silently wins over
+       the red danger background too. -->
+  <Style Selector="Button.ribbon.danger">
+    <Setter Property="Background" Value="{DynamicResource DangerGradient}"/>
+    <Setter Property="BorderBrush" Value="#FF858C"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#FF646D" Opacity="0.3"/></Setter>
+  </Style>
+  <Style Selector="Button.ribbon.danger:pointerover">
+    <Setter Property="Background" Value="{DynamicResource DangerGradient}"/>
+    <Setter Property="BorderBrush" Value="#FFC0C4"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="#FF646D" Opacity="0.6"/></Setter>
+  </Style>
+
+  <Style Selector="Button.ribbon StackPanel">
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="HorizontalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Button.ribbon TextBlock">
+    <Setter Property="HorizontalAlignment" Value="Center"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Border.iconTile">
+    <Setter Property="Width" Value="34"/>
+    <Setter Property="Height" Value="34"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="HorizontalAlignment" Value="Center"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="BoxShadow" Value="0 0 10 0 #35000000"/>
+    <Setter Property="Margin" Value="0,0,0,3"/>
+  </Style>
+  <Style Selector="Border.navIcon">
+    <Setter Property="Width" Value="28"/>
+    <Setter Property="Height" Value="28"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <Style Selector="Border.card.glowGreen">
+    <Setter Property="Background" Value="{DynamicResource CardGreenGradient}"/>
+    <Setter Property="BoxShadow" Value="0 0 26 2 #5A3ADF64, 0 10 28 0 #60000000"/>
+  </Style>
+  <Style Selector="Border.card.glowCyan">
+    <Setter Property="Background" Value="{DynamicResource CardCyanGradient}"/>
+    <Setter Property="BoxShadow" Value="0 0 26 2 #5A35D5E8, 0 10 28 0 #60000000"/>
+  </Style>
+  <Style Selector="Border.card.glowViolet">
+    <Setter Property="Background" Value="{DynamicResource CardVioletGradient}"/>
+    <Setter Property="BoxShadow" Value="0 0 26 2 #5AA96DFF, 0 10 28 0 #60000000"/>
+  </Style>
+  <Style Selector="Button.ribbonCompact">
+    <Setter Property="Height" Value="38"/>
+    <Setter Property="MinWidth" Value="42"/>
+    <Setter Property="Padding" Value="8,4"/>
+  </Style>
+  <Style Selector="Button.ribbonCompact:pointerover">
+    <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
+    <Setter Property="BorderBrush" Value="#91E4FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#35B9FF" Opacity="0.46"/></Setter>
+  </Style>
+  <Style Selector="Button.ribbonMedium">
+    <Setter Property="Height" Value="40"/>
+    <Setter Property="MinWidth" Value="88"/>
+    <Setter Property="Padding" Value="10,5"/>
+    <Setter Property="Margin" Value="0,0,5,0"/>
+  </Style>
+  <Style Selector="Button.ribbonMedium:pointerover">
+    <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
+    <Setter Property="BorderBrush" Value="#91E4FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="11" Color="#35B9FF" Opacity="0.46"/></Setter>
+  </Style>
+  <Style Selector="ToggleButton.categoryTab">
+    <Setter Property="Height" Value="36"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Margin" Value="1,1,1,0"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0,2,0,2"/>
+    <Setter Property="Foreground" Value="#F4F8FC"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+  </Style>
+  <Style Selector="Border.categoryTabGlow">
+    <Setter Property="Padding" Value="14,4"/>
+    <Setter Property="CornerRadius" Value="5"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="VerticalAlignment" Value="Stretch"/>
+  </Style>
+  <Style Selector="ToggleButton.categoryTab:pointerover">
+    <Setter Property="BorderBrush" Value="#91E4FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="11" Color="#35B9FF" Opacity="0.46"/></Setter>
+  </Style>
+  <Style Selector="ToggleButton.categoryTab:pointerover Border.categoryTabGlow">
+    <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
+  </Style>
+  <Style Selector="ToggleButton.categoryTab:checked">
+    <Setter Property="BorderBrush" Value="#5AD4FF"/>
+    <Setter Property="Foreground" Value="#FFFFFF"/>
+  </Style>
+  <Style Selector="ToggleButton.categoryTab:checked Border.categoryTabGlow">
+    <Setter Property="Background" Value="{DynamicResource CategoryActiveGradient}"/>
+    <Setter Property="BoxShadow" Value="0 0 18 1 #7A52C4FF"/>
+  </Style>
+  <!-- Category selection is dark glass; semantic color lives on the overline, underline and glow. -->
+  <Style Selector="ToggleButton.categoryTab.server:checked"><Setter Property="BorderBrush" Value="#52C4FF"/></Style>
+  <Style Selector="ToggleButton.categoryTab.world:checked"><Setter Property="BorderBrush" Value="#B87BFF"/></Style>
+  <Style Selector="ToggleButton.categoryTab.backups:checked"><Setter Property="BorderBrush" Value="#F4B83F"/></Style>
+  <Style Selector="ToggleButton.categoryTab.mods:checked"><Setter Property="BorderBrush" Value="#E676FF"/></Style>
+  <Style Selector="ToggleButton.categoryTab.tools:checked"><Setter Property="BorderBrush" Value="#FF9558"/></Style>
+  <Style Selector="ToggleButton.categoryTab.system:checked"><Setter Property="BorderBrush" Value="#72C8E8"/></Style>
+  <Style Selector="ToggleButton.categoryTab.mods:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="0 0 18 1 #72E676FF"/></Style>
+  <Style Selector="ToggleButton.categoryTab.backups:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="0 0 18 1 #72F4B83F"/></Style>
+  <Style Selector="ToggleButton.categoryTab.world:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="0 0 18 1 #72A96DFF"/></Style>
+  <Style Selector="ToggleButton.categoryTab.tools:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="0 0 18 1 #72FF9558"/></Style>
+  <Style Selector="ToggleButton.categoryTab.system:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="0 0 18 1 #7272C8E8"/></Style>
+
+  <Style Selector="Border.worldTabHeader">
+    <Setter Property="Background" Value="#B8162638"/>
+    <Setter Property="BorderBrush" Value="#4E6E8BA8"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Padding" Value="7,5"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="BoxShadow" Value="0 0 16 0 #3835B9FF"/>
+  </Style>
+  <Style Selector="TextBlock.worldTabLabel">
+    <Setter Property="FontSize" Value="9"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="#8299AF"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="Margin" Value="4,0,8,0"/>
+  </Style>
+  <Style Selector="ToggleButton.worldTab">
+    <Setter Property="Height" Value="28"/>
+    <Setter Property="MinWidth" Value="64"/>
+    <Setter Property="Padding" Value="10,3"/>
+    <Setter Property="CornerRadius" Value="5"/>
+    <Setter Property="Background" Value="#C0182A3C"/>
+    <Setter Property="BorderBrush" Value="#39536B"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Foreground" Value="#CEDCE8"/>
+    <Setter Property="FontSize" Value="10"/>
+  </Style>
+  <Style Selector="ToggleButton.worldTab:pointerover">
+    <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
+    <Setter Property="BorderBrush" Value="#A8E9FF"/>
+    <Setter Property="Foreground" Value="#FFFFFF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#35B9FF" Opacity="0.48"/></Setter>
+  </Style>
+  <Style Selector="ToggleButton.worldTab:checked">
+    <Setter Property="Background" Value="#E12A3155"/>
+    <Setter Property="BorderBrush" Value="#B87BFF"/>
+    <Setter Property="Foreground" Value="#FFFFFF"/>
+  </Style>
+  <Style Selector="ToggleButton.worldTab.primary">
+    <Setter Property="MinWidth" Value="92"/>
+    <Setter Property="Height" Value="30"/>
+    <Setter Property="FontSize" Value="11"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+  <Style Selector="ToggleButton.worldTab.nested">
+    <Setter Property="Height" Value="26"/>
+    <Setter Property="MinWidth" Value="60"/>
+    <Setter Property="Foreground" Value="#B9CBD9"/>
+  </Style>
+
+  <Style Selector="ToggleButton.nav">
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+    <Setter Property="Height" Value="58"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Foreground" Value="#F4F8FC"/>
+    <!-- FluentTheme's ToggleButton template paints its own checked/pointerover background
+         directly on an internal template part; a plain Background setter on the control
+         cannot override that state-specific template paint. Replacing the template with a
+         bare ContentPresenter removes that default chrome entirely, so the only visuals
+         are the ones this app draws itself via the child Border.navSurface. -->
+    <Setter Property="Template">
+      <ControlTemplate TargetType="ToggleButton">
+        <ContentPresenter Content="{TemplateBinding Content}"
+                           Padding="{TemplateBinding Padding}"
+                           HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                           VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ToggleButton.nav:checked">
+    <Setter Property="Foreground" Value="#FFFFFF"/>
+  </Style>
+  <Style Selector="Border.navSurface">
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Padding" Value="8,0"/>
+    <Setter Property="BorderThickness" Value="2"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="VerticalAlignment" Value="Stretch"/>
+  </Style>
+  <Style Selector="Border.navSurface TextBlock">
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="ToggleButton.nav:pointerover Border.navSurface">
+    <Setter Property="Background" Value="{DynamicResource NavHoverGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="#91E4FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#49BFFF" Opacity="0.4"/></Setter>
+  </Style>
+  <Style Selector="ToggleButton.nav:pointerover Border.navSurface TextBlock">
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="8" Color="#8CE8FF" Opacity="0.85"/></Setter>
+  </Style>
+  <Style Selector="ToggleButton.nav:checked Border.navSurface TextBlock">
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="7" Color="#C8F0FF" Opacity="0.65"/></Setter>
+  </Style>
+  <Style Selector="ToggleButton.nav:checked Border.navSurface">
+    <Setter Property="Background" Value="{DynamicResource NavSelectedGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="#62D8FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="2" BlurRadius="10" Color="#35D5E8" Opacity="0.55"/></Setter>
+  </Style>
+  <Style Selector="ToggleButton.nav:checked:pointerover Border.navSurface">
+    <Setter Property="Background" Value="{DynamicResource NavSelectedHoverGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="#B0EEFF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="2" BlurRadius="14" Color="#6CE8FF" Opacity="0.75"/></Setter>
+  </Style>
+  <Style Selector="ToggleButton.nav:checked Border.navIcon">
+    <Setter Property="BoxShadow" Value="0 0 14 1 #7749BFFF"/>
+  </Style>
+
+  <!-- Compatibility style for page-local subnavigation buttons used inside prototype pages. -->
+  <Style Selector="Button.nav">
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    <Setter Property="MinHeight" Value="34"/>
+    <Setter Property="Background" Value="{DynamicResource ButtonGradient}"/>
+    <Setter Property="BorderBrush" Value="#365C78"/>
+    <Setter Property="Padding" Value="9,4"/>
+  </Style>
+  <Style Selector="Button.nav:pointerover">
+    <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
+    <Setter Property="BorderBrush" Value="#91E4FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="11" Color="#35B9FF" Opacity="0.46"/></Setter>
+  </Style>
+
+  <Style Selector="ToggleButton.serverTab">
+    <Setter Property="MinWidth" Value="175"/>
+    <Setter Property="Height" Value="56"/>
+    <Setter Property="Margin" Value="0,5,6,5"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="CornerRadius" Value="6,6,1,1"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+  </Style>
+  <Style Selector="Border.serverTabSurface">
+    <Setter Property="Background" Value="{DynamicResource ServerTabGradient}"/>
+    <Setter Property="BorderBrush" Value="#365A75"/>
+    <Setter Property="BorderThickness" Value="1,1,1,2"/>
+    <Setter Property="CornerRadius" Value="6,6,1,1"/>
+    <Setter Property="Padding" Value="10,5"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="BoxShadow" Value="0 8 18 0 #42000000"/>
+  </Style>
+  <Style Selector="ToggleButton.serverTab:pointerover Border.serverTabSurface">
+    <Setter Property="Background" Value="{DynamicResource ServerTabHoverGradient}"/>
+    <Setter Property="BorderBrush" Value="#72D0FF"/>
+    <Setter Property="BoxShadow" Value="0 0 18 1 #6049BFFF"/>
+  </Style>
+  <Style Selector="ToggleButton.serverTab:checked Border.serverTabSurface">
+    <Setter Property="Background" Value="{DynamicResource ServerTabActiveGradient}"/>
+    <Setter Property="BorderBrush" Value="#62D8FF"/>
+    <Setter Property="BorderThickness" Value="1,1,1,3"/>
+    <Setter Property="BoxShadow" Value="-8 9 18 0 #5B35D5E8, 8 9 18 0 #5B35D5E8, 0 3 7 0 #7A64E7FF, 0 10 22 0 #55000000"/>
+  </Style>
+
+  <Style Selector="Border.appIcon">
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Background" Value="#E8152B42"/>
+    <Setter Property="BorderBrush" Value="#5EC6EB"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BoxShadow" Value="0 0 17 1 #5849CFFF, 0 7 14 0 #55000000"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+
+  <Style Selector="Border.brandWordmark">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="CornerRadius" Value="0"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="ClipToBounds" Value="False"/>
+    <Setter Property="BoxShadow" Value="0 0 18 1 #5A61CFFF"/>
+  </Style>
+  <Style Selector="TextBlock.brandText">
+    <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="#EAF5FF"/>
+  </Style>
+  <Style Selector="TextBlock.brandVersion">
+    <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Text, Inter"/>
+    <Setter Property="FontSize" Value="10"/>
+    <Setter Property="LetterSpacing" Value="0.45"/>
+    <Setter Property="Foreground" Value="#AFC7DA"/>
+  </Style>
+  <Style Selector="Border.dashboardGlass">
+    <Setter Property="Background" Value="{DynamicResource DashboardGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="#315A7A"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="6"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="BoxShadow" Value="0 0 30 0 #3B2F9FEA, 0 14 34 0 #50000000"/>
+  </Style>
+  <Style Selector="Border.ribbonGroup.contextBlue">
+    <Setter Property="Margin" Value="12,0,4,0"/>
+    <Setter Property="Background" Value="{DynamicResource ContextBlueGradient}"/>
+    <Setter Property="BorderBrush" Value="#4DAFE8"/>
+    <Setter Property="BoxShadow" Value="0 0 15 0 #3F2EA8FF"/>
+  </Style>
+  <Style Selector="Border.ribbonGroup.contextViolet">
+    <Setter Property="Margin" Value="12,0,4,0"/>
+    <Setter Property="Background" Value="{DynamicResource ContextVioletGradient}"/>
+    <Setter Property="BorderBrush" Value="#8D63C9"/>
+    <Setter Property="BoxShadow" Value="0 0 15 0 #3FA96DFF"/>
+  </Style>
+  <Style Selector="Border.ribbonGroup.contextAmber">
+    <Setter Property="Margin" Value="12,0,4,0"/>
+    <Setter Property="Background" Value="{DynamicResource BackupContextGradient}"/>
+    <Setter Property="BorderBrush" Value="#D19A3D"/>
+    <Setter Property="BorderThickness" Value="1,2,1,1"/>
+    <Setter Property="BoxShadow" Value="0 0 22 1 #55F4B83F, 0 8 18 0 #52000000"/>
+  </Style>
+  <Style Selector="Border.ribbonGroup.contextMagenta">
+    <Setter Property="Margin" Value="12,0,4,0"/>
+    <Setter Property="Background" Value="{DynamicResource ContextMagentaGradient}"/>
+    <Setter Property="BorderBrush" Value="#D26AED"/>
+    <Setter Property="BorderThickness" Value="1,2,1,1"/>
+    <Setter Property="BoxShadow" Value="0 0 22 1 #58E676FF, 0 8 18 0 #52000000"/>
+  </Style>
+  <Style Selector="Border.ribbonGroup.contextOrange">
+    <Setter Property="Margin" Value="12,0,4,0"/>
+    <Setter Property="Background" Value="{DynamicResource ContextOrangeGradient}"/>
+    <Setter Property="BorderBrush" Value="#B06B3E"/>
+    <Setter Property="BoxShadow" Value="0 0 15 0 #3FFF9558"/>
+  </Style>
+
+  <Style Selector="Button.ribbon.backupCreate">
+    <Setter Property="BorderBrush" Value="#C99935"/>
+    <Setter Property="Background" Value="#46351C16"/>
+  </Style>
+  <Style Selector="Button.ribbon.backupCreate:pointerover">
+    <Setter Property="Background" Value="#75552D18"/>
+    <Setter Property="BorderBrush" Value="#FFD15B"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="15" Color="#F4B83F" Opacity="0.58"/></Setter>
+  </Style>
+  <Style Selector="Button.ribbon.backupVerify">
+    <Setter Property="BorderBrush" Value="#4E9E68"/>
+    <Setter Property="Background" Value="#2F193824"/>
+  </Style>
+  <Style Selector="Button.ribbon.backupVerify:pointerover">
+    <Setter Property="Background" Value="#55224D30"/>
+    <Setter Property="BorderBrush" Value="#75E995"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="15" Color="#63DF7B" Opacity="0.56"/></Setter>
+  </Style>
+  <Style Selector="Button.ribbon.backupRetention">
+    <Setter Property="BorderBrush" Value="#A86C39"/>
+    <Setter Property="Background" Value="#3B2B211C"/>
+  </Style>
+  <Style Selector="Button.ribbon.backupRetention:pointerover">
+    <Setter Property="Background" Value="#65452D1D"/>
+    <Setter Property="BorderBrush" Value="#FF9E5F"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="15" Color="#FF9558" Opacity="0.58"/></Setter>
+  </Style>
+
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource CardGradient}"/>
+    <Setter Property="BorderBrush" Value="#426784"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Padding" Value="14"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="BoxShadow" Value="-3 -3 11 0 #2548BFFF, 0 0 12 0 #2435BFFF, 0 10 26 0 #5A000000"/>
+  </Style>
+  <!-- Status-driven card glows: declared after Border.card so they win the Background/BoxShadow
+       cascade for equal-specificity single-class selectors (Avalonia resolves ties by declaration
+       order, not by "how specific this feels"). Unscoped from .card so they also apply to
+       .statuscard elements (e.g. the Dashboard's SERVER card). Toggled via Classes.glowX bindings. -->
+  <Style Selector="Border.glowGreen">
+    <Setter Property="Background" Value="{DynamicResource CardGreenGradient}"/>
+    <Setter Property="BorderBrush" Value="#4CAF6E"/>
+    <Setter Property="BoxShadow" Value="0 0 22 2 #5A3ADF64, 0 8 22 0 #55000000"/>
+  </Style>
+  <Style Selector="Border.glowRed">
+    <Setter Property="Background" Value="{DynamicResource CardRedGradient}"/>
+    <Setter Property="BorderBrush" Value="#E0626A"/>
+    <Setter Property="BoxShadow" Value="0 0 22 2 #5AFF646D, 0 8 22 0 #55000000"/>
+  </Style>
+  <Style Selector="Border.glowAmber">
+    <Setter Property="Background" Value="{DynamicResource CardAmberGradient}"/>
+    <Setter Property="BorderBrush" Value="#E0A83E"/>
+    <Setter Property="BoxShadow" Value="0 0 22 2 #5AF4B83F, 0 8 22 0 #55000000"/>
+  </Style>
+  <Style Selector="Border.glowPurple">
+    <Setter Property="Background" Value="{DynamicResource CardPurpleGradient}"/>
+    <Setter Property="BorderBrush" Value="#8E62B8"/>
+    <Setter Property="BoxShadow" Value="0 0 22 2 #5AA96DFF, 0 8 22 0 #55000000"/>
+  </Style>
+  <Style Selector="Border.glowDarkGreen">
+    <Setter Property="Background" Value="{DynamicResource CardDarkGreenGradient}"/>
+    <Setter Property="BorderBrush" Value="#3E9860"/>
+    <Setter Property="BoxShadow" Value="0 0 22 2 #5A2E9E5C, 0 8 22 0 #55000000"/>
+  </Style>
+  <Style Selector="Border.glowNeutral">
+    <Setter Property="Background" Value="{DynamicResource CardNeutralGradient}"/>
+    <Setter Property="BorderBrush" Value="#5A7FA0"/>
+    <Setter Property="BoxShadow" Value="0 0 16 1 #3552749A, 0 8 22 0 #55000000"/>
+  </Style>
+  <Style Selector="Border.card TextBlock">
+    <Setter Property="TextWrapping" Value="Wrap"/>
+  </Style>
+  <Style Selector="Border.card Grid">
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <Style Selector="Border.card StackPanel">
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <Style Selector="Border.card DockPanel">
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <Style Selector="Border.card WrapPanel">
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <Style Selector="Border.card Button">
+    <Setter Property="MinHeight" Value="28"/>
+    <Setter Property="MaxHeight" Value="34"/>
+    <Setter Property="Padding" Value="9,4"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <Style Selector="Border.card.backupProtection">
+    <Setter Property="Background" Value="{DynamicResource BackupProtectionGradient}"/>
+    <Setter Property="BorderBrush" Value="#AA8350"/>
+    <Setter Property="BoxShadow" Value="0 0 16 0 #35F4B83F, 0 10 24 0 #59000000"/>
+  </Style>
+  <Style Selector="Border.card.backupStorage">
+    <Setter Property="Background" Value="{DynamicResource BackupStorageGradient}"/>
+    <Setter Property="BorderBrush" Value="#4A83A8"/>
+    <Setter Property="BoxShadow" Value="0 0 14 0 #3035BFFF, 0 10 24 0 #59000000"/>
+  </Style>
+  <Style Selector="Border.card.backupRetention">
+    <Setter Property="Background" Value="{DynamicResource BackupRetentionGradient}"/>
+    <Setter Property="BorderBrush" Value="#A96E3C"/>
+    <Setter Property="BoxShadow" Value="0 0 15 0 #3CFF9558, 0 10 24 0 #59000000"/>
+  </Style>
+  <Style Selector="Border.statusBadge">
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Padding" Value="7,2"/>
+    <Setter Property="HorizontalAlignment" Value="Left"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <Style Selector="Border.statusBadge.verified">
+    <Setter Property="Background" Value="#241B4A2B"/>
+    <Setter Property="BorderBrush" Value="#4C9B64"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BoxShadow" Value="0 0 10 0 #2F63DF7B"/>
+  </Style>
+  <Style Selector="Border.statusBadge.enabled, Border.statusBadge.healthy">
+    <Setter Property="Background" Value="#241B4A2B"/><Setter Property="BorderBrush" Value="#4C9B64"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BoxShadow" Value="0 0 9 0 #2863DF7B"/>
+  </Style>
+  <Style Selector="Border.statusBadge.update">
+    <Setter Property="Background" Value="#2E4A3518"/><Setter Property="BorderBrush" Value="#B27C31"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BoxShadow" Value="0 0 9 0 #35F4B83F"/>
+  </Style>
+  <Style Selector="Border.card.modPlatform"><Setter Property="BorderBrush" Value="#8753AE"/><Setter Property="BoxShadow" Value="-3 -3 12 0 #2CE676FF, 0 10 24 0 #59000000"/></Style>
+  <Style Selector="Border.card.modRuntime"><Setter Property="BorderBrush" Value="#4D8C5F"/><Setter Property="BoxShadow" Value="-3 -3 12 0 #2863DF7B, 0 10 24 0 #59000000"/></Style>
+  <Style Selector="Border.card.modUpdates"><Setter Property="Background" Value="{DynamicResource BackupRetentionGradient}"/><Setter Property="BorderBrush" Value="#C27C38"/><Setter Property="BoxShadow" Value="-3 -3 14 0 #45FF9558, 0 10 24 0 #59000000"/></Style>
+  <Style Selector="Border.card.modDetails"><Setter Property="BorderBrush" Value="#8957A8"/><Setter Property="BoxShadow" Value="-3 -3 13 0 #31E676FF, 0 10 24 0 #59000000"/></Style>
+  <Style Selector="Border.selectionActions"><Setter Property="Padding" Value="12"/><Setter Property="CornerRadius" Value="6"/><Setter Property="Background" Value="#312C1C42"/><Setter Property="BorderBrush" Value="#785194"/><Setter Property="BorderThickness" Value="1"/></Style>
+  <Style Selector="Border.modRow"><Setter Property="Background" Value="#100A1724"/><Setter Property="BorderBrush" Value="#193A5268"/><Setter Property="BorderThickness" Value="0,0,0,1"/></Style>
+  <Style Selector="Border.modRow:pointerover"><Setter Property="Background" Value="#3A35234A"/><Setter Property="BorderBrush" Value="#9767B2"/></Style>
+  <Style Selector="Border.modRow.selected"><Setter Property="Background" Value="#503B2455"/><Setter Property="BorderBrush" Value="#E676FF"/><Setter Property="BorderThickness" Value="3,0,0,1"/><Setter Property="BoxShadow" Value="0 0 15 0 #42E676FF"/></Style>
+  <Style Selector="Button.disableAction"><Setter Property="Background" Value="#E3141A22"/><Setter Property="BorderBrush" Value="#5D3D46"/><Setter Property="Foreground" Value="#C9B9BF"/></Style>
+  <Style Selector="Button.disableAction:pointerover"><Setter Property="Background" Value="#6B44231D"/><Setter Property="BorderBrush" Value="#FF8058"/><Setter Property="Foreground" Value="#FFD4C6"/><Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="#FF704D" Opacity="0.48"/></Setter></Style>
+  <Style Selector="Button.updateAction"><Setter Property="Background" Value="#59412318"/><Setter Property="BorderBrush" Value="#C78135"/><Setter Property="Foreground" Value="#FFD277"/></Style>
+  <Style Selector="Button.updateAction:pointerover"><Setter Property="Background" Value="#79552D18"/><Setter Property="BorderBrush" Value="#FFB65A"/><Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="#FF9558" Opacity="0.5"/></Setter></Style>
+  <Style Selector="Border.card.prototypeMetric"><Setter Property="BoxShadow" Value="-3 -3 12 0 #2548BFFF, 0 9 22 0 #56000000"/></Style>
+  <Style Selector="Border.card.prototypeMetric.accent"><Setter Property="BorderBrush" Value="#4B9DC4"/><Setter Property="BoxShadow" Value="-3 -3 13 0 #3B35D5E8, 0 9 22 0 #56000000"/></Style>
+  <Style Selector="Border.card.prototypeTable"><Setter Property="BorderBrush" Value="#426E8B"/></Style>
+  <Style Selector="Border.prototypeRow"><Setter Property="Background" Value="#100A1724"/><Setter Property="BorderBrush" Value="#193A5268"/><Setter Property="BorderThickness" Value="0,0,0,1"/></Style>
+  <Style Selector="Border.prototypeRow:pointerover"><Setter Property="Background" Value="#33243B4C"/><Setter Property="BorderBrush" Value="#4F81A3"/><Setter Property="BoxShadow" Value="0 0 10 0 #2535BFFF"/></Style>
+  <Style Selector="Border.statusBadge.prototypeState"><Setter Property="Background" Value="#241B4A2B"/><Setter Property="BorderBrush" Value="#437E58"/><Setter Property="BorderThickness" Value="1"/></Style>
+  <Style Selector="Border.card.prototypeDetails"><Setter Property="BorderBrush" Value="#4A83A8"/><Setter Property="BoxShadow" Value="-3 -3 13 0 #2E35D5E8, 0 10 24 0 #59000000"/></Style>
+  <Style Selector="Border.card.prototypeActions"><Setter Property="BorderBrush" Value="#9A633B"/><Setter Property="Background" Value="{DynamicResource ContextOrangeGradient}"/><Setter Property="BoxShadow" Value="-3 -3 12 0 #31FF9558, 0 10 24 0 #59000000"/></Style>
+  <Style Selector="Border.dataRow">
+    <Setter Property="Background" Value="#120B1825"/>
+    <Setter Property="BorderBrush" Value="#193A5268"/>
+    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    <Setter Property="Padding" Value="0"/>
+  </Style>
+  <Style Selector="Border.dataRow:pointerover">
+    <Setter Property="Background" Value="#38263F50"/>
+    <Setter Property="BorderBrush" Value="#4F81A3"/>
+  </Style>
+  <Style Selector="Border.dataRow.selected">
+    <Setter Property="Background" Value="#423C321C"/>
+    <Setter Property="BorderBrush" Value="#B88236"/>
+    <Setter Property="BorderThickness" Value="2,0,0,1"/>
+    <Setter Property="BoxShadow" Value="0 0 12 0 #2CF4B83F"/>
+  </Style>
+  <Style Selector="Button.cardAction">
+    <Setter Property="MinHeight" Value="28"/>
+    <Setter Property="Height" Value="30"/>
+    <Setter Property="Padding" Value="10,3"/>
+    <Setter Property="MinWidth" Value="80"/>
+    <Setter Property="Background" Value="{DynamicResource ButtonGradient}"/>
+    <Setter Property="BorderBrush" Value="#4A7593"/>
+  </Style>
+  <Style Selector="Button.cardAction:pointerover">
+    <Setter Property="Background" Value="{DynamicResource ButtonGradientHover}"/>
+    <Setter Property="BorderBrush" Value="#7BE0FF"/>
+    <Setter Property="Effect">
+      <DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="14" Color="#52C4FF" Opacity="0.65"/>
+    </Setter>
+  </Style>
+  <Style Selector="Button.cardAction:pressed">
+    <Setter Property="Background" Value="{DynamicResource ButtonGradientPressed}"/>
+    <Setter Property="BorderBrush" Value="#5AB6D9"/>
+  </Style>
+  <Style Selector="Button.cardAction.restore">
+    <Setter Property="Background" Value="{DynamicResource RestoreGradient}"/>
+    <Setter Property="BorderBrush" Value="#A77639"/>
+    <Setter Property="Foreground" Value="#FFE3AD"/>
+  </Style>
+  <Style Selector="Button.cardAction.restore:pointerover">
+    <Setter Property="Background" Value="{DynamicResource RestoreGradientHover}"/>
+    <Setter Property="BorderBrush" Value="#FFC864"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="13" Color="#F4B83F" Opacity="0.55"/></Setter>
+  </Style>
+  <Style Selector="Border.ribbonGroup">
+    <Setter Property="Background" Value="#C4142739"/>
+    <Setter Property="BorderBrush" Value="#365B76"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Padding" Value="6"/>
+    <Setter Property="Margin" Value="0,0,5,0"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="BoxShadow" Value="0 5 14 0 #40000000"/>
+  </Style>
+  <Style Selector="Border.badge">
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Padding" Value="7,2"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+
+  <Style Selector="ScrollBar:vertical">
+    <Setter Property="Width" Value="8"/>
+    <Setter Property="MinWidth" Value="8"/>
+    <Setter Property="Background" Value="#081522"/>
+  </Style>
+  <Style Selector="ScrollBar:horizontal">
+    <Setter Property="Height" Value="8"/>
+    <Setter Property="MinHeight" Value="8"/>
+    <Setter Property="Background" Value="#081522"/>
+  </Style>
+
+  <Style Selector="ProgressBar">
+    <Setter Property="Height" Value="6"/>
+    <Setter Property="CornerRadius" Value="4"/>
+    <Setter Property="Foreground" Value="{DynamicResource BlueBrush}"/>
+    <Setter Property="Background" Value="#173049"/>
+  </Style>
+
+  <Style Selector="TextBox">
+    <Setter Property="MinHeight" Value="34"/>
+    <Setter Property="Padding" Value="9,4"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Background" Value="#0B1A29"/>
+    <Setter Property="BorderBrush" Value="#365C78"/>
+  </Style>
+  <Style Selector="ComboBox">
+    <Setter Property="MinHeight" Value="34"/>
+    <Setter Property="Padding" Value="9,4"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Background" Value="#0B1A29"/>
+    <Setter Property="BorderBrush" Value="#365C78"/>
+  </Style>
+  <Style Selector="CheckBox">
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+
+  <Style Selector="ScrollViewer">
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+
+  <!-- Global list-row delineation: every ListBox gets an alternating row tint and a thin
+       bottom divider by default, even where the item's own DataTemplate has no border. -->
+  <Style Selector="ListBoxItem">
+    <Setter Property="Padding" Value="4,3"/>
+    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    <Setter Property="BorderBrush" Value="#152B3D"/>
+    <Setter Property="CornerRadius" Value="0"/>
+  </Style>
+  <Style Selector="ListBoxItem:nth-child(2n)">
+    <Setter Property="Background" Value="#0C1826"/>
+  </Style>
+  <Style Selector="ListBoxItem:pointerover">
+    <Setter Property="Background" Value="#1B3247"/>
+  </Style>
+  <Style Selector="ListBoxItem:selected">
+    <Setter Property="Background" Value="#24425C"/>
+  </Style>
+</Styles>

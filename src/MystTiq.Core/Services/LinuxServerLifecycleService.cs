@@ -32,13 +32,15 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
     private readonly IServerSessionInspector sessionInspector;
     private readonly IProcessSignalService signals;
     private readonly ServerLifecycleStateStore stateStore;
+    private readonly int expectedGamePort;
 
     public LinuxServerLifecycleService(
         ServerPlatformProfile platform,
         IServerPathProfile paths,
         IServerSessionInspector sessionInspector,
         IProcessSignalService? signals = null,
-        ServerLifecycleStateStore? stateStore = null)
+        ServerLifecycleStateStore? stateStore = null,
+        int expectedGamePort = 8211)
     {
         if (!OperatingSystem.IsLinux())
             throw new PlatformNotSupportedException("Linux lifecycle control requires Linux.");
@@ -48,6 +50,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         this.sessionInspector = sessionInspector ?? throw new ArgumentNullException(nameof(sessionInspector));
         this.signals = signals ?? new LinuxProcessSignalService();
         this.stateStore = stateStore ?? new ServerLifecycleStateStore(paths.ManagerRuntimeRoot);
+        this.expectedGamePort = expectedGamePort is > 0 and <= 65535 ? expectedGamePort : 8211;
     }
 
     public Task<ServerLifecycleSnapshot> GetStatusAsync(CancellationToken cancellationToken = default)
@@ -62,7 +65,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         if (processes.Count > 0)
         {
             var native = SelectNativeProcess(processes);
-            var ready = ports.Contains(8211);
+            var ready = ports.Contains(expectedGamePort);
             var snapshot = new ServerLifecycleSnapshot(
                 ServerLifecyclePhase.Running,
                 native?.ProcessId,
@@ -73,8 +76,8 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                 now,
                 persisted?.LastTransitionAt,
                 ready
-                    ? "PalServer process and UDP 8211 are active."
-                    : "PalServer process is active; UDP 8211 has not been confirmed.");
+                    ? $"PalServer process and UDP {expectedGamePort} are active."
+                    : $"PalServer process is active; UDP {expectedGamePort} has not been confirmed.");
 
             // Observation is allowed to repair stale state from a previous host invocation.
             if (persisted?.Phase != ServerLifecyclePhase.Running ||
@@ -227,7 +230,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                     HeadlessExitCode.Success,
                     lastSnapshot,
                     false,
-                    "PalServer started and UDP 8211 was verified.");
+                    $"PalServer started and UDP {expectedGamePort} was verified.");
             }
         }
 
@@ -238,7 +241,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                 HeadlessExitCode.StartupTimeout,
                 lastSnapshot,
                 false,
-                "PalServer process is running, but UDP 8211 was not confirmed before the startup timeout. The process was left running.");
+                $"PalServer process is running, but UDP {expectedGamePort} was not confirmed before the startup timeout. The process was left running.");
         }
 
         return new ServerLifecycleOperationResult(

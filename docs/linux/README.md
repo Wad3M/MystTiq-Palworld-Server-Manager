@@ -1,3 +1,7 @@
+## Complete command reference
+
+See **[`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md)** for all headless commands, workflows, paths and security expectations.
+
 # MystTiq Linux Development
 
 v0.3 is the Linux/headless development line.

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>Assets/PalworldServerManager.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- v0.3.1.9 connection/navigation foundation intentionally follows the current Avalonia 11.3 servicing line.
+         Pin the exact resolved package version after the first successful Windows/Linux acceptance. -->
+    <PackageReference Include="Avalonia" Version="11.3.*" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.*" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.*" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MystTiq.Core\MystTiq.Core.csproj" />
+  </ItemGroup>
+</Project>

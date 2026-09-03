@@ -24,6 +24,24 @@ try {
     Invoke-Step "Building $Configuration win-x64" {
         & (Join-Path $PSScriptRoot 'Build.ps1') -Configuration $Configuration
     }
+    Invoke-Step "Running v$version logic tests" {
+        & (Join-Path $PSScriptRoot "Test-v$version-Logic.ps1") -ProjectRoot $root -ExportJson
+    }
+    Invoke-Step "Building Windows headless" {
+        & (Join-Path $PSScriptRoot 'Build-WindowsHeadless.ps1') -Configuration $Configuration
+    }
+    Invoke-Step "Building Linux headless" {
+        & (Join-Path $PSScriptRoot 'Build-LinuxHeadless.ps1') -Configuration $Configuration
+    }
+    Invoke-Step "Building Avalonia desktop for Windows" {
+        & (Join-Path $PSScriptRoot 'Build-AvaloniaDesktop.ps1') -Configuration $Configuration -Runtime 'win-x64' -Publish -NoLaunch
+    }
+    Invoke-Step "Running Windows headless API runtime smoke" {
+        & (Join-Path $PSScriptRoot "Test-v$version-RuntimeSmoke.ps1") -ProjectRoot $root
+    }
+    Invoke-Step "Building Avalonia desktop for Linux" {
+        & (Join-Path $PSScriptRoot 'Build-AvaloniaDesktop.ps1') -Configuration $Configuration -Runtime 'linux-x64' -Publish -NoLaunch
+    }
     Invoke-Step "Creating portable package" {
         & (Join-Path $PSScriptRoot 'Package-Portable.ps1') -Version $version
     }

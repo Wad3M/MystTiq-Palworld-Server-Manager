@@ -39,6 +39,30 @@ public sealed record HeadlessConfiguration(
 {
     public const int CurrentSchemaVersion = 2;
 
+    public static HeadlessConfiguration CreateDefaultForCurrentPlatform() =>
+        OperatingSystem.IsWindows() ? CreateWindowsDefault() : CreateLinuxDefault();
+
+    public static HeadlessConfiguration CreateWindowsDefault()
+    {
+        var common = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        var root = Path.Combine(common, "MystTiqPalworldServer");
+        return new(
+            CurrentSchemaVersion,
+            new HeadlessApiConfiguration(
+                Enabled: true,
+                BindAddress: "127.0.0.1",
+                Port: 8213,
+                Authentication: new HeadlessApiAuthenticationConfiguration(false, Path.Combine(root, "secrets", "api-token")),
+                Tls: new HeadlessApiTlsConfiguration(false, Path.Combine(root, "certs", "mysttiq.pfx"), Path.Combine(root, "secrets", "certificate-password"))),
+            new HeadlessLifecycleConfiguration(90, 30, 5, 10, 5, 300),
+            new HeadlessServerConfiguration(
+                @"C:\GameServers\Palworld\Server",
+                @"C:\GameServers\Palworld\SteamCMD\steamcmd.exe",
+                @"C:\GameServers\Palworld\Server\Backups",
+                Path.Combine(root, "runtime"),
+                ["-useperfthreads", "-NoAsyncLoadingThread", "-UseMultithreadForDS", "-stdout", "-FullStdOutLogOutput", "-logformat=text"]));
+    }
+
     public static HeadlessConfiguration CreateLinuxDefault() =>
         new(
             CurrentSchemaVersion,
@@ -67,10 +91,11 @@ public sealed record HeadlessConfiguration(
                 RuntimeRoot: "/opt/mysttiq/runtime",
                 LaunchArguments:
                 [
-                    "EpicApp=PalServer",
                     "-useperfthreads",
                     "-NoAsyncLoadingThread",
-                    "-UseMultithreadForDS"
+                    "-UseMultithreadForDS",
+                    "-log",
+                    "-logformat=text"
                 ]));
 }
 

@@ -1,0 +1,80 @@
+<Application xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="MystTiq.Desktop.App" RequestedThemeVariant="Dark">
+
+  <TrayIcon.Icons>
+    <TrayIcons>
+      <TrayIcon Icon="/Assets/PalworldServerManager.ico" ToolTipText="MystTiq — Palworld Server Manager">
+        <TrayIcon.Menu>
+          <NativeMenu>
+            <NativeMenuItem Header="Show MystTiq" Click="ShowWindow_OnClick"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Start Palworld Server" Click="StartServer_OnClick"/>
+            <NativeMenuItem Header="Restart Palworld Server" Click="RestartServer_OnClick"/>
+            <NativeMenuItem Header="Stop Palworld Server" Click="StopServer_OnClick"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Safe Exit — stop server and management backend" Click="SafeExit_OnClick"/>
+            <NativeMenuItem Header="Force Exit — terminate server and management backend" Click="ForceExit_OnClick"/>
+            <NativeMenuItem Header="Exit GUI Only — keep services running" Click="ExitGui_OnClick"/>
+          </NativeMenu>
+        </TrayIcon.Menu>
+      </TrayIcon>
+    </TrayIcons>
+  </TrayIcon.Icons>
+  <Application.Resources>
+    <Color x:Key="MystTiqBackground">#08111D</Color><Color x:Key="MystTiqSidebar">#0B1624</Color><Color x:Key="MystTiqCard">#101F30</Color>
+    <Color x:Key="MystTiqCardAlt">#132A40</Color><Color x:Key="MystTiqBorder">#244B6B</Color><Color x:Key="MystTiqBlue">#2389D7</Color>
+    <Color x:Key="MystTiqBlueHover">#2F9BE8</Color><Color x:Key="MystTiqMuted">#8CA8C2</Color><Color x:Key="MystTiqSuccess">#1E9B63</Color>
+    <Color x:Key="MystTiqWarning">#E7A51A</Color><Color x:Key="MystTiqDanger">#D54343</Color>
+    <LinearGradientBrush x:Key="MystTiqButtonMetal" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#375169"/><GradientStop Offset="0.48" Color="#223C52"/><GradientStop Offset="0.52" Color="#172E42"/><GradientStop Offset="1" Color="#102638"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="MystTiqButtonMetalHover" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#4B6C86"/><GradientStop Offset="0.48" Color="#31536D"/><GradientStop Offset="0.52" Color="#22425B"/><GradientStop Offset="1" Color="#17354B"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="MystTiqButtonMetalPressed" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#102638"/><GradientStop Offset="0.48" Color="#172E42"/><GradientStop Offset="0.52" Color="#223C52"/><GradientStop Offset="1" Color="#375169"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="MystTiqButtonBlueMetal" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#4DB5F5"/><GradientStop Offset="0.47" Color="#278FD7"/><GradientStop Offset="0.53" Color="#1675B9"/><GradientStop Offset="1" Color="#105A91"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="MystTiqButtonBlueMetalHover" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="#70C8FA"/><GradientStop Offset="0.47" Color="#3AA8ED"/><GradientStop Offset="0.53" Color="#208ACF"/><GradientStop Offset="1" Color="#166CA8"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="MystTiqNavGlassHover" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#553E6C89"/><GradientStop Offset="0.28" Color="#332C5675"/><GradientStop Offset="0.7" Color="#24152D46"/><GradientStop Offset="1" Color="#17102034"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="MystTiqNavGlassActive" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#C11867A0"/><GradientStop Offset="0.38" Color="#B00A4E94"/><GradientStop Offset="0.72" Color="#8A07366B"/><GradientStop Offset="1" Color="#5C081D3B"/>
+    </LinearGradientBrush>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme />
+    <Style Selector="Window"><Setter Property="Background" Value="{DynamicResource MystTiqBackground}"/><Setter Property="Foreground" Value="#F4F8FC"/></Style>
+    <Style Selector="Button"><Setter Property="MinHeight" Value="36"/><Setter Property="Padding" Value="14,7"/><Setter Property="CornerRadius" Value="6"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="Background" Value="{DynamicResource MystTiqButtonMetal}"/><Setter Property="BorderBrush" Value="#66839B"/><Setter Property="BorderThickness" Value="1"/><Setter Property="ToolTip.ShowDelay" Value="300"/><Setter Property="ClipToBounds" Value="True"/></Style>
+    <Style Selector="Button:pointerover"><Setter Property="Background" Value="{DynamicResource MystTiqButtonMetalHover}"/><Setter Property="BorderBrush" Value="#8DB2CE"/></Style>
+    <Style Selector="Button:pressed"><Setter Property="Background" Value="{DynamicResource MystTiqButtonMetalPressed}"/><Setter Property="BorderBrush" Value="#4C6A81"/></Style>
+    <Style Selector="Button:focus-visible"><Setter Property="BorderBrush" Value="#75C8FF"/><Setter Property="BorderThickness" Value="2"/></Style>
+    <Style Selector="Button:disabled"><Setter Property="Opacity" Value="0.48"/></Style>
+    <Style Selector="Button.primary"><Setter Property="Background" Value="{DynamicResource MystTiqButtonBlueMetal}"/><Setter Property="BorderBrush" Value="#6CC8FF"/><Setter Property="Foreground" Value="White"/></Style>
+    <Style Selector="Button.primary:pointerover"><Setter Property="Background" Value="{DynamicResource MystTiqButtonBlueMetalHover}"/></Style>
+    <Style Selector="Button.success"><Setter Property="Background" Value="{DynamicResource MystTiqSuccess}"/><Setter Property="Foreground" Value="White"/></Style>
+    <Style Selector="Button.warning"><Setter Property="Background" Value="{DynamicResource MystTiqWarning}"/><Setter Property="Foreground" Value="#07111C"/></Style>
+    <Style Selector="Button.danger"><Setter Property="Background" Value="{DynamicResource MystTiqDanger}"/><Setter Property="Foreground" Value="White"/></Style>
+    <Style Selector="Button.navitem"><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="Background" Value="Transparent"/><Setter Property="Height" Value="44"/><Setter Property="MinHeight" Value="44"/><Setter Property="Padding" Value="10,4"/><Setter Property="FontSize" Value="12"/></Style>
+    <Style Selector="Expander.navgroup"><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="MinHeight" Value="44"/><Setter Property="Padding" Value="0"/><Setter Property="FontSize" Value="13"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+    <Style Selector="Button.navitem.navchild"><Setter Property="Padding" Value="22,4,8,4"/></Style>
+    <Style Selector="Button.navitem:pointerover"><Setter Property="Background" Value="{DynamicResource MystTiqNavGlassHover}"/><Setter Property="BorderBrush" Value="#549ED0F1"/></Style>
+    <Style Selector="Button.navitem.active"><Setter Property="Background" Value="#174F7D"/><Setter Property="BorderBrush" Value="#2EA4F2"/><Setter Property="BorderThickness" Value="3,0,0,0"/><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+    <Style Selector="Button.navitem.navhome"><Setter Property="Height" Value="38"/><Setter Property="MinHeight" Value="38"/><Setter Property="Margin" Value="0,1"/><Setter Property="CornerRadius" Value="6"/></Style>
+    <Style Selector="Button.navitem.navhome.active"><Setter Property="Background" Value="{DynamicResource MystTiqNavGlassActive}"/><Setter Property="BorderBrush" Value="#30AFFF"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+    <Style Selector="Border.card"><Setter Property="Background" Value="{DynamicResource MystTiqCard}"/><Setter Property="BorderBrush" Value="{DynamicResource MystTiqBorder}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="9"/><Setter Property="Padding" Value="18"/><Setter Property="ClipToBounds" Value="True"/></Style>
+    <Style Selector="Border.statuscard"><Setter Property="Background" Value="#0E2133"/><Setter Property="BorderBrush" Value="#1E5279"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="12"/><Setter Property="ClipToBounds" Value="True"/></Style>
+    <Style Selector="ListBox"><Setter Property="ToolTip.ShowDelay" Value="300"/></Style>
+    <Style Selector="ComboBox"><Setter Property="ToolTip.ShowDelay" Value="300"/></Style>
+    <Style Selector="Border.card TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style>
+    <Style Selector="Border.statuscard TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style>
+    <Style Selector="Border.card Grid"><Setter Property="ClipToBounds" Value="True"/></Style>
+    <Style Selector="Border.card StackPanel"><Setter Property="ClipToBounds" Value="True"/></Style>
+    <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{DynamicResource MystTiqMuted}"/></Style>
+    <StyleInclude Source="avares://MystTiq.Desktop/Styles/DesignSystem.axaml"/>
+  </Application.Styles>
+</Application>

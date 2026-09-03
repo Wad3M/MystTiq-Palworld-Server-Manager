@@ -76,7 +76,7 @@ public sealed class HeadlessRemoteApiEnrollmentService
     public HeadlessConfiguration DisableRemoteApi(string configurationPath)
     {
         var configuration = configurationService.LoadOrDefault(configurationPath);
-        var defaults = HeadlessConfiguration.CreateLinuxDefault();
+        var defaults = HeadlessConfiguration.CreateDefaultForCurrentPlatform();
 
         var updated = configuration with
         {

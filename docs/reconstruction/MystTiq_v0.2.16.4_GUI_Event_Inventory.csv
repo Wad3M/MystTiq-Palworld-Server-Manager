@@ -1,0 +1,288 @@
+﻿ControlType,ControlName,Label,Event,OldHandler
+Window,,,PreviewMouseWheel,MainWindow_PreviewMouseWheel
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+RadioButton,,,Click,Nav_Click
+Button,NotificationBellButton,,Click,NotificationBell_Click
+Button,,✓  MARK READ,Click,NotificationFlyoutMarkAllRead_Click
+ListBox,NotificationFlyoutList,,SelectionChanged,NotificationFlyoutSelection_Changed
+Button,,▤  ACTIVITY & AUDIT,Click,NotificationFlyoutActivity_Click
+Button,,✕  CLEAR,Click,NotificationFlyoutClear_Click
+TabControl,Tabs,,SelectionChanged,Tabs_SelectionChanged
+Button,,↻  REFRESH,Click,DashboardRefresh_Click
+Button,DashboardStartButton,▶  START,Click,Start_Click
+Button,DashboardRestartButton,↻  RESTART,Click,Restart_Click
+Button,DashboardStopButton,■  STOP,Click,Stop_Click
+Button,,↗  OPEN,Click,DashboardOpenWorld_Click
+Button,,▣  BACKUP,Click,Backup_Click
+Button,,✚  DOCTOR,Click,DashboardOpenDoctor_Click
+Button,,↗  OPEN,Click,DashboardOpenPlayers_Click
+Button,,↗  OPEN,Click,DashboardOpenGuilds_Click
+Button,,↗  OPEN,Click,DashboardOpenMods_Click
+Button,,⌕  SCAN,Click,ScanServerProcesses_Click
+Button,,✚  DOCTOR,Click,RunServerDoctor_Click
+Button,,✕  CLEANUP,Click,ForceCleanup_Click
+ComboBox,HistoricalRangeCombo,,SelectionChanged,HistoricalRangeCombo_SelectionChanged
+Button,UpdateServerButton,UPDATE SERVER,Click,Update_Click
+Button,,,Click,HistoricalRefresh_Click
+Button,,,Click,HistoricalExport_Click
+Button,,{Binding Action},Click,EnvironmentAction_Click
+Button,,＋  CREATE DEFAULT SETTINGS,Click,CreateSetupSettings_Click
+Button,,↻  CHECK FOR UPDATES,Click,CheckForUpdates_Click
+Button,,⬇  INSTALL MISSING,Click,InstallRequired_Click
+Button,,✓  VERIFY FILES,Click,VerifyEnvironment_Click
+Button,,↻  LOAD ACTIVE,Click,LoadActive_Click
+Button,,↶  RESET DEFAULTS,Click,LoadDefaults_Click
+Button,SaveConfigButton,✓  SAVE CHANGES,Click,SaveConfig_Click
+Button,SimpleConfigViewButton,⚙  SIMPLE SETTINGS,Click,ShowSimpleConfig_Click
+Button,AdvancedConfigViewButton,⚙  ADVANCED SETTINGS,Click,ShowAdvancedConfig_Click
+TextBox,ConfigSearchBox,,TextChanged,ConfigFilter_Changed
+ComboBox,ConfigCategoryCombo,,SelectionChanged,ConfigFilter_Changed
+Button,,,Click,ImportConfig_Click
+Button,,,Click,ExportConfig_Click
+CheckBox,,,Click,QolOption_Changed
+TextBox,SimpleServerNameTextBox,,TextChanged,SimpleServerIdentity_Changed
+Button,,🎲  GENERATE,Click,GenerateServerName_Click
+TextBox,SimpleServerDescriptionTextBox,,TextChanged,SimpleServerIdentity_Changed
+ComboBox,QolPresetCombo,,SelectionChanged,QolPresetCombo_SelectionChanged
+ComboBox,SimpleDeathPenaltyCombo,,SelectionChanged,SimpleDeathPenalty_Changed
+Button,,📂  OPEN LOGS,Click,OpenLogsFolder_Click
+Button,,⇩  EXPORT VIEW,Click,SaveVisibleLog_Click
+ComboBox,ConsoleSeverityFilter,,SelectionChanged,ConsoleFilter_Changed
+ComboBox,ConsoleCategoryFilter,,SelectionChanged,ConsoleFilter_Changed
+TextBox,ConsoleSearchBox,,TextChanged,ConsoleSearch_Changed
+CheckBox,HideRoutineRestCheckBox,Hide REST traffic,Checked,ConsoleFilter_Changed
+CheckBox,HideRoutineRestCheckBox,Hide REST traffic,Unchecked,ConsoleFilter_Changed
+Button,,↻  REFRESH VIEW,Click,RefreshConsole_Click
+Button,PauseConsoleButton,Ⅱ  PAUSE,Click,PauseConsole_Click
+Button,,✕  CLEAR VIEW,Click,ClearConsole_Click
+Button,,⚕  RCON DOCTOR,Click,RconDoctor_Click
+Button,,●  CONNECT,Click,RconConnect_Click
+Button,,■  DISCONNECT,Click,RconDisconnect_Click
+ComboBox,RconPresetCombo,,SelectionChanged,RconPreset_Changed
+Button,,➤  SEND COMMAND,Click,RconSend_Click
+Button,,↻  REFRESH STATUS,Click,RefreshAdminCommandsStatus_Click
+Button,,↻  REFRESH,Click,RefreshPlayers_Click
+Button,,⌕  DISCOVER SAVES,Click,DiscoverPlayerSaves_Click
+Button,,⇩  EXPORT CSV,Click,ExportPlayersCsv_Click
+TextBox,PlayerSearchBox,,TextChanged,PlayerSearch_Changed
+ComboBox,PlayerViewCombo,,SelectionChanged,PlayerView_Changed
+ComboBox,PlayerAdminFilterCombo,,SelectionChanged,PlayerAdminFilter_Changed
+Button,,ℹ  KICK,Click,Kick_Click
+Button,,⛔  TEMP BAN 24H,Click,TemporaryBan_Click
+Button,,⛔  BAN,Click,Ban_Click
+Button,,✓  UNBAN,Click,Unban_Click
+Button,,⇄  PROMOTE ADMIN,Click,PromoteAdmin_Click
+Button,,✖  REMOVE ADMIN,Click,RemoveAdmin_Click
+Button,,ℹ  WHITELIST,Click,WhitelistPlayer_Click
+Button,,✖  REMOVE WHITELIST,Click,RemoveWhitelist_Click
+Button,,⇄  ADMIN ACCESS,Click,AdminAccess_Click
+Button,,＋  ADD NOTE,Click,AddAdministrationNote_Click
+Button,,ℹ  ISSUE WARNING,Click,IssuePlayerWarning_Click
+Button,,✖  CLEAR WARNINGS,Click,ClearPlayerWarnings_Click
+DataGrid,PlayersGrid,,SelectionChanged,PlayerSelection_Changed
+Button,SavePlayerNoteButton,✓  SAVE NOTE,Click,SavePlayerNote_Click
+Button,,↻  REFRESH,Click,RefreshGuilds_Click
+Button,,⧉  COPY DISCOVERY DIAGNOSTICS,Click,CopyWorldDiscoveryDiagnostics_Click
+Button,,⇩  EXPORT,Click,ExportGuildSnapshot_Click
+TextBox,GuildSearchBox,,TextChanged,GuildSearchBox_TextChanged
+ComboBox,GuildStatusFilterCombo,,SelectionChanged,GuildStatusFilterCombo_SelectionChanged
+Button,,✖  CLEAR FILTERS,Click,ClearGuildFilters_Click
+DataGrid,GuildsGrid,,SelectionChanged,GuildSelection_Changed
+Button,,⧉  COPY GUILD ID,Click,CopyGuildId_Click
+Button,,📂  OPEN PLAYER,Click,OpenGuildPlayer_Click
+Button,,＋ ADD PLAYER,Click,AddPlayerToGuild_Click
+Button,,♛ TRANSFER LEADER,Click,TransferGuildLeadership_Click
+Button,,⚑ CLAIM ORPHAN,Click,ClaimOrphanedGuild_Click
+Button,,⚒ REPAIR MAPPINGS,Click,RepairGuildMappings_Click
+Button,,✓ APPLY REPAIR,Click,ApplyGuildRepair_Click
+Button,,▣  CREATE BACKUP,Click,Backup_Click
+Button,,✓  VERIFY SELECTED,Click,VerifyBackup_Click
+Button,,✓  VERIFY ALL,Click,BackupCenterVerifyAll_Click
+Button,,↥  RESTORE SELECTED,Click,Restore_Click
+Button,,🗑  DELETE SELECTED,Click,DeleteBackup_Click
+Button,,↻  REFRESH,Click,RefreshBackups_Click
+Button,,👁  PREVIEW CLEANUP,Click,BackupCenterPreviewRetention_Click
+Button,,✓  APPLY CLEANUP,Click,BackupCenterApplyRetention_Click
+Button,,📂  OPEN BACKUP ROOT,Click,BackupCenterOpenFolder_Click
+Button,,✓  VERIFY & SCAN ALL MODS,Click,VerifyAllMods_Click
+Button,,⇩  EXPORT REPORT,Click,ExportModVerificationReport_Click
+DataGrid,ModDashboardGrid,,SelectionChanged,ModDashboardGrid_SelectionChanged
+Button,,✓  VERIFY SELECTED,Click,VerifySelectedMod_Click
+Button,,⇢  MIGRATE LEGACY MODS,Click,MigrateLegacyMods_Click
+Button,,📂  OPEN MODS FOLDER,Click,OpenModsRoot_Click
+Button,,＋  INSTALL MOD ZIP,Click,BrowseModZip_Click
+Button,,▶  ENABLE SELECTED,Click,EnableSelectedMod_Click
+Button,,▶  ENABLE ALL,Click,EnableAllMods_Click
+Button,,■  DISABLE SELECTED,Click,DisableSelectedMod_Click
+Button,,■  DISABLE ALL,Click,DisableAllMods_Click
+Button,,🔧  REPAIR STATES,Click,RepairModStates_Click
+Button,,🗑  DELETE SELECTED,Click,DeleteMod_Click
+DataGrid,ModsGrid,,SelectionChanged,ModsGrid_SelectionChanged
+Button,,↻  REFRESH,Click,RefreshLocalSteamMods_Click
+Button,,⇩  IMPORT SELECTED,Click,ImportLocalMod_Click
+DataGrid,LocalModsGrid,,SelectionChanged,LocalModsGrid_SelectionChanged
+Button,,↻  REFRESH INFO,Click,RefreshSelectedModInfo_Click
+Button,,⌕  SEARCH ONLINE,Click,SearchSelectedModOnline_Click
+Button,,📂  OPEN FOLDER,Click,OpenSelectedModFolder_Click
+Button,,↗  OPEN WORKSHOP,Click,OpenSelectedWorkshop_Click
+CheckBox,ScheduledRestartCheck,Daily restart,Checked,ScheduledRestartCheck_Changed
+CheckBox,ScheduledRestartCheck,Daily restart,Unchecked,ScheduledRestartCheck_Changed
+Button,,✓  SAVE AUTOMATION,Click,SaveAutomation_Click
+Button,,⌕  BROWSE,Click,BrowseServerRoot_Click
+Button,,⌕  BROWSE,Click,BrowseSteamCmd_Click
+Button,,⌕  BROWSE,Click,BrowseBackupRoot_Click
+TextBox,ApiPasswordVisibleBox,,TextChanged,ApiPasswordVisibleBox_TextChanged
+ToggleButton,PasswordVisibilityToggle,👁,Checked,PasswordVisibilityToggle_Checked
+ToggleButton,PasswordVisibilityToggle,👁,Unchecked,PasswordVisibilityToggle_Unchecked
+Button,,✓  SAVE SETTINGS,Click,SaveSettings_Click
+Button,,✚  RUN FULL DIAGNOSTIC,Click,RunServerDoctor_Click
+Button,,⚠  FORCE CLEANUP,Click,ForceCleanup_Click
+Button,StartStabilityTestButton,▶  START TEST,Click,StartStabilityTest_Click
+Button,StopStabilityTestButton,■  STOP TEST,Click,StopStabilityTest_Click
+Button,,ℹ  VANILLA,Click,PrepareVanillaIsolation_Click
+Button,,ℹ  UE4SS ONLY,Click,PrepareUe4ssIsolation_Click
+Button,,↶  RESTORE STATE,Click,RestoreIsolationState_Click
+Button,,↻  REFRESH EVENTS,Click,RefreshServerEvents_Click
+Button,,↻  REFRESH,Click,RefreshCrashAnalyzer_Click
+Button,,▣  OPEN DIAGNOSTICS,Click,OpenDiagnosticsFolder_Click
+DataGrid,CrashHistoryGrid,,SelectionChanged,CrashHistoryGrid_SelectionChanged
+Button,UpdateCheckAllButton,↻  CHECK ALL UPDATES,Click,RefreshUpdateCenter_Click
+Button,UpdateAllAvailableButton,⬇  UPDATE ALL AVAILABLE,Click,UpdateAllAvailable_Click
+Button,UpdateCenterActionButton,{Binding Action},Click,UpdateCenterRowAction_Click
+Button,,↻  REFRESH,Click,RefreshModRuntime_Click
+Button,,📂  OPEN RUNTIME,Click,OpenModRuntimeFolder_Click
+Button,ModRuntimeToggleButton,■  DISABLE,Click,ToggleModRuntime_Click
+Button,,✓  VERIFY,Click,VerifyModRuntime_Click
+ComboBox,Ue4ssSourceCombo,,SelectionChanged,Ue4ssSourceCombo_SelectionChanged
+ComboBox,Ue4ssReleaseCombo,,SelectionChanged,Ue4ssReleaseCombo_SelectionChanged
+Button,,↻  REFRESH RELEASES,Click,CheckUe4ssVersions_Click
+Button,,✓  VERIFY VERSION,Click,VerifyUe4ssRuntimeVersion_Click
+Button,,⬇  INSTALL SELECTED,Click,InstallSelectedUe4ssRelease_Click
+Button,,↗  GITHUB RELEASES,Click,OpenUe4ssGithub_Click
+Button,,⇩  IMPORT RUNTIME ZIP,Click,ImportModRuntimeZip_Click
+Button,,▣  BACKUP CURRENT,Click,BackupModRuntime_Click
+Button,,↶  RESTORE SNAPSHOT,Click,RestoreModRuntimeSnapshot_Click
+Button,,◎  INSPECT ACTIVE WORLD,Click,InspectActiveWorld_Click
+Button,,↻  REFRESH,Click,RefreshSaveInspector_Click
+Button,,⇧  EXPORT REPORT,Click,ExportSaveDiagnostics_Click
+Button,,📂  OPEN WORLD FOLDER,Click,OpenInspectedWorldFolder_Click
+Button,,📂  BROWSE LEVEL.SAV,Click,BrowseSaveInspector_Click
+Button,,⌕  INSPECT,Click,InspectSelectedSave_Click
+Button,,♟  OPEN PLAYERS MANAGER,Click,OpenPlayersManager_Click
+Button,,♜  OPEN GUILDS MANAGER,Click,OpenGuildsManager_Click
+Button,,⌂  OPEN BASE MANAGER,Click,OpenBasesManager_Click
+TextBox,SaveInspectorFileSearchBox,,TextChanged,SaveInspectorFileSearch_TextChanged
+ComboBox,SaveInspectorCategoryFilter,,SelectionChanged,SaveInspectorCategoryFilter_SelectionChanged
+DataGrid,SaveInspectorFilesGrid,,SelectionChanged,SaveInspectorFilesGrid_SelectionChanged
+Button,,↻  VALIDATE ACTIVE WORLD,Click,WorldValidatorRefresh_Click
+Button,,📂  OPEN REPAIRS,Click,WorldValidatorOpenRepair_Click
+Button,,⇧  EXPORT REPORT,Click,WorldValidatorExport_Click
+DataGrid,WorldValidatorFindingsGrid,,SelectionChanged,WorldValidatorSelection_Changed
+Button,,📦  SELECT ARCHIVE,Click,WorldImportSelectArchive_Click
+Button,,⌕  ANALYZE,Click,WorldImportAnalyze_Click
+Button,,✓  ACCEPT OPTIONS,Click,WorldImportAcceptOptions_Click
+Button,,👁  REVIEW PLAN,Click,WorldImportReviewPlan_Click
+Button,,✓  VALIDATE,Click,WorldImportValidate_Click
+Button,,⚠  IMPORT & ACTIVATE,Click,WorldImportApply_Click
+Button,,📂  OPEN IMPORTED WORLD,Click,WorldImportOpenResult_Click
+Button,,↻  SCAN WORLD,Click,RepairCenterScan_Click
+DataGrid,SaveInspectorRepairGrid,,SelectionChanged,RepairCenterSelectionChanged
+Button,,👁  PREVIEW SELECTED,Click,PreviewSelectedRepairs_Click
+Button,,☐  CLEAR SELECTION,Click,RepairCenterClearSelection_Click
+Button,,↻  REFRESH,Click,RefreshTransactionHistory_Click
+Button,,📂  OPEN JOURNALS,Click,OpenTransactionFolder_Click
+TextBox,TransactionSearchBox,,TextChanged,TransactionFilter_Changed
+ComboBox,TransactionStateFilter,,SelectionChanged,TransactionFilter_Changed
+ComboBox,TransactionOperationFilter,,SelectionChanged,TransactionFilter_Changed
+DataGrid,TransactionHistoryGrid,,SelectionChanged,TransactionHistoryGrid_SelectionChanged
+Button,OpenTransactionBackupButton,📦  OPEN BACKUP,Click,OpenTransactionBackup_Click
+Button,OpenTransactionReportButton,📄  OPEN REPORT,Click,OpenTransactionReport_Click
+Button,,↻  SCAN ACTIVE WORLD,Click,PlayerRecoveryRefresh_Click
+Button,,📂  OPEN WORLD,Click,PlayerRecoveryOpenFolder_Click
+DataGrid,PlayerRecoveryGrid,,SelectionChanged,PlayerRecoverySelection_Changed
+Button,,👁  PREVIEW MAPPING,Click,PlayerRecoveryPreview_Click
+Button,,▣  SAFETY BACKUP,Click,PlayerRecoveryBackup_Click
+Button,,⇧  EXPORT PLAYER,Click,PlayerRecoveryExport_Click
+Button,,✓  SAVE PLAN,Click,PlayerRecoverySavePlan_Click
+Button,,↻  SCAN ACTIVE WORLD,Click,GuildBaseRecoveryRefresh_Click
+Button,,📂  OPEN GUILD MANAGER,Click,GuildBaseRecoveryOpenGuilds_Click
+Button,,ℹ  SELECT RECOMMENDED,Click,GuildBaseRecoverySelectRecommended_Click
+Button,,👁  PREPARE PREVIEW,Click,GuildBaseRecoveryPrepare_Click
+Button,,▣  SAFETY BACKUP,Click,GuildBaseRecoveryBackup_Click
+Button,,✓  SAVE PLAN,Click,GuildBaseRecoverySavePlan_Click
+Button,,⇧  EXPORT REPORT,Click,GuildBaseRecoveryExport_Click
+Button,,↻  SCAN ACTIVE WORLD,Click,BaseManagerRefresh_Click
+Button,,📂  OPEN RECOVERY,Click,BaseManagerOpenRecovery_Click
+TextBox,BaseManagerSearchBox,,TextChanged,BaseManagerSearch_TextChanged
+ComboBox,BaseManagerStatusFilter,,SelectionChanged,BaseManagerFilter_Changed
+DataGrid,BaseManagerGrid,,SelectionChanged,BaseManagerSelection_Changed
+Button,,⇧  EXPORT CSV,Click,BaseManagerExport_Click
+Button,,▣  SAFETY BACKUP,Click,BaseManagerBackup_Click
+Button,,👁  PREVIEW,Click,BaseManagerOwnershipPreview_Click
+Button,BaseManagerApplyOwnershipButton,✓  APPLY,Click,BaseManagerOwnershipApply_Click
+Button,,✓  SAVE OWNERSHIP PLAN,Click,BaseManagerPlan_Click
+Button,,↻  REFRESH,Click,AuditRefresh_Click
+Button,,⇧  EXPORT,Click,AuditExport_Click
+Button,,✖  CLEAR,Click,AuditClear_Click
+TextBox,AuditSearchBox,,TextChanged,AuditFilter_Changed
+ComboBox,AuditSeverityFilter,,SelectionChanged,AuditFilter_Changed
+ComboBox,AuditCategoryFilter,,SelectionChanged,AuditFilter_Changed
+Button,,↻  REFRESH,Click,NotificationRefresh_Click
+Button,,ℹ  MARK ALL READ,Click,NotificationMarkAllRead_Click
+Button,,ℹ  DISMISS READ,Click,NotificationDismissRead_Click
+Button,,⇧  EXPORT,Click,NotificationExport_Click
+Button,,✓  RUN SELF-TEST,Click,NotificationRunSelfTest_Click
+Button,,✖  CLEAR TESTS,Click,NotificationClearTests_Click
+TextBox,NotificationSearchBox,,TextChanged,NotificationFilter_Changed
+ComboBox,NotificationSeverityFilter,,SelectionChanged,NotificationFilter_Changed
+ComboBox,NotificationStateFilter,,SelectionChanged,NotificationFilter_Changed
+DataGrid,NotificationGrid,,SelectionChanged,NotificationSelection_Changed
+Button,,ℹ  MARK READ,Click,NotificationMarkRead_Click
+Button,,ℹ  PIN / UNPIN,Click,NotificationPin_Click
+Button,,📂  OPEN RELATED,Click,NotificationOpenRelated_Click
+Button,,ℹ  DISMISS,Click,NotificationDismiss_Click
+Button,,✓  RUN ALL TESTS,Click,SaveToolsRunAll_Click
+Button,,ℹ  COPY DIAGNOSTICS,Click,SaveToolsCopyDiagnostics_Click
+Button,,🐍  TEST PYTHON,Click,SaveToolsTestPython_Click
+Button,,⚙  TEST CONVERTER,Click,SaveToolsTestConverter_Click
+Button,,◎  TEST ACTIVE WORLD,Click,SaveToolsTestWorld_Click
+Button,,📂  OPEN TOOLS FOLDER,Click,SaveToolsOpenFolder_Click
+Button,,🛠  INSTALL / REPAIR,Click,SaveToolsRepair_Click
+Button,,↻  REFRESH,Click,WorkspaceRefresh_Click
+Button,,✓  VALIDATE ALL,Click,WorkspaceValidate_Click
+Button,,📂  OPEN,Click,WorkspaceOpenExecutable_Click
+Button,,📂  OPEN,Click,WorkspaceOpenRoot_Click
+Button,,📂  OPEN,Click,WorkspaceOpenData_Click
+Button,,…  BROWSE,Click,WorkspaceBrowseServer_Click
+Button,,📂  OPEN,Click,WorkspaceOpenServer_Click
+Button,,…  BROWSE,Click,WorkspaceBrowseSteamCmd_Click
+Button,,📂  OPEN,Click,WorkspaceOpenSteamCmd_Click
+Button,,…  BROWSE,Click,WorkspaceBrowseBackups_Click
+Button,,📂  OPEN,Click,WorkspaceOpenBackups_Click
+Button,,📂  OPEN,Click,WorkspaceOpenDownloads_Click
+Button,,📂  OPEN,Click,WorkspaceOpenExports_Click
+Button,,📂  OPEN,Click,WorkspaceOpenLogs_Click
+Button,,✓  SAVE PATHS,Click,WorkspaceSave_Click
+Button,DiagnosticsRunButton,✓  RUN FULL DIAGNOSTICS,Click,RunFullDiagnostics_Click
+Button,DiagnosticsExportButton,⇧  EXPORT REPORT,Click,ExportDiagnostics_Click
+Button,DiagnosticsSupportButton,▣  SUPPORT PACKAGE,Click,CreateSupportPackage_Click
+Button,,ℹ  COPY SUMMARY,Click,CopyDiagnosticsSummary_Click
+Button,,📂  OPEN DIAGNOSTICS,Click,OpenDiagnosticsCenterFolder_Click

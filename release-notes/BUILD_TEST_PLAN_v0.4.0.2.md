@@ -1,0 +1,1 @@
+# Build / Test Plan — v0.4.0.2\n\n```powershell\ncd C:\GameServers\MystTiqPalLinux\nGet-ChildItem . -Recurse -Filter *.ps1 | Unblock-File\n.\Build.ps1 Clean\n.\Build.ps1 Validate\n.\scripts\Test-v0.4.0.2-Logic.ps1 `\n    -ProjectRoot . `\n    -RunBuild `\n    -ExportJson\n```\n\nExpected: validation 0 errors/0 warnings and logic harness Failed : 0.\n

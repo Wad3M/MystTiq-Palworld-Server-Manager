@@ -1,4 +1,604 @@
+## v0.6.0.0 — Architecture Baseline & Operation Platform
+
+- Adds a real Operation/Provider/Health/Transaction contract set in `MystTiq.Core/Operations/`: `OperationId`/`OperationRecord`/`OperationPhase`/`OperationTransactionState`, `ServerProfileId`, `ServerHealthState`/`ServerHealthSnapshot`, `ICapabilityProvider`, and `IOperationCoordinator`/`OperationCoordinator` — first milestone of the `v0.6.x.0` family, laying the foundation the rest of it builds on.
+- `OperationCoordinator` rejects any operation whose resource keys overlap one already in flight (reject-if-conflicting, not queue-and-wait), naming the blocking operation in the message, and persists one JSON journal per operation.
+- Migrates the three existing destructive-mutation services — World Transactions, Guild Ownership, Base Ownership/Recovery — onto the coordinator by "wrapping, not replacing" their proven per-feature journals, layering cross-feature resource-locking on top rather than ripping out already-shipped, verified logic. All four share resource key `world-mutation` (they all touch the same `Level.sav`), so the coordinator now correctly rejects any of them running concurrently with another — a real safety property that did not exist before.
+- Adds `GET /api/v1/operations` and `GET /api/v1/operations/{id}`; the Desktop World Transactions page gains a second "Operation Platform" card listing Kind/Source/Phase/TransactionState across all three migrated features with its own Refresh command.
+- Scoped-down pass by design: priority-ordered queueing, dependency-graph blocking beyond a single resource key, restart-safe reclassification of interrupted operations, SteamCMD phase parsing, and a full log-tail UI are explicitly deferred, not silently dropped — see `docs/architecture/v0.6.0.0-operation-platform.md`.
+- Verified end-to-end on Windows: a real Base Recovery Apply and a concurrent World Transaction Apply were fired simultaneously against an isolated copy of a real guild/base-populated save; the loser was rejected with the coordinator's own message naming the held resource key, proving the new cross-feature lock rather than any pre-existing per-service guard. The new `/api/v1/operations` routes were also confirmed working end-to-end against the live Linux VM.
+
+## v0.5.5.0 — Desktop Shell UI/UX Consolidation
+
+- Replaces the sidebar `ToggleButton.nav` template with a bare `ContentPresenter`, fixing a bug where FluentTheme's default checked/pointerover background bled a solid `#0078D4` default-blue frame around the custom rounded glass pill (a plain `Background` setter cannot override a template's own internal state-specific paint).
+- Nav items are taller (58px) and the sidebar is wider (260px); the pill now stretches to fill its full row height instead of centering at its natural text height and leaving dead space.
+- Hovering an already-selected nav item now visibly brightens instead of showing zero change (checked background was silently winning over hover with equal cascade specificity).
+- Selected/hover glow switched from `BoxShadow` to `DropShadowEffect`, since `BoxShadow` was painting a hard rectangular corner past the rounded `CornerRadius` silhouette.
+- Dashboard SERVER card is now a clean three-state traffic light (red/amber/green) instead of a fourth neutral-grey state that made a stopped server look calm rather than stopped; OVERALL HEALTH label color now follows its card's state instead of staying hardcoded green.
+- Every page's duplicated title banner (18 of them) removed from the page body now that the title/subtitle renders once in a shared card in the ribbon row, which also now carries Auto refresh/Connected — frees vertical space on every page.
+- Desktop-only change; no backend/API/platform-specific code touched.
+
+## v0.5.4.0 — Base Recovery
+
+- Adds Base Recovery ("Recover Base"), porting the legacy app's `DeleteBaseAndOwnedObjects` operation onto `HeadlessBaseOwnershipService`: removes the base's `base_ids` entry from its owning guild and deletes every `base_camp_id_belong_to`-tagged structure/container/worker record outright, rather than reassigning them like Transfer Ownership.
+- Uses the same Preview → Safety Backup → Server-side Transaction → Validate → Journal/Audit → Refresh GUI implementation as Base Ownership Transfer. Preview decodes the save up front and reports the exact record count that will be permanently removed before Apply.
+- Removal only ever discards whole array elements, never a keyed object property — some record shapes (`MapObjectSaveData`) carry the ownership tag nested under `Model.value.RawData.value`, several levels below the record's own array element; deleting that inner key directly corrupted the structure and crashed the save encoder during initial testing, fixed by scanning each array element's full subtree for the tag before removing the whole element.
+- The Bases page's "Recover Base — BACKEND REQUIRED" stub is replaced with a real Preview/Apply card carrying an explicit destructive-action confirmation checkbox.
+- Verified end-to-end on both Windows and Linux (Ubuntu 24.04.4 LTS) against a real guild/base-populated save: 132/132 tagged records and the `base_ids` entry correctly removed, confirmed via independent re-decode with zero remaining references, identical outcome on both platforms.
+
+## v0.5.3.0 — Base Ownership Transfer
+
+- Adds Base Ownership Transfer, porting the Guild Ownership pattern onto Base: moves a base's `base_ids` entry between guild records and retags every structure/container/worker object placed at that base (132 tagged records confirmed for one real base) to the new owning guild.
+- Uses the same Preview → Safety Backup → Server-side Transaction → Validate → Journal/Audit → Refresh GUI implementation and journals into the same store as Guild Ownership and World Transactions.
+- Scoped to Transfer Ownership only; Base Recovery (legacy `DeleteBaseAndOwnedObjects`) is not ported and remains an honest disabled stub.
+- Verified end-to-end on both Windows and Linux (Ubuntu 24.04.4 LTS) against a real guild/base-populated save: 113/113 owning-guild tags correctly retagged and both guilds' `base_ids` arrays confirmed correct via independent re-decode, identical outcome on both platforms.
+
+## v0.5.2.0 — Guild Ownership Platform
+
+- Adds real Claim Orphaned Guild, Transfer Leadership, and Add Player to Guild operations, replacing three disabled "BACKEND REQUIRED" stub buttons on the Guilds page.
+- All three share one Preview → Safety Backup → Server-side Transaction → Validate → Journal/Audit → Refresh GUI implementation and journal into the same store as World Transactions.
+- Adds a server-side save codec that detects each save's real container format (plain PlZ vs. PlM/Oodle) per file instead of assuming one converter.
+- Fixes `PalworldSettingsConfigurationService.Load()` crashing the entire `/api/v1/status/poll` endpoint when `PalWorldSettings.ini` exists but hasn't been fully written yet.
+- Fixes two version-string literals that had silently drifted from the real build version (headless `--help`, Desktop `Version` property); both now derive from the assembly.
+- Fixes a dead "Open Server Log" button in Diagnostics Center.
+- Base ownership/Palbox repair remains BACKEND REQUIRED — the pattern now exists and is proven, it just hasn't been ported onto Base's data shape yet.
+- Verified end-to-end against a real Linux deployment (Ubuntu 24.04.4 LTS), not just compiled for Linux.
+
+## v0.5.1.5 — First-Run Setup Wiring and Update Center Correction
+
+- Restores the Server Setup first-run defaults form for identity, optional passwords, player capacity, and game/REST ports.
+- Adds a confirmation-gated, authenticated headless creation route that validates inputs, refuses overwrite, preserves official REST/RCON enablement defaults, and omits credentials from audit details.
+- Restores the Update Center platform, SteamCMD, and PalServer summary cards to the Update Center page.
+- Preserves the v0.5.1.4 server-tab, Configuration, Backup Center, Console, Workspace, containment, polling, security, and Windows/Linux parity corrections.
+
+## v0.5.1.4 — Legacy Page Detail and Server Tab Correction
+
+- Corrects the selected server tab’s contained glass styling and places the add-server control directly beside the profile tabs.
+- Expands Server Setup with component, ready, and attention summaries above the authoritative environment checklist.
+- Restores Configuration server identity, separate Simple slider/selection controls, and the Advanced default/active settings table while removing lifecycle/status duplication.
+- Restores all primary Backup Center commands to the top row with archive verification summaries.
+- Removes CPU, RAM, thread, and recent-metric cards from Console; console rows remain green and timestamps are normalized to the first field.
+- Restores Workspace deployment mode, health, server discovery, and executable/application/server/download/export/log locations with profile-safe actions.
+- Fixes the desktop publisher so the scoped artifact process is closed before output files are overwritten.
+
+## v0.5.1.3 — Navigation and UE4SS Parity Correction
+
+- Moves Notifications into System and keeps the notification bell routed to the same persistent API-backed page.
+- Adds the top add-server control and opens a blank, unsaved connection profile in Settings until explicitly saved.
+- Replaces redundant UE4SS Installed MODs content with installed runtime version, health/evidence, and fork selection.
+- Adds server-side UE4SS version detection across the existing API DTO boundary without desktop filesystem access.
+- Standardizes single-line TextBox and ComboBox dimensions against the legacy GUI and records the ordered v0.2.16.4 screen comparison.
+- Preserves the headless-first wiring, single aggregate poll, secured remote/LAN boundary, card containment and shared Windows/Linux Avalonia implementation.
+
+## v0.5.1.2 — v0.5 Shell Functional Integration
+
+- Promoted the approved v0.5.0.18 prototype visual system from reference-only code into the real desktop shell.
+- Replaced dummy prototype server tabs with the authoritative connection-profile collection.
+- Connected ribbon lifecycle, backup, console and Doctor actions to the existing ViewModel/API/headless paths.
+- Retained every restored functional page inside the glass workspace, with Home, World and System navigation matching the approved information architecture.
+- Added custom title-bar behavior while preserving tray-aware close semantics.
+- Added versioned logic/runtime/Linux gates and parity evidence for the corrected shell foundation.
+
+## v0.5.1.1 — Home Navigation Refinement
+
+- Creates a Home section containing Dashboard and Notifications.
+- Removes Notifications from System; Settings and Activity & Audit remain there.
+- Restyles the selected Home destination with the compact blue glass treatment from the approved prototype reference.
+- Keeps the header notification bell routed to the persistent Notifications page.
+- Preserves the v0.5.1.0 functional wiring, single status poll, secured remote/LAN boundary, card containment and Windows/Linux parity.
+
+## v0.5.1.0 — Functional Visual Shell Integration
+
+- Starts the post-restoration integration route from the clean v0.4.18.2 functional baseline.
+- Uses the supplied compact MystTiq wordmark beside the Palworld server icon with the version directly beneath it.
+- Keeps World navigation to Inspector, Players, Bases and Guilds; the transactional recovery center remains available inside Inspector.
+- Keeps Settings, Activity & Audit and Notifications under System and adds direct header bell/gear routing.
+- Adds a glass-highlight navigation hover while preserving global card clipping and centered metallic buttons.
+- Preserves the headless-first API boundary, single aggregate poll, remote/LAN security, and Windows/Linux Avalonia parity.
+
+## v0.4.18.2 — Closeout Gate Contract Correction
+
+- Corrects inherited logic assertions that still expected v0.4.17.4 metadata and the former Workspace button label.
+- Carries the complete v0.4.18.1 Workspace, Diagnostics, Settings and 287-event coverage implementation unchanged.
+
+## v0.4.18.1 — Workspace + Diagnostics + Settings Closeout
+
+- Corrects the initial v0.4.18.0 path-validator compile mismatch.
+- Restores Workspace refresh, syntax validation, local browse/open and rollback-backed API save; local shell operations are disabled for remote profiles.
+- Adds diagnostic report export and a local redacted ZIP support package while retaining network/firewall/listener routes.
+- Retains connection profiles, LAN discovery, process-memory-only bearer tokens, TLS certificate pins and explicit local bootstrap.
+- Classifies all 287 legacy GUI event rows with current mapping and evidence.
+- Closes the planned restoration sequence and stops before v0.5.0.0.
+
+## v0.4.9.1 — RCON Boundary Gate Correction
+
+- Corrects the RCON ownership assertion so descriptive GUI text containing the word “socket” is not mistaken for socket implementation code.
+- Continues to require all `TcpClient`/socket transport construction to remain in the shared headless Core service.
+- Preserves the v0.4.9.0 Console + RCON implementation, single status poll, global card containment, remote/LAN security, and Windows/Linux Avalonia parity unchanged.
+
+## v0.4.9.0 — Console + RCON Parity & Global Card Containment
+
+- Accepts v0.4.8.0 as the source baseline and corrects its stale Testing UX and Palworld Configuration logic assertions.
+- Restores legacy console severity/category/search filters, Hide routine REST, Refresh, Pause/Resume, Clear View and local Export.
+- Adds Core-owned Source RCON support with headless `/api/v1/rcon/status`, `/api/v1/rcon/doctor`, and `/api/v1/rcon/command` routes; AdminPassword never crosses the API boundary.
+- Adds legacy RCON Doctor/Connect/Disconnect/preset/send/history UI while clearly labelling RCON as deprecated/compatibility functionality.
+- Adds a global card-containment style: card/status-card clipping, card text wrapping, and nested layout clipping to prevent content overflow.
+- Adds v0.4.9.0 logic/runtime coverage for console filters, RCON wiring/security, global containment, version consistency, and prior regression contracts.
+
+## v0.4.8.0 — Configuration Parity
+
+- Promotes v0.4.7.1 as the accepted source baseline and fixes its carried-forward version/documentation metadata mismatches.
+- Restores Simple/Advanced Palworld configuration views, search/category filtering, historical QoL presets, dirty-state and validation.
+- Adds cross-platform local JSON import/export through Avalonia StorageProvider; imports remain local until Save Changes routes through the management API.
+- Preserves unknown/custom OptionSettings and rollback-backed server-side saves.
+- Adds v0.4.8.0 logic coverage for configuration parity, file-boundary safety, presets, filtering, validation, and version consistency.
+
+## v0.4.8.0 — Dashboard + Server Setup Parity Closeout
+
+- Correct the Testing UX logic assertion so README validation targets `Test-v0.4.8.0-Logic.ps1` rather than the prior v0.4.6.8 harness.
+- Promote v0.4.6.8 as the official baseline after its complete gate passed.
+- Restore legacy-style Dashboard OPEN/BACKUP/DOCTOR card workflows and the operational health strip without adding a second poller.
+- Make RCON/Cleanup capability gaps visible as BACKEND REQUIRED instead of fake controls.
+- Restore Server Setup banner/environment-health/checklist/operations/monitor hierarchy.
+- Extend `/api/v1/server/environment` rows with `actionSupported` and `unavailableReason`; unsupported mutations are disabled and guarded in the ViewModel.
+- Add v0.4.8.0 logic/runtime/Linux acceptance coverage for the reconstruction contract.
+
+## v0.4.6.8 — Dashboard Meter Containment Fix
+
+- Constrained the compact CPU/Memory utilization meters to the dashboard card using clipping and bounded meter layout.
+- Clipped the custom Resource History chart to its own drawing bounds and inset plotted strokes so antialiasing cannot paint outside the card.
+- Added logic-test coverage for dashboard meter/chart containment.
+
+## v0.4.6.7 — Tray Gate Contract Fix & GUI Restoration Roadmap
+
+- Corrected the stale Tray Lifecycle logic assertion to recognize the implemented Safe Exit, Force Exit and Exit GUI Only tray controls.
+- Packaged the supplied GUI Reconstruction Guide, 287-event v0.2.16.4 event inventory and v0.2.16.4-to-current functional crosswalk as reconstruction references.
+- Added `docs/GUI_RESTORATION_ROADMAP_v0.4.7.0_PLUS.md`, defining exact page/section restoration builds, current ViewModel/API mappings, BACKEND REQUIRED boundaries and per-version logic tests.
+- Made the dangerous world/save mutation contract explicit: Preview → Safety Backup → Server-side Transaction → Validate → Journal/Audit → Refresh GUI.
+- Preserved the v0.4.6.6 runtime functionality; this build is a release-gate/reference correction, not a backend architecture rewrite.
+
+## v0.4.6.6 — Resource History Graph & Runtime Metrics Parity
+
+- Restored the v0.2.16.4-style Resource History card with a live CPU/RAM line graph, 1 Hour / 6 Hours / 24 Hours / 7 Days / 30 Days range selector, average/peak summaries, sample count and live indicator.
+- Added persisted headless historical telemetry under the manager runtime root with 30-day retention and throttled recording from the existing aggregate status poll; no second periodic poller was introduced.
+- Added `/api/v1/history` for on-demand range changes while current live samples continue to arrive through the single `/api/v1/status/poll` path.
+- Changed runtime metrics sampling to aggregate all managed PalServer processes so CPU, memory and thread totals do not go idle when the bootstrap/wrapper PID differs from the Shipping process.
+- Restored compact CPU and RAM meters in the top dashboard summary and kept the full dual-series history graph in Resource History.
+- Corrected the v0.4.6.4 Page Parity assertion so the intentionally restored `SERVER ENVIRONMENT` heading satisfies Server Setup parity.
+- Added Windows runtime-smoke coverage for the historical-metrics endpoint and logic coverage for graph rendering, range selection, persistence and multi-process metrics aggregation.
+
+## v0.4.6.3 — Deployment Bootstrap & Dashboard Telemetry Parity
+
+- Added safe latest-FullSource deployment from Downloads with clean/stop, staged validation, target replacement, script unblocking and post-install validation.
+- Replaced dashboard CPU bar with a live history graph sourced from the existing aggregate status poll.
+- Added active-world nickname + full copyable World ID and restored authoritative World Pulse day/time, save-age and backup-age presentation.
+- Combined redirected PalServer process output with Pal.log and restored green in-app console presentation.
+- Restored dashboard server name/description, removed duplicate Dashboard heading, and repaired the persistent sidebar status layout.
+- Expanded aggregate `/api/v1/status/poll` with dashboard world, backup and Palworld settings support data without adding another client polling loop.
+
+
+## v0.4.6.2 — PalServer Window Suppression & Live Dashboard Parity
+
+- Reapplies the proven v0.2 Windows post-launch window policy with Win32 `ShowWindow(SW_HIDE)` during PalServer startup so wrapper/child consoles that allocate after `Process.Start` are hidden while stdout/stderr remain redirected into MystTiq.
+- Rebuilds the Avalonia Dashboard toward v0.2.16.4 information density with live health, world pulse, session/player state, resource history, live activity, console tail, online players and compact operational summaries.
+- Preserves the single aggregate status polling path; dashboard animation/data surfaces consume the same coherent sample rather than creating extra pollers.
+- Adds regression coverage for post-launch child-window hiding and dense live-dashboard parity.
+
+## v0.4.6.1 — Hidden PalServer Console & In-App Output Redirection
+
+- Promotes the successful v0.4.6.0 management-session/server-start behavior into the next tracked fix build.
+- Windows PalServer launch no longer uses Unreal `-log`, which explicitly opens a separate log window.
+- Windows default launch now uses `-stdout -FullStdOutLogOutput -logformat=text` with `UseShellExecute=false`, redirected stdout/stderr, and `CreateNoWindow=true`.
+- MystTiq prioritizes `MystTiq-PalServer-Console.log` as the Live Console source, falling back to `Pal.log` only when redirected capture is unavailable.
+- Adds regression coverage for hidden-window launch and Live Console redirection.
+
+- Promoted v0.4.5.1 as the official baseline after its compile/logic/runtime gate passed.
+- Versioned `/healthz` with API contract, backend version, platform, authentication and TLS metadata.
+- Changed desktop connection establishment to use health verification followed by the single aggregate status poll instead of separate status/service calls.
+- Added `--desktop-sidecar`, which forces a GUI-owned sidecar to loopback-only unauthenticated/non-TLS mode without weakening remote/LAN security rules.
+- Added compatibility-aware loopback bootstrap: an occupied or incompatible configured endpoint causes the packaged sidecar to launch on a private free loopback port.
+- Improved lifecycle connection failure text to report the exact endpoint and retained backend detail.
+- Restored the established v0.2 default PalServer launch arguments and explicit text logging flags when no custom headless configuration exists.
+- Carried the v0.2.16.4 GUI parity audit forward as `docs/GUI_PARITY_v0.4.6.1.md`.
+
 # Changelog
+
+## v0.4.11.0 — Guilds + Bases Parity
+
+- Restored read-only guild and base directory/detail workflows with search/status filters, CSV export, ID copy, and guild-leader player navigation.
+- Carried authoritative decoded base IDs through the headless explorer contract without adding GUI filesystem access.
+- Kept all guild/base repairs and recovery visibly unavailable until the complete transactional safety backend exists.
+
+## v0.4.10.0 — Players Parity
+
+- Unified live REST and saved-player evidence into a server-owned stable-ID player directory with search, view/admin filters, details, save discovery, and CSV export.
+- Added headless-persisted player notes and warnings with bounded input, atomic writes, and privacy-conscious audit entries.
+- Made Kick/Ban availability follow online state and kept unsupported player operations visibly disabled.
+- Centered global button content, added the metallic gradient interaction treatment, and guarded build relaunch by exact artifact-root process ownership.
+- Preserved single aggregate periodic polling, remote/LAN security, card containment, and Windows/Linux Avalonia/headless parity.
+
+## v0.4.5.1 — runtime parity continuation
+- Fixed Avalonia desktop compilation for the Palworld configuration list by replacing unsupported `ListBox.HorizontalContentAlignment` with supported `ListBoxItem`/template stretching; added regression coverage.
+
+- Restored a full active Palworld `OptionSettings` configuration editor in the Avalonia Configuration page through a new headless `/api/v1/palworld/config` contract. Saves create timestamped rollback copies.
+- Server startup readiness now follows the configured `PublicPort` from `PalWorldSettings.ini` instead of assuming UDP 8211.
+- Removed generic/self-evident tooltips while preserving explanatory, safety, capability, path and destructive-action help.
+- Added `docs/GUI_PARITY_v0.4.5.1.md`, a page-by-page comparison against the v0.2.16.4 WPF GUI; partial and not-yet-migrated functions are explicitly tracked instead of being represented as complete.
+
+## v0.4.5.1 — Tray Lifecycle, Page Parity & Server Start Reliability (Release Candidate)
+
+### Runtime acceptance continuation
+- Fixed Avalonia AXAML property-element syntax introduced by the tooltip pass; tooltips remain on owning/interactive controls and templates/context-menu property elements no longer carry invalid attributes.
+- Added an Avalonia XAML safety regression check to block the malformed property-element attribute pattern from returning.
+- Added hover information tooltips across navigation, buttons and selection controls.
+- Added right-click live-player administration: native Palworld REST Kick/Ban plus capability-gated Whisper/Promote/Give Item entries.
+- Restored persistent MystTiq activity/audit logging and a dedicated Activity & Audit view.
+- Restored Windows PalServer stdout/stderr capture to `MystTiq-PalServer-Console.log` when MystTiq launches the server.
+- Restricted world discovery to canonical SaveGames directories so backup copies of `Level.sav` are not detected as live worlds.
+- World Inspector now preserves the full World ID and supplies a compact nickname for readability.
+- Corrected stale v0.4.5.0 version assertions/manifest/banner references and archived-test validation noise.
+
+
+- Added an Avalonia system tray using the established MystTiq icon and NativeMenu. Closing the main window hides it to the tray; it no longer leaves the local sidecar running with no user-facing control surface.
+- Added tray actions to show the GUI and route Start/Restart/Stop through the existing ViewModel/API lifecycle commands.
+- Added explicit `Stop Local Management Backend & Exit` and `Exit GUI (keep backend running)` choices. The stop action is guarded to the exact sidecar PID/executable started by the current GUI session and never targets PalServer or a separately installed MystTiq service.
+- Decoupled management-API connectivity from the human-readable connection/lifecycle status so a failed Start operation does not disable all future lifecycle retries.
+- Start Server now attempts local backend recovery when needed, verifies the server distribution/executable before mutation, and surfaces a visible lifecycle result instead of failing silently.
+- Split previously shared generic page presentation into page-specific Server Setup, Update Center, Base Manager, Guild Administration, Live Console, Activity & Audit, MOD Dashboard, MOD Library, and UE4SS Runtime views while retaining existing backend data contracts.
+- Hardened the Windows runtime smoke test with an isolated missing-server root and a safe `/api/v1/server/start` request that must return HTTP 424; it can never launch the user's real PalServer.
+- Added v0.4.5.1 logic/runtime/Linux acceptance coverage for tray lifetime, sidecar ownership, lifecycle retryability, start preflight, visible lifecycle results, and page-specific presentation.
+
+## v0.4.5.0 — GUI Branding & Navigation Polish (Release Candidate)
+
+- Promoted v0.4.4.3 as the official baseline after successful build, logic and runtime acceptance.
+- Replaced the temporary Avalonia sidebar `M` placeholder with the established MystTiq Palworld Server Manager logo asset.
+- Applied the established MystTiq icon to the Avalonia window/application packaging.
+- Added a modest standardized indent to expanded navigation child items while preserving the shared 44-pixel navigation row height.
+- Added v0.4.5.0 logic/runtime/Linux acceptance coverage and branding/navigation regression checks.
+- Preserved single aggregate status polling, local sidecar auto-connect, LAN/remote authentication/TLS, and Windows/Linux platform behavior.
+
+## v0.4.4.3 — Local Sidecar Auto-Connect & Runtime Acceptance Fix (Promoted Baseline)
+
+- Fixed the acceptance-blocking Windows architecture gap where `api-run` rejected Windows, leaving the Avalonia GUI able to discover PalServer files but unable to perform management operations.
+- Added Windows Core lifecycle/session inspection and Windows management API composition.
+- Added a self-contained headless sidecar to Windows/Linux Avalonia desktop publishes and local API bootstrap behavior when no persistent API is reachable.
+- Standardized sidebar top-level and expanded child navigation rows to the same 44-pixel sizing.
+- Added a Windows runtime-smoke gate for health, aggregate status, configuration and distribution endpoints.
+- Added platform-aware Windows/Linux headless configuration defaults and path validation.
+- Local loopback sidecars now auto-connect without remote credentials when `/healthz` explicitly reports authentication disabled; LAN/remote services retain bearer/TLS requirements.
+- Corrected the desktop-sidecar packaging assertion to validate the actual publish contract instead of a brittle regex.
+- Corrected stale v0.4.4.2 expectations accidentally carried into the v0.4.4.3 logic harness for version, README, roadmap and test-command checks.
+- Hardened `Build.ps1 Clean` so auto-launched development GUI/sidecar processes under `artifacts` are stopped before deletion; Clean now fails loudly if generated artifacts remain instead of reporting a false success.
+- Promoted as the official baseline after the complete release gate and runtime acceptance passed.
+
+
+## v0.4.4.1 — Server / Configuration / Console / Workspace Integration (Release Candidate)
+
+
+- Fixed release packaging so `scripts/Test-v0.4.4.1-Logic.ps1` is present in both Changed Files and Full Source packages.
+- Added bounded cross-platform LAN discovery for MystTiq `/healthz` endpoints instead of assuming only `127.0.0.1`.
+- Preserved secure remote management: discovery may identify a service, while authenticated API operations still use normal TLS validation/certificate pinning and bearer-token rules.
+- Standardized Avalonia sidebar navigation rows at 36 px with compact indentation/font sizing so expanded items fit consistently across Windows and Linux.
+- Added logic contracts for dynamic version wiring, package/test presence, LAN discovery behavior/security, and GUI discovery composition.
+- Standardized the documented full test sequence: unblock scripts, Clean, Validate, then the current version logic test with `-RunBuild -ExportJson`.
+
+- Added one aggregate `/api/v1/status/poll` endpoint so periodic GUI status sampling does not fan out across multiple HTTP requests.
+- Added a cross-platform bottom status bar with last-sample time and an indeterminate busy animation for active work.
+- Promoted Workspace from placeholder navigation to a managed, API-backed view of server, SteamCMD, backup, and runtime paths.
+- Preserved lifecycle ownership in the headless/Core path; Avalonia remains an API consumer on Windows and Linux.
+- Added `Test-v0.4.4.1-Logic.ps1` covering View → ViewModel → API → endpoint → Core/platform wiring, polling behavior, workspace behavior, release-gate integration, and platform preservation.
+- Updated the release workflow so logic tests and Windows/Linux headless + Avalonia builds execute before packaging/checksums.
+
+- Development moved to v0.4.4.1 after promotion of v0.4.3.1.
+- Target architecture remains headless-first: View -> ViewModel -> API/service -> endpoint -> Core -> platform implementation.
+- GUI close/background behavior must remain independent of explicit server/service shutdown.
+- Windows and Linux desktop behavior must share Avalonia/Core contracts wherever platform-specific implementations are not required.
+- Versioning now follows MAJOR.MINOR.REVISION.FIX; new revisions start at fix 0.
+
+## v0.4.3.1 — Promoted Baseline / Avalonia StringFormat Parser Hotfix
+
+- Promoted v0.4.3.1 as the official baseline after the complete release gate passed.
+- Normalized the former `v0.4.0.3 FIX1` label to the new four-part version convention.
+- The final component is now the fix number; separate `FIX1` suffixes are no longer used for new releases.
+- Preserved the Dashboard/local backend integration and Avalonia StringFormat correction.
+
+## v0.4.0.2 FIX2 — Console Composition & Warning-Free Build Hotfix
+
+- Corrected Console composition verification to follow its real Players/Logs/Metrics API wiring.
+- Fixed CS8601 in diagnostics restart handling.
+- Avalonia desktop compiler warnings now block promotion.
+- Product version remains v0.4.0.2.
+
+
+## v0.4.0.2 FIX1 — Logic Harness & Release Packaging Hotfix
+
+- Fixed the v0.4.0.2 PowerShell logic-harness parser error.
+- Added required changed-files apply instructions and packaging preflight checks.
+- Product/runtime behavior remains v0.4.0.2.
+
+
+## v0.4.0.2 — Avalonia Navigation & Theme Foundation
+
+- Rebuilt the Avalonia left navigation using the original MystTiq SERVER/WORLD/MODS/TOOLS/SYSTEM hierarchy.
+- Added persistent sidebar service/server status and version identity.
+- Replaced the purple prototype accent with centralized dark navy/blue theme resources.
+- Added shared primary/success/warning/danger/navigation/card/status styles.
+- Routed navigation destinations to existing backend-backed screens where available and explicit placeholders where backend integration is deferred.
+- Added current-version Linux acceptance/production-readiness packaging scripts.
+- Integrated version-specific logic/regression tests into the root Build.ps1 release gate.
+- Re-sequenced v0.4.0.3–v0.4.0.9 for GUI functional parity before deferred save/freeze and advanced MOD diagnostic work.
+
+## v0.4.0.1 — Network Diagnostics & Connectivity Recovery
+
+- Added independent Runtime Health and Network Health.
+- Added effective Palworld UDP game-port resolution with explicit `-port=` support and safe 8211 fallback.
+- Added PID-aware UDP/TCP endpoint inspection and wrong-process/wrong-port detection.
+- Treats `0.0.0.0` as a healthy all-IPv4 binding and resolves a human-readable LAN endpoint.
+- Added Windows Firewall rule inspection plus idempotent MystTiq-owned rule repair.
+- Added startup grace for delayed PalServer socket binding.
+- Added optional RCON and REST checks when enabled in PalWorldSettings.ini.
+- Added controlled diagnostic restart with post-restart network verification.
+- Added management API endpoints and shared Avalonia Diagnostics UI.
+- Added redacted support report/copy workflow and structured diagnostic start/end evidence.
+- Captured projected v0.4.0.2–v0.4.0.5 save/freeze, auto-save/save-health, incident-bundle and MOD isolation/functional-test work.
+
+
+## v0.4.0.0 — Windows Persistent Service Foundation
+
+- Added Windows SCM service manager contracts and implementation in shared core.
+- Added automatic-start/recovery configuration for the MystTiq Windows Service.
+- Added win-x64 headless-host publish build action.
+- Preserved Linux systemd behavior and existing WPF runtime while Windows service lifecycle integration proceeds.
+
+
+## v0.3.1.9 FIX1 — Release Metadata & Deployment Script Cleanup
+
+- Added the required v0.3.1.9 Changed Files apply document.
+- Synchronized Linux desktop deployment helper version references to v0.3.1.9.
+- No runtime behavior changed.
+
+
+## v0.3.1.9 — MOD & UE4SS Management
+
+- Added shared MOD/UE4SS API and Avalonia management page.
+- Added UE4SS active-root and runtime-evidence parity.
+- Added safe stopped-server PAK and mods.txt state changes.
+- Preserved neutral Disabled / Active-Unverified health semantics.
+- Removed superseded v0.3.1.8 harness warning source.
+
+
+## v0.3.1.8 — Player & Guild Explorer
+
+- Added validated active-world player-save identity discovery.
+- Added authenticated Player & Guild Explorer API.
+- Added authoritative decoded GroupSaveDataMap guild semantics.
+- Added optional live REST enrichment for online player evidence.
+- Added guild leadership/member/base-reference and orphan-review evidence.
+- Added shared Avalonia Players & Guilds page.
+- Preserved read-only behavior and explicit semantic-unavailable state.
+
+
+## v0.3.1.7 FIX1 — Validation Warning Cleanup
+
+- Removed the prior-patch literal from the active v0.3.1.7 logic harness.
+- Replaced it with a positive assertion that `DoctorReport` receives the assembly-derived `reportVersion`.
+- No runtime behavior changed.
+
+
+## v0.3.1.7 — World Explorer Foundation
+
+- Added read-only authenticated World Explorer API.
+- Added server-authoritative world discovery from SaveRoot/Level.sav evidence.
+- Added bounded active-world file/player-save metadata inventory.
+- Added shared Avalonia World Explorer page.
+- Made Doctor version assembly-derived.
+- Changed inapplicable secured-listener lifecycle acceptance from Warning to Skip.
+- Added skipped-count evidence to Linux acceptance.
+
+
+## v0.3.1.6 — Server Setup & Update Workflows
+
+- Began v0.3.1.6+ feature-parity expansion.
+- Added service-owned SteamCMD/Palworld server distribution status and plan APIs.
+- Added API-backed Palworld Dedicated Server update/validation.
+- Added stopped-server, serialization, cancellation and post-update verification safeguards.
+- Added shared Avalonia Setup & Update page.
+- Kept MystTiq application updates explicitly separate from Palworld server updates.
+
+
+## v0.3.1.5 FIX1 — Desktop Version Metadata Cleanup
+
+- Synchronized PalworldManager manifest release metadata to v0.3.1.5.
+- Synchronized Avalonia desktop project metadata to v0.3.1.5.
+- Added version-metadata regression checks.
+- No runtime behavior changed.
+
+
+## v0.3.1.5 — Production Doctor & Diagnostics GUI
+
+- Added authenticated `/api/v1/doctor` endpoint and shared production-health evidence model.
+- Added functional Avalonia Doctor page with PASS/WARNING/FAIL summary, evidence, recommendations, timestamp, and report export.
+- Added Linux acceptance coverage for the Doctor endpoint.
+
+
+## v0.3.1.4 — Backup & Configuration
+
+- Added authenticated backup inventory/create/delete/restore API.
+- Added managed filename/path containment checks and verified `.partial` backup commit.
+- Added safe restore requiring PalServer stopped, pre-restore safety backup, and staging/rollback.
+- Added restricted headless configuration GET/PUT API.
+- Added validation + timestamped rollback copy before configuration writes.
+- Preserved authentication/TLS security structures outside the editable DTO.
+- Added functional Avalonia Backups page and headless configuration editor.
+- Added v0.3.1.4 Linux acceptance coverage for backup/config read contracts.
+
+
+## v0.3.1.3 FIX6 — Harness Assertion Cleanup
+
+- Replaced one brittle exact-line deployment assertion with behavior-oriented checks.
+- Preserved parser-safe version resolution and dynamic archive-selection regression coverage.
+- No runtime code changed.
+
+
+## v0.3.1.3 FIX5 — PowerShell Deploy Parameter Syntax Hotfix
+
+- Replaced invalid command invocation in the `Version` parameter default.
+- Current project version is now resolved after parameter binding and project-root resolution.
+- Preserved optional explicit `-Version` override.
+- Added parser-pattern regression checks.
+- No runtime behavior changed.
+
+
+## v0.3.1.3 FIX4 — Dynamic Deployment Version & Validation Cleanup
+
+- Removed hard-coded v0.3.0.7 deployment version.
+- Headless deployment now derives the current project version dynamically.
+- Headless archive selection is version-driven.
+- Linux acceptance/production gate paths remain dynamically versioned.
+- No runtime behavior changed.
+
+
+## v0.3.1.3 FIX3 — Linux Gate Version-Path Validation Cleanup
+
+- Eliminated six false stale-version warnings caused by literal versioned Linux gate filenames in the logic harness.
+- Current Linux acceptance/production script paths are now derived from `Get-ProjectVersion.ps1`.
+- Preserved all Linux monitoring gate checks.
+- No runtime behavior changed.
+
+
+## v0.3.1.3 FIX2 — Linux Acceptance & Production Gate Restoration
+
+- Added release-version-matched v0.3.1.3 Linux acceptance and production-readiness runners.
+- Added monitoring endpoint/payload checks to Linux acceptance.
+- Added explicit evidence that AdminPassword is absent from the player API response.
+- Removed legacy v0.3.0.7 Linux gate scripts from the active full-source baseline.
+- Updated cleanup automation for ChangedFiles overlays.
+
+
+## v0.3.1.3 FIX1 — Headless Monitoring HttpVersion Compile Hotfix
+
+- Added the missing `System.Net` namespace required by `HttpVersion.Version11`.
+- Preserved explicit HTTP/1.1 Palworld REST requests.
+- Added compile-contract regression checks.
+- No runtime behavior changed.
+
+
+## v0.3.1.3 — Logs, Players & Monitoring
+
+- Added authenticated `/api/v1/players`, `/api/v1/logs/tail`, and `/api/v1/metrics` endpoints.
+- Added server-side Palworld REST player polling over loopback only.
+- Kept Palworld AdminPassword server-side; it is never returned to Avalonia.
+- Added bounded PalServer log-tail reads.
+- Added PalServer CPU, working-set RAM and thread metrics.
+- Added shared Players and Monitoring pages.
+- Added Dashboard player-count/CPU/RAM summaries and recent metric history.
+- Preserved v0.3.1.2 lifecycle behavior and v0.3.1.1 connection-profile security.
+
+
+## v0.3.1.2 FIX1 — Version Consistency Cleanup
+
+- Removed obsolete v0.3.1.1 cleanup script from active source.
+- Removed literal stale-version text from the current cleanup helper.
+- Updated Avalonia desktop project metadata to v0.3.1.2.
+- Added regression checks for version-consistency hygiene.
+- No runtime behavior changed.
+
+
+## v0.3.1.2 — Dashboard & Lifecycle
+
+- Added API-backed Start / Stop / Restart to the shared Avalonia desktop.
+- Added live PalServer readiness, PID and UDP listener evidence.
+- Added MystTiq system-service state.
+- Added last-observed, last-transition and uptime presentation.
+- Added optional five-second auto refresh.
+- Lifecycle mutations reacquire authoritative status/service evidence.
+- Desktop remains an API client and never directly owns PalServer.
+
+
+## v0.3.1.1 FIX1 — Deployment Version & Warning Cleanup
+
+- Removed stale v0.3.1.0 references from the Linux desktop deployment helper.
+- Made Linux desktop archive naming version-driven.
+- Removed the unused generic `CanExecuteChanged` backing-field compiler warning.
+- Added regression checks for both cleanup items.
+- No runtime behavior changed.
+
+
+## v0.3.1.1 — Shared Shell, Navigation & Connection Foundation
+
+- Added working Avalonia navigation across Dashboard, Server, Players, Backups, Mods, Doctor and Settings.
+- Added persistent local/remote connection profiles.
+- Bearer tokens remain process-memory-only and are never saved with profiles.
+- Added optional SHA-256 TLS certificate pinning while preserving normal OS trust validation by default.
+- Added automated Linux Avalonia desktop build/deploy/hash/smoke-launch helper.
+- GUI remains an API client and does not own PalServer lifetime.
+
+
+## v0.3.1.0 FIX6 — Actual RunBuild Block Locator Hotfix
+
+- Replaced first-string `IndexOf()` RunBuild detection with a line-level regex locator.
+- The harness now selects the final real `if($RunBuild){` block instead of its own string literal.
+- Independently validated the extracted build block during package generation.
+- No application/runtime behavior changed.
+
+
+## v0.3.1.0 FIX5 — RunBuild Boundary Marker Hotfix
+
+- Corrected the logic harness RunBuild end marker from nonexistent `$report=` to the actual `$passed=` summary boundary.
+- Added regression coverage for the real RunBuild boundary marker.
+- No application/runtime behavior changed.
+
+
+## v0.3.1.0 FIX4 — RunBuild Block Boundary Hotfix
+
+- Fixed the final false-negative build-gate regression check.
+- RunBuild source inspection now stops at the report-generation boundary instead of scanning the remainder of the harness.
+- Prevents the regression assertion from detecting its own `$LASTEXITCODE` text.
+- No application/runtime behavior changed.
+
+
+## v0.3.1.0 FIX3 — Harness Self-Reference Regression Hotfix
+
+- Fixed two false-negative FIX2 logic checks caused by self-referential source scanning and PowerShell string interpolation.
+- Build-gate regression checks now inspect only the actual RunBuild block.
+- Validate, Windows desktop and Linux desktop non-throwing-completion semantics are all checked structurally.
+- No application/runtime behavior changed.
+
+
+## v0.3.1.0 FIX2 — PowerShell Build-Gate Exit Semantics Hotfix
+
+- Fixed false harness failure caused by checking stale `$LASTEXITCODE` after successful PowerShell build-script execution.
+- PowerShell build actions now PASS on non-throwing completion and FAIL on exceptions.
+- Added regression coverage preventing native exit-code semantics from being reused for PowerShell build actions.
+- No runtime application behavior changed.
+
+
+## v0.3.1.0 FIX1 — Avalonia Font Dependency & Desktop Compile-Gate Hotfix
+
+- Added the missing `Avalonia.Fonts.Inter` dependency required by `.WithInterFont()`.
+- Updated the public docs index to the v0.3.1.0 desktop foundation candidate.
+- Strengthened the v0.3.1.0 `-RunBuild` harness to compile/publish Windows and Linux Avalonia targets.
+- Added regression checks tying the Inter bootstrap to its package dependency.
+- No accepted headless/WPF/server runtime behavior changed.
+
+
+## v0.3.1.0 — Avalonia Desktop Foundation
+
+- Added the first shared Windows/Linux Avalonia desktop project.
+- Added MVVM shell, MystTiq theme foundation and API client boundary.
+- Added local connection profile and live `/api/v1/status` connection.
+- Added Windows/Linux desktop publish build actions.
+- Preserved Windows WPF during cross-platform parity development.
+
+
+## v0.3.0.7 FIX4 — Headless Help, Linux Documentation & GUI Roadmap Completion
+
+- Added `production-doctor` to built-in headless help.
+- Added complete Linux command/path/security documentation.
+- Added Linux production workflow to the main README.
+- Selected Avalonia for v0.3.1.x shared Windows/Linux GUI.
+- Defined v0.3.1.0 as Avalonia Desktop Foundation.
+- No accepted Linux runtime behavior changed.
+
 
 ## v0.3.0.7 FIX3 — Production Readiness Result Accounting Hotfix
 
@@ -816,3 +1416,62 @@ All notable public changes will be documented here.
 - Installer and post-install launch now run elevated; the application itself continues to request administrator privileges on subsequent launches.
 - Updated README installer guidance and executable naming.
 
+
+- Corrected the v0.4.4.1 platform-preservation test so cross-platform `System.Windows.Input.ICommand` usage is not misidentified as WPF.
+- Added the missing v0.4.4.1 Linux acceptance and production-readiness scripts required by Linux packaging.
+- Windows Avalonia desktop publish now launches the GUI automatically after a successful publish; `-NoGuiLaunch` suppresses launch for CI/release automation.
+
+- v0.4.6.1 connection contract fix: desktop lifecycle DTO now accepts nullable `lastTransitionAt`, matching the headless/Core wire model so a stopped server can establish the management session before its first lifecycle transition.
+## v0.4.12.0 — Backup Center Parity
+
+- Adds deep persisted/audited backup verification, explicit restore confirmation, immutable server-side retention preview/apply, and profile-aware backup-root behavior.
+- Preserves safety-backup rollback, remote/LAN security, one aggregate status poll, Windows/Linux Avalonia parity, card containment, and centered metallic buttons.
+## v0.4.13.0 — MOD Dashboard / MOD Library / UE4SS Parity
+
+- Adds staged, bounded, traversal-safe MOD ZIP installation plus audited selected delete, bulk state, and repair routes.
+- Preserves server-side evidence, neutral Disabled/Active-Unverified health, and explicit capability truth.
+## v0.4.14.0 — World Inspector Read-only Parity
+
+- Restores ten read-only world evidence sections with headless statistics/integrity metadata, canonical discovery, and remote-safe presentation.
+## v0.4.15.0 — World Validator, Recovery & Transaction Center
+
+- Added structural world validation and local report export through the headless API.
+- Added bounded, traversal-safe archive Analyze and expiring single-use review plans.
+- Added stopped-server, confirmation-gated full-world import and canonical player-save recovery.
+- Enforced fresh safety backup, isolated staging, atomic swap, post-validation, rollback, durable journal/audit and GUI refresh.
+- Added test-only gated failure injection for every transaction stage; production hosts ignore the test header.
+- Kept guild/base binary mutations visibly BACKEND REQUIRED pending a safe Palworld save codec.
+## v0.4.16.0 — Activity & Audit + Notifications Parity
+
+- Added Activity/Audit search, severity/category filters and visible-view export.
+- Kept persistent audit append-only from the GUI with no silent clear endpoint.
+- Added bounded atomic server-side notification persistence and audited read/pin/dismiss/mark-all/self-test routes.
+- Added notification badge/page, filters, selection actions and local export without another periodic poll.
+
+## v0.4.17.0 — Crash Analyzer + Palworld Save Tools Parity
+
+- Added bounded evidence-backed crash signature analysis with durable server-side history.
+- Added non-destructive isolation guidance that does not claim unproven causes.
+- Added on-demand Python, legacy/PlM converter, Oodle and active-save diagnostics.
+- Added bounded remote-safe save inventory and read-only signature inspection.
+- Preserved single polling, authenticated remote/LAN access, card containment and the protected World Transaction mutation boundary.
+
+## v0.4.17.1 — Documentation Gate Correction
+
+- Synchronized `docs/index.html` and current-version release references after strict validation rejected the v0.4.17.0 candidate.
+- No runtime behavior changed from the v0.4.17.0 feature candidate.
+
+## v0.4.17.2 — Promotion-State Gate Correction
+
+- Keeps the roadmap status as Current Release Candidate until the installed-tree gate completes.
+- Carries the v0.4.17.1 documentation-index correction and all v0.4.17.0 feature behavior unchanged.
+
+## v0.4.17.3 — Clean/Updater DLL-Release Retry
+
+- Waits for the verified artifact-hosted desktop and sidecar to exit, then retries deletion of only resolved `artifacts`, `bin`, and `obj` directories when Windows briefly retains a DLL mapping.
+- Refuses retry deletion for paths outside the project root or for unrecognized directory names.
+
+## v0.4.17.4 — Installed-Workspace Shutdown Guard
+
+- Updater closes MystTiq desktop/sidecar processes from the exact installation target, including development `bin` launches, before invoking clean and replacement.
+- Process ownership is constrained by both executable name and a resolved target-root path prefix, with repeated sweeps and exit waits.

@@ -1,8 +1,8 @@
-#requires -Version 7.0
+﻿#requires -Version 7.0
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = ".",
-    [string]$Version = "0.3.0.7",
+    [string]$Version = "",
     [string]$LinuxHost = "192.168.1.248",
     [string]$LinuxUser = "mystroth",
     [string]$RemoteBase = "/home/mystroth/mysttiq-builds",
@@ -21,6 +21,15 @@ function Pass([string]$Text) { Write-Host "[PASS] $Text" -ForegroundColor Green 
 function Warn([string]$Text) { Write-Warning $Text }
 
 $root = (Resolve-Path $ProjectRoot).Path
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = & (Join-Path $root 'scripts\Get-ProjectVersion.ps1')
+}
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    throw 'Unable to resolve the current MystTiq project version.'
+}
+
 $ssh = (Get-Command ssh -ErrorAction Stop).Source
 $scp = (Get-Command scp -ErrorAction Stop).Source
 

@@ -7,6 +7,8 @@ namespace MystTiq.Core.Services;
 public sealed class HeadlessConfigurationService
 {
     public const string LinuxDefaultPath = "/etc/mysttiq/mysttiq.json";
+    public static string WindowsDefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "MystTiqPalworldServer", "mysttiq.json");
+    public static string DefaultPath => OperatingSystem.IsWindows() ? WindowsDefaultPath : LinuxDefaultPath;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -16,9 +18,9 @@ public sealed class HeadlessConfigurationService
 
     public HeadlessConfiguration LoadOrDefault(string? path = null)
     {
-        path ??= LinuxDefaultPath;
+        path ??= DefaultPath;
         if (!File.Exists(path))
-            return HeadlessConfiguration.CreateLinuxDefault();
+            return HeadlessConfiguration.CreateDefaultForCurrentPlatform();
 
         var json = File.ReadAllText(path);
         var schemaVersion = ReadSchemaVersion(json);
@@ -54,12 +56,12 @@ public sealed class HeadlessConfigurationService
         }
 
         if (configuration.Api.Authentication.Enabled)
-            ValidateAbsoluteLinuxPath(configuration.Api.Authentication.TokenFile, "api.authentication.tokenFile", errors);
+            ValidateAbsolutePath(configuration.Api.Authentication.TokenFile, "api.authentication.tokenFile", errors);
 
         if (configuration.Api.Tls.Enabled)
         {
-            ValidateAbsoluteLinuxPath(configuration.Api.Tls.CertificatePath, "api.tls.certificatePath", errors);
-            ValidateAbsoluteLinuxPath(configuration.Api.Tls.CertificatePasswordFile, "api.tls.certificatePasswordFile", errors);
+            ValidateAbsolutePath(configuration.Api.Tls.CertificatePath, "api.tls.certificatePath", errors);
+            ValidateAbsolutePath(configuration.Api.Tls.CertificatePasswordFile, "api.tls.certificatePasswordFile", errors);
         }
 
         ValidatePositive(configuration.Lifecycle.StartupTimeoutSeconds, "lifecycle.startupTimeoutSeconds", errors);
@@ -69,10 +71,10 @@ public sealed class HeadlessConfigurationService
         ValidatePositive(configuration.Lifecycle.MaximumRecoveryAttempts, "lifecycle.maximumRecoveryAttempts", errors);
         ValidatePositive(configuration.Lifecycle.RecoveryWindowSeconds, "lifecycle.recoveryWindowSeconds", errors);
 
-        ValidateAbsoluteLinuxPath(configuration.Server.ServerRoot, "server.serverRoot", errors);
-        ValidateAbsoluteLinuxPath(configuration.Server.SteamCmdPath, "server.steamCmdPath", errors);
-        ValidateAbsoluteLinuxPath(configuration.Server.BackupRoot, "server.backupRoot", errors);
-        ValidateAbsoluteLinuxPath(configuration.Server.RuntimeRoot, "server.runtimeRoot", errors);
+        ValidateAbsolutePath(configuration.Server.ServerRoot, "server.serverRoot", errors);
+        ValidateAbsolutePath(configuration.Server.SteamCmdPath, "server.steamCmdPath", errors);
+        ValidateAbsolutePath(configuration.Server.BackupRoot, "server.backupRoot", errors);
+        ValidateAbsolutePath(configuration.Server.RuntimeRoot, "server.runtimeRoot", errors);
 
         if (configuration.Server.LaunchArguments is null || configuration.Server.LaunchArguments.Count == 0)
             errors.Add("server.launchArguments must contain at least one argument.");
@@ -80,29 +82,68 @@ public sealed class HeadlessConfigurationService
         return new ConfigurationValidationResult(errors.Count == 0, errors);
     }
 
+    public string SaveValidated(
+        HeadlessConfiguration configuration,
+        string? path = null,
+        bool createRollbackCopy = true)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        path ??= DefaultPath;
+
+        var validation = Validate(configuration);
+        if (!validation.Valid)
+            throw new InvalidDataException(
+                "Configuration did not validate: " + string.Join("; ", validation.Errors));
+
+        var directory = Path.GetDirectoryName(path)
+            ?? throw new InvalidOperationException("Configuration path has no parent directory.");
+        Directory.CreateDirectory(directory);
+
+        string? rollbackPath = null;
+        if (createRollbackCopy && File.Exists(path))
+        {
+            rollbackPath = path + $".pre-api-{DateTime.UtcNow:yyyyMMdd-HHmmssfff}.bak";
+            File.Copy(path, rollbackPath, overwrite: false);
+        }
+
+        var tempPath = path + $".tmp-{Guid.NewGuid():N}";
+        try
+        {
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(configuration, JsonOptions));
+            File.Move(tempPath, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+
+        return rollbackPath ?? string.Empty;
+    }
+
     public void WriteDefault(string? path = null, bool overwrite = false)
     {
-        path ??= LinuxDefaultPath;
+        path ??= DefaultPath;
         if (File.Exists(path) && !overwrite)
             throw new IOException($"Configuration already exists: {path}");
 
         var directory = Path.GetDirectoryName(path)
             ?? throw new InvalidOperationException("Configuration path has no parent directory.");
         Directory.CreateDirectory(directory);
-        File.WriteAllText(path, JsonSerializer.Serialize(HeadlessConfiguration.CreateLinuxDefault(), JsonOptions));
+        File.WriteAllText(path, JsonSerializer.Serialize(HeadlessConfiguration.CreateDefaultForCurrentPlatform(), JsonOptions));
     }
 
 
     public bool NeedsMigration(string? path = null)
     {
-        path ??= LinuxDefaultPath;
+        path ??= DefaultPath;
         if (!File.Exists(path)) return false;
         return ReadSchemaVersion(File.ReadAllText(path)) < HeadlessConfiguration.CurrentSchemaVersion;
     }
 
     public HeadlessConfiguration MigrateFile(string? path = null)
     {
-        path ??= LinuxDefaultPath;
+        path ??= DefaultPath;
         if (!File.Exists(path)) throw new FileNotFoundException("MystTiq configuration was not found.", path);
         var migrated = LoadOrDefault(path);
         var validation = Validate(migrated);
@@ -128,14 +169,15 @@ public sealed class HeadlessConfigurationService
         var legacy = JsonSerializer.Deserialize<LegacyHeadlessConfigurationV1>(json, JsonOptions)
             ?? throw new InvalidDataException("Unable to deserialize MystTiq schema v1 configuration.");
 
+        var defaults = HeadlessConfiguration.CreateDefaultForCurrentPlatform();
         return new HeadlessConfiguration(
             HeadlessConfiguration.CurrentSchemaVersion,
             new HeadlessApiConfiguration(
                 legacy.Api.Enabled,
                 legacy.Api.BindAddress,
                 legacy.Api.Port,
-                new HeadlessApiAuthenticationConfiguration(false, "/etc/mysttiq/secrets/api-token"),
-                new HeadlessApiTlsConfiguration(false, "/etc/mysttiq/certs/mysttiq.pfx", "/etc/mysttiq/secrets/certificate-password")),
+                defaults.Api.Authentication with { Enabled = false },
+                defaults.Api.Tls with { Enabled = false }),
             legacy.Lifecycle,
             legacy.Server);
     }
@@ -155,9 +197,18 @@ public sealed class HeadlessConfigurationService
         if (value <= 0) errors.Add($"{name} must be greater than zero.");
     }
 
-    private static void ValidateAbsoluteLinuxPath(string? value, string name, ICollection<string> errors)
+    private static void ValidateAbsolutePath(string? value, string name, ICollection<string> errors)
     {
-        if (string.IsNullOrWhiteSpace(value) || !value.StartsWith("/", StringComparison.Ordinal))
-            errors.Add($"{name} must be an absolute Linux path.");
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            errors.Add($"{name} must be an absolute path.");
+            return;
+        }
+
+        var absolute = OperatingSystem.IsWindows()
+            ? Path.IsPathFullyQualified(value)
+            : value.StartsWith("/", StringComparison.Ordinal);
+        if (!absolute)
+            errors.Add($"{name} must be an absolute path for the current platform.");
     }
 }

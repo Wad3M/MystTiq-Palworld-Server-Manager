@@ -24,3 +24,19 @@ The supported desktop application remains WPF/Windows. v0.3.0.0 now adds a separ
 - [`remote-api-enrollment-v0.3.0.6.md`](remote-api-enrollment-v0.3.0.6.md) — explicit LAN enrollment, certificate provisioning and remote API acceptance
 
 - [`production-readiness-v0.3.0.7.md`](production-readiness-v0.3.0.7.md) — Linux integration, first-run/upgrade automation and production Doctor gate
+
+- [`avalonia-desktop-v0.3.1.md`](avalonia-desktop-v0.3.1.md) — shared Windows/Linux Avalonia client architecture for v0.3.1.x
+
+- [`monitoring-v0.3.1.3.md`](monitoring-v0.3.1.3.md) — player/log/runtime monitoring API boundary
+
+- [`backup-configuration-v0.3.1.4.md`](backup-configuration-v0.3.1.4.md) — backup safety and restricted configuration editing
+
+- [`doctor-diagnostics-v0.3.1.5.md`](doctor-diagnostics-v0.3.1.5.md) — production Doctor API and Avalonia diagnostics UI
+
+- [`server-distribution-v0.3.1.6.md`](server-distribution-v0.3.1.6.md) — service-owned SteamCMD and Palworld server update boundary
+
+- [`world-explorer-v0.3.1.7.md`](world-explorer-v0.3.1.7.md) — read-only server-authoritative world/save inventory boundary
+
+- [`player-guild-explorer-v0.3.1.8.md`](player-guild-explorer-v0.3.1.8.md) — player-save and authoritative guild semantic evidence model
+
+- [`mod-ue4ss-v0.3.1.9.md`](mod-ue4ss-v0.3.1.9.md) — cross-platform MOD/UE4SS state and evidence boundary

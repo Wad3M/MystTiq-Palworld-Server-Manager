@@ -42,17 +42,14 @@ if (command is "help" or "--help" or "-h")
     return 0;
 }
 
-var configurationPath = GetOption("--config")
-    ?? (OperatingSystem.IsLinux()
-        ? HeadlessConfigurationService.LinuxDefaultPath
-        : "mysttiq.json");
+var configurationPath = GetOption("--config") ?? HeadlessConfigurationService.DefaultPath;
 var configurationService = new HeadlessConfigurationService();
 
 if (command.Equals("api-token-create", StringComparison.OrdinalIgnoreCase))
 {
     try
     {
-        var tokenPath = GetOption("--token-file") ?? "/etc/mysttiq/secrets/api-token";
+        var tokenPath = GetOption("--token-file") ?? HeadlessConfiguration.CreateDefaultForCurrentPlatform().Api.Authentication.TokenFile;
         var overwrite = args.Any(argument => argument.Equals("--overwrite", StringComparison.OrdinalIgnoreCase));
         var secrets = new HeadlessSecretFileService();
         var token = secrets.GenerateBearerToken();
@@ -72,9 +69,9 @@ if (command.Equals("api-tls-create", StringComparison.OrdinalIgnoreCase))
 {
     try
     {
-        var certificatePath = GetOption("--certificate-file") ?? "/etc/mysttiq/certs/mysttiq.pfx";
+        var certificatePath = GetOption("--certificate-file") ?? HeadlessConfiguration.CreateDefaultForCurrentPlatform().Api.Tls.CertificatePath;
         var passwordFile = GetOption("--certificate-password-file")
-            ?? "/etc/mysttiq/secrets/certificate-password";
+            ?? HeadlessConfiguration.CreateDefaultForCurrentPlatform().Api.Tls.CertificatePasswordFile;
         var bindAddress = GetOption("--bind-address")
             ?? throw new ArgumentException("--bind-address is required for api-tls-create.");
         var dnsName = GetOption("--dns-name");
@@ -149,6 +146,31 @@ var runtimeConfiguration = defaults with
     BackupRoot = GetOption("--backup-root") ?? defaults.BackupRoot,
     RuntimeRoot = GetOption("--runtime-root") ?? defaults.RuntimeRoot
 };
+var desktopSidecar = args.Any(argument => argument.Equals("--desktop-sidecar", StringComparison.OrdinalIgnoreCase));
+var effectiveHeadlessConfiguration = headlessConfiguration with
+{
+    Api = headlessConfiguration.Api with
+    {
+        BindAddress = desktopSidecar ? "127.0.0.1" : GetOption("--bind-address") ?? headlessConfiguration.Api.BindAddress,
+        Port = GetIntOption("--api-port", headlessConfiguration.Api.Port),
+        Authentication = desktopSidecar ? headlessConfiguration.Api.Authentication with { Enabled = false } : headlessConfiguration.Api.Authentication,
+        Tls = desktopSidecar ? headlessConfiguration.Api.Tls with { Enabled = false } : headlessConfiguration.Api.Tls
+    },
+    Server = headlessConfiguration.Server with
+    {
+        ServerRoot = runtimeConfiguration.ServerRoot,
+        SteamCmdPath = runtimeConfiguration.SteamCmdPath,
+        BackupRoot = runtimeConfiguration.BackupRoot,
+        RuntimeRoot = runtimeConfiguration.RuntimeRoot
+    }
+};
+var effectiveValidation = configurationService.Validate(effectiveHeadlessConfiguration);
+if (!effectiveValidation.Valid)
+{
+    Console.Error.WriteLine("Effective configuration validation failed after command-line overrides:");
+    foreach (var error in effectiveValidation.Errors) Console.Error.WriteLine($"  - {error}");
+    return (int)HeadlessExitCode.InvalidArguments;
+}
 
 var platform = ServerPlatformProfile.ForCurrentPlatform();
 var paths = ServerPathProfile.ForCurrentPlatform(runtimeConfiguration);
@@ -471,32 +493,52 @@ switch (command.ToLowerInvariant())
 
     case "api-run":
     {
-        if (!OperatingSystem.IsLinux())
+        IServerLifecycleService lifecycle;
+        IManagementServiceStatusProvider serviceStatusProvider;
+        ILinuxServiceManager? linuxServiceManager = null;
+        var configuredGamePort = new PalworldSettingsConfigurationService(paths).GetConfiguredGamePort();
+        var guardedPorts = platform.GuardedPorts.Append(configuredGamePort).Distinct().ToArray();
+        if (OperatingSystem.IsWindows())
         {
-            Console.Error.WriteLine("Local API host in v0.3.0.7 requires Linux.");
+            var sessionInspector = new WindowsServerSessionInspector(guardedPorts);
+            lifecycle = new WindowsServerLifecycleService(platform, paths, sessionInspector, expectedGamePort: configuredGamePort);
+            serviceStatusProvider = new WindowsStandaloneManagementServiceStatusProvider();
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            var sessionInspector = new LinuxServerSessionInspector(guardedPorts);
+            lifecycle = new LinuxServerLifecycleService(platform, paths, sessionInspector, expectedGamePort: configuredGamePort);
+            linuxServiceManager = new LinuxSystemdServiceManager(paths);
+            serviceStatusProvider = new LinuxManagementServiceStatusProvider(linuxServiceManager);
+        }
+        else
+        {
+            Console.Error.WriteLine("Local API host requires Windows or Linux.");
             return (int)HeadlessExitCode.UnsupportedPlatform;
         }
 
-        var sessionInspector = new LinuxServerSessionInspector(platform.GuardedPorts);
-        var lifecycle = new LinuxServerLifecycleService(platform, paths, sessionInspector);
-        var serviceManager = new LinuxSystemdServiceManager(paths);
-
         await using var apiHost = LocalManagementApiHost.Create(
-            headlessConfiguration,
+            effectiveHeadlessConfiguration,
             lifecycle,
-            serviceManager);
+            serviceStatusProvider,
+            configurationPath,
+            linuxServiceManager);
 
-        using var termRegistration = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
+        IDisposable? termRegistration = null;
+        if (OperatingSystem.IsLinux())
         {
-            context.Cancel = true;
-            cancellation.Cancel();
-        });
+            termRegistration = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
+            {
+                context.Cancel = true;
+                cancellation.Cancel();
+            });
+        }
 
         try
         {
             await apiHost.StartAsync(cancellation.Token);
             Console.WriteLine(
-                $"MystTiq local management API listening on http://{headlessConfiguration.Api.BindAddress}:{headlessConfiguration.Api.Port}");
+                $"MystTiq local management API listening on {(effectiveHeadlessConfiguration.Api.Tls.Enabled ? "https" : "http")}://{effectiveHeadlessConfiguration.Api.BindAddress}:{effectiveHeadlessConfiguration.Api.Port}");
             await apiHost.WaitForShutdownAsync(cancellation.Token);
             return 0;
         }
@@ -505,6 +547,10 @@ switch (command.ToLowerInvariant())
             using var shutdownTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             await apiHost.StopAsync(shutdownTimeout.Token);
             return 0;
+        }
+        finally
+        {
+            termRegistration?.Dispose();
         }
     }
 
@@ -629,7 +675,7 @@ switch (command.ToLowerInvariant())
         {
             if (headlessConfiguration.Api.Enabled)
             {
-                apiHost = LocalManagementApiHost.Create(headlessConfiguration, lifecycle, serviceManager);
+                apiHost = LocalManagementApiHost.Create(effectiveHeadlessConfiguration, lifecycle, new LinuxManagementServiceStatusProvider(serviceManager), configurationPath, serviceManager);
                 await apiHost.StartAsync(cancellation.Token);
                 Console.WriteLine(
                     $"MystTiq local management API listening on http://{headlessConfiguration.Api.BindAddress}:{headlessConfiguration.Api.Port}");
@@ -730,16 +776,16 @@ static void PrintServiceStatus(LinuxServiceStatus status)
 
 static void PrintHelp()
 {
-    Console.WriteLine("MystTiq Headless Host v0.3.0.7");
+    Console.WriteLine($"MystTiq Headless Host v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(4)}");
     Console.WriteLine();
     Console.WriteLine("Commands:");
     Console.WriteLine("  probe          Detect platform, distro, paths, PalServer processes and guarded ports.");
-    Console.WriteLine("  status         Show persisted + observed Linux PalServer lifecycle state.");
+    Console.WriteLine("  status         Show persisted + observed PalServer lifecycle state.");
     Console.WriteLine("  start          Start PalServer headlessly; blocks duplicate starts and verifies UDP 8211.");
-    Console.WriteLine("  stop           Send SIGTERM first; escalate to SIGKILL only after the shutdown timeout.");
+    Console.WriteLine("  stop           Request a graceful platform shutdown first; escalate only after the timeout.");
     Console.WriteLine("  restart        Stop safely when needed, then start and verify PalServer.");
     Console.WriteLine("  install-plan   Show the platform-specific SteamCMD plan without executing it.");
-    Console.WriteLine("  service-status Show MystTiq systemd installation/runtime state.");
+    Console.WriteLine("  service-status Show MystTiq systemd installation/runtime state (Linux).");
     Console.WriteLine("  service-install Install/enable MystTiq under systemd (requires sudo).");
     Console.WriteLine("  service-uninstall Stop/disable/remove MystTiq systemd unit (requires sudo).");
     Console.WriteLine("  service-run    Long-running supervisor used by systemd.");
@@ -752,6 +798,7 @@ static void PrintHelp()
     Console.WriteLine("  api-tls-create Generate a self-signed TLS server certificate.");
     Console.WriteLine("  api-remote-enable Explicitly enable authenticated + TLS remote API binding.");
     Console.WriteLine("  api-remote-disable Return API binding to the safe loopback default.");
+    Console.WriteLine("  production-doctor Run production-readiness checks with evidence and repair recommendations.");
     Console.WriteLine();
     Console.WriteLine("Options:");
     Console.WriteLine("  --config <path>                  Headless JSON configuration path.");
@@ -759,6 +806,7 @@ static void PrintHelp()
     Console.WriteLine("  --certificate-file <path>        TLS PFX certificate path.");
     Console.WriteLine("  --certificate-password-file <path> TLS certificate-password secret path.");
     Console.WriteLine("  --bind-address <ip>              Literal API/certificate bind IP.");
+    Console.WriteLine("  --desktop-sidecar                Force loopback-only unauthenticated API for the packaged desktop-owned sidecar.");
     Console.WriteLine("  --api-port <n>                   Management API port.");
     Console.WriteLine("  --dns-name <name>                Optional DNS SAN for generated TLS certificate.");
     Console.WriteLine("  --overwrite                      Allow config-write-default to replace an existing file.");
