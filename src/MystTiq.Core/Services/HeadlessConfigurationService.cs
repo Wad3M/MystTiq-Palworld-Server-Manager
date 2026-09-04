@@ -25,7 +25,9 @@ public sealed class HeadlessConfigurationService
         var json = File.ReadAllText(path);
         var schemaVersion = ReadSchemaVersion(json);
         if (schemaVersion == 1)
-            return MigrateV1(json);
+            return MigrateV2(MigrateV1Json(json));
+        if (schemaVersion == 2)
+            return MigrateV2(json);
 
         var configuration = JsonSerializer.Deserialize<HeadlessConfiguration>(json, JsonOptions);
         return configuration ?? throw new InvalidDataException($"MystTiq configuration is empty or invalid JSON: {path}");
@@ -71,13 +73,37 @@ public sealed class HeadlessConfigurationService
         ValidatePositive(configuration.Lifecycle.MaximumRecoveryAttempts, "lifecycle.maximumRecoveryAttempts", errors);
         ValidatePositive(configuration.Lifecycle.RecoveryWindowSeconds, "lifecycle.recoveryWindowSeconds", errors);
 
-        ValidateAbsolutePath(configuration.Server.ServerRoot, "server.serverRoot", errors);
-        ValidateAbsolutePath(configuration.Server.SteamCmdPath, "server.steamCmdPath", errors);
-        ValidateAbsolutePath(configuration.Server.BackupRoot, "server.backupRoot", errors);
-        ValidateAbsolutePath(configuration.Server.RuntimeRoot, "server.runtimeRoot", errors);
+        ValidateAbsolutePath(configuration.FleetRoot, "fleetRoot", errors);
+        if (configuration.FleetStaggerSeconds < 0)
+            errors.Add("fleetStaggerSeconds must be zero or greater.");
 
-        if (configuration.Server.LaunchArguments is null || configuration.Server.LaunchArguments.Count == 0)
-            errors.Add("server.launchArguments must contain at least one argument.");
+        if (configuration.Servers is null || configuration.Servers.Count == 0)
+        {
+            errors.Add("servers must contain at least one server profile.");
+        }
+        else
+        {
+            if (configuration.FindServer(HeadlessConfiguration.DefaultServerProfileId) is null)
+                errors.Add($"servers must include a profile with id \"{HeadlessConfiguration.DefaultServerProfileId}\".");
+
+            var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var server in configuration.Servers)
+            {
+                if (string.IsNullOrWhiteSpace(server.Id))
+                    errors.Add("Every server profile must have a non-empty id.");
+                else if (!seenIds.Add(server.Id))
+                    errors.Add($"Duplicate server profile id \"{server.Id}\".");
+
+                var prefix = $"servers[{server.Id}]";
+                ValidateAbsolutePath(server.ServerRoot, $"{prefix}.serverRoot", errors);
+                ValidateAbsolutePath(server.SteamCmdPath, $"{prefix}.steamCmdPath", errors);
+                ValidateAbsolutePath(server.BackupRoot, $"{prefix}.backupRoot", errors);
+                ValidateAbsolutePath(server.RuntimeRoot, $"{prefix}.runtimeRoot", errors);
+
+                if (server.LaunchArguments is null || server.LaunchArguments.Count == 0)
+                    errors.Add($"{prefix}.launchArguments must contain at least one argument.");
+            }
+        }
 
         return new ConfigurationValidationResult(errors.Count == 0, errors);
     }
@@ -164,14 +190,17 @@ public sealed class HeadlessConfigurationService
         return 1;
     }
 
-    private static HeadlessConfiguration MigrateV1(string json)
+    // v1 -> v3: deserialize as legacy v1 shape, re-serialize as legacy v2 shape (single Server
+    // block, current-platform auth/TLS defaults disabled same as before), then hand off to MigrateV2
+    // so both migration paths converge on one v2->v3 wrapping step.
+    private static string MigrateV1Json(string json)
     {
         var legacy = JsonSerializer.Deserialize<LegacyHeadlessConfigurationV1>(json, JsonOptions)
             ?? throw new InvalidDataException("Unable to deserialize MystTiq schema v1 configuration.");
 
         var defaults = HeadlessConfiguration.CreateDefaultForCurrentPlatform();
-        return new HeadlessConfiguration(
-            HeadlessConfiguration.CurrentSchemaVersion,
+        var v2 = new LegacyHeadlessConfigurationV2(
+            2,
             new HeadlessApiConfiguration(
                 legacy.Api.Enabled,
                 legacy.Api.BindAddress,
@@ -180,6 +209,36 @@ public sealed class HeadlessConfigurationService
                 defaults.Api.Tls with { Enabled = false }),
             legacy.Lifecycle,
             legacy.Server);
+        return JsonSerializer.Serialize(v2, JsonOptions);
+    }
+
+    // v2 -> v3: the old single `Server` block becomes the sole entry in `Servers`, id "default" --
+    // an existing single-server deployment upgrades with zero behavior change (every unprefixed
+    // route still resolves to this profile). FleetRoot (new in v3, shared state for the
+    // fleet-level singletons -- OperationCoordinator/RBAC/AuthAbuseGuard) derives from the
+    // platform default's fleet path since v2 configs never had one.
+    private static HeadlessConfiguration MigrateV2(string json)
+    {
+        var legacy = JsonSerializer.Deserialize<LegacyHeadlessConfigurationV2>(json, JsonOptions)
+            ?? throw new InvalidDataException("Unable to deserialize MystTiq schema v2 configuration.");
+
+        var defaults = HeadlessConfiguration.CreateDefaultForCurrentPlatform();
+        return new HeadlessConfiguration(
+            HeadlessConfiguration.CurrentSchemaVersion,
+            legacy.Api,
+            legacy.Lifecycle,
+            [
+                new HeadlessServerProfileConfiguration(
+                    HeadlessConfiguration.DefaultServerProfileId,
+                    "Default Server",
+                    legacy.Server.ServerRoot,
+                    legacy.Server.SteamCmdPath,
+                    legacy.Server.BackupRoot,
+                    legacy.Server.RuntimeRoot,
+                    legacy.Server.LaunchArguments,
+                    OperatingSystem.IsWindows() ? ServerRuntimeKind.WindowsNative : ServerRuntimeKind.LinuxNative)
+            ],
+            defaults.FleetRoot);
     }
 
     private sealed record LegacyHeadlessApiConfigurationV1(bool Enabled, string BindAddress, int Port);
@@ -189,8 +248,17 @@ public sealed class HeadlessConfigurationService
         HeadlessLifecycleConfiguration Lifecycle,
         HeadlessServerConfiguration Server);
 
+    private sealed record LegacyHeadlessConfigurationV2(
+        int SchemaVersion,
+        HeadlessApiConfiguration Api,
+        HeadlessLifecycleConfiguration Lifecycle,
+        HeadlessServerConfiguration Server);
+
+    public static ServerRuntimeConfiguration ToRuntimeConfiguration(HeadlessServerProfileConfiguration server) =>
+        new(server.ServerRoot, server.SteamCmdPath, server.BackupRoot, server.RuntimeRoot);
+
     public static ServerRuntimeConfiguration ToRuntimeConfiguration(HeadlessConfiguration configuration) =>
-        new(configuration.Server.ServerRoot, configuration.Server.SteamCmdPath, configuration.Server.BackupRoot, configuration.Server.RuntimeRoot);
+        ToRuntimeConfiguration(configuration.DefaultServer);
 
     private static void ValidatePositive(int value, string name, ICollection<string> errors)
     {

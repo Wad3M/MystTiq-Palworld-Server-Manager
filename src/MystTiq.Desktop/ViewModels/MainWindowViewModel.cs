@@ -18,6 +18,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly ILocalInstallationDiscoveryService _localDiscovery;
     private readonly IMystTiqServiceDiscoveryService _serviceDiscovery;
     private readonly ILocalManagementBootstrapper _localBootstrapper;
+    private readonly LocalDiagnosticsService _localDiagnostics = new();
     private readonly DispatcherTimer _refreshTimer;
 
     private NavigationPage _selectedPage = NavigationPage.Dashboard;
@@ -91,6 +92,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _doctorSummary = "Connect to a MystTiq service, then run Doctor.";
     private string _doctorCheckedAt = "Never";
     private string _doctorExportPath = string.Empty;
+    private DiagnosticsReportDto? _latestDiagnosticsReport;
+    private string _diagnosticsReportDetail = string.Empty;
     private string _distributionState = "Not checked";
     private string _distributionDetail = "Connect to inspect Palworld server installation.";
     private string _steamCmdState = "Unknown";
@@ -139,6 +142,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _selectedPlayerNotes = string.Empty;
     private string _newPlayerWarning = string.Empty;
     private string _playerMetadataState = "Select a player to load notes and warnings.";
+    private PlayerExplorerItemDto? _migrationSourcePlayer;
+    private PlayerExplorerItemDto? _migrationDestinationPlayer;
+    private string _migrationState = "Pick a source and destination player, then Preview.";
+    private CharacterMigrationPreviewDto? _migrationPreview;
+    private string _migrationDisposition = "Keep";
     private GuildExplorerItemDto? _selectedExplorerGuild;
     private BaseExplorerItemDto? _selectedExplorerBase;
     private string _guildSearchText = string.Empty;
@@ -180,12 +188,17 @@ public sealed class MainWindowViewModel : ViewModelBase
     private WorkshopItemDto? _selectedWorkshopItem;
     private string _workshopScanState = "Refresh to scan local Steam Workshop content.";
     private string _networkHealth = "Not run";
+    private string _localDiagnosticsState = "Diagnose a connection profile to see staged DNS/TCP/TLS/HTTP results.";
     private string _networkRuntime = "Unknown";
     private string _networkPort = "—";
     private string _networkBinding = "—";
     private string _networkLanEndpoint = "—";
     private string _networkRecommendation = "Run Diagnostics";
     private string _networkReportText = "";
+    private string _wanPublicIpPort = "Not checked";
+    private string _wanUpnpState = "Not checked";
+    private string _wanRouterDescription = "—";
+    private string _wanStatus = "Run Reachability Check";
     private string _localServiceStatus = "Unknown";
     private string _localPalServerStatus = "Unknown";
     private string _localApiStatus = "Unknown";
@@ -234,11 +247,37 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _notificationSearchText = string.Empty;
     private string _notificationSeverityFilter = "All";
     private NotificationItemDto? _selectedNotification;
+    private string _automationState = "Open Automation to load scheduled rules.";
+    private AutomationRuleDto? _selectedAutomationRule;
+    private string _newAutomationRuleName = string.Empty;
+    private string _newAutomationTriggerKind = "DailyTime";
+    private string _newAutomationTimeOfDayUtc = "03:00";
+    private int _newAutomationIntervalMinutes = 60;
+    private int _newAutomationIdleThresholdMinutes = 30;
+    private string _newAutomationActionKind = "CreateBackup";
+    private string _newAutomationNotificationTitle = string.Empty;
+    private string _newAutomationNotificationMessage = string.Empty;
+    private string _newAutomationRconCommand = string.Empty;
+    private string _securityState = "Open Security to load API principals.";
+    private MystTiqPrincipalDto? _selectedPrincipal;
+    private MystTiqPrincipalDto? _currentPrincipal;
+    private string _newPrincipalName = string.Empty;
+    private string _newPrincipalRole = "Operator";
+    private string? _lastCreatedPrincipalToken;
+    private string _alertCenterState = "Open Alert Center to load threshold rules.";
+    private AlertRuleSetDto _alertRules = new();
+    private DiskSpacePredictionDto? _diskSpacePrediction;
+    private string _fleetState = "Open Fleet to list configured server profiles.";
+    private string _cloneNewProfileId = string.Empty;
+    private string _cloneNewProfileName = string.Empty;
+    private string _cloneWorldStatusText = "Clones this connection's server (binaries + world) into a new profile. Requires the source server to be stopped.";
     private string _crashAnalyzerState = "Run analysis to inspect bounded recent server-log evidence.";
     private string _saveToolsState = "Open Save Tools to inspect server-side dependencies and saves.";
     private string _saveToolsPaths = "Not inspected";
     private SaveFileDto? _selectedSaveFile;
     private string _playerAdminStatusText = "Right-click a player for administration actions.";
+    private string _moderationProviderStatusText = string.Empty;
+    private string _playerRegistrySummaryText = string.Empty;
     private string _playerActionMessage = "Removed by administrator.";
     private string _playerActionItem = string.Empty;
     private string _palworldConfigState = "Not loaded";
@@ -280,6 +319,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         _serviceDiscovery = serviceDiscovery;
         _localBootstrapper = localBootstrapper ?? new LocalManagementBootstrapper();
 
+        foreach (var finding in _localDiagnostics.GetLocalMachineFindings())
+            LocalMachineFindings.Add(finding);
+
         foreach (var profile in _profileStore.Load())
             Profiles.Add(profile);
 
@@ -302,6 +344,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         ToggleNotificationReadCommand = new AsyncCommand(ToggleNotificationReadAsync, () => !IsBusy && SelectedNotification is not null);
         ToggleNotificationPinCommand = new AsyncCommand(ToggleNotificationPinAsync, () => !IsBusy && SelectedNotification is not null);
         DismissNotificationCommand = new AsyncCommand(DismissNotificationAsync, () => !IsBusy && SelectedNotification is not null);
+        RefreshAutomationCommand = new AsyncCommand(RefreshAutomationAsync, () => !IsBusy);
+        CreateAutomationRuleCommand = new AsyncCommand(CreateAutomationRuleAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(NewAutomationRuleName));
+        DeleteAutomationRuleCommand = new AsyncCommand(DeleteAutomationRuleAsync, () => !IsBusy && SelectedAutomationRule is not null);
+        ToggleAutomationRuleEnabledCommand = new AsyncCommand(ToggleAutomationRuleEnabledAsync, () => !IsBusy && SelectedAutomationRule is not null);
+        RunAutomationRuleNowCommand = new AsyncCommand(RunAutomationRuleNowAsync, () => !IsBusy && SelectedAutomationRule is not null);
+        RefreshSecurityCommand = new AsyncCommand(RefreshSecurityAsync, () => !IsBusy);
+        CreatePrincipalCommand = new AsyncCommand(CreatePrincipalAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(NewPrincipalName));
+        RevokePrincipalCommand = new AsyncCommand(RevokePrincipalAsync, () => !IsBusy && SelectedPrincipal is not null);
+        RefreshAlertCenterCommand = new AsyncCommand(RefreshAlertCenterAsync, () => !IsBusy);
+        SaveAlertRulesCommand = new AsyncCommand(SaveAlertRulesAsync, () => !IsBusy);
+        RefreshFleetCommand = new AsyncCommand(RefreshFleetAsync, () => !IsBusy);
+        CloneWorldCommand = new AsyncCommand(CloneWorldAsync, () => !IsBusy && ManagementApiConnected && !string.IsNullOrWhiteSpace(CloneNewProfileId));
+        BackupAllCommand = new AsyncCommand(BackupAllAsync, () => !IsBusy && ManagementApiConnected);
+        DoctorAllCommand = new AsyncCommand(DoctorAllAsync, () => !IsBusy && ManagementApiConnected);
+        UpdateAllCommand = new AsyncCommand(UpdateAllAsync, () => !IsBusy && ManagementApiConnected);
         AnalyzeCrashesCommand = new AsyncCommand(AnalyzeCrashesAsync, () => !IsBusy && ManagementApiConnected);
         RefreshCrashHistoryCommand = new AsyncCommand(RefreshCrashHistoryAsync, () => !IsBusy);
         RefreshSaveToolsCommand = new AsyncCommand(() => RefreshSaveToolsAsync(false), () => !IsBusy);
@@ -309,6 +366,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         RefreshPlayersCommand = new AsyncCommand(RefreshPlayersPageAsync, () => !IsBusy);
         LoadPlayerMetadataCommand = new AsyncCommand(LoadSelectedPlayerMetadataAsync, () => !IsBusy && SelectedPlayerRecord is not null);
         SavePlayerNotesCommand = new AsyncCommand(SaveSelectedPlayerNotesAsync, () => !IsBusy && SelectedPlayerRecord is not null);
+        PreviewCharacterMigrationCommand = new AsyncCommand(PreviewCharacterMigrationAsync, () => !IsBusy && MigrationSourcePlayer is not null && MigrationDestinationPlayer is not null);
+        ApplyCharacterMigrationCommand = new AsyncCommand(ApplyCharacterMigrationAsync, () => !IsBusy && MigrationPreview is { CanApply: true });
         AddPlayerWarningCommand = new AsyncCommand(AddSelectedPlayerWarningAsync, () => !IsBusy && SelectedPlayerRecord is not null && !string.IsNullOrWhiteSpace(NewPlayerWarning));
         KickSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("kick"), () => !IsBusy && SelectedPlayerRecord?.Online == true);
         BanSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("ban"), () => !IsBusy && SelectedPlayerRecord?.Online == true);
@@ -337,8 +396,14 @@ public sealed class MainWindowViewModel : ViewModelBase
         GenerateServerNameCommand = new RelayCommand(GenerateServerName, () => PalworldConfigLoaded && !IsBusy);
         GenerateSetupServerNameCommand = new RelayCommand(() => SetupServerName = GenerateRandomServerName());
         RunDoctorCommand = new AsyncCommand(RunDoctorAsync, () => !IsBusy);
+        RecheckDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy) Dispatcher.UIThread.Post(async () => await RecheckDiagnosticAsync(f)); });
+        FixDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy && f is { CanFix: true }) Dispatcher.UIThread.Post(async () => await FixDiagnosticAsync(f)); });
         RunNetworkDiagnosticsCommand = new AsyncCommand(RunNetworkDiagnosticsAsync, () => !IsBusy);
+        DiagnoseConnectionCommand = new AsyncCommand(DiagnoseConnectionAsync, () => !IsBusy && SelectedProfile is not null);
         RepairFirewallCommand = new AsyncCommand(RepairFirewallAsync, () => !IsBusy);
+        RunWanReachabilityCommand = new AsyncCommand(RunWanReachabilityAsync, () => !IsBusy);
+        RepairUpnpMappingCommand = new AsyncCommand(RepairUpnpMappingAsync, () => !IsBusy);
+        OpenExternalPortCheckerCommand = new RelayCommand(OpenExternalPortChecker);
         RestartFromDiagnosticsCommand = new AsyncCommand(RestartFromDiagnosticsAsync, () => !IsBusy);
         RefreshEnvironmentCommand = new AsyncCommand(RefreshEnvironmentAsync, () => !IsBusy);
         VerifyEnvironmentCommand = new AsyncCommand(VerifyEnvironmentAsync, () => !IsBusy);
@@ -366,6 +431,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         EnableSelectedModCommand = new AsyncCommand(() => SetSelectedModEnabledAsync(true), () => !IsBusy);
         DisableSelectedModCommand = new AsyncCommand(() => SetSelectedModEnabledAsync(false), () => !IsBusy);
         DeleteSelectedModCommand = new AsyncCommand(DeleteSelectedModAsync, () => !IsBusy && SelectedMod is not null);
+        RollbackSelectedModCommand = new AsyncCommand(RollbackSelectedModAsync, () => !IsBusy && SelectedMod is not null);
         EnableAllModsCommand = new AsyncCommand(() => SetAllModsEnabledAsync(true), () => !IsBusy);
         DisableAllModsCommand = new AsyncCommand(() => SetAllModsEnabledAsync(false), () => !IsBusy);
         RepairModsCommand = new AsyncCommand(RepairModsAsync, () => !IsBusy);
@@ -421,6 +487,14 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ObservableCollection<string> ActivityLines { get; } = [];
     public ObservableCollection<NotificationItemDto> Notifications { get; } = [];
     public ObservableCollection<NotificationItemDto> FilteredNotifications { get; } = [];
+    public ObservableCollection<AutomationRuleDto> AutomationRules { get; } = [];
+    public ObservableCollection<AutomationRunRecordDto> AutomationRuns { get; } = [];
+    public ObservableCollection<MystTiqPrincipalDto> Principals { get; } = [];
+    public ObservableCollection<ServerProfileSummaryDto> FleetServers { get; } = [];
+    public ObservableCollection<FleetActionResultDto> FleetActionResults { get; } = [];
+    public IReadOnlyList<string> AutomationTriggerKinds { get; } = ["DailyTime", "Interval", "IdleEmpty"];
+    public IReadOnlyList<string> AutomationActionKinds { get; } = ["CreateBackup", "StartServer", "StopServer", "RestartServer", "SendNotification", "SendRconCommand"];
+    public IReadOnlyList<string> MystTiqRoles { get; } = ["Viewer", "Operator", "Admin", "Owner"];
     public ObservableCollection<CrashFindingDto> CrashFindings { get; } = [];
     public ObservableCollection<string> CrashIsolationPlan { get; } = [];
     public ObservableCollection<CrashAnalysisSnapshotDto> CrashHistory { get; } = [];
@@ -454,7 +528,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool HasModsNeedingAttention => ModsNeedingAttention.Any();
     public ObservableCollection<WorkshopItemDto> WorkshopItems { get; } = [];
     public ObservableCollection<DoctorCheckDto> DoctorChecks { get; } = [];
+    public ObservableCollection<DiagnosticFindingDto> DiagnosticFindings { get; } = [];
     public ObservableCollection<NetworkDiagnosticCheckDto> NetworkDiagnosticChecks { get; } = [];
+    public ObservableCollection<WanReachabilityCheckDto> WanReachabilityChecks { get; } = [];
+    public ObservableCollection<DiagnosticFindingDto> LocalConnectionFindings { get; } = [];
+    public ObservableCollection<DiagnosticFindingDto> LocalMachineFindings { get; } = [];
     public ObservableCollection<PalworldSettingDto> PalworldSettings { get; } = [];
     public ObservableCollection<PalworldSettingDto> FilteredPalworldSettings { get; } = [];
     public ObservableCollection<PalworldSimpleSettingItem> SimplePalworldSettings { get; } = [];
@@ -524,6 +602,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
     public string PlayerMetadataState { get => _playerMetadataState; private set => SetField(ref _playerMetadataState, value); }
+    public PlayerExplorerItemDto? MigrationSourcePlayer { get => _migrationSourcePlayer; set { if (SetField(ref _migrationSourcePlayer, value)) (PreviewCharacterMigrationCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
+    public PlayerExplorerItemDto? MigrationDestinationPlayer { get => _migrationDestinationPlayer; set { if (SetField(ref _migrationDestinationPlayer, value)) (PreviewCharacterMigrationCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
+    public string MigrationState { get => _migrationState; private set => SetField(ref _migrationState, value); }
+    public CharacterMigrationPreviewDto? MigrationPreview { get => _migrationPreview; private set { if (SetField(ref _migrationPreview, value)) (ApplyCharacterMigrationCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
+    public IReadOnlyList<string> CharacterDispositionOptions { get; } = ["Keep", "Archive", "Delete", "Reset (not yet available)"];
+    public string MigrationDisposition { get => _migrationDisposition; set => SetField(ref _migrationDisposition, value); }
 
     public ConnectionProfile? SelectedProfile
     {
@@ -605,7 +689,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
     public string DashboardHealthDetail { get => _dashboardHealthDetail; private set => SetField(ref _dashboardHealthDetail, value); }
-    public bool IsHealthGlowAmber => IsServerTransitioning;
+    public bool IsHealthGlowAmber => IsServerTransitioning || (!IsServerTransitioning && DashboardHealthText == "DEGRADED");
     public bool IsHealthGlowRed => !IsServerTransitioning && DashboardHealthText == "ATTENTION";
     public bool IsHealthGlowGreen => !IsServerTransitioning && !IsHealthGlowRed && DashboardHealthText == "READY";
     public bool IsHealthGlowNeutral => !IsHealthGlowAmber && !IsHealthGlowRed && !IsHealthGlowGreen;
@@ -669,9 +753,46 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string NotificationSeverityFilter { get => _notificationSeverityFilter; set { if (SetField(ref _notificationSeverityFilter, value ?? "All")) ApplyNotificationFilters(); } }
     public NotificationItemDto? SelectedNotification { get => _selectedNotification; set { if (SetField(ref _selectedNotification, value)) { (ToggleNotificationReadCommand as AsyncCommand)?.RaiseCanExecuteChanged(); (ToggleNotificationPinCommand as AsyncCommand)?.RaiseCanExecuteChanged(); (DismissNotificationCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } } }
     public string NotificationBadgeText => Notifications.Count(x => !x.Read).ToString();
+
+    public string AutomationState { get => _automationState; private set => SetField(ref _automationState, value); }
+    public AutomationRuleDto? SelectedAutomationRule
+    {
+        get => _selectedAutomationRule;
+        set { if (SetField(ref _selectedAutomationRule, value)) { (DeleteAutomationRuleCommand as AsyncCommand)?.RaiseCanExecuteChanged(); (ToggleAutomationRuleEnabledCommand as AsyncCommand)?.RaiseCanExecuteChanged(); (RunAutomationRuleNowCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
+    }
+    public string NewAutomationRuleName { get => _newAutomationRuleName; set { if (SetField(ref _newAutomationRuleName, value ?? string.Empty)) (CreateAutomationRuleCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
+    public string NewAutomationTriggerKind { get => _newAutomationTriggerKind; set => SetField(ref _newAutomationTriggerKind, value ?? "DailyTime"); }
+    public string NewAutomationTimeOfDayUtc { get => _newAutomationTimeOfDayUtc; set => SetField(ref _newAutomationTimeOfDayUtc, value ?? "03:00"); }
+    public int NewAutomationIntervalMinutes { get => _newAutomationIntervalMinutes; set => SetField(ref _newAutomationIntervalMinutes, value); }
+    public int NewAutomationIdleThresholdMinutes { get => _newAutomationIdleThresholdMinutes; set => SetField(ref _newAutomationIdleThresholdMinutes, value); }
+    public string NewAutomationActionKind { get => _newAutomationActionKind; set => SetField(ref _newAutomationActionKind, value ?? "CreateBackup"); }
+    public string NewAutomationNotificationTitle { get => _newAutomationNotificationTitle; set => SetField(ref _newAutomationNotificationTitle, value ?? string.Empty); }
+    public string NewAutomationNotificationMessage { get => _newAutomationNotificationMessage; set => SetField(ref _newAutomationNotificationMessage, value ?? string.Empty); }
+    public string NewAutomationRconCommand { get => _newAutomationRconCommand; set => SetField(ref _newAutomationRconCommand, value ?? string.Empty); }
+
+    public string SecurityState { get => _securityState; private set => SetField(ref _securityState, value); }
+    public MystTiqPrincipalDto? SelectedPrincipal { get => _selectedPrincipal; set => SetField(ref _selectedPrincipal, value); }
+    public MystTiqPrincipalDto? CurrentPrincipal { get => _currentPrincipal; private set => SetField(ref _currentPrincipal, value); }
+    public string NewPrincipalName { get => _newPrincipalName; set { if (SetField(ref _newPrincipalName, value ?? string.Empty)) (CreatePrincipalCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
+    public string NewPrincipalRole { get => _newPrincipalRole; set => SetField(ref _newPrincipalRole, value ?? "Operator"); }
+    public string? LastCreatedPrincipalToken { get => _lastCreatedPrincipalToken; private set { if (SetField(ref _lastCreatedPrincipalToken, value)) RaisePropertyChanged(nameof(HasLastCreatedPrincipalToken)); } }
+    public bool HasLastCreatedPrincipalToken => !string.IsNullOrEmpty(LastCreatedPrincipalToken);
+    // The visible client-side payoff of RBAC: buttons a Viewer/Operator principal cannot use are disabled.
+    public bool CanManageAdmin => CurrentPrincipal is null || CurrentPrincipal.Role is "Admin" or "Owner";
+    public bool CanManagePrincipals => CurrentPrincipal is null || CurrentPrincipal.Role == "Owner";
+
+    public string AlertCenterState { get => _alertCenterState; private set => SetField(ref _alertCenterState, value); }
+    public AlertRuleSetDto AlertRules { get => _alertRules; set => SetField(ref _alertRules, value ?? new()); }
+    public DiskSpacePredictionDto? DiskSpacePrediction { get => _diskSpacePrediction; private set => SetField(ref _diskSpacePrediction, value); }
+    public string FleetState { get => _fleetState; private set => SetField(ref _fleetState, value); }
+    public string CloneNewProfileId { get => _cloneNewProfileId; set { if (SetField(ref _cloneNewProfileId, value ?? string.Empty)) (CloneWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
+    public string CloneNewProfileName { get => _cloneNewProfileName; set => SetField(ref _cloneNewProfileName, value ?? string.Empty); }
+    public string CloneWorldStatusText { get => _cloneWorldStatusText; private set => SetField(ref _cloneWorldStatusText, value); }
     public string ActivityFileText { get => _activityFileText; private set => SetField(ref _activityFileText, value); }
     public string ActivityDetail { get => _activityDetail; private set => SetField(ref _activityDetail, value); }
     public string PlayerAdminStatusText { get => _playerAdminStatusText; private set => SetField(ref _playerAdminStatusText, value); }
+    public string ModerationProviderStatusText { get => _moderationProviderStatusText; private set => SetField(ref _moderationProviderStatusText, value); }
+    public string PlayerRegistrySummaryText { get => _playerRegistrySummaryText; private set => SetField(ref _playerRegistrySummaryText, value); }
     public string PlayerActionMessage { get => _playerActionMessage; set => SetField(ref _playerActionMessage, value); }
     public string PlayerActionItem { get => _playerActionItem; set => SetField(ref _playerActionItem, value); }
 
@@ -772,6 +893,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string DoctorSummary { get => _doctorSummary; private set => SetField(ref _doctorSummary, value); }
     public string DoctorCheckedAt { get => _doctorCheckedAt; private set => SetField(ref _doctorCheckedAt, value); }
     public string DoctorExportPath { get => _doctorExportPath; private set => SetField(ref _doctorExportPath, value); }
+    public DiagnosticsReportDto? LatestDiagnosticsReport { get => _latestDiagnosticsReport; private set => SetField(ref _latestDiagnosticsReport, value); }
+    public string DiagnosticsReportDetail { get => _diagnosticsReportDetail; private set => SetField(ref _diagnosticsReportDetail, value); }
     public string DistributionState { get => _distributionState; private set => SetField(ref _distributionState, value); }
     public string DistributionDetail { get => _distributionDetail; private set => SetField(ref _distributionDetail, value); }
     public string SteamCmdState { get => _steamCmdState; private set => SetField(ref _steamCmdState, value); }
@@ -857,7 +980,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string SelectedBaseStatusFilter { get => _selectedBaseStatusFilter; set { if (SetField(ref _selectedBaseStatusFilter, value ?? "All Bases")) ApplyBaseFilters(); } }
     public string GuildVisibleCountText { get => _guildVisibleCountText; private set => SetField(ref _guildVisibleCountText, value); }
     public string BaseVisibleCountText { get => _baseVisibleCountText; private set => SetField(ref _baseVisibleCountText, value); }
-    public IReadOnlyList<string> GuildOperationTypes { get; } = ["Claim Orphaned Guild", "Transfer Leadership", "Add Player to Guild"];
+    public IReadOnlyList<string> GuildOperationTypes { get; } = ["Claim Orphaned Guild", "Transfer Leadership", "Add Player to Guild", "Remove Broken Member"];
     public string GuildOperationType
     {
         get => _guildOperationType;
@@ -889,6 +1012,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         "Transfer Leadership" => "transfer-leadership",
         "Add Player to Guild" => "add-player",
+        "Remove Broken Member" => "remove-broken-member",
         _ => "claim"
     };
     public string BaseTransferTargetGuildId
@@ -934,7 +1058,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string Ue4ssInstalledVersion { get => _ue4ssInstalledVersion; private set => SetField(ref _ue4ssInstalledVersion, value); }
     public IReadOnlyList<string> Ue4ssForkOptions { get; } = ["Palworld Fork", "Official Upstream"];
     public string SelectedUe4ssFork { get => _selectedUe4ssFork; set => SetField(ref _selectedUe4ssFork, value ?? "Palworld Fork"); }
-    public ModItemDto? SelectedMod { get => _selectedMod; set { if (SetField(ref _selectedMod, value)) (DeleteSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
+    public ModItemDto? SelectedMod { get => _selectedMod; set { if (SetField(ref _selectedMod, value)) { (DeleteSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged(); (RollbackSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } } }
     public IReadOnlyList<string> ModInstallTypes { get; } = ["PAK", "UE4SS"];
     public string ModInstallType { get => _modInstallType; set => SetField(ref _modInstallType, value ?? "PAK"); }
     public string ModInstallPackage { get => _modInstallPackage; set => SetField(ref _modInstallPackage, value ?? string.Empty); }
@@ -994,6 +1118,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             (PreviewBackupRetentionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (ApplyBackupRetentionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (DeleteSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (RollbackSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (EnableAllModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (DisableAllModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RepairModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -1028,7 +1153,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         NavigationPage.ServerSetup => "Server Setup", NavigationPage.ModDashboard => "MOD Dashboard", NavigationPage.ModLibrary => "MOD Library",
         NavigationPage.Ue4ss => "UE4SS", NavigationPage.UpdateCenter => "Update Center", NavigationPage.Doctor => "Server Doctor",
         NavigationPage.CrashAnalyzer => "Crash Analyzer", NavigationPage.SaveTools => "Palworld Save Tools", NavigationPage.DiagnosticsCenter => "Diagnostics Center",
-        NavigationPage.WorldTransactions => "World Validator & Recovery", NavigationPage.ActivityAudit => "Activity & Audit", NavigationPage.Notifications => "Notifications", _ => SelectedPage.ToString()
+        NavigationPage.WorldTransactions => "World Validator & Recovery", NavigationPage.ActivityAudit => "Activity & Audit", NavigationPage.Notifications => "Notifications",
+        NavigationPage.Automation => "Automation", NavigationPage.Security => "Security", NavigationPage.AlertCenter => "Alert Center",
+        NavigationPage.Fleet => "Fleet", _ => SelectedPage.ToString()
     };
     public string PageSubtitle => SelectedPage switch
     {
@@ -1052,7 +1179,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         NavigationPage.SaveTools => "Server-side Python, converter, Oodle and read-only save diagnostics",
         NavigationPage.DiagnosticsCenter => "Network connectivity, firewall and socket ownership diagnostics",
         NavigationPage.Settings => "Connection profiles and desktop settings",
-        NavigationPage.ActivityAudit => "Runtime activity and audit evidence", NavigationPage.Notifications => "Persistent alerts, read state, pins and dismissals", _ => string.Empty
+        NavigationPage.ActivityAudit => "Runtime activity and audit evidence", NavigationPage.Notifications => "Persistent alerts, read state, pins and dismissals",
+        NavigationPage.Automation => "Scheduled backups, lifecycle actions and notifications",
+        NavigationPage.Security => "API principals, roles and access",
+        NavigationPage.AlertCenter => "Threshold alerts and disk-space prediction",
+        NavigationPage.Fleet => "Every configured server profile, with fleet-wide backup, doctor and update actions",
+        _ => string.Empty
     };
 
     public bool ShowGlobalPageHeader => true;
@@ -1071,6 +1203,10 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool IsConsolePage => SelectedPage == NavigationPage.Console;
     public bool IsActivityAuditPage => SelectedPage == NavigationPage.ActivityAudit;
     public bool IsNotificationsPage => SelectedPage == NavigationPage.Notifications;
+    public bool IsAutomationPage => SelectedPage == NavigationPage.Automation;
+    public bool IsSecurityPage => SelectedPage == NavigationPage.Security;
+    public bool IsAlertCenterPage => SelectedPage == NavigationPage.AlertCenter;
+    public bool IsFleetPage => SelectedPage == NavigationPage.Fleet;
     public bool IsBackupsPage => SelectedPage == NavigationPage.Backups;
     public bool IsWorkspacePage => SelectedPage == NavigationPage.Workspace;
     public bool IsModsPage => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.Ue4ss;
@@ -1089,14 +1225,14 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool IsWorldGroupSelected => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds;
     public bool IsModsGroupSelected => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.Ue4ss;
     public bool IsToolsGroupSelected => SelectedPage is NavigationPage.UpdateCenter or NavigationPage.Doctor or NavigationPage.CrashAnalyzer or NavigationPage.SaveTools or NavigationPage.DiagnosticsCenter;
-    public bool IsSystemGroupSelected => SelectedPage is NavigationPage.Settings or NavigationPage.Notifications or NavigationPage.ActivityAudit;
+    public bool IsSystemGroupSelected => SelectedPage is NavigationPage.Settings or NavigationPage.Notifications or NavigationPage.ActivityAudit or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter;
     public bool IsV5HomeCategory => SelectedPage == NavigationPage.Dashboard;
     public bool IsV5ServerCategory => SelectedPage is NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Console or NavigationPage.Workspace;
     public bool IsV5WorldCategory => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds;
     public bool IsV5BackupsCategory => SelectedPage == NavigationPage.Backups;
     public bool IsV5ModsCategory => IsModsGroupSelected;
     public bool IsV5ToolsCategory => IsToolsGroupSelected;
-    public bool IsV5SystemCategory => SelectedPage is NavigationPage.Settings or NavigationPage.ActivityAudit or NavigationPage.Notifications;
+    public bool IsV5SystemCategory => SelectedPage is NavigationPage.Settings or NavigationPage.ActivityAudit or NavigationPage.Notifications or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter;
 
     public ICommand ConnectCommand { get; }
     public ICommand DiscoverServicesCommand { get; }
@@ -1115,6 +1251,21 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand ToggleNotificationReadCommand { get; }
     public ICommand ToggleNotificationPinCommand { get; }
     public ICommand DismissNotificationCommand { get; }
+    public ICommand RefreshAutomationCommand { get; }
+    public ICommand CreateAutomationRuleCommand { get; }
+    public ICommand DeleteAutomationRuleCommand { get; }
+    public ICommand ToggleAutomationRuleEnabledCommand { get; }
+    public ICommand RunAutomationRuleNowCommand { get; }
+    public ICommand RefreshSecurityCommand { get; }
+    public ICommand CreatePrincipalCommand { get; }
+    public ICommand RevokePrincipalCommand { get; }
+    public ICommand RefreshAlertCenterCommand { get; }
+    public ICommand SaveAlertRulesCommand { get; }
+    public ICommand RefreshFleetCommand { get; }
+    public ICommand CloneWorldCommand { get; }
+    public ICommand BackupAllCommand { get; }
+    public ICommand DoctorAllCommand { get; }
+    public ICommand UpdateAllCommand { get; }
     public ICommand AnalyzeCrashesCommand { get; }
     public ICommand RefreshCrashHistoryCommand { get; }
     public ICommand RefreshSaveToolsCommand { get; }
@@ -1122,6 +1273,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand RefreshPlayersCommand { get; }
     public ICommand LoadPlayerMetadataCommand { get; }
     public ICommand SavePlayerNotesCommand { get; }
+    public ICommand PreviewCharacterMigrationCommand { get; }
+    public ICommand ApplyCharacterMigrationCommand { get; }
     public ICommand AddPlayerWarningCommand { get; }
     public ICommand KickSelectedPlayerCommand { get; }
     public ICommand BanSelectedPlayerCommand { get; }
@@ -1148,6 +1301,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand GenerateServerNameCommand { get; }
     public ICommand GenerateSetupServerNameCommand { get; }
     public ICommand RunDoctorCommand { get; }
+    public ICommand RecheckDiagnosticCommand { get; }
+    public ICommand FixDiagnosticCommand { get; }
     public ICommand RefreshEnvironmentCommand { get; }
     public ICommand VerifyEnvironmentCommand { get; }
     public ICommand InstallMissingEnvironmentCommand { get; }
@@ -1174,6 +1329,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand EnableSelectedModCommand { get; }
     public ICommand DisableSelectedModCommand { get; }
     public ICommand DeleteSelectedModCommand { get; }
+    public ICommand RollbackSelectedModCommand { get; }
     public ICommand EnableAllModsCommand { get; }
     public ICommand DisableAllModsCommand { get; }
     public ICommand RepairModsCommand { get; }
@@ -1275,14 +1431,23 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string WorkspaceLogsRoot => Path.Combine(WorkspaceApplicationData, "Logs");
 
     public string NetworkHealth { get => _networkHealth; private set => SetField(ref _networkHealth, value); }
+    public string LocalDiagnosticsState { get => _localDiagnosticsState; private set => SetField(ref _localDiagnosticsState, value); }
     public string NetworkRuntime { get => _networkRuntime; private set => SetField(ref _networkRuntime, value); }
     public string NetworkPort { get => _networkPort; private set => SetField(ref _networkPort, value); }
     public string NetworkBinding { get => _networkBinding; private set => SetField(ref _networkBinding, value); }
     public string NetworkLanEndpoint { get => _networkLanEndpoint; private set => SetField(ref _networkLanEndpoint, value); }
     public string NetworkRecommendation { get => _networkRecommendation; private set => SetField(ref _networkRecommendation, value); }
     public string NetworkReportText { get => _networkReportText; private set => SetField(ref _networkReportText, value); }
+    public string WanPublicIpPort { get => _wanPublicIpPort; private set => SetField(ref _wanPublicIpPort, value); }
+    public string WanUpnpState { get => _wanUpnpState; private set => SetField(ref _wanUpnpState, value); }
+    public string WanRouterDescription { get => _wanRouterDescription; private set => SetField(ref _wanRouterDescription, value); }
+    public string WanStatus { get => _wanStatus; private set => SetField(ref _wanStatus, value); }
     public ICommand RunNetworkDiagnosticsCommand { get; }
+    public ICommand DiagnoseConnectionCommand { get; }
     public ICommand RepairFirewallCommand { get; }
+    public ICommand RunWanReachabilityCommand { get; }
+    public ICommand RepairUpnpMappingCommand { get; }
+    public ICommand OpenExternalPortCheckerCommand { get; }
     public ICommand RestartFromDiagnosticsCommand { get; }
     public ICommand ValidateWorkspaceCommand { get; }
     public ICommand BootstrapLocalCommand { get; }
@@ -1397,6 +1562,29 @@ public sealed class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
+    // v0.6.4.0 local-PC diagnostics: runs entirely client-side against SelectedProfile, unlike
+    // every other diagnostic command on this page which asks the server about itself. This is what
+    // replaces RefreshAsync's raw, uninterpreted exception message with a real staged DNS/TCP/TLS/
+    // HTTP diagnosis when a connection profile can't be reached.
+    private async Task DiagnoseConnectionAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        LocalDiagnosticsState = "Diagnosing…";
+        try
+        {
+            var findings = await _localDiagnostics.DiagnoseConnectionAsync(SelectedProfile, CancellationToken.None);
+            LocalConnectionFindings.Clear();
+            foreach (var finding in findings) LocalConnectionFindings.Add(finding);
+            var failed = findings.FirstOrDefault(f => f.State == (int)MystTiq.Core.Models.DiagnosticState.Fail);
+            LocalDiagnosticsState = failed is not null
+                ? $"Failed at {failed.Component}: {failed.Evidence}"
+                : "All stages passed.";
+        }
+        catch (Exception ex) { LocalDiagnosticsState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
     private async Task RestartFromDiagnosticsAsync()
     {
         if (SelectedProfile is null) return;
@@ -1425,6 +1613,53 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex) { NetworkRecommendation = ex.Message; }
         finally { IsBusy = false; }
+    }
+
+    // v0.6.11.0: the genuine gap left after local firewall inspection (above) and v0.6.4.0's Local
+    // Machine Diagnostics -- neither tests whether the internet, or even the router, can actually
+    // reach the configured game port. Public IP + UPnP mapping are real, automated checks; true
+    // unsolicited-inbound UDP confirmation needs infrastructure we don't own, so that piece is a
+    // manual hand-off (Copy IP:Port / Open Port Checker) rather than a faked pass/fail.
+    private async Task RunWanReachabilityAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var report = await _api.GetWanReachabilityAsync(SelectedProfile, BearerToken);
+            WanPublicIpPort = report.PublicIpPortText;
+            WanUpnpState = report.UpnpStateText;
+            WanRouterDescription = report.RouterDescription ?? "—";
+            WanReachabilityChecks.Clear();
+            foreach (var check in report.Checks) WanReachabilityChecks.Add(check);
+            WanStatus = "Checked " + report.CheckedAt.ToLocalTime().ToString("t");
+        }
+        catch (Exception ex) { WanStatus = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RepairUpnpMappingAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var result = await _api.RepairUpnpMappingAsync(SelectedProfile, BearerToken);
+            WanStatus = result.Message;
+            await RunWanReachabilityAsync();
+        }
+        catch (Exception ex) { WanStatus = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private void OpenExternalPortChecker()
+    {
+        try
+        {
+            var start = new ProcessStartInfo("https://canyouseeme.org/") { UseShellExecute = true };
+            Process.Start(start);
+        }
+        catch (Exception ex) { WanStatus = "Unable to open the port checker: " + ex.Message; }
     }
 
     private void Navigate(string? pageName)
@@ -1472,6 +1707,18 @@ public sealed class MainWindowViewModel : ViewModelBase
                 break;
             case NavigationPage.Notifications:
                 await RefreshNotificationsAsync();
+                break;
+            case NavigationPage.Automation:
+                await RefreshAutomationAsync();
+                break;
+            case NavigationPage.Security:
+                await RefreshSecurityAsync();
+                break;
+            case NavigationPage.AlertCenter:
+                await RefreshAlertCenterAsync();
+                break;
+            case NavigationPage.Fleet:
+                await RefreshFleetAsync();
                 break;
             case NavigationPage.Inspector:
                 await RefreshWorldExplorerAsync();
@@ -1733,6 +1980,28 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         try
         {
+            // v0.6.4.0: "no health deduction should exist without a corresponding visible Doctor
+            // finding" -- the Dashboard badge now overrides its lifecycle-only default (already set
+            // by ApplyStatus above) with the unified Doctor/Environment report whenever it actually
+            // found something wrong, so a Fail/Warning finding is always reflected here too. Not
+            // fetched on the fast silent poll tick (only this full-refresh path) since Doctor's own
+            // checks (journalctl, disk space) are too heavy to run every poll interval.
+            LatestDiagnosticsReport = await _api.GetDiagnosticsReportAsync(profile, BearerToken);
+            if (LatestDiagnosticsReport.Failures > 0)
+            {
+                DashboardHealthText = "ATTENTION";
+                DashboardHealthDetail = $"{LatestDiagnosticsReport.Failures} Doctor finding(s) need attention. Open Doctor.";
+            }
+            else if (LatestDiagnosticsReport.Warnings > 0 && DashboardHealthText == "READY")
+            {
+                DashboardHealthText = "DEGRADED";
+                DashboardHealthDetail = $"{LatestDiagnosticsReport.Warnings} Doctor finding(s) are warnings. Open Doctor.";
+            }
+        }
+        catch (Exception ex) { DiagnosticsReportDetail = $"Dashboard diagnostics load: {ex.Message}"; }
+
+        try
+        {
             var mods = await _api.GetModsAsync(profile, BearerToken);
             ApplyModInventory(mods);
             DashboardModText = $"{mods.Installed} installed · {mods.ConfirmedIssues} confirmed issue(s)";
@@ -1911,6 +2180,15 @@ public sealed class MainWindowViewModel : ViewModelBase
 
             if (SelectedPlayerRecord is not null)
                 await LoadSelectedPlayerMetadataCoreAsync(profile, SelectedPlayerRecord.PlayerId);
+
+            try
+            {
+                var providers = await _api.GetPlayerModerationProvidersAsync(profile, BearerToken);
+                ModerationProviderStatusText = providers.Count == 0
+                    ? string.Empty
+                    : string.Join("   ", providers.Select(x => $"{x.DisplayName}: {x.Health}"));
+            }
+            catch { ModerationProviderStatusText = string.Empty; }
         }
         catch (Exception ex)
         {
@@ -1968,6 +2246,68 @@ public sealed class MainWindowViewModel : ViewModelBase
         var metadata = await _api.GetPlayerMetadataAsync(profile, playerId, BearerToken);
         if (!string.Equals(SelectedPlayerRecord?.PlayerId, playerId, StringComparison.OrdinalIgnoreCase)) return;
         ApplyPlayerMetadata(metadata, "Metadata loaded");
+
+        try
+        {
+            var registry = await _api.GetPlayerRegistryAsync(profile, BearerToken);
+            if (!string.Equals(SelectedPlayerRecord?.PlayerId, playerId, StringComparison.OrdinalIgnoreCase)) return;
+            var record = registry.FirstOrDefault(r => string.Equals(r.PlayerId, playerId, StringComparison.OrdinalIgnoreCase));
+            PlayerRegistrySummaryText = record is null
+                ? "No registry history yet — first observed on the next status poll."
+                : $"First seen {record.FirstSeenUtc.ToLocalTime():yyyy-MM-dd} · Last seen {record.LastSeenUtc.ToLocalTime():yyyy-MM-dd HH:mm} · {record.TotalSessions} session(s) · {record.TotalPlaytimeMinutes / 60:F1}h tracked playtime";
+        }
+        catch { PlayerRegistrySummaryText = string.Empty; }
+    }
+
+    private async Task PreviewCharacterMigrationAsync()
+    {
+        if (MigrationSourcePlayer is null || MigrationDestinationPlayer is null) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { MigrationState = ex.Message; return; }
+
+        IsBusy = true;
+        MigrationState = "Previewing…";
+        try
+        {
+            var preview = await _api.PreviewCharacterMigrationAsync(profile,
+                new CharacterMigrationPreviewRequestDto(MigrationSourcePlayer.PlayerId, MigrationDestinationPlayer.PlayerId), BearerToken);
+            MigrationPreview = preview;
+            MigrationState = string.Join(" ", preview.Findings);
+        }
+        catch (Exception ex) { MigrationState = ex.Message; MigrationPreview = null; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task ApplyCharacterMigrationAsync()
+    {
+        if (MigrationPreview is not { CanApply: true }) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { MigrationState = ex.Message; return; }
+
+        IsBusy = true;
+        MigrationState = "Applying migration…";
+        try
+        {
+            var result = await _api.ApplyCharacterMigrationAsync(profile,
+                new CharacterMigrationApplyRequestDto(MigrationPreview.PreviewToken, true), BearerToken);
+            MigrationState = result.Message;
+            if (result.Success && result.SourcePlayerId is not null)
+            {
+                // Reset is intentionally still selectable (not decorative-disabled) so the server's
+                // own real "not yet supported" rejection is what the operator sees, rather than a
+                // client-side substitution silently changing their choice.
+                var dispositionText = MigrationDisposition.Split(' ')[0];
+                var dispositionResult = await _api.DisposeSourceCharacterAsync(profile, result.SourcePlayerId,
+                    new CharacterDispositionRequestDto(dispositionText), BearerToken);
+                MigrationState = $"{result.Message} {dispositionResult.Message}";
+            }
+            MigrationPreview = null;
+            await RefreshPlayersPageAsync();
+        }
+        catch (Exception ex) { MigrationState = ex.Message; }
+        finally { IsBusy = false; }
     }
 
     private async Task SaveSelectedPlayerNotesAsync()
@@ -2459,6 +2799,247 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ExportVisibleActivity() => string.Join(Environment.NewLine, ActivityLines);
     public string ExportVisibleNotifications() => string.Join(Environment.NewLine, FilteredNotifications.Select(x => $"[{x.CreatedUtc:O}] [{x.Severity}] [{(x.Read ? "READ" : "UNREAD")}] [{(x.Pinned ? "PINNED" : "UNPINNED")}] {x.Title} — {x.Message}"));
 
+    private async Task RefreshAutomationAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var rules = await _api.GetAutomationRulesAsync(SelectedProfile, BearerToken);
+            var selectedId = SelectedAutomationRule?.Id;
+            AutomationRules.Clear(); foreach (var rule in rules) AutomationRules.Add(rule);
+            SelectedAutomationRule = AutomationRules.FirstOrDefault(x => x.Id == selectedId) ?? AutomationRules.FirstOrDefault();
+
+            var runs = await _api.GetAutomationRunsAsync(SelectedProfile, 100, BearerToken);
+            AutomationRuns.Clear(); foreach (var run in runs) AutomationRuns.Add(run);
+            AutomationState = $"{AutomationRules.Count} rule(s), {AutomationRuns.Count} recent run(s).";
+        }
+        catch (Exception ex) { AutomationState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task CreateAutomationRuleAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var request = BuildAutomationRuleRequest();
+            var rule = await _api.CreateAutomationRuleAsync(SelectedProfile, request, BearerToken);
+            AutomationRules.Add(rule);
+            SelectedAutomationRule = rule;
+            NewAutomationRuleName = string.Empty;
+            AutomationState = $"Created rule '{rule.Name}'.";
+        }
+        catch (Exception ex) { AutomationState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private AutomationRuleRequestDto BuildAutomationRuleRequest()
+    {
+        var trigger = new AutomationTriggerDto { Kind = NewAutomationTriggerKind };
+        if (NewAutomationTriggerKind == "Interval")
+            trigger.Interval = TimeSpan.FromMinutes(Math.Max(1, NewAutomationIntervalMinutes));
+        else if (NewAutomationTriggerKind == "IdleEmpty")
+            trigger.IdleThresholdMinutes = Math.Max(1, NewAutomationIdleThresholdMinutes);
+        else
+            trigger.TimeOfDayUtc = TimeOnly.TryParse(NewAutomationTimeOfDayUtc, out var time) ? time : new TimeOnly(3, 0);
+
+        var action = new AutomationActionDto { Kind = NewAutomationActionKind };
+        if (NewAutomationActionKind == "SendNotification")
+        {
+            action.NotificationTitle = string.IsNullOrWhiteSpace(NewAutomationNotificationTitle) ? NewAutomationRuleName : NewAutomationNotificationTitle;
+            action.NotificationMessage = NewAutomationNotificationMessage;
+        }
+        else if (NewAutomationActionKind == "SendRconCommand")
+        {
+            action.RconCommand = NewAutomationRconCommand;
+        }
+
+        return new AutomationRuleRequestDto(NewAutomationRuleName, trigger, new AutomationConditionDto(), action);
+    }
+
+    private async Task DeleteAutomationRuleAsync()
+    {
+        if (SelectedProfile is null || SelectedAutomationRule is not { } rule) return;
+        IsBusy = true;
+        try
+        {
+            await _api.DeleteAutomationRuleAsync(SelectedProfile, rule.Id, BearerToken);
+            AutomationRules.Remove(rule);
+            SelectedAutomationRule = AutomationRules.FirstOrDefault();
+            AutomationState = $"Deleted rule '{rule.Name}'.";
+        }
+        catch (Exception ex) { AutomationState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task ToggleAutomationRuleEnabledAsync()
+    {
+        if (SelectedProfile is null || SelectedAutomationRule is not { } rule) return;
+        IsBusy = true;
+        try
+        {
+            var updated = await _api.SetAutomationRuleEnabledAsync(SelectedProfile, rule.Id, !rule.Enabled, BearerToken);
+            var index = AutomationRules.IndexOf(rule);
+            if (index >= 0) AutomationRules[index] = updated;
+            SelectedAutomationRule = updated;
+            AutomationState = $"Rule '{updated.Name}' is now {(updated.Enabled ? "enabled" : "disabled")}.";
+        }
+        catch (Exception ex) { AutomationState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RunAutomationRuleNowAsync()
+    {
+        if (SelectedProfile is null || SelectedAutomationRule is not { } rule) return;
+        IsBusy = true;
+        try
+        {
+            await _api.RunAutomationRuleNowAsync(SelectedProfile, rule.Id, BearerToken);
+            AutomationState = $"Rule '{rule.Name}' dispatched. Refresh runs shortly to see the result.";
+        }
+        catch (Exception ex) { AutomationState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RefreshSecurityAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var who = await _api.WhoAmIAsync(SelectedProfile, BearerToken);
+            CurrentPrincipal = who;
+            RaisePropertyChanged(nameof(CanManageAdmin));
+            RaisePropertyChanged(nameof(CanManagePrincipals));
+
+            var principals = await _api.GetPrincipalsAsync(SelectedProfile, BearerToken);
+            var selectedId = SelectedPrincipal?.Id;
+            Principals.Clear(); foreach (var principal in principals) Principals.Add(principal);
+            SelectedPrincipal = Principals.FirstOrDefault(x => x.Id == selectedId);
+            SecurityState = $"Signed in as {who.Name} ({who.Role}). {Principals.Count} principal(s) issued.";
+        }
+        catch (Exception ex) { SecurityState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task CreatePrincipalAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var result = await _api.CreatePrincipalAsync(SelectedProfile, new HeadlessCreatePrincipalRequestDto(NewPrincipalName, NewPrincipalRole, null), BearerToken);
+            Principals.Add(result.Principal);
+            LastCreatedPrincipalToken = result.PlaintextToken;
+            NewPrincipalName = string.Empty;
+            SecurityState = $"Created principal '{result.Principal.Name}'. Copy the token now — it will not be shown again.";
+        }
+        catch (Exception ex) { SecurityState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RevokePrincipalAsync()
+    {
+        if (SelectedProfile is null || SelectedPrincipal is not { } principal) return;
+        IsBusy = true;
+        try
+        {
+            await _api.RevokePrincipalAsync(SelectedProfile, principal.Id, BearerToken);
+            Principals.Remove(principal);
+            SelectedPrincipal = null;
+            SecurityState = $"Revoked principal '{principal.Name}'.";
+        }
+        catch (Exception ex) { SecurityState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RefreshAlertCenterAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            AlertRules = await _api.GetAlertRulesAsync(SelectedProfile, BearerToken);
+            DiskSpacePrediction = await _api.GetDiskSpacePredictionAsync(SelectedProfile, BearerToken);
+            AlertCenterState = "Alert rules and disk-space prediction loaded.";
+        }
+        catch (Exception ex) { AlertCenterState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task SaveAlertRulesAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            AlertRules = await _api.SaveAlertRulesAsync(SelectedProfile, AlertRules, BearerToken);
+            AlertCenterState = "Alert rules saved.";
+        }
+        catch (Exception ex) { AlertCenterState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RefreshFleetAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var summaries = await _api.GetServerProfilesAsync(SelectedProfile, BearerToken);
+            FleetServers.Clear();
+            foreach (var summary in summaries) FleetServers.Add(summary);
+            FleetState = $"{FleetServers.Count} server profile(s) configured.";
+        }
+        catch (Exception ex) { FleetState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task CloneWorldAsync()
+    {
+        if (SelectedProfile is null || string.IsNullOrWhiteSpace(CloneNewProfileId)) return;
+        IsBusy = true;
+        CloneWorldStatusText = "Cloning… this copies the entire server installation and can take a while.";
+        try
+        {
+            var request = new WorldCloneRequestDto
+            {
+                NewProfileId = CloneNewProfileId.Trim(),
+                NewProfileName = string.IsNullOrWhiteSpace(CloneNewProfileName) ? null : CloneNewProfileName.Trim()
+            };
+            var result = await _api.CloneWorldAsync(SelectedProfile, request, BearerToken);
+            CloneWorldStatusText = result.Message;
+            if (result.Success) await RefreshFleetAsync();
+        }
+        catch (Exception ex) { CloneWorldStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RunFleetActionAsync(string label, Func<ConnectionProfile, string?, Task<IReadOnlyList<FleetActionResultDto>>> action)
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var results = await action(SelectedProfile, BearerToken);
+            FleetActionResults.Clear();
+            foreach (var result in results) FleetActionResults.Add(result);
+            var failures = results.Count(r => !r.Success);
+            FleetState = failures == 0
+                ? $"{label}: completed on all {results.Count} server(s)."
+                : $"{label}: {failures} of {results.Count} server(s) failed. See results below.";
+            await RefreshFleetAsync();
+        }
+        catch (Exception ex) { FleetState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private Task BackupAllAsync() => RunFleetActionAsync("Backup All", (profile, token) => _api.BackupAllAsync(profile, token));
+    private Task DoctorAllAsync() => RunFleetActionAsync("Doctor All", (profile, token) => _api.DoctorAllAsync(profile, token));
+    private Task UpdateAllAsync() => RunFleetActionAsync("Update All", (profile, token) => _api.UpdateAllAsync(profile, token));
+
     private async Task AnalyzeCrashesAsync()
     {
         if (SelectedProfile is null) return; IsBusy = true; CrashAnalyzerState = "Analyzing bounded recent-log evidence…";
@@ -2558,12 +3139,58 @@ public sealed class MainWindowViewModel : ViewModelBase
             var report = await _api.RunDoctorAsync(profile, BearerToken);
             DoctorChecks.Clear();
             foreach (var check in report.Checks) DoctorChecks.Add(check);
-            DoctorStatus = report.Status;
             DoctorCheckedAt = report.CheckedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
-            DoctorSummary = $"{report.Passed} passed · {report.Warnings} warning(s) · {report.Failures} failure(s)";
             (ExportDoctorCommand as RelayCommand)?.RaiseCanExecuteChanged();
+
+            // v0.6.4.0: the unified report supersedes the raw /doctor-only status/summary text
+            // (DoctorChecks above stays populated too, for the existing export format) -- this is
+            // what makes the Doctor page and the Dashboard badge agree, since both now read from
+            // the same HeadlessDiagnosticsService output.
+            LatestDiagnosticsReport = await _api.GetDiagnosticsReportAsync(profile, BearerToken);
+            DiagnosticFindings.Clear();
+            foreach (var finding in LatestDiagnosticsReport.Findings) DiagnosticFindings.Add(finding);
+            DoctorStatus = LatestDiagnosticsReport.OverallHealthText;
+            DoctorSummary = $"{LatestDiagnosticsReport.Passed} passed · {LatestDiagnosticsReport.Warnings} warning(s) · {LatestDiagnosticsReport.Failures} failure(s)";
         }
         catch (Exception ex) { DoctorStatus = "Unavailable"; DoctorSummary = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RecheckDiagnosticAsync(DiagnosticFindingDto? finding)
+    {
+        if (finding is null) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { DiagnosticsReportDetail = ex.Message; return; }
+
+        IsBusy = true;
+        try
+        {
+            var updated = await _api.RecheckDiagnosticFindingAsync(profile, finding.Id, BearerToken);
+            if (updated is null) { DiagnosticsReportDetail = $"{finding.Component}: finding no longer exists."; return; }
+            var index = DiagnosticFindings.ToList().FindIndex(f => f.Id == updated.Id);
+            if (index >= 0) DiagnosticFindings[index] = updated;
+            DiagnosticsReportDetail = $"{updated.Component}: {updated.StateText}.";
+        }
+        catch (Exception ex) { DiagnosticsReportDetail = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task FixDiagnosticAsync(DiagnosticFindingDto? finding)
+    {
+        if (finding is null || !finding.CanFix) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { DiagnosticsReportDetail = ex.Message; return; }
+
+        IsBusy = true;
+        try
+        {
+            var result = await _api.FixDiagnosticFindingAsync(profile, finding.Id, BearerToken);
+            DiagnosticsReportDetail = result.Message;
+            if (result.Success) await RecheckDiagnosticAsync(finding);
+        }
+        catch (Exception ex) { DiagnosticsReportDetail = ex.Message; }
         finally { IsBusy = false; }
     }
 
@@ -3323,8 +3950,23 @@ public sealed class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
+    // v0.6.3.0: Setup/Update Center cleanup -- this used to call UpdatePalworldServerAsync()
+    // (a full SteamCMD update/reinstall) unconditionally, even when SteamCMD/the Palworld
+    // Dedicated Server were already installed. Update Center's own "Update Palworld Server"
+    // button is now the one authoritative place that mutation happens; Setup only performs it
+    // directly for the genuine first-run case (something is actually missing).
     private async Task InstallMissingEnvironmentAsync()
     {
+        var stillMissing = EnvironmentItems.Where(x => x.Component is "SteamCMD" or "Palworld Dedicated Server" && x.IsMissing).ToList();
+        if (stillMissing.Count == 0)
+        {
+            SetupOperationState = "COMPLETE";
+            SetupOperationTitle = "Nothing to install";
+            SetupOperationDetail = "SteamCMD and the Palworld Dedicated Server are already installed. Use Update Center to check for or apply updates.";
+            SetupRecentActivity = $"Recent activity: Install missing skipped, nothing missing · {DateTime.Now:t}.";
+            return;
+        }
+
         SetupOperationState = "INSTALLING";
         SetupOperationTitle = "Installing required server distribution components";
         SetupOperationDetail = "MystTiq will provision SteamCMD when needed and install/validate the Palworld Dedicated Server. Optional developer/save-tool dependencies remain explicitly listed if manual installation is required.";
@@ -3361,7 +4003,20 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
         if (item.Component is "SteamCMD" or "Palworld Dedicated Server")
         {
-            Dispatcher.UIThread.Post(async () => await InstallMissingEnvironmentAsync());
+            // v0.6.3.0: this row's action used to always call InstallMissingEnvironmentAsync
+            // (a full SteamCMD update/reinstall), even when clicked on an already-installed row
+            // reading "VERIFY" -- silently mutating on what looked like a read-only check. Setup
+            // now only mutates directly for the genuine first-run "INSTALL" case; the ongoing
+            // "already installed, check/apply updates" case belongs to Update Center.
+            if (item.IsMissing)
+            {
+                Dispatcher.UIThread.Post(async () => await InstallMissingEnvironmentAsync());
+            }
+            else
+            {
+                SetupRecentActivity = $"Recent activity: {item.Component} already installed — opening Update Center · {DateTime.Now:t}.";
+                Navigate(nameof(NavigationPage.UpdateCenter));
+            }
             return;
         }
         SetupOperationState = "VERIFYING";
@@ -3915,6 +4570,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         await RunModMutationAsync((profile) => _api.DeleteModAsync(profile, selected.Type, selected.Package, BearerToken), "Delete failed");
     }
 
+    private async Task RollbackSelectedModAsync()
+    {
+        if (SelectedMod is null) return; var selected = SelectedMod;
+        await RunModMutationAsync((profile) => _api.RollbackModAsync(profile, selected.Type, selected.Package, BearerToken), "Rollback failed");
+    }
+
     private async Task SetAllModsEnabledAsync(bool enabled) =>
         await RunModMutationAsync(profile => _api.SetAllModsEnabledAsync(profile, enabled, BearerToken), "Bulk state change failed");
 
@@ -4029,6 +4690,14 @@ public sealed class MainWindowViewModel : ViewModelBase
             LifecycleStatusText = bootstrap.Detail;
             Detail = bootstrap.Detail;
             return false;
+        }
+        if (bootstrap.StaleInstanceDetected)
+        {
+            // A different-version MystTiq backend was already running locally and was left alone
+            // (never killed automatically) -- surfaced here, not just on failure, since this exact
+            // path (connecting right before Start/Stop) is where that confusion is most likely.
+            LifecycleStatusText = bootstrap.Detail;
+            Detail = bootstrap.Detail;
         }
         ServerUrl = bootstrap.Endpoint;
         await RefreshAsync(silent: true);
@@ -4233,6 +4902,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(IsConsolePage));
         RaisePropertyChanged(nameof(IsActivityAuditPage));
         RaisePropertyChanged(nameof(IsNotificationsPage));
+        RaisePropertyChanged(nameof(IsAutomationPage));
+        RaisePropertyChanged(nameof(IsSecurityPage));
+        RaisePropertyChanged(nameof(IsAlertCenterPage));
+        RaisePropertyChanged(nameof(IsFleetPage));
         RaisePropertyChanged(nameof(IsModDashboardPage));
         RaisePropertyChanged(nameof(IsModLibraryPage));
         RaisePropertyChanged(nameof(IsUe4ssPage));

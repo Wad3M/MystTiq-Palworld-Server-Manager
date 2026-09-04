@@ -14,5 +14,6 @@ public interface IOperationCoordinator
     void Complete(OperationId id, string detail);
     void Fail(OperationId id, string detail, bool rolledBack = false);
     IReadOnlyList<OperationRecord> ListRecent(int max = 50);
+    IReadOnlyList<OperationRecord> ListRecent(ServerProfileId? profile, int max = 50);
     OperationRecord? Find(OperationId id);
 }

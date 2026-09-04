@@ -9,10 +9,12 @@ public sealed class HeadlessNotificationService
     private readonly object gate = new();
     private readonly string statePath;
     private readonly HeadlessActivityLogService activity;
+    private readonly HeadlessNotificationRoutingService? routing;
 
-    public HeadlessNotificationService(IServerPathProfile paths, HeadlessActivityLogService activity)
+    public HeadlessNotificationService(IServerPathProfile paths, HeadlessActivityLogService activity, HeadlessNotificationRoutingService? routing = null)
     {
         this.activity = activity;
+        this.routing = routing;
         var root = Path.Combine(paths.ManagerRuntimeRoot, "notifications");
         Directory.CreateDirectory(root);
         statePath = Path.Combine(root, "state.json");
@@ -45,6 +47,23 @@ public sealed class HeadlessNotificationService
             activity.Record("Information", "Notifications", "Created notification self-test", $"batch={batch}; count=4");
             return GetSnapshotUnsafe();
         }
+    }
+
+    // General-purpose notification creation -- the entire integration surface the Alert Center
+    // and the automation SendNotification action need. No parallel notification pipeline.
+    public HeadlessNotificationSnapshot Create(string severity, string title, string message, bool pinned = false)
+    {
+        HeadlessNotificationSnapshot snapshot;
+        lock (gate)
+        {
+            var items = Load();
+            items.Add(New(severity, title, message, pinned));
+            Save(items);
+            activity.Record("Information", "Notifications", "Created notification", $"severity={severity}; title={title}");
+            snapshot = GetSnapshotUnsafe();
+        }
+        routing?.Dispatch(severity, title, message);
+        return snapshot;
     }
 
     public HeadlessNotificationSnapshot SetRead(string id, bool read) => Mutate(id, "read", item => item.Read = read);

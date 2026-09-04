@@ -28,13 +28,14 @@ public sealed class HeadlessBaseOwnershipService
     private readonly HeadlessPlayerGuildExplorerService explorer;
     private readonly HeadlessSaveCodecService codec;
     private readonly IOperationCoordinator coordinator;
+    private readonly ServerProfileId profile;
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly Dictionary<string, PendingBaseTransfer> pending = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PendingBaseRecovery> pendingRecovery = new(StringComparer.Ordinal);
 
     public HeadlessBaseOwnershipService(IServerPathProfile paths, IServerLifecycleService lifecycle,
         HeadlessBackupService backups, HeadlessActivityLogService activity, HeadlessPlayerGuildExplorerService explorer,
-        HeadlessSaveCodecService codec, IOperationCoordinator coordinator)
+        HeadlessSaveCodecService codec, IOperationCoordinator coordinator, ServerProfileId profile)
     {
         this.paths = paths;
         this.lifecycle = lifecycle;
@@ -43,6 +44,7 @@ public sealed class HeadlessBaseOwnershipService
         this.explorer = explorer;
         this.codec = codec;
         this.coordinator = coordinator;
+        this.profile = profile;
     }
 
     public async Task<HeadlessBaseOwnershipPreview> PreviewTransferAsync(string baseId, string targetGuildId, CancellationToken cancellationToken)
@@ -121,14 +123,14 @@ public sealed class HeadlessBaseOwnershipService
             if (!File.Exists(op.LevelSavePath) || !HashFile(op.LevelSavePath).Equals(op.SourceHash, StringComparison.OrdinalIgnoreCase))
                 return HeadlessBaseOwnershipResult.Failure("Level.sav changed since the preview. Preview the transfer again.");
 
-            operation = await coordinator.BeginAsync(ServerProfileId.Default, "base-ownership-transfer",
+            operation = await coordinator.BeginAsync(profile, "base-ownership-transfer",
                 "HeadlessBaseOwnershipService", ["world-mutation"], cancellationToken);
 
             var id = Guid.NewGuid().ToString("N");
             journal = NewJournal(id, op.BaseId, op.TargetGuildId);
             Advance(journal, "PreviewAccepted", $"The single-use preview token for base {op.BaseId} was accepted.");
 
-            var safety = await backups.CreateAsync(cancellationToken);
+            var safety = await backups.CreateAsync(BackupClass.Safety, cancellationToken);
             if (!safety.Success || string.IsNullOrWhiteSpace(safety.FileName))
                 throw new InvalidOperationException("Fresh safety backup failed: " + safety.Message);
             journal.SafetyBackup = safety.FileName;
@@ -309,14 +311,14 @@ public sealed class HeadlessBaseOwnershipService
             if (!File.Exists(op.LevelSavePath) || !HashFile(op.LevelSavePath).Equals(op.SourceHash, StringComparison.OrdinalIgnoreCase))
                 return HeadlessBaseOwnershipResult.Failure("Level.sav changed since the preview. Preview the recovery again.");
 
-            operation = await coordinator.BeginAsync(ServerProfileId.Default, "base-recovery",
+            operation = await coordinator.BeginAsync(profile, "base-recovery",
                 "HeadlessBaseOwnershipService", ["world-mutation"], cancellationToken);
 
             var id = Guid.NewGuid().ToString("N");
             journal = NewJournal(id, op.BaseId, "recovery");
             Advance(journal, "PreviewAccepted", $"The single-use preview token for base {op.BaseId} was accepted.");
 
-            var safety = await backups.CreateAsync(cancellationToken);
+            var safety = await backups.CreateAsync(BackupClass.Safety, cancellationToken);
             if (!safety.Success || string.IsNullOrWhiteSpace(safety.FileName))
                 throw new InvalidOperationException("Fresh safety backup failed: " + safety.Message);
             journal.SafetyBackup = safety.FileName;

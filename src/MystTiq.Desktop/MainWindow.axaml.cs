@@ -101,6 +101,15 @@ public sealed partial class MainWindow : Window
             await clipboard.SetTextAsync(vm.NetworkReportText);
     }
 
+    private async void CopyWanPublicIpPort_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.WanPublicIpPort) || vm.WanPublicIpPort == "Not checked")
+            return;
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is not null)
+            await clipboard.SetTextAsync(vm.WanPublicIpPort);
+    }
+
     private async void ExportNetworkDiagnosticReport_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanSave) return;

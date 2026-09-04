@@ -16,13 +16,14 @@ public sealed class HeadlessWorldTransactionService
     private readonly HeadlessActivityLogService activity;
     private readonly HeadlessWorldExplorerService explorer;
     private readonly IOperationCoordinator coordinator;
+    private readonly ServerProfileId profile;
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly Dictionary<string, PendingPlan> plans = new(StringComparer.Ordinal);
     private readonly string transactionRoot;
 
     public HeadlessWorldTransactionService(IServerPathProfile paths, IServerLifecycleService lifecycle,
         HeadlessBackupService backups, HeadlessActivityLogService activity, HeadlessWorldExplorerService explorer,
-        IOperationCoordinator coordinator)
+        IOperationCoordinator coordinator, ServerProfileId profile)
     {
         this.paths = paths;
         this.lifecycle = lifecycle;
@@ -30,6 +31,7 @@ public sealed class HeadlessWorldTransactionService
         this.activity = activity;
         this.explorer = explorer;
         this.coordinator = coordinator;
+        this.profile = profile;
         transactionRoot = Path.Combine(paths.ManagerRuntimeRoot, "world-transactions");
         Directory.CreateDirectory(transactionRoot);
     }
@@ -129,7 +131,7 @@ public sealed class HeadlessWorldTransactionService
             if (!snapshot.Available || string.IsNullOrWhiteSpace(snapshot.ActiveWorldPath))
                 return HeadlessWorldTransactionResult.Failure("No active world is available for transactional recovery.");
 
-            operation = await coordinator.BeginAsync(ServerProfileId.Default, "world-transaction",
+            operation = await coordinator.BeginAsync(profile, "world-transaction",
                 "HeadlessWorldTransactionService", ["world-mutation"], cancellationToken);
 
             var id = Guid.NewGuid().ToString("N");
@@ -137,7 +139,7 @@ public sealed class HeadlessWorldTransactionService
             Advance(journal, "PreviewAccepted", "The single-use preview token was accepted.");
             ThrowIfRequested(failureStage, "preview");
 
-            var safety = await backups.CreateAsync(cancellationToken);
+            var safety = await backups.CreateAsync(BackupClass.Safety, cancellationToken);
             if (!safety.Success || string.IsNullOrWhiteSpace(safety.FileName))
                 throw new InvalidOperationException("Fresh safety backup failed: " + safety.Message);
             journal.SafetyBackup = safety.FileName;

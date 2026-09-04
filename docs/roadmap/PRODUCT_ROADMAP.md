@@ -44,7 +44,13 @@ PalServer
 
 Closing/crashing the GUI must not stop MystTiq service or PalServer.
 
-## v0.6.0.0 — Architecture Baseline & Operation Platform (Current Release Candidate)
+## v0.6.1.0 — Advanced Administration, Automation & Analytics Platform
+
+**Accepted source baseline: v0.6.0.0.**
+
+Merges what the grouped roadmap originally split across three milestones (Guardian backups, Automation/RBAC, Analytics) into one pass — see the restructuring note at the top of `docs/roadmap/MystTiq_v0.6_Grouped_Development_Roadmap.md`. Adds the app's first background loop (a real Trigger→Condition→Action automation engine), formal backup classes with default retention protection, minimal backward-compatible RBAC layered on the existing bearer token, an Alert Center with disk-space-exhaustion prediction, and a real slice of notification routing. Along the way, retrofits the manual server start/stop/restart routes onto the `OperationCoordinator` — a real gap found where they previously bypassed it entirely. Scoped down from the milestone's full bullet list by design; see `docs/architecture/v0.6.1.0-advanced-administration-automation.md` for the explicit deferred list.
+
+## v0.6.0.0 — Architecture Baseline & Operation Platform
 
 **Accepted source baseline: v0.5.5.0.**
 
@@ -359,7 +365,7 @@ No health deduction should exist without a corresponding visible Doctor finding.
 
 **Superseded by `docs/roadmap/MystTiq_v0.6_Grouped_Development_Roadmap.md` and its paired `MystTiq_v0.6_Grouped_Logic_Acceptance_Test_Plan.md`.** Those documents are the authoritative, testable breakdown of this phase (10 grouped `v0.6.x.0` milestones with acceptance checklists and a PowerShell logic-test harness under `scripts/Test-v0.6.*.0-Logic.ps1`); this section is kept only as a one-line index so the high-level areas remain discoverable from this file.
 
-Covers, in order: Architecture/Operation Platform (v0.6.0.0) → Guardian & Transactional Safety (v0.6.1.0) → Provider Framework & Configuration Intelligence (v0.6.2.0) → Automation/Notifications/RBAC (v0.6.3.0) → Player Registry & World Explorer 2 (v0.6.4.0) → Safe World Editing & Recovery (v0.6.5.0) → MOD/UE4SS Platform & Analytics (v0.6.6.0) → Transactional Updates/Discovery/Migration (v0.6.7.0) → **Multi-Server Fleet & Runtime Providers (v0.6.8.0 — replaces the former standalone "v0.6.x — Multi-Server / Multi-Instance Management" line)** → Advanced Intelligence/Remote Clients/Simulation/UX (v0.6.9.0).
+Covers, in order (re-grouped 2026-09-03 after v0.6.0.0 shipped — see the restructuring note at the top of the grouped roadmap doc): Architecture/Operation Platform (v0.6.0.0) → Advanced Administration, Automation & Analytics Platform (v0.6.1.0) → **Multi-Server Fleet & Runtime Providers (v0.6.2.0 — pulled forward from the former v0.6.8.0, replacing the standalone "v0.6.x — Multi-Server / Multi-Instance Management" line that used to live in this document)** → Windows Service Hardening, Character Migration & Setup/Update Cleanup (v0.6.3.0) → Troubleshooting & Diagnostics Platform (v0.6.4.0, new) → Provider Framework & Configuration Intelligence (v0.6.5.0) → Player Registry & World Explorer 2 (v0.6.6.0) → Safe World Editing & Recovery (v0.6.7.0) → MOD/UE4SS Platform & Monitoring (v0.6.8.0) → Advanced Intelligence/Remote Clients/Simulation/UX (v0.6.9.0).
 
 Explicit non-goals carried forward: multi-game hosting and commercial billing/hosting-provider features.
 

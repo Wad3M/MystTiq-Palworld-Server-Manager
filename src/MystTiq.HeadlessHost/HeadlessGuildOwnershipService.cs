@@ -23,12 +23,13 @@ public sealed class HeadlessGuildOwnershipService
     private readonly HeadlessPlayerGuildExplorerService explorer;
     private readonly HeadlessSaveCodecService codec;
     private readonly IOperationCoordinator coordinator;
+    private readonly ServerProfileId profile;
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly Dictionary<string, PendingOperation> pending = new(StringComparer.Ordinal);
 
     public HeadlessGuildOwnershipService(IServerPathProfile paths, IServerLifecycleService lifecycle,
         HeadlessBackupService backups, HeadlessActivityLogService activity, HeadlessPlayerGuildExplorerService explorer,
-        HeadlessSaveCodecService codec, IOperationCoordinator coordinator)
+        HeadlessSaveCodecService codec, IOperationCoordinator coordinator, ServerProfileId profile)
     {
         this.paths = paths;
         this.lifecycle = lifecycle;
@@ -37,6 +38,7 @@ public sealed class HeadlessGuildOwnershipService
         this.explorer = explorer;
         this.codec = codec;
         this.coordinator = coordinator;
+        this.profile = profile;
     }
 
     public async Task<HeadlessGuildOwnershipPreview> PreviewAsync(string operationTypeName, string guildId, string playerId, CancellationToken cancellationToken)
@@ -59,7 +61,7 @@ public sealed class HeadlessGuildOwnershipService
             findings.Add($"Guild {guildId} was not found.");
         if (player is null)
             findings.Add($"Player {playerId} was not found.");
-        else if (!player.SaveExists)
+        else if (operationType != GuildOwnershipOperationType.RemoveBrokenMember && !player.SaveExists)
             findings.Add($"Player {playerId} has no save file yet; they must join the server at least once before this change applies.");
 
         if (guild is not null)
@@ -76,6 +78,13 @@ public sealed class HeadlessGuildOwnershipService
                 case GuildOwnershipOperationType.AddPlayerToGuild when player is not null &&
                     guild.MemberPlayerIds.Any(id => string.Equals(id, player.PlayerId, StringComparison.OrdinalIgnoreCase)):
                     findings.Add($"{player.PlayerName} is already a member of {guild.GuildName}.");
+                    break;
+                case GuildOwnershipOperationType.RemoveBrokenMember when player is not null && player.SaveExists:
+                    findings.Add($"{player.PlayerName} has a valid save file. Remove Broken Member is only offered for a dangling reference with no matching save.");
+                    break;
+                case GuildOwnershipOperationType.RemoveBrokenMember when player is not null &&
+                    !guild.MemberPlayerIds.Any(id => string.Equals(id, player.PlayerId, StringComparison.OrdinalIgnoreCase)):
+                    findings.Add($"{playerId} is not currently a member of {guild.GuildName}.");
                     break;
             }
         }
@@ -109,7 +118,8 @@ public sealed class HeadlessGuildOwnershipService
         "claim" or "claimorphanedguild" or "claim-orphaned-guild" => GuildOwnershipOperationType.ClaimOrphanedGuild,
         "transfer" or "transferleadership" or "transfer-leadership" => GuildOwnershipOperationType.TransferLeadership,
         "add-player" or "addplayer" or "addplayertoguild" or "add-player-to-guild" => GuildOwnershipOperationType.AddPlayerToGuild,
-        _ => throw new ArgumentException("operationType must be claim, transfer-leadership, or add-player.")
+        "remove-broken-member" or "removebrokenmember" => GuildOwnershipOperationType.RemoveBrokenMember,
+        _ => throw new ArgumentException("operationType must be claim, transfer-leadership, add-player, or remove-broken-member.")
     };
 
     public async Task<HeadlessGuildOwnershipResult> ApplyAsync(HeadlessGuildOwnershipApplyRequest request, CancellationToken cancellationToken)
@@ -141,14 +151,14 @@ public sealed class HeadlessGuildOwnershipService
             if (!File.Exists(op.LevelSavePath) || !HashFile(op.LevelSavePath).Equals(op.SourceHash, StringComparison.OrdinalIgnoreCase))
                 return HeadlessGuildOwnershipResult.Failure("Level.sav changed since the preview. Preview the change again.");
 
-            operation = await coordinator.BeginAsync(ServerProfileId.Default, "guild-ownership",
+            operation = await coordinator.BeginAsync(profile, "guild-ownership",
                 "HeadlessGuildOwnershipService", ["world-mutation"], cancellationToken);
 
             var id = Guid.NewGuid().ToString("N");
             journal = NewJournal(id, op.OperationType, op.GuildId);
             Advance(journal, "PreviewAccepted", $"The single-use preview token for guild {op.GuildId} was accepted.");
 
-            var safety = await backups.CreateAsync(cancellationToken);
+            var safety = await backups.CreateAsync(BackupClass.Safety, cancellationToken);
             if (!safety.Success || string.IsNullOrWhiteSpace(safety.FileName))
                 throw new InvalidOperationException("Fresh safety backup failed: " + safety.Message);
             journal.SafetyBackup = safety.FileName;
@@ -243,6 +253,9 @@ public sealed class HeadlessGuildOwnershipService
             case GuildOwnershipOperationType.AddPlayerToGuild:
                 EnsureMember(rawData, playerId, playerName);
                 break;
+            case GuildOwnershipOperationType.RemoveBrokenMember:
+                RemoveMember(rawData, playerId);
+                break;
         }
     }
 
@@ -260,6 +273,10 @@ public sealed class HeadlessGuildOwnershipService
                 if (!ContainsMember(rawData, playerId))
                     throw new InvalidDataException("Verification did not find the target player among the repaired guild's members.");
                 break;
+            case GuildOwnershipOperationType.RemoveBrokenMember:
+                if (ContainsMember(rawData, playerId))
+                    throw new InvalidDataException("Verification still found the broken member reference in the repaired save.");
+                break;
         }
     }
 
@@ -268,6 +285,7 @@ public sealed class HeadlessGuildOwnershipService
         GuildOwnershipOperationType.ClaimOrphanedGuild => "Claim Orphaned Guild",
         GuildOwnershipOperationType.TransferLeadership => "Transfer Leadership",
         GuildOwnershipOperationType.AddPlayerToGuild => "Add Player to Guild",
+        GuildOwnershipOperationType.RemoveBrokenMember => "Remove Broken Member",
         _ => type.ToString()
     };
 
@@ -276,6 +294,7 @@ public sealed class HeadlessGuildOwnershipService
         GuildOwnershipOperationType.ClaimOrphanedGuild => $"Ready: {player.PlayerName} ({player.PlayerId}) will become leader of {guild.GuildName}, preserving the guild ID and its {guild.BaseCount} base(s).",
         GuildOwnershipOperationType.TransferLeadership => $"Ready: leadership of {guild.GuildName} will transfer from {guild.LeaderName} to {player.PlayerName} ({player.PlayerId}).",
         GuildOwnershipOperationType.AddPlayerToGuild => $"Ready: {player.PlayerName} ({player.PlayerId}) will be added to {guild.GuildName} as a member.",
+        GuildOwnershipOperationType.RemoveBrokenMember => $"Ready: the dangling member reference {player.PlayerName} ({player.PlayerId}) -- no matching save file -- will be removed from {guild.GuildName}.",
         _ => "Ready."
     };
 
@@ -284,6 +303,7 @@ public sealed class HeadlessGuildOwnershipService
         GuildOwnershipOperationType.ClaimOrphanedGuild => $"{playerName} set as leader of guild {guildId}.",
         GuildOwnershipOperationType.TransferLeadership => $"{playerName} set as leader of guild {guildId}.",
         GuildOwnershipOperationType.AddPlayerToGuild => $"{playerName} added as a member of guild {guildId}.",
+        GuildOwnershipOperationType.RemoveBrokenMember => $"Broken member reference {playerName} removed from guild {guildId}.",
         _ => "Guild updated."
     };
 
@@ -292,6 +312,7 @@ public sealed class HeadlessGuildOwnershipService
         GuildOwnershipOperationType.ClaimOrphanedGuild => $"{playerName} is now the leader of guild {guildId}.",
         GuildOwnershipOperationType.TransferLeadership => $"Leadership of guild {guildId} transferred to {playerName}.",
         GuildOwnershipOperationType.AddPlayerToGuild => $"{playerName} was added to guild {guildId}.",
+        GuildOwnershipOperationType.RemoveBrokenMember => $"The broken member reference for {playerName} was removed from guild {guildId}.",
         _ => "Guild ownership change applied."
     };
 
@@ -302,6 +323,7 @@ public sealed class HeadlessGuildOwnershipService
             GuildOwnershipOperationType.ClaimOrphanedGuild => "guild-ownership-claim",
             GuildOwnershipOperationType.TransferLeadership => "guild-ownership-transfer",
             GuildOwnershipOperationType.AddPlayerToGuild => "guild-ownership-add-player",
+            GuildOwnershipOperationType.RemoveBrokenMember => "guild-ownership-remove-broken-member",
             _ => "guild-ownership"
         };
         var path = Path.Combine(paths.ManagerRuntimeRoot, "world-transactions", "journals", $"transaction-{id}.json");
@@ -458,6 +480,18 @@ public sealed class HeadlessGuildOwnershipService
             });
     }
 
+    private static void RemoveMember(JsonObject rawData, string playerId)
+    {
+        var members = GetMembers(rawData);
+        var normalized = Normalize(playerId);
+        for (var i = members.Count - 1; i >= 0; i--)
+        {
+            if (members[i] is JsonObject member &&
+                Normalize(ReadScalar(GetProperty(member, "player_uid"))).Equals(normalized, StringComparison.OrdinalIgnoreCase))
+                members.RemoveAt(i);
+        }
+    }
+
     private static bool ContainsMember(JsonObject rawData, string playerId) =>
         GetMembers(rawData).OfType<JsonObject>().Any(member =>
             Normalize(ReadScalar(GetProperty(member, "player_uid"))).Equals(Normalize(playerId), StringComparison.OrdinalIgnoreCase));
@@ -489,7 +523,7 @@ public sealed class HeadlessGuildOwnershipService
         string PlayerName, string LevelSavePath, string SourceHash, DateTimeOffset ExpiresUtc);
 }
 
-public enum GuildOwnershipOperationType { ClaimOrphanedGuild, TransferLeadership, AddPlayerToGuild }
+public enum GuildOwnershipOperationType { ClaimOrphanedGuild, TransferLeadership, AddPlayerToGuild, RemoveBrokenMember }
 
 public sealed record HeadlessGuildOwnershipPreview(bool CanApply, string PreviewToken, string OperationType, string GuildId,
     string GuildName, string PlayerId, string PlayerName, IReadOnlyList<string> Findings, DateTimeOffset ExpiresUtc);

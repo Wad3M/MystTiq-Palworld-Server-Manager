@@ -77,6 +77,42 @@ public interface IMystTiqApiClient
     Task<NotificationSnapshotDto> SetNotificationPinnedAsync(ConnectionProfile profile, string id, bool value, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<NotificationSnapshotDto> DismissNotificationAsync(ConnectionProfile profile, string id, string? bearerToken = null, CancellationToken cancellationToken = default);
 
+    Task<NotificationChannelConfigurationDto> GetNotificationChannelsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<NotificationChannelConfigurationDto> SaveNotificationChannelsAsync(ConnectionProfile profile, NotificationChannelConfigurationDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<NotificationTemplateDto>> GetNotificationTemplatesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<NotificationTemplateDto>> SaveNotificationTemplatesAsync(ConnectionProfile profile, List<NotificationTemplateDto> request, string? bearerToken = null, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<AutomationRuleDto>> GetAutomationRulesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<AutomationRuleDto> CreateAutomationRuleAsync(ConnectionProfile profile, AutomationRuleRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<AutomationRuleDto> UpdateAutomationRuleAsync(ConnectionProfile profile, string id, AutomationRuleRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task DeleteAutomationRuleAsync(ConnectionProfile profile, string id, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<AutomationRuleDto> SetAutomationRuleEnabledAsync(ConnectionProfile profile, string id, bool enabled, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task RunAutomationRuleNowAsync(ConnectionProfile profile, string id, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AutomationRunRecordDto>> GetAutomationRunsAsync(ConnectionProfile profile, int max = 100, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task CancelAutomationRunAsync(ConnectionProfile profile, string id, string? bearerToken = null, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MystTiqPrincipalDto>> GetPrincipalsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<HeadlessCreatePrincipalResultDto> CreatePrincipalAsync(ConnectionProfile profile, HeadlessCreatePrincipalRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task RevokePrincipalAsync(ConnectionProfile profile, string id, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<MystTiqPrincipalDto> WhoAmIAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+
+    // v0.6.3.0 character/account migration.
+    Task<CharacterMigrationPreviewDto> PreviewCharacterMigrationAsync(ConnectionProfile profile, CharacterMigrationPreviewRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<CharacterMigrationResultDto> ApplyCharacterMigrationAsync(ConnectionProfile profile, CharacterMigrationApplyRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<CharacterDispositionResultDto> DisposeSourceCharacterAsync(ConnectionProfile profile, string sourcePlayerId, CharacterDispositionRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+
+    // v0.6.2.0 Multi-Server Fleet.
+    Task<IReadOnlyList<ServerProfileSummaryDto>> GetServerProfilesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<FleetActionResultDto>> BackupAllAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<FleetActionResultDto>> DoctorAllAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<FleetActionResultDto>> UpdateAllAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+
+    Task<AlertRuleSetDto> GetAlertRulesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<AlertRuleSetDto> SaveAlertRulesAsync(ConnectionProfile profile, AlertRuleSetDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<DiskSpacePredictionDto> GetDiskSpacePredictionAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+
+    Task<BackupClassificationEntryDto> SetBackupClassAsync(ConnectionProfile profile, string fileName, BackupSetClassRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+
     Task<CrashAnalysisSnapshotDto> AnalyzeCrashesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CrashAnalysisSnapshotDto>> GetCrashHistoryAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<SaveToolsDiagnosticsDto> GetSaveToolsDiagnosticsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
@@ -96,10 +132,25 @@ public interface IMystTiqApiClient
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ProviderDescriptorDto>> GetPlayerModerationProvidersAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PlayerRegistryRecordDto>> GetPlayerRegistryAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
     Task<DoctorReportDto> RunDoctorAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
+
+    // v0.6.4.0 unified diagnostics platform.
+    Task<DiagnosticsReportDto> GetDiagnosticsReportAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<DiagnosticFindingDto?> RecheckDiagnosticFindingAsync(ConnectionProfile profile, string id, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<HeadlessDiagnosticFixResultDto> FixDiagnosticFindingAsync(ConnectionProfile profile, string id, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     Task<BackupInventoryDto> GetBackupsAsync(
         ConnectionProfile profile,
@@ -150,6 +201,12 @@ public interface IMystTiqApiClient
 
     Task<EnvironmentChecklistSnapshotDto> GetEnvironmentChecklistAsync(
         ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<WorldCloneResultDto> CloneWorldAsync(
+        ConnectionProfile profile,
+        WorldCloneRequestDto request,
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
 
@@ -208,12 +265,15 @@ public interface IMystTiqApiClient
     Task<NetworkDiagnosticReportDto> GetNetworkDiagnosticsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<NetworkRecoveryResultDto> RestartFromNetworkDiagnosticsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<FirewallRepairResultDto> RepairNetworkFirewallAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<WanReachabilityReportDto> GetWanReachabilityAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<UpnpRepairResultDto> RepairUpnpMappingAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     Task<ModInventoryDto> GetModsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModVerificationResultDto> VerifyModsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> SetModEnabledAsync(ConnectionProfile profile, string type, string package, bool enabled, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> InstallModZipAsync(ConnectionProfile profile, string type, string package, Stream archive, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> DeleteModAsync(ConnectionProfile profile, string type, string package, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ModMutationResultDto> RollbackModAsync(ConnectionProfile profile, string type, string package, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> SetAllModsEnabledAsync(ConnectionProfile profile, bool enabled, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> RepairModsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<WorkshopScanResultDto> ScanWorkshopModsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);

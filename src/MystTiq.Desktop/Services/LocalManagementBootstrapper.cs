@@ -7,11 +7,17 @@ using MystTiq.Core.Services;
 
 namespace MystTiq.Desktop.Services;
 
-public sealed record LocalManagementBootstrapResult(bool Available, bool Started, string Endpoint, string Detail, string? BackendVersion = null);
+public sealed record LocalManagementBootstrapResult(bool Available, bool Started, string Endpoint, string Detail, string? BackendVersion = null,
+    bool StaleInstanceDetected = false, string? StaleInstanceEndpoint = null, string? StaleInstanceVersion = null);
 
 public interface ILocalManagementBootstrapper
 {
-    Task<LocalManagementBootstrapResult> EnsureAvailableAsync(LocalInstallationSnapshot snapshot, CancellationToken cancellationToken = default);
+    // v0.6.2.0: expectedServerProfileId defaults to "default" (the sole profile in a non-fleet
+    // deployment) -- the "already reachable, reuse it" fast path now also verifies that profile
+    // is actually present in the probed instance's /healthz serverProfileIds list, not just that
+    // *some* compatible-looking process answered. Closes a real cross-talk bug where a "local"
+    // connection profile could silently attach to a different already-running MystTiq instance.
+    Task<LocalManagementBootstrapResult> EnsureAvailableAsync(LocalInstallationSnapshot snapshot, string expectedServerProfileId = "default", CancellationToken cancellationToken = default);
     Task<bool> StopOwnedSidecarAsync(CancellationToken cancellationToken = default);
 }
 
@@ -29,30 +35,47 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
     private int? ownedSidecarProcessId;
     private string? ownedSidecarExecutable;
 
-    public async Task<LocalManagementBootstrapResult> EnsureAvailableAsync(LocalInstallationSnapshot snapshot, CancellationToken cancellationToken = default)
+    public async Task<LocalManagementBootstrapResult> EnsureAvailableAsync(LocalInstallationSnapshot snapshot, string expectedServerProfileId = "default", CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         var requestedEndpoint = string.IsNullOrWhiteSpace(snapshot.ApiBaseAddress) ? "http://127.0.0.1:8213" : snapshot.ApiBaseAddress.TrimEnd('/');
         var existing = await ProbeAsync(requestedEndpoint, cancellationToken);
-        if (existing.Compatible && !existing.AuthenticationEnabled && !existing.TlsEnabled)
+        if (existing.Compatible && !existing.AuthenticationEnabled && !existing.TlsEnabled && HasExpectedProfile(existing, expectedServerProfileId) && VersionMatches(existing.Version))
             return new(true, false, requestedEndpoint, $"Compatible MystTiq management API is already reachable ({existing.Version ?? "unknown version"}).", existing.Version);
+
+        // A same-machine instance that IS reachable/compatible but reports a DIFFERENT version is a
+        // real, previously-silent bug: apiVersion (the wire-protocol integer above) has stayed 1
+        // across every release, so an old instance always passed the compatibility check and got
+        // silently reused, driving a stale backend without any indication to the user. Flagged here
+        // rather than fixed by force: this bootstrapper never kills a process it didn't itself
+        // start, so the stale instance is left running and the user is told about it explicitly.
+        var staleDetected = existing.Reachable && existing.Compatible && !VersionMatches(existing.Version);
+        var staleEndpoint = staleDetected ? requestedEndpoint : null;
+        var staleVersion = staleDetected ? existing.Version : null;
 
         var endpoint = requestedEndpoint;
         await gate.WaitAsync(cancellationToken);
         try
         {
             existing = await ProbeAsync(requestedEndpoint, cancellationToken);
-            if (existing.Compatible && !existing.AuthenticationEnabled && !existing.TlsEnabled)
+            if (existing.Compatible && !existing.AuthenticationEnabled && !existing.TlsEnabled && HasExpectedProfile(existing, expectedServerProfileId) && VersionMatches(existing.Version))
                 return new(true, false, requestedEndpoint, $"Compatible MystTiq management API became reachable while bootstrap was waiting ({existing.Version ?? "unknown version"}).", existing.Version);
+            if (existing.Reachable && existing.Compatible && !VersionMatches(existing.Version))
+            {
+                staleDetected = true;
+                staleEndpoint = requestedEndpoint;
+                staleVersion = existing.Version;
+            }
 
-            // If the configured loopback port is occupied by an older/incompatible process, do not
-            // reuse it merely because /healthz answers. Launch this packaged sidecar on a private
-            // free loopback port and return that exact endpoint to the GUI.
+            // If the configured loopback port is occupied by an older/incompatible/mismatched-version
+            // process, do not reuse it merely because /healthz answers. Launch this packaged sidecar
+            // on a private free loopback port and return that exact endpoint to the GUI instead.
             endpoint = existing.Reachable ? FindAvailableLoopbackEndpoint() : NormalizePrivateLoopbackEndpoint(requestedEndpoint);
 
             var executable = FindPackagedHeadlessExecutable();
             if (executable is null)
-                return new(false, false, endpoint, "Packaged MystTiq headless sidecar was not found next to the desktop application.");
+                return new(false, false, endpoint, "Packaged MystTiq headless sidecar was not found next to the desktop application.",
+                    null, staleDetected, staleEndpoint, staleVersion);
 
             var info = new ProcessStartInfo
             {
@@ -103,11 +126,17 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                 cancellationToken.ThrowIfCancellationRequested();
                 var probe = await ProbeAsync(endpoint, cancellationToken);
                 if (probe.Compatible)
-                    return new(true, true, endpoint, $"Started the packaged MystTiq headless API for this machine ({probe.Version ?? "unknown version"}).", probe.Version);
+                {
+                    var detail = staleDetected
+                        ? $"Started a fresh MystTiq {probe.Version ?? "unknown version"} backend on {endpoint} because a different version ({staleVersion ?? "unknown"}) is already running at {staleEndpoint}. That older instance was left running -- close it manually if you don't need it."
+                        : $"Started the packaged MystTiq headless API for this machine ({probe.Version ?? "unknown version"}).";
+                    return new(true, true, endpoint, detail, probe.Version, staleDetected, staleEndpoint, staleVersion);
+                }
                 await Task.Delay(250, cancellationToken);
             }
 
-            return new(false, true, endpoint, "The packaged headless process was started, but its health endpoint did not become reachable before timeout.");
+            return new(false, true, endpoint, "The packaged headless process was started, but its health endpoint did not become reachable before timeout.",
+                null, staleDetected, staleEndpoint, staleVersion);
         }
         catch (Exception ex)
         {
@@ -178,7 +207,26 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
         return candidates.FirstOrDefault(File.Exists);
     }
 
-    private sealed record ProbeResult(bool Reachable, bool Compatible, string? Version, bool AuthenticationEnabled, bool TlsEnabled, string Detail);
+    // Real bug this closes: apiVersion (the coarse wire-protocol integer in /healthz) has stayed 1
+    // across every v0.6.x.0 release, so it alone never distinguishes "this is the same version I'm
+    // bundling" from "this is some other release entirely" -- an old instance always looked
+    // "compatible" and got silently reused. A missing probed version (pre-version-reporting builds)
+    // is treated leniently, matching HasExpectedProfile's own fallback posture below.
+    private static bool VersionMatches(string? probedVersion)
+    {
+        if (string.IsNullOrWhiteSpace(probedVersion)) return true;
+        var ownVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(4);
+        return string.IsNullOrWhiteSpace(ownVersion) || probedVersion.Equals(ownVersion, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasExpectedProfile(ProbeResult probe, string expectedServerProfileId) =>
+        // Older (pre-v0.6.2.0) instances never report serverProfileIds at all -- treat an absent
+        // list as "unknown, assume compatible" so a fresh desktop build against an older sidecar
+        // doesn't regress into always relaunching its own copy.
+        probe.ServerProfileIds is null || probe.ServerProfileIds.Count == 0 ||
+        probe.ServerProfileIds.Any(id => id.Equals(expectedServerProfileId, StringComparison.OrdinalIgnoreCase));
+
+    private sealed record ProbeResult(bool Reachable, bool Compatible, string? Version, bool AuthenticationEnabled, bool TlsEnabled, string Detail, IReadOnlyList<string>? ServerProfileIds = null);
 
     private static async Task<ProbeResult> ProbeAsync(string endpoint, CancellationToken cancellationToken)
     {
@@ -203,10 +251,14 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                 (authenticationProperty.ValueKind is JsonValueKind.True or JsonValueKind.False) && authenticationProperty.GetBoolean();
             var tls = root.TryGetProperty("tls", out var tlsProperty) &&
                 (tlsProperty.ValueKind is JsonValueKind.True or JsonValueKind.False) && tlsProperty.GetBoolean();
+            List<string>? serverProfileIds = null;
+            if (root.TryGetProperty("serverProfileIds", out var profilesProperty) && profilesProperty.ValueKind == JsonValueKind.Array)
+                serverProfileIds = profilesProperty.EnumerateArray().Select(e => e.GetString() ?? string.Empty).Where(s => s.Length > 0).ToList();
             var compatible = string.Equals(component, "mysttiq-headless", StringComparison.OrdinalIgnoreCase) && apiVersion >= 1;
             return new(true, compatible, version, authentication, tls, compatible
                 ? "Compatible MystTiq management API."
-                : "A process answered /healthz, but it is not a compatible MystTiq management API for this desktop build.");
+                : "A process answered /healthz, but it is not a compatible MystTiq management API for this desktop build.",
+                serverProfileIds);
         }
         catch (Exception ex)
         {

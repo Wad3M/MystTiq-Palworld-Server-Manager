@@ -43,6 +43,7 @@ public sealed class HeadlessModManagementService
         {
             var blocked = await RejectWhenRunningAsync(cancellationToken); if (blocked is not null) return blocked;
             package = NormalizePackage(package);
+            CaptureSnapshot(type, package);
             Directory.CreateDirectory(staging);
             var archivePath = Path.Combine(staging, "upload.zip");
             await using (var output = new FileStream(archivePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
@@ -79,7 +80,9 @@ public sealed class HeadlessModManagementService
         try
         {
             var blocked = await RejectWhenRunningAsync(cancellationToken); if (blocked is not null) return blocked;
-            package = NormalizePackage(package); var changed = 0;
+            package = NormalizePackage(package);
+            CaptureSnapshot(type, package);
+            var changed = 0;
             if (type.Equals("PAK", StringComparison.OrdinalIgnoreCase))
             {
                 var root = Path.Combine(paths.ServerRoot, "Pal", "Content", "Paks", "~mods");
@@ -226,6 +229,133 @@ public sealed class HeadlessModManagementService
     {
         var status = await lifecycle.GetStatusAsync(token);
         return status.NativeProcessId.HasValue || status.Ready ? HeadlessModMutationResult.Failure("Stop PalServer before changing MOD files.") : null;
+    }
+
+    // v0.6.8.0 "Backup, staged install, runtime verification and rollback": the roadmap's backup/
+    // rollback half was genuinely missing -- InstallZipAsync/DeleteAsync had a staging area for the
+    // NEW content but took no snapshot of what a package looked like BEFORE the mutation, so a bad
+    // install or an accidental delete had no built-in undo. One snapshot per (type, package) is kept
+    // (overwritten on the next mutation of that same package) -- "undo my last change to this MOD",
+    // not a full history, matching the actual failure mode this protects against.
+    private string SnapshotPath(string type, string package) =>
+        Path.Combine(paths.ManagerRuntimeRoot, "mod-snapshots", $"{type.ToUpperInvariant()}_{package}.zip");
+
+    private void CaptureSnapshot(string type, string package)
+    {
+        try
+        {
+            var snapshotPath = SnapshotPath(type, package);
+            Directory.CreateDirectory(Path.GetDirectoryName(snapshotPath)!);
+            var metaPath = snapshotPath + ".meta";
+            var absentMarker = snapshotPath + ".absent";
+            foreach (var stale in new[] { snapshotPath, metaPath, absentMarker }) if (File.Exists(stale)) File.Delete(stale);
+
+            if (type.Equals("PAK", StringComparison.OrdinalIgnoreCase))
+            {
+                var flatRoot = Path.Combine(paths.ServerRoot, "Pal", "Content", "Paks", "~mods");
+                var flatFiles = Directory.Exists(flatRoot)
+                    ? PakExtensions.SelectMany(ext => new[] { ext, ext + ".disabled" })
+                        .Select(suffix => Path.Combine(flatRoot, package + suffix))
+                        .Where(File.Exists).ToList()
+                    : [];
+                if (flatFiles.Count > 0)
+                {
+                    using (var zip = ZipFile.Open(snapshotPath, ZipArchiveMode.Create))
+                        foreach (var file in flatFiles) zip.CreateEntryFromFile(file, Path.GetFileName(file));
+                    File.WriteAllText(metaPath, $"flat|{flatRoot}");
+                    return;
+                }
+
+                var nested = FindNestedPakModFolder(package);
+                if (nested is not null && Directory.Exists(nested))
+                {
+                    ZipFile.CreateFromDirectory(nested, snapshotPath, CompressionLevel.Optimal, false);
+                    File.WriteAllText(metaPath, $"folder|{nested}");
+                    return;
+                }
+            }
+            else if (type.Equals("UE4SS", StringComparison.OrdinalIgnoreCase))
+            {
+                var folder = Path.Combine(ResolveUe4ss().ActiveModsRoot, package);
+                if (Directory.Exists(folder))
+                {
+                    ZipFile.CreateFromDirectory(folder, snapshotPath, CompressionLevel.Optimal, false);
+                    File.WriteAllText(metaPath, $"folder|{folder}");
+                    return;
+                }
+            }
+
+            // Nothing existed for this package before the mutation -- record that explicitly so
+            // RollbackAsync removes whatever the mutation just created rather than silently no-op'ing.
+            File.WriteAllText(absentMarker, DateTimeOffset.UtcNow.ToString("O"));
+        }
+        catch
+        {
+            // A snapshot failure must not block the underlying mutation, which the operator already
+            // explicitly confirmed -- losing the safety-net snapshot is a degraded, not blocking, state.
+        }
+    }
+
+    public async Task<HeadlessModMutationResult> RollbackAsync(string type, string package, CancellationToken cancellationToken)
+    {
+        if (!await mutationGate.WaitAsync(0, cancellationToken))
+            return HeadlessModMutationResult.Failure("A MOD mutation is already in progress.");
+        try
+        {
+            var blocked = await RejectWhenRunningAsync(cancellationToken); if (blocked is not null) return blocked;
+            package = NormalizePackage(package);
+            var snapshotPath = SnapshotPath(type, package);
+            var metaPath = snapshotPath + ".meta";
+            var absentMarker = snapshotPath + ".absent";
+
+            if (!File.Exists(snapshotPath) && !File.Exists(absentMarker))
+                return HeadlessModMutationResult.Failure(
+                    $"No rollback snapshot is available for {type.ToUpperInvariant()} {package}. A snapshot is captured automatically the next time this MOD is installed or deleted.");
+
+            if (type.Equals("PAK", StringComparison.OrdinalIgnoreCase))
+            {
+                var flatRoot = Path.Combine(paths.ServerRoot, "Pal", "Content", "Paks", "~mods");
+                foreach (var suffix in PakExtensions.SelectMany(ext => new[] { ext, ext + ".disabled" }))
+                {
+                    var file = Path.Combine(flatRoot, package + suffix);
+                    if (File.Exists(file)) File.Delete(file);
+                }
+                var nested = FindNestedPakModFolder(package);
+                if (nested is not null && Directory.Exists(nested)) Directory.Delete(nested, true);
+            }
+            else if (type.Equals("UE4SS", StringComparison.OrdinalIgnoreCase))
+            {
+                var folder = Path.Combine(ResolveUe4ss().ActiveModsRoot, package);
+                if (Directory.Exists(folder)) Directory.Delete(folder, true);
+            }
+            else return HeadlessModMutationResult.Failure("Only PAK and UE4SS MOD types are managed.");
+
+            var restored = false;
+            if (File.Exists(snapshotPath) && File.Exists(metaPath))
+            {
+                var meta = File.ReadAllText(metaPath).Split('|', 2);
+                if (meta[0] == "flat")
+                {
+                    var flatRoot = Path.Combine(paths.ServerRoot, "Pal", "Content", "Paks", "~mods");
+                    Directory.CreateDirectory(flatRoot);
+                    using var zip = ZipFile.OpenRead(snapshotPath);
+                    foreach (var entry in zip.Entries) entry.ExtractToFile(Path.Combine(flatRoot, entry.FullName), true);
+                }
+                else if (meta[0] == "folder" && meta.Length > 1)
+                {
+                    Directory.CreateDirectory(meta[1]);
+                    ZipFile.ExtractToDirectory(snapshotPath, meta[1], true);
+                }
+                restored = true;
+            }
+
+            activity.Record("Information", "MODs", "Rolled back MOD", $"type={type.ToUpperInvariant()}; package={package}; restored={restored}");
+            return new HeadlessModMutationResult(true, type.ToUpperInvariant(), package, restored, 1,
+                restored ? $"{package} was restored to its state before the last install/delete."
+                         : $"{package} was removed -- it did not exist before the last install/delete.");
+        }
+        catch (Exception ex) { return HeadlessModMutationResult.Failure(ex.Message); }
+        finally { mutationGate.Release(); }
     }
 
     private int InstallPakFiles(string extracted, string package)

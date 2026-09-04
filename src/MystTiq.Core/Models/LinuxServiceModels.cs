@@ -29,11 +29,3 @@ public sealed record LinuxServiceInstallResult(
     bool Enabled,
     bool Started,
     string Message);
-
-public sealed record LinuxServiceSupervisorOptions(
-    TimeSpan PollInterval,
-    TimeSpan StartupTimeout,
-    TimeSpan StopTimeout,
-    TimeSpan RestartBackoff,
-    int MaximumRestartAttempts,
-    TimeSpan RestartWindow);

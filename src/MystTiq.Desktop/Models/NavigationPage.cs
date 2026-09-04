@@ -7,5 +7,6 @@ public enum NavigationPage
     Inspector, WorldTransactions, Players, Bases, Guilds,
     ModDashboard, ModLibrary, Ue4ss,
     UpdateCenter, Doctor, CrashAnalyzer, SaveTools, DiagnosticsCenter,
-    Settings, ActivityAudit, Notifications
+    Settings, ActivityAudit, Notifications,
+    Automation, Security, AlertCenter, Fleet
 }

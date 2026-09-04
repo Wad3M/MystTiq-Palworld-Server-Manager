@@ -3,11 +3,12 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using MystTiq.Core.Providers;
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
 
-public sealed class HeadlessPalworldAdminService
+public sealed class HeadlessPalworldAdminService : IPlayerModerationProvider
 {
     private readonly IServerPathProfile paths;
     private readonly HeadlessActivityLogService activity;
@@ -16,6 +17,38 @@ public sealed class HeadlessPalworldAdminService
     {
         this.paths = paths;
         this.activity = activity;
+    }
+
+    // IPlayerModerationProvider: this service was the sole REST-based kick/ban executor before
+    // v0.6.5.0's Provider Framework. It keeps that role unchanged and additionally registers as
+    // the "rest" provider so PlayerModerationCoordinator can fall back to RCON when REST is
+    // disabled/misconfigured, without duplicating any of the logic below.
+    public string ProviderId => "rest";
+    public string DisplayName => "Palworld REST API";
+
+    public bool SupportsAction(string action) => (action ?? string.Empty).Trim().ToLowerInvariant() is "kick" or "ban";
+
+    public async Task<ProviderDescriptor> GetHealthAsync(CancellationToken cancellationToken)
+    {
+        var settingsPath = Path.Combine(paths.ConfigRoot, "PalWorldSettings.ini");
+        if (!File.Exists(settingsPath))
+            return new ProviderDescriptor(ProviderId, DisplayName, ProviderHealth.Unavailable, $"PalWorldSettings.ini was not found at {settingsPath}.");
+
+        var text = await File.ReadAllTextAsync(settingsPath, cancellationToken);
+        if (ReadBooleanOption(text, "RESTAPIEnabled") is not true)
+            return new ProviderDescriptor(ProviderId, DisplayName, ProviderHealth.Unavailable, "Palworld REST API is disabled in PalWorldSettings.ini.");
+
+        var password = ReadQuotedOption(text, "AdminPassword");
+        if (string.IsNullOrWhiteSpace(password))
+            return new ProviderDescriptor(ProviderId, DisplayName, ProviderHealth.Misconfigured, "Palworld AdminPassword is empty; authenticated REST requests will be rejected.");
+
+        return new ProviderDescriptor(ProviderId, DisplayName, ProviderHealth.Healthy, "REST API is enabled with an AdminPassword configured.");
+    }
+
+    async Task<PlayerModerationResult> IPlayerModerationProvider.ExecuteAsync(string action, string playerId, string? message, CancellationToken cancellationToken)
+    {
+        var result = await ExecuteAsync(action, playerId, message, item: null, cancellationToken);
+        return new PlayerModerationResult(result.Success, result.Supported, ProviderId, result.Action, result.PlayerId, result.Message);
     }
 
     public async Task<HeadlessPlayerAdminResult> ExecuteAsync(string action, string playerId, string? message, string? item, CancellationToken token)
@@ -72,18 +105,33 @@ public sealed class HeadlessPalworldAdminService
         content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
         using var request = new HttpRequestMessage(HttpMethod.Post, action) { Content = content, Version = HttpVersion.Version11, VersionPolicy = HttpVersionPolicy.RequestVersionExact };
         request.Headers.ConnectionClose = true;
-        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead, token);
-        var body = await response.Content.ReadAsStringAsync(token);
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            var detail = $"Palworld REST /{action} returned HTTP {(int)response.StatusCode} {response.ReasonPhrase}. {body}".Trim();
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead, token);
+            var body = await response.Content.ReadAsStringAsync(token);
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = $"Palworld REST /{action} returned HTTP {(int)response.StatusCode} {response.ReasonPhrase}. {body}".Trim();
+                activity.Record("Error", "Players", $"Player {action} failed", $"{playerId}: {detail}");
+                return new HeadlessPlayerAdminResult(false, true, action, playerId, detail);
+            }
+
+            var success = $"Player {action} request accepted for {playerId}.";
+            activity.Record("Success", "Players", $"Player {action}", success);
+            return new HeadlessPlayerAdminResult(true, true, action, playerId, success);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
+        {
+            // The REST endpoint being unreachable (server down, port not actually listening despite
+            // RESTAPIEnabled=True) is a real, expected failure mode -- not a bug -- and must produce
+            // an honest result rather than an unhandled exception. This also lets
+            // PlayerModerationCoordinator (v0.6.5.0) actually fall back to RCON: an exception here
+            // would otherwise propagate straight out of the coordinator's loop, skipping every
+            // remaining provider.
+            var detail = $"Palworld REST /{action} could not be reached at http://127.0.0.1:{port}/v1/api/{action}: {ex.Message}";
             activity.Record("Error", "Players", $"Player {action} failed", $"{playerId}: {detail}");
             return new HeadlessPlayerAdminResult(false, true, action, playerId, detail);
         }
-
-        var success = $"Player {action} request accepted for {playerId}.";
-        activity.Record("Success", "Players", $"Player {action}", success);
-        return new HeadlessPlayerAdminResult(true, true, action, playerId, success);
     }
 
     private HeadlessPlayerAdminResult Fail(string action, string detail)

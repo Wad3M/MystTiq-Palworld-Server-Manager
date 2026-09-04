@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MystTiq.Core.Models;
 using MystTiq.Core.Services;
 using MystTiq.HeadlessHost;
@@ -138,15 +140,29 @@ if (!configurationValidation.Valid)
     return (int)HeadlessExitCode.InvalidArguments;
 }
 
-var defaults = HeadlessConfigurationService.ToRuntimeConfiguration(headlessConfiguration);
-var runtimeConfiguration = defaults with
+// v0.6.2.0: --server-root/--steamcmd/--backup-root/--runtime-root are single-server CLI
+// conveniences (ad hoc testing, the desktop sidecar launch) -- they override only the "default"
+// server profile's entry in Servers. Direct single-server CLI verbs (status/start/stop/restart/
+// service-*) below operate against that same default profile, matching pre-v0.6.2.0 CLI behavior
+// exactly for a deployment that never adds a second profile. Multi-server CLI selection (a
+// --server-id flag for these direct verbs) is not part of this pass -- api-run/the Management API
+// is the fleet-aware surface; see the v0.6.2.0 implementation note for this deferral.
+var defaultServerProfile = headlessConfiguration.DefaultServer;
+var runtimeConfiguration = HeadlessConfigurationService.ToRuntimeConfiguration(defaultServerProfile) with
 {
-    ServerRoot = GetOption("--server-root") ?? defaults.ServerRoot,
-    SteamCmdPath = GetOption("--steamcmd") ?? defaults.SteamCmdPath,
-    BackupRoot = GetOption("--backup-root") ?? defaults.BackupRoot,
-    RuntimeRoot = GetOption("--runtime-root") ?? defaults.RuntimeRoot
+    ServerRoot = GetOption("--server-root") ?? defaultServerProfile.ServerRoot,
+    SteamCmdPath = GetOption("--steamcmd") ?? defaultServerProfile.SteamCmdPath,
+    BackupRoot = GetOption("--backup-root") ?? defaultServerProfile.BackupRoot,
+    RuntimeRoot = GetOption("--runtime-root") ?? defaultServerProfile.RuntimeRoot
 };
 var desktopSidecar = args.Any(argument => argument.Equals("--desktop-sidecar", StringComparison.OrdinalIgnoreCase));
+var effectiveDefaultServerProfile = defaultServerProfile with
+{
+    ServerRoot = runtimeConfiguration.ServerRoot,
+    SteamCmdPath = runtimeConfiguration.SteamCmdPath,
+    BackupRoot = runtimeConfiguration.BackupRoot,
+    RuntimeRoot = runtimeConfiguration.RuntimeRoot
+};
 var effectiveHeadlessConfiguration = headlessConfiguration with
 {
     Api = headlessConfiguration.Api with
@@ -156,13 +172,9 @@ var effectiveHeadlessConfiguration = headlessConfiguration with
         Authentication = desktopSidecar ? headlessConfiguration.Api.Authentication with { Enabled = false } : headlessConfiguration.Api.Authentication,
         Tls = desktopSidecar ? headlessConfiguration.Api.Tls with { Enabled = false } : headlessConfiguration.Api.Tls
     },
-    Server = headlessConfiguration.Server with
-    {
-        ServerRoot = runtimeConfiguration.ServerRoot,
-        SteamCmdPath = runtimeConfiguration.SteamCmdPath,
-        BackupRoot = runtimeConfiguration.BackupRoot,
-        RuntimeRoot = runtimeConfiguration.RuntimeRoot
-    }
+    Servers = headlessConfiguration.Servers
+        .Select(s => s.Id.Equals(defaultServerProfile.Id, StringComparison.OrdinalIgnoreCase) ? effectiveDefaultServerProfile : s)
+        .ToArray()
 };
 var effectiveValidation = configurationService.Validate(effectiveHeadlessConfiguration);
 if (!effectiveValidation.Valid)
@@ -442,7 +454,7 @@ switch (command.ToLowerInvariant())
         var stopTimeout = TimeSpan.FromSeconds(
             GetIntOption("--stop-timeout-seconds", headlessConfiguration.Lifecycle.StopTimeoutSeconds));
 
-        var defaultServerArguments = headlessConfiguration.Server.LaunchArguments;
+        var defaultServerArguments = effectiveDefaultServerProfile.LaunchArguments;
 
         try
         {
@@ -493,21 +505,37 @@ switch (command.ToLowerInvariant())
 
     case "api-run":
     {
-        IServerLifecycleService lifecycle;
+        // v0.6.2.0: one IServerLifecycleService per configured server profile, not one for the
+        // whole process -- LocalManagementApiHost.Create calls this factory once per profile,
+        // passing that profile's own paths (so each profile's guarded-port set/game port is
+        // discovered from its own PalWorldSettings.ini, exactly as the single-server flow already
+        // did). IManagementServiceStatusProvider/ILinuxServiceManager stay fleet-level (they report
+        // on the mysttiq-server process's own systemd unit, not any one Palworld server).
         IManagementServiceStatusProvider serviceStatusProvider;
         ILinuxServiceManager? linuxServiceManager = null;
-        var configuredGamePort = new PalworldSettingsConfigurationService(paths).GetConfiguredGamePort();
-        var guardedPorts = platform.GuardedPorts.Append(configuredGamePort).Distinct().ToArray();
+        IServerLifecycleService LifecycleFactory(HeadlessServerProfileConfiguration serverProfile, IServerPathProfile profilePaths)
+        {
+            var configuredGamePort = new PalworldSettingsConfigurationService(profilePaths).GetConfiguredGamePort();
+            var guardedPorts = platform.GuardedPorts.Append(configuredGamePort).Distinct().ToArray();
+            if (OperatingSystem.IsWindows())
+            {
+                var sessionInspector = new WindowsServerSessionInspector(guardedPorts);
+                return new WindowsServerLifecycleService(platform, profilePaths, sessionInspector, expectedGamePort: configuredGamePort);
+            }
+            if (OperatingSystem.IsLinux())
+            {
+                var linuxSessionInspector = new LinuxServerSessionInspector(guardedPorts);
+                return new LinuxServerLifecycleService(platform, profilePaths, linuxSessionInspector, expectedGamePort: configuredGamePort);
+            }
+            throw new PlatformNotSupportedException("MystTiq currently supports Windows and Linux runtime providers.");
+        }
+
         if (OperatingSystem.IsWindows())
         {
-            var sessionInspector = new WindowsServerSessionInspector(guardedPorts);
-            lifecycle = new WindowsServerLifecycleService(platform, paths, sessionInspector, expectedGamePort: configuredGamePort);
             serviceStatusProvider = new WindowsStandaloneManagementServiceStatusProvider();
         }
         else if (OperatingSystem.IsLinux())
         {
-            var sessionInspector = new LinuxServerSessionInspector(guardedPorts);
-            lifecycle = new LinuxServerLifecycleService(platform, paths, sessionInspector, expectedGamePort: configuredGamePort);
             linuxServiceManager = new LinuxSystemdServiceManager(paths);
             serviceStatusProvider = new LinuxManagementServiceStatusProvider(linuxServiceManager);
         }
@@ -519,7 +547,7 @@ switch (command.ToLowerInvariant())
 
         await using var apiHost = LocalManagementApiHost.Create(
             effectiveHeadlessConfiguration,
-            lifecycle,
+            LifecycleFactory,
             serviceStatusProvider,
             configurationPath,
             linuxServiceManager);
@@ -559,142 +587,289 @@ switch (command.ToLowerInvariant())
     case "service-uninstall":
     case "service-run":
     {
-        if (!OperatingSystem.IsLinux())
-        {
-            Console.Error.WriteLine("Linux service commands require the experimental Linux headless host.");
-            return (int)HeadlessExitCode.UnsupportedPlatform;
-        }
-
-        var sessionInspector = new LinuxServerSessionInspector(platform.GuardedPorts);
-        var lifecycle = new LinuxServerLifecycleService(platform, paths, sessionInspector);
-        var serviceManager = new LinuxSystemdServiceManager(paths);
-
-        if (command.Equals("service-status", StringComparison.OrdinalIgnoreCase))
-        {
-            var serviceStatus = await serviceManager.GetStatusAsync(cancellation.Token);
-            if (json)
-                Console.WriteLine(JsonSerializer.Serialize(serviceStatus, JsonOptions()));
-            else
-                PrintServiceStatus(serviceStatus);
-            return serviceStatus.State == LinuxServiceState.Failed ? 1 : 0;
-        }
-
-        if (command.Equals("service-install", StringComparison.OrdinalIgnoreCase))
-        {
-            var executable = Environment.ProcessPath
-                ?? throw new InvalidOperationException("Unable to determine the current headless-host executable path.");
-            var serviceUser = GetOption("--service-user")
-                ?? Environment.GetEnvironmentVariable("SUDO_USER")
-                ?? Environment.GetEnvironmentVariable("USER")
-                ?? "mystroth";
-            var startNow = args.Any(argument => argument.Equals("--start-now", StringComparison.OrdinalIgnoreCase));
-
-            try
-            {
-                if (!File.Exists(configurationPath))
-                {
-                    configurationService.WriteDefault(configurationPath);
-                    Console.WriteLine($"Created default configuration: {configurationPath}");
-                }
-                else if (configurationService.NeedsMigration(configurationPath))
-                {
-                    var migrated = configurationService.MigrateFile(configurationPath);
-                    Console.WriteLine($"Migrated configuration to schema {migrated.SchemaVersion}: {configurationPath}");
-                }
-
-                var result = await serviceManager.InstallAsync(
-                    executable,
-                    serviceUser,
-                    configurationPath,
-                    startNow,
-                    cancellation.Token);
-                if (json)
-                    Console.WriteLine(JsonSerializer.Serialize(result, JsonOptions()));
-                else
-                {
-                    Console.WriteLine("MystTiq Headless Host — systemd install");
-                    Console.WriteLine($"Unit            : {result.UnitName}");
-                    Console.WriteLine($"Executable      : {result.InstalledExecutable}");
-                    Console.WriteLine($"Unit path       : {result.UnitPath}");
-                    Console.WriteLine($"Enabled         : {result.Enabled}");
-                    Console.WriteLine($"Started         : {result.Started}");
-                    Console.WriteLine($"Message         : {result.Message}");
-                }
-                return result.Success ? 0 : 1;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine("Run service-install with sudo.");
-                return 1;
-            }
-        }
-
-        if (command.Equals("service-uninstall", StringComparison.OrdinalIgnoreCase))
-        {
-            try
-            {
-                var removed = await serviceManager.UninstallAsync(cancellation.Token);
-                Console.WriteLine(removed
-                    ? "MystTiq systemd service removed."
-                    : "MystTiq systemd service could not be completely removed.");
-                return removed ? 0 : 1;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine("Run service-uninstall with sudo.");
-                return 1;
-            }
-        }
-
-        var supervisorOptions = new LinuxServiceSupervisorOptions(
+        var supervisorOptions = new HeadlessSupervisorOptions(
             TimeSpan.FromSeconds(GetIntOption("--service-poll-seconds", headlessConfiguration.Lifecycle.ServicePollSeconds)),
             TimeSpan.FromSeconds(GetIntOption("--startup-timeout-seconds", headlessConfiguration.Lifecycle.StartupTimeoutSeconds)),
             TimeSpan.FromSeconds(GetIntOption("--stop-timeout-seconds", headlessConfiguration.Lifecycle.StopTimeoutSeconds)),
             TimeSpan.FromSeconds(GetIntOption("--recovery-backoff-seconds", headlessConfiguration.Lifecycle.RecoveryBackoffSeconds)),
             GetIntOption("--max-recovery-attempts", headlessConfiguration.Lifecycle.MaximumRecoveryAttempts),
             TimeSpan.FromSeconds(GetIntOption("--recovery-window-seconds", headlessConfiguration.Lifecycle.RecoveryWindowSeconds)));
+        var serverArguments = effectiveDefaultServerProfile.LaunchArguments;
+        var startNow = args.Any(argument => argument.Equals("--start-now", StringComparison.OrdinalIgnoreCase));
 
-        var serverArguments = headlessConfiguration.Server.LaunchArguments;
-        var supervisor = new LinuxHeadlessSupervisor(lifecycle, supervisorOptions, serverArguments);
+        if (OperatingSystem.IsWindows())
+        {
+            var sessionInspector = new WindowsServerSessionInspector(platform.GuardedPorts);
+            var lifecycle = new WindowsServerLifecycleService(platform, paths, sessionInspector);
+            var serviceManager = new WindowsServiceManager();
 
-        using var termRegistration = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
-        {
-            context.Cancel = true;
-            cancellation.Cancel();
-        });
-        using var intRegistration = PosixSignalRegistration.Create(PosixSignal.SIGINT, context =>
-        {
-            context.Cancel = true;
-            cancellation.Cancel();
-        });
-
-        LocalManagementApiHost? apiHost = null;
-        try
-        {
-            if (headlessConfiguration.Api.Enabled)
+            // v0.6.3.0: mirrors the Linux ServiceRunLifecycleFactory below exactly -- crash-recovery
+            // supervision (HeadlessSupervisor) stays scoped to the "default" profile only on both
+            // platforms; the embedded Management API host is fully fleet-aware via this factory.
+            [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#pragma warning disable CA1416 // The [SupportedOSPlatform("windows")] attribute above (and this whole branch's own OperatingSystem.IsWindows() guard) already make this Windows-only; the platform-compat analyzer just doesn't trace guard attributes through local functions.
+            IServerLifecycleService WindowsServiceRunLifecycleFactory(HeadlessServerProfileConfiguration serverProfile, IServerPathProfile profilePaths)
             {
-                apiHost = LocalManagementApiHost.Create(effectiveHeadlessConfiguration, lifecycle, new LinuxManagementServiceStatusProvider(serviceManager), configurationPath, serviceManager);
-                await apiHost.StartAsync(cancellation.Token);
-                Console.WriteLine(
-                    $"MystTiq local management API listening on http://{headlessConfiguration.Api.BindAddress}:{headlessConfiguration.Api.Port}");
+                var configuredGamePort = new PalworldSettingsConfigurationService(profilePaths).GetConfiguredGamePort();
+                var guardedPorts = platform.GuardedPorts.Append(configuredGamePort).Distinct().ToArray();
+                var profileSessionInspector = new WindowsServerSessionInspector(guardedPorts);
+                return new WindowsServerLifecycleService(platform, profilePaths, profileSessionInspector, expectedGamePort: configuredGamePort);
+            }
+#pragma warning restore CA1416
+
+            if (command.Equals("service-status", StringComparison.OrdinalIgnoreCase))
+            {
+                var serviceStatus = await serviceManager.GetStatusAsync(cancellation.Token);
+                if (json)
+                    Console.WriteLine(JsonSerializer.Serialize(serviceStatus, JsonOptions()));
+                else
+                    PrintWindowsServiceStatus(serviceStatus);
+                return serviceStatus.State is WindowsServiceState.Unknown ? 1 : 0;
             }
 
-            return await supervisor.RunAsync(cancellation.Token);
+            if (command.Equals("service-install", StringComparison.OrdinalIgnoreCase))
+            {
+                var executable = Environment.ProcessPath
+                    ?? throw new InvalidOperationException("Unable to determine the current headless-host executable path.");
+                try
+                {
+                    if (!File.Exists(configurationPath))
+                    {
+                        configurationService.WriteDefault(configurationPath);
+                        Console.WriteLine($"Created default configuration: {configurationPath}");
+                    }
+                    else if (configurationService.NeedsMigration(configurationPath))
+                    {
+                        var migrated = configurationService.MigrateFile(configurationPath);
+                        Console.WriteLine($"Migrated configuration to schema {migrated.SchemaVersion}: {configurationPath}");
+                    }
+
+                    var result = await serviceManager.InstallAsync(executable, configurationPath, startNow, cancellation.Token);
+                    if (json)
+                        Console.WriteLine(JsonSerializer.Serialize(result, JsonOptions()));
+                    else
+                    {
+                        Console.WriteLine("MystTiq Headless Host — Windows Service install");
+                        Console.WriteLine($"Service         : {result.ServiceName}");
+                        Console.WriteLine($"Executable      : {result.ExecutablePath}");
+                        Console.WriteLine($"Started         : {result.Started}");
+                        Console.WriteLine($"Message         : {result.Message}");
+                    }
+                    return result.Success ? 0 : 1;
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    Console.Error.WriteLine("Run service-install from an elevated (Administrator) prompt.");
+                    return 1;
+                }
+            }
+
+            if (command.Equals("service-uninstall", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var removed = await serviceManager.UninstallAsync(cancellation.Token);
+                    Console.WriteLine(removed
+                        ? "MystTiq Windows Service removed."
+                        : "MystTiq Windows Service could not be completely removed.");
+                    return removed ? 0 : 1;
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    Console.Error.WriteLine("Run service-uninstall from an elevated (Administrator) prompt.");
+                    return 1;
+                }
+            }
+
+            // service-run: participates in the Windows Service Control Manager lifecycle via
+            // AddWindowsService() so `sc.exe stop` gracefully cancels this token (mirroring what
+            // PosixSignalRegistration/SIGTERM already does for Linux service-run below) instead of
+            // SCM eventually force-killing an unresponsive process. Degrades harmlessly to a no-op
+            // lifetime when not actually running under SCM (e.g. launched manually for testing).
+            var windowsServiceName = WindowsServiceManager.ServiceName;
+            var scmHostBuilder = Host.CreateApplicationBuilder();
+            scmHostBuilder.Services.AddWindowsService(o => o.ServiceName = windowsServiceName);
+            using var scmHost = scmHostBuilder.Build();
+            await scmHost.StartAsync(cancellation.Token);
+            using var scmStopRegistration = scmHost.Services.GetRequiredService<IHostApplicationLifetime>()
+                .ApplicationStopping.Register(() => cancellation.Cancel());
+
+            var supervisor = new HeadlessSupervisor(lifecycle, supervisorOptions, serverArguments);
+            LocalManagementApiHost? apiHost = null;
+            try
+            {
+                if (headlessConfiguration.Api.Enabled)
+                {
+                    apiHost = LocalManagementApiHost.Create(effectiveHeadlessConfiguration, WindowsServiceRunLifecycleFactory, new WindowsSystemServiceStatusProvider(serviceManager), configurationPath);
+                    await apiHost.StartAsync(cancellation.Token);
+                    Console.WriteLine(
+                        $"MystTiq local management API listening on http://{headlessConfiguration.Api.BindAddress}:{headlessConfiguration.Api.Port}");
+                }
+
+                return await supervisor.RunAsync(cancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                using var shutdownTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                if (apiHost is not null)
+                    await apiHost.StopAsync(shutdownTimeout.Token);
+                await supervisor.StopManagedServerAsync(shutdownTimeout.Token);
+                return 0;
+            }
+            finally
+            {
+                if (apiHost is not null)
+                    await apiHost.DisposeAsync();
+                await scmHost.StopAsync();
+            }
         }
-        catch (OperationCanceledException)
+
+        if (!OperatingSystem.IsLinux())
         {
-            using var shutdownTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-            if (apiHost is not null)
-                await apiHost.StopAsync(shutdownTimeout.Token);
-            await supervisor.StopManagedServerAsync(shutdownTimeout.Token);
-            return 0;
+            Console.Error.WriteLine("Service commands are implemented for Windows and Linux only.");
+            return (int)HeadlessExitCode.UnsupportedPlatform;
         }
-        finally
+
         {
-            if (apiHost is not null)
-                await apiHost.DisposeAsync();
+            var sessionInspector = new LinuxServerSessionInspector(platform.GuardedPorts);
+            var lifecycle = new LinuxServerLifecycleService(platform, paths, sessionInspector);
+            var serviceManager = new LinuxSystemdServiceManager(paths);
+
+            // v0.6.2.0: the systemd auto-recovery supervisor loop (HeadlessSupervisor below) stays
+            // scoped to the "default" server profile only -- crash-recovery supervision for
+            // additional fleet profiles is not part of this pass (see the implementation note's
+            // deferred list). The embedded Management API host is fully fleet-aware regardless, via
+            // this factory, exactly like api-run's.
+            [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+            IServerLifecycleService ServiceRunLifecycleFactory(HeadlessServerProfileConfiguration serverProfile, IServerPathProfile profilePaths)
+            {
+                var configuredGamePort = new PalworldSettingsConfigurationService(profilePaths).GetConfiguredGamePort();
+                var guardedPorts = platform.GuardedPorts.Append(configuredGamePort).Distinct().ToArray();
+                var profileSessionInspector = new LinuxServerSessionInspector(guardedPorts);
+#pragma warning disable CA1416 // The [SupportedOSPlatform("linux")] attribute above (and this whole "service-run" case's own OperatingSystem.IsLinux() guard) already make this Linux-only; the platform-compat analyzer just doesn't trace guard attributes through local functions.
+                return new LinuxServerLifecycleService(platform, profilePaths, profileSessionInspector, expectedGamePort: configuredGamePort);
+#pragma warning restore CA1416
+            }
+
+            if (command.Equals("service-status", StringComparison.OrdinalIgnoreCase))
+            {
+                var serviceStatus = await serviceManager.GetStatusAsync(cancellation.Token);
+                if (json)
+                    Console.WriteLine(JsonSerializer.Serialize(serviceStatus, JsonOptions()));
+                else
+                    PrintServiceStatus(serviceStatus);
+                return serviceStatus.State == LinuxServiceState.Failed ? 1 : 0;
+            }
+
+            if (command.Equals("service-install", StringComparison.OrdinalIgnoreCase))
+            {
+                var executable = Environment.ProcessPath
+                    ?? throw new InvalidOperationException("Unable to determine the current headless-host executable path.");
+                var serviceUser = GetOption("--service-user")
+                    ?? Environment.GetEnvironmentVariable("SUDO_USER")
+                    ?? Environment.GetEnvironmentVariable("USER")
+                    ?? "mystroth";
+
+                try
+                {
+                    if (!File.Exists(configurationPath))
+                    {
+                        configurationService.WriteDefault(configurationPath);
+                        Console.WriteLine($"Created default configuration: {configurationPath}");
+                    }
+                    else if (configurationService.NeedsMigration(configurationPath))
+                    {
+                        var migrated = configurationService.MigrateFile(configurationPath);
+                        Console.WriteLine($"Migrated configuration to schema {migrated.SchemaVersion}: {configurationPath}");
+                    }
+
+                    var result = await serviceManager.InstallAsync(
+                        executable,
+                        serviceUser,
+                        configurationPath,
+                        startNow,
+                        cancellation.Token);
+                    if (json)
+                        Console.WriteLine(JsonSerializer.Serialize(result, JsonOptions()));
+                    else
+                    {
+                        Console.WriteLine("MystTiq Headless Host — systemd install");
+                        Console.WriteLine($"Unit            : {result.UnitName}");
+                        Console.WriteLine($"Executable      : {result.InstalledExecutable}");
+                        Console.WriteLine($"Unit path       : {result.UnitPath}");
+                        Console.WriteLine($"Enabled         : {result.Enabled}");
+                        Console.WriteLine($"Started         : {result.Started}");
+                        Console.WriteLine($"Message         : {result.Message}");
+                    }
+                    return result.Success ? 0 : 1;
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    Console.Error.WriteLine("Run service-install with sudo.");
+                    return 1;
+                }
+            }
+
+            if (command.Equals("service-uninstall", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var removed = await serviceManager.UninstallAsync(cancellation.Token);
+                    Console.WriteLine(removed
+                        ? "MystTiq systemd service removed."
+                        : "MystTiq systemd service could not be completely removed.");
+                    return removed ? 0 : 1;
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    Console.Error.WriteLine("Run service-uninstall with sudo.");
+                    return 1;
+                }
+            }
+
+            var supervisor = new HeadlessSupervisor(lifecycle, supervisorOptions, serverArguments);
+
+            using var termRegistration = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
+            {
+                context.Cancel = true;
+                cancellation.Cancel();
+            });
+            using var intRegistration = PosixSignalRegistration.Create(PosixSignal.SIGINT, context =>
+            {
+                context.Cancel = true;
+                cancellation.Cancel();
+            });
+
+            LocalManagementApiHost? apiHost = null;
+            try
+            {
+                if (headlessConfiguration.Api.Enabled)
+                {
+                    apiHost = LocalManagementApiHost.Create(effectiveHeadlessConfiguration, ServiceRunLifecycleFactory, new LinuxManagementServiceStatusProvider(serviceManager), configurationPath, serviceManager);
+                    await apiHost.StartAsync(cancellation.Token);
+                    Console.WriteLine(
+                        $"MystTiq local management API listening on http://{headlessConfiguration.Api.BindAddress}:{headlessConfiguration.Api.Port}");
+                }
+
+                return await supervisor.RunAsync(cancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                using var shutdownTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                if (apiHost is not null)
+                    await apiHost.StopAsync(shutdownTimeout.Token);
+                await supervisor.StopManagedServerAsync(shutdownTimeout.Token);
+                return 0;
+            }
+            finally
+            {
+                if (apiHost is not null)
+                    await apiHost.DisposeAsync();
+            }
         }
     }
 
@@ -771,6 +946,16 @@ static void PrintServiceStatus(LinuxServiceStatus status)
     Console.WriteLine($"Active state    : {status.ActiveState}");
     Console.WriteLine($"Sub state       : {status.SubState}");
     Console.WriteLine($"Main PID        : {(status.MainProcessId?.ToString() ?? "none")}");
+    Console.WriteLine($"Detail          : {status.Detail}");
+}
+
+static void PrintWindowsServiceStatus(WindowsServiceStatus status)
+{
+    Console.WriteLine("MystTiq Headless Host — Windows Service");
+    Console.WriteLine($"Service         : {status.ServiceName}");
+    Console.WriteLine($"Installed       : {status.Installed}");
+    Console.WriteLine($"State           : {status.State}");
+    Console.WriteLine($"Process ID      : {(status.ProcessId?.ToString() ?? "none")}");
     Console.WriteLine($"Detail          : {status.Detail}");
 }
 

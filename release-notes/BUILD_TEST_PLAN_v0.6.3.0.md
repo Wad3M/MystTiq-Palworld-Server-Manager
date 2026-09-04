@@ -1,0 +1,11 @@
+# v0.6.3.0 Build and Test Plan
+
+1. Close artifact-hosted MystTiq desktop and sidecar processes with Clean.
+2. Run strict validation and the complete v0.6.3.0 logic suite (`scripts/Test-v0.6.3.0-Logic.ps1 -RunBuild`), including the frozen v0.6.2.0 checkpoint regression gate and the v0.5.1.5 runtime smoke suite.
+3. Build shared, Windows/Linux headless, and Windows/Linux Avalonia targets.
+4. On Windows, from an elevated (Administrator) prompt: `mysttiq-server service-install --start-now` against a real (non-production) config; confirm `sc.exe query MystTiqPalworld` shows it running and `service-status` reports real SCM state; kill the PalServer process externally and confirm the supervisor auto-restarts it within the configured backoff/attempt window; `sc.exe stop MystTiqPalworld` and confirm it actually stops (not hangs/force-kills); `service-uninstall` cleans up. (Not yet performed this session — needs elevation.)
+5. On a real isolated copy of a live save (never the production save): preview a character migration between two known players, confirm match confidence/findings are sensible; Apply while the server is stopped; confirm guild membership/leadership correctly repoints to the destination via a file-hash diff against the fresh safety backup; confirm the journal shows up in Transaction Center history; test each disposition (Archive moves the file, Delete removes it, Reset returns the explicit not-supported error); deliberately change `Level.sav` between preview and apply and confirm the hash-mismatch rejection fires.
+6. On the Desktop app: confirm Server Setup's per-row action for "Palworld Dedicated Server"/"SteamCMD" navigates to Update Center instead of mutating when the component is already installed; confirm Update Center's own "Update Palworld Server" button still works unchanged; confirm Setup's "Install Missing" still directly installs when a component is genuinely absent; confirm the new Character Migration card on the Players page previews and applies correctly.
+7. Create FullSource and Changed Files ZIPs and verify their entries and SHA-256 hashes.
+
+Any failure blocks promotion. Step 4 (elevated SCM install/start/stop/uninstall cycle) is a known open item for this checkpoint — see `CHECKPOINT_NOTES.md`.

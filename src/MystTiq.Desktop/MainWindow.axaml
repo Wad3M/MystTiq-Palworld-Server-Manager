@@ -14,13 +14,14 @@
         Icon="/Assets/PalworldServerManager.ico">
   <Grid RowDefinitions="66,42,Auto,*,44">
     <Border Grid.Row="0" Background="#F1081422" BorderBrush="#28445D" BorderThickness="0,0,0,1" PointerPressed="TitleBar_OnPointerPressed">
-      <Grid ColumnDefinitions="282,*,Auto">
-        <Grid Grid.Column="0" Margin="14,7,10,7" ColumnDefinitions="52,*">
+      <Grid ColumnDefinitions="430,*,Auto">
+        <Grid Grid.Column="0" Margin="14,7,10,7" ColumnDefinitions="52,Auto,Auto">
           <Border Classes="appIcon" Width="48" Height="48"><Image Source="/Assets/PalworldServerManager.png" Stretch="UniformToFill"/></Border>
           <StackPanel Grid.Column="1" Margin="10,1,0,0" VerticalAlignment="Center" Spacing="1">
             <Image Source="/Assets/mysttiq-wordmark-v5.png" Width="145" Height="27" HorizontalAlignment="Left" Stretch="Uniform"/>
             <TextBlock Classes="brandVersion" Text="{Binding Version}"/>
           </StackPanel>
+          <TextBlock Grid.Column="2" Text="Palworld Server Manager" Foreground="#8CA8C2" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="14,1,0,0"/>
         </Grid>
         <StackPanel Grid.Column="1" Orientation="Horizontal" ClipToBounds="True">
         <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" Background="Transparent" BorderThickness="0" Margin="0,6" MaxWidth="720">
@@ -77,7 +78,7 @@
       <StackPanel Orientation="Horizontal">
         <Border Classes="ribbonGroup"><StackPanel><StackPanel Orientation="Horizontal" Spacing="5">
           <Button Classes="ribbon" Command="{Binding ConnectCommand}"><StackPanel><Border Classes="iconTile"><TextBlock Classes="flatIcon" Foreground="#FFD447" Text="↻"/></Border><TextBlock Text="Refresh"/></StackPanel></Button>
-          <Button Classes="ribbon primary" Command="{Binding StartCommand}"><StackPanel><Border Classes="iconTile"><TextBlock Classes="flatIcon" Foreground="#63DF7B" Text="▶"/></Border><TextBlock Text="Start"/></StackPanel></Button>
+          <Button Classes="ribbon success" Command="{Binding StartCommand}"><StackPanel><Border Classes="iconTile"><TextBlock Classes="flatIcon" Foreground="#63DF7B" Text="▶"/></Border><TextBlock Text="Start"/></StackPanel></Button>
           <Button Classes="ribbon" Command="{Binding RestartCommand}"><StackPanel><Border Classes="iconTile"><TextBlock Classes="flatIcon" Foreground="#52C4FF" Text="⟳"/></Border><TextBlock Text="Restart"/></StackPanel></Button>
           <Button Classes="ribbon danger" Command="{Binding StopCommand}"><StackPanel><Border Classes="iconTile"><TextBlock Classes="flatIcon" Foreground="#FF737B" Text="■"/></Border><TextBlock Text="Stop"/></StackPanel></Button>
         </StackPanel><TextBlock Classes="muted" FontSize="10" Text="Server Control" HorizontalAlignment="Center"/></StackPanel></Border>
@@ -166,6 +167,10 @@
                 <ToggleButton Classes="nav" IsChecked="{Binding IsSettingsPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Settings"><Border Classes="navSurface"><TextBlock Text="⚙   Settings"/></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsChecked="{Binding IsNotificationsPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Notifications"><Border Classes="navSurface"><TextBlock Text="●   Notifications"/></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsChecked="{Binding IsActivityAuditPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ActivityAudit"><Border Classes="navSurface"><TextBlock Text="≣   Activity &amp; Audit"/></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsChecked="{Binding IsAutomationPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Automation"><Border Classes="navSurface"><TextBlock Text="⏱   Automation"/></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsChecked="{Binding IsAlertCenterPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="AlertCenter"><Border Classes="navSurface"><TextBlock Text="⚠   Alert Center"/></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsChecked="{Binding IsSecurityPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Security"><Border Classes="navSurface"><TextBlock Text="🔒   Security"/></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsChecked="{Binding IsFleetPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Fleet"><Border Classes="navSurface"><TextBlock Text="🖧   Fleet"/></Border></ToggleButton>
               </StackPanel>
             </Grid>
           </ScrollViewer>
@@ -667,7 +672,7 @@
                 <Border Classes="card"><StackPanel Spacing="7"><TextBlock Text="Members" FontWeight="SemiBold"/><ListBox ItemsSource="{Binding SelectedExplorerGuild.MemberPlayerIds}" MaxHeight="110"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontFamily="Consolas, monospace" FontSize="11"/></DataTemplate></ListBox.ItemTemplate></ListBox><TextBlock Text="Base IDs" FontWeight="SemiBold"/><ListBox ItemsSource="{Binding SelectedExplorerGuild.BaseIds}" MaxHeight="90"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontFamily="Consolas, monospace" FontSize="11"/></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
               </StackPanel>
             </Grid>
-            <Border Classes="card"><StackPanel Spacing="8"><TextBlock Text="Guild Ownership Operations" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="Applies to the selected guild above. Requires PalServer stopped. Claim is only offered for guilds showing Orphaned / Needs Review; Transfer and Add Player work on any guild. Follows Preview → Safety Backup → Server-side Transaction → Validate → Journal/Audit → Refresh GUI." Foreground="#969AAD" TextWrapping="Wrap"/><Grid ColumnDefinitions="180,2*,Auto" ColumnSpacing="10"><ComboBox ItemsSource="{Binding GuildOperationTypes}" SelectedItem="{Binding GuildOperationType}"/><TextBox Grid.Column="1" Watermark="Target player ID (32-hex)" Text="{Binding GuildOperationPlayerId}"/><Button Grid.Column="2" Content="Preview" Command="{Binding PreviewGuildOwnershipCommand}"/></Grid><TextBlock Text="{Binding GuildOperationStatusText}" Foreground="#A997FF" TextWrapping="Wrap"/><CheckBox Content="I reviewed this plan and confirm the active Palworld server is stopped." IsChecked="{Binding GuildOperationConfirmed}"/><Button Classes="danger" Content="Apply With Fresh Safety Backup" HorizontalAlignment="Left" Command="{Binding ApplyGuildOwnershipCommand}"/></StackPanel></Border>
+            <Border Classes="card"><StackPanel Spacing="8"><TextBlock Text="Guild Ownership Operations" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="Applies to the selected guild above. Requires PalServer stopped. Claim is only offered for guilds showing Orphaned / Needs Review; Transfer and Add Player work on any guild; Remove Broken Member is only offered when the target player has no matching save file. Follows Preview → Safety Backup → Server-side Transaction → Validate → Journal/Audit → Refresh GUI." Foreground="#969AAD" TextWrapping="Wrap"/><Grid ColumnDefinitions="180,2*,Auto" ColumnSpacing="10"><ComboBox ItemsSource="{Binding GuildOperationTypes}" SelectedItem="{Binding GuildOperationType}"/><TextBox Grid.Column="1" Watermark="Target player ID (32-hex)" Text="{Binding GuildOperationPlayerId}"/><Button Grid.Column="2" Content="Preview" Command="{Binding PreviewGuildOwnershipCommand}"/></Grid><TextBlock Text="{Binding GuildOperationStatusText}" Foreground="#A997FF" TextWrapping="Wrap"/><CheckBox Content="I reviewed this plan and confirm the active Palworld server is stopped." IsChecked="{Binding GuildOperationConfirmed}"/><Button Classes="danger" Content="Apply With Fresh Safety Backup" HorizontalAlignment="Left" Command="{Binding ApplyGuildOwnershipCommand}"/></StackPanel></Border>
           </StackPanel>
 
           <StackPanel IsVisible="{Binding IsBasesPage}" Spacing="14">
@@ -903,6 +908,7 @@
                   <TextBlock Text="{Binding SelectedPlayerRecord.GuildName}"/>
                   <TextBlock Text="{Binding SelectedPlayerRecord.Role}" Foreground="#8CA8C2"/>
                   <TextBlock Text="{Binding SelectedPlayerRecord.Evidence}" Foreground="#969AAD" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding PlayerRegistrySummaryText}" Foreground="#6D7186" FontSize="12" TextWrapping="Wrap"/>
                 </StackPanel>
               </Border>
 
@@ -925,7 +931,7 @@
           <Border Classes="card">
             <StackPanel Spacing="9">
               <TextBlock Text="Player Administration" FontSize="17" FontWeight="SemiBold"/>
-              <TextBlock Text="Kick and Ban use the native Palworld REST API and are enabled only for an online player. Unsupported operations remain visibly disabled and cannot report false success." Foreground="#969AAD" TextWrapping="Wrap"/>
+              <TextBlock Text="Kick and Ban route through the Palworld REST API first, automatically falling back to RCON if REST is disabled or misconfigured, and are enabled only for an online player. Unsupported operations remain visibly disabled and cannot report false success." Foreground="#969AAD" TextWrapping="Wrap"/>
               <Grid ColumnDefinitions="2*,Auto,Auto" ColumnSpacing="10">
                 <TextBox Watermark="Kick / ban reason" Text="{Binding PlayerActionMessage}"/>
                 <Button Grid.Column="1" Content="Kick" Command="{Binding KickSelectedPlayerCommand}" Classes="warning"/>
@@ -938,6 +944,34 @@
                 <Button Content="Remove Admin — BACKEND REQUIRED" IsEnabled="False" Margin="0,0,8,8"/>
               </WrapPanel>
               <TextBlock Text="{Binding PlayerAdminStatusText}" Foreground="#A997FF" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding ModerationProviderStatusText}" Foreground="#6D7186" FontSize="12" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card" IsEnabled="{Binding CanManageAdmin}">
+            <StackPanel Spacing="9">
+              <TextBlock Text="Character / Account Migration" FontSize="17" FontWeight="SemiBold"/>
+              <TextBlock Text="Migrate a source player's guild membership to an already-existing destination player identity (e.g. Xbox → Steam). Level/inventory/Pal transfer is not yet supported — only guild references migrate." Foreground="#969AAD" TextWrapping="Wrap"/>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Source player" Classes="muted"/>
+                  <ComboBox ItemsSource="{Binding PlayerRecords}" SelectedItem="{Binding MigrationSourcePlayer}" HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate><DataTemplate x:DataType="models:PlayerExplorerItemDto"><TextBlock Text="{Binding PlayerName}"/></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Text="Destination player" Classes="muted"/>
+                  <ComboBox ItemsSource="{Binding PlayerRecords}" SelectedItem="{Binding MigrationDestinationPlayer}" HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate><DataTemplate x:DataType="models:PlayerExplorerItemDto"><TextBlock Text="{Binding PlayerName}"/></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+              </Grid>
+              <Button Content="Preview Migration" Command="{Binding PreviewCharacterMigrationCommand}"/>
+              <TextBlock Text="{Binding MigrationState}" TextWrapping="Wrap" Foreground="#969AAD"/>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding MigrationPreview.CanApply}">
+                <ComboBox ItemsSource="{Binding CharacterDispositionOptions}" SelectedItem="{Binding MigrationDisposition}"/>
+                <Button Grid.Column="1" Content="Apply Migration" Command="{Binding ApplyCharacterMigrationCommand}" Classes="danger"/>
+              </Grid>
             </StackPanel>
           </Border>
         </StackPanel>
@@ -1240,6 +1274,7 @@
                   <Button Content="Enable Selected" Command="{Binding EnableSelectedModCommand}"/>
                   <Button Content="Disable Selected" Command="{Binding DisableSelectedModCommand}"/>
                   <Button Content="Delete Selected" Command="{Binding DeleteSelectedModCommand}"/>
+                  <Button Content="Rollback Selected" Command="{Binding RollbackSelectedModCommand}" ToolTip.Tip="Restores this MOD to its state before the last Install or Delete. A snapshot is captured automatically on every install/delete."/>
                   <Button Content="Enable All" Command="{Binding EnableAllModsCommand}"/>
                   <Button Content="Disable All" Command="{Binding DisableAllModsCommand}"/>
                   <Button Content="Repair" Command="{Binding RepairModsCommand}"/>
@@ -1338,6 +1373,68 @@
             </DataTemplate></ItemsControl.ItemTemplate>
           </ItemsControl>
           <Border Classes="card"><StackPanel Spacing="8"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="Support Diagnostic Report" FontSize="17" FontWeight="SemiBold"/><WrapPanel Grid.Column="1"><Button Content="Copy Report" Click="CopyNetworkDiagnosticReport_Click" Margin="0,0,8,0"/><Button Content="Export Report" Click="ExportNetworkDiagnosticReport_Click" Margin="0,0,8,0"/><Button Classes="primary" Content="Create Support Package" Click="CreateSupportPackage_Click" Margin="0,0,8,0"/><Button Content="Open Local Diagnostics" Tag="runtime" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/></WrapPanel></Grid><TextBlock Text="Support output excludes passwords, bearer tokens, certificate pins, URL credentials, query strings and fragments." Foreground="#969AAD"/><TextBox Text="{Binding NetworkReportText}" AcceptsReturn="True" IsReadOnly="True" MinHeight="180" FontFamily="Consolas, monospace" FontSize="11"/></StackPanel></Border>
+
+          <!-- WAN / EXTERNAL REACHABILITY (v0.6.11.0) -->
+          <Border Classes="card">
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel><TextBlock Text="WAN / External Reachability" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="Public IP and router UPnP port-forward mapping are checked automatically. True internet-side reachability needs a third party we don't control, so use Open Port Checker for that final confirmation." Foreground="#969AAD" TextWrapping="Wrap"/></StackPanel>
+                <WrapPanel Grid.Column="1">
+                  <Button Classes="primary" Content="Run Reachability Check" Command="{Binding RunWanReachabilityCommand}" Margin="0,0,8,0"/>
+                  <Button Content="Add UPnP Port Mapping" Command="{Binding RepairUpnpMappingCommand}" ToolTip.Tip="Adds a port-forward mapping on your router via UPnP for the configured game port." Margin="0,0,8,0"/>
+                </WrapPanel>
+              </Grid>
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                <Border Classes="card"><StackPanel><TextBlock Text="PUBLIC IP : PORT" Foreground="#969AAD"/><TextBlock Text="{Binding WanPublicIpPort}" FontSize="16" FontWeight="SemiBold"/></StackPanel></Border>
+                <Border Grid.Column="1" Classes="card"><StackPanel><TextBlock Text="ROUTER UPNP MAPPING" Foreground="#969AAD"/><TextBlock Text="{Binding WanUpnpState}" FontSize="16" FontWeight="SemiBold" Foreground="#A997FF"/></StackPanel></Border>
+                <Border Grid.Column="2" Classes="card"><StackPanel><TextBlock Text="ROUTER" Foreground="#969AAD"/><TextBlock Text="{Binding WanRouterDescription}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/></StackPanel></Border>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding WanReachabilityChecks}">
+                <ItemsControl.ItemTemplate><DataTemplate x:DataType="models:WanReachabilityCheckDto">
+                  <Border Classes="card" Margin="0,0,0,8"><Grid ColumnDefinitions="180,100,*,220" ColumnSpacing="12">
+                    <TextBlock Text="{Binding Test}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding StateText}" Foreground="#A997FF"/>
+                    <TextBlock Grid.Column="2" Text="{Binding Details}" TextWrapping="Wrap"/><TextBlock Grid.Column="3" Text="{Binding Recommendation}" Foreground="#969AAD" TextWrapping="Wrap"/>
+                  </Grid></Border>
+                </DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding WanStatus}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <WrapPanel Grid.Column="1">
+                  <Button Content="Copy IP:Port" Click="CopyWanPublicIpPort_Click" Margin="0,0,8,0"/>
+                  <Button Content="Open Port Checker" Command="{Binding OpenExternalPortCheckerCommand}" ToolTip.Tip="Opens a well-known external port-checker website in your browser."/>
+                </WrapPanel>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- LOCAL MACHINE DIAGNOSTICS (v0.6.4.0) -->
+          <Border Classes="card">
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Local Machine Diagnostics" FontSize="17" FontWeight="SemiBold"/>
+                  <TextBlock Text="Diagnoses the selected connection profile from THIS machine -- DNS, TCP, TLS, then HTTP -- works even when the server is fully unreachable." Foreground="#969AAD" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="1" Classes="primary" Content="Diagnose Connection" Command="{Binding DiagnoseConnectionCommand}" VerticalAlignment="Top"/>
+              </Grid>
+              <TextBlock Text="{Binding LocalDiagnosticsState}" Foreground="#A997FF" TextWrapping="Wrap"/>
+              <ItemsControl ItemsSource="{Binding LocalConnectionFindings}">
+                <ItemsControl.ItemTemplate><DataTemplate x:DataType="models:DiagnosticFindingDto">
+                  <Border Classes="statuscard" Margin="0,0,0,6"><Grid ColumnDefinitions="120,140,*" ColumnSpacing="12">
+                    <TextBlock Text="{Binding StateText}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding Component}"/><TextBlock Grid.Column="2" Text="{Binding Evidence}" TextWrapping="Wrap"/>
+                  </Grid></Border>
+                </DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="This Machine" FontSize="14" FontWeight="SemiBold" Foreground="#8CA8C2"/>
+              <ItemsControl ItemsSource="{Binding LocalMachineFindings}">
+                <ItemsControl.ItemTemplate><DataTemplate x:DataType="models:DiagnosticFindingDto">
+                  <Border Classes="statuscard" Margin="0,0,0,6"><Grid ColumnDefinitions="120,140,*" ColumnSpacing="12">
+                    <TextBlock Text="{Binding StateText}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding Component}"/><TextBlock Grid.Column="2" Text="{Binding Evidence}" TextWrapping="Wrap"/>
+                  </Grid></Border>
+                </DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
         </StackPanel>
 
         <StackPanel IsVisible="{Binding IsDoctorPage}" Spacing="16">
@@ -1353,18 +1450,26 @@
               <TextBlock Text="{Binding DoctorExportPath}" TextWrapping="Wrap" Foreground="#969AAD" />
             </StackPanel>
           </Border>
-          <ItemsControl ItemsSource="{Binding DoctorChecks}">
+          <TextBlock Text="{Binding DiagnosticsReportDetail}" Foreground="#A997FF" TextWrapping="Wrap"/>
+          <ItemsControl ItemsSource="{Binding DiagnosticFindings}">
             <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="models:DoctorCheckDto">
+              <DataTemplate x:DataType="models:DiagnosticFindingDto">
                 <Border Classes="card" Margin="0,0,0,10">
-                  <StackPanel Spacing="6">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                      <TextBlock Text="{Binding State}" FontWeight="Bold" />
-                      <TextBlock Text="{Binding Component}" FontSize="17" FontWeight="SemiBold" />
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="6">
+                      <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="{Binding StateText}" FontWeight="Bold" />
+                        <TextBlock Text="{Binding Component}" FontSize="17" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Category}" Foreground="#8CA8C2" FontSize="11" VerticalAlignment="Center"/>
+                      </StackPanel>
+                      <TextBlock Text="{Binding Evidence}" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" Foreground="#969AAD" />
                     </StackPanel>
-                    <TextBlock Text="{Binding Evidence}" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" Foreground="#969AAD" />
-                  </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+                      <Button Content="Recheck" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).RecheckDiagnosticCommand}" CommandParameter="{Binding}"/>
+                      <Button Content="Fix Automatically" Classes="success" IsVisible="{Binding CanFix}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).FixDiagnosticCommand}" CommandParameter="{Binding}"/>
+                    </StackPanel>
+                  </Grid>
                 </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -1479,6 +1584,106 @@
               <ListBox ItemsSource="{Binding FilteredNotifications}" SelectedItem="{Binding SelectedNotification}" MaxHeight="470"><ListBox.ItemTemplate><DataTemplate x:DataType="models:NotificationItemDto"><Border Classes="statuscard" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Text="{Binding Message}" TextWrapping="Wrap"/><TextBlock Text="{Binding Severity}" Foreground="#A997FF"/><TextBlock Text="{Binding StateText}" Classes="muted" FontSize="10"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
               <Border Grid.Column="1" Classes="statuscard"><StackPanel Spacing="8"><TextBlock Text="Selected Notification" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedNotification.Title}" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedNotification.Message}" TextWrapping="Wrap"/><TextBlock Text="{Binding SelectedNotification.StateText}" Classes="muted"/><Button Content="Toggle Read / Unread" Command="{Binding ToggleNotificationReadCommand}"/><Button Content="Pin / Unpin" Command="{Binding ToggleNotificationPinCommand}"/><Button Classes="danger" Content="Dismiss" Command="{Binding DismissNotificationCommand}"/></StackPanel></Border>
             </Grid>
+          </StackPanel></Border>
+        </StackPanel>
+
+        <!-- AUTOMATION -->
+        <StackPanel IsVisible="{Binding IsAutomationPage}" Spacing="16">
+          <Border Classes="card"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"><StackPanel Spacing="4"><TextBlock Text="Scheduled Automation" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{Binding AutomationState}" Classes="muted" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshAutomationCommand}" VerticalAlignment="Top"/></Grid></Border>
+          <Border Classes="card" IsEnabled="{Binding CanManageAdmin}">
+            <StackPanel Spacing="10">
+              <TextBlock Text="New Rule" FontSize="17" FontWeight="SemiBold"/>
+              <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+                <TextBlock Text="Name" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Column="1" Text="{Binding NewAutomationRuleName}" Watermark="Nightly backup"/>
+                <TextBlock Grid.Row="1" Text="Trigger" VerticalAlignment="Center" Classes="muted"/><ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AutomationTriggerKinds}" SelectedItem="{Binding NewAutomationTriggerKind}"/>
+                <TextBlock Grid.Row="2" Text="Time (UTC, HH:mm) / Interval (min) / Idle threshold (min)" VerticalAlignment="Center" Classes="muted"/>
+                <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,*,*" ColumnSpacing="10"><TextBox Text="{Binding NewAutomationTimeOfDayUtc}" Watermark="03:00"/><NumericUpDown Grid.Column="1" Value="{Binding NewAutomationIntervalMinutes}" Minimum="1"/><NumericUpDown Grid.Column="2" Value="{Binding NewAutomationIdleThresholdMinutes}" Minimum="1" ToolTip.Tip="Used only when Trigger is IdleEmpty: stop after this many minutes with 0 online players."/></Grid>
+                <TextBlock Grid.Row="3" Text="Action" VerticalAlignment="Center" Classes="muted"/><ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding AutomationActionKinds}" SelectedItem="{Binding NewAutomationActionKind}"/>
+                <TextBlock Grid.Row="4" Text="Notification title / message" VerticalAlignment="Center" Classes="muted"/>
+                <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="*,*" ColumnSpacing="10"><TextBox Text="{Binding NewAutomationNotificationTitle}" Watermark="Title"/><TextBox Grid.Column="1" Text="{Binding NewAutomationNotificationMessage}" Watermark="Message"/></Grid>
+                <TextBlock Grid.Row="5" Text="RCON command" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="5" Grid.Column="1" Text="{Binding NewAutomationRconCommand}" Watermark="Broadcast Hello"/>
+              </Grid>
+              <Button Classes="success" Content="Create Rule" HorizontalAlignment="Left" Command="{Binding CreateAutomationRuleCommand}"/>
+            </StackPanel>
+          </Border>
+          <Grid ColumnDefinitions="2*,*" ColumnSpacing="12">
+            <Border Classes="card"><StackPanel Spacing="8"><TextBlock Text="Rules" FontSize="17" FontWeight="SemiBold"/>
+              <ListBox ItemsSource="{Binding AutomationRules}" SelectedItem="{Binding SelectedAutomationRule}" MaxHeight="420"><ListBox.ItemTemplate><DataTemplate x:DataType="models:AutomationRuleDto"><Border Classes="statuscard" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding ScheduleText}" Classes="muted"/><TextBlock Text="{Binding Action.Kind}" Foreground="#A997FF"/><TextBlock><Run Text="Enabled:"/><Run Text="{Binding Enabled}"/></TextBlock></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+            </StackPanel></Border>
+            <Border Grid.Column="1" Classes="statuscard" IsEnabled="{Binding CanManageAdmin}"><StackPanel Spacing="8"><TextBlock Text="Selected Rule" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedAutomationRule.Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedAutomationRule.ScheduleText}" Classes="muted" TextWrapping="Wrap"/><Button Content="Run Now" Command="{Binding RunAutomationRuleNowCommand}"/><Button Content="Enable / Disable" Command="{Binding ToggleAutomationRuleEnabledCommand}"/><Button Classes="danger" Content="Delete" Command="{Binding DeleteAutomationRuleCommand}"/></StackPanel></Border>
+          </Grid>
+          <Border Classes="card"><StackPanel Spacing="8"><TextBlock Text="Recent Runs" FontSize="17" FontWeight="SemiBold"/>
+            <ItemsControl ItemsSource="{Binding AutomationRuns}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:AutomationRunRecordDto"><Border Classes="statuscard" Margin="0,3"><Grid ColumnDefinitions="150,100,*" ColumnSpacing="10"><TextBlock Text="{Binding RuleName}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding State}"/><TextBlock Grid.Column="2" Text="{Binding Detail}" Classes="muted" TextWrapping="Wrap"/></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+          </StackPanel></Border>
+        </StackPanel>
+
+        <!-- ALERT CENTER -->
+        <StackPanel IsVisible="{Binding IsAlertCenterPage}" Spacing="16">
+          <Border Classes="card"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"><StackPanel Spacing="4"><TextBlock Text="Alert Center" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{Binding AlertCenterState}" Classes="muted" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshAlertCenterCommand}" VerticalAlignment="Top"/></Grid></Border>
+          <Border Classes="statuscard"><StackPanel Spacing="4"><TextBlock Text="DISK SPACE PREDICTION" Classes="muted"/><TextBlock Text="{Binding DiskSpacePrediction.FreeGb}" FontSize="19" FontWeight="Bold" Foreground="#52C4FF"/><TextBlock Text="{Binding DiskSpacePrediction.Detail}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+          <Border Classes="card" IsEnabled="{Binding CanManageAdmin}">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Threshold Rules" FontSize="17" FontWeight="SemiBold"/>
+              <Grid ColumnDefinitions="220,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+                <TextBlock Text="Sustained high CPU %" VerticalAlignment="Center" Classes="muted"/><CheckBox Grid.Column="1" IsChecked="{Binding AlertRules.HighCpuSustained.Enabled}"/><NumericUpDown Grid.Column="2" Value="{Binding AlertRules.HighCpuSustained.ThresholdPercent}" Minimum="1" Maximum="100"/>
+                <TextBlock Grid.Row="1" Text="Sustained high memory (MB)" VerticalAlignment="Center" Classes="muted"/><CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding AlertRules.HighMemorySustained.Enabled}"/><NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding AlertRules.HighMemorySustained.ThresholdMb}" Minimum="1"/>
+                <TextBlock Grid.Row="2" Text="Low disk space %" VerticalAlignment="Center" Classes="muted"/><CheckBox Grid.Row="2" Grid.Column="1" IsChecked="{Binding AlertRules.LowDiskSpace.Enabled}"/><NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding AlertRules.LowDiskSpace.ThresholdPercent}" Minimum="1" Maximum="100"/>
+                <TextBlock Grid.Row="3" Text="Disk exhaustion predicted within (days)" VerticalAlignment="Center" Classes="muted"/><CheckBox Grid.Row="3" Grid.Column="1" IsChecked="{Binding AlertRules.DiskSpaceExhaustionPredicted.Enabled}"/><NumericUpDown Grid.Row="3" Grid.Column="2" Value="{Binding AlertRules.DiskSpaceExhaustionPredicted.ThresholdDays}" Minimum="1"/>
+                <TextBlock Grid.Row="4" Text="MOD/UE4SS health needs attention" VerticalAlignment="Center" Classes="muted"/><CheckBox Grid.Row="4" Grid.Column="1" IsChecked="{Binding AlertRules.ModHealthDegraded.Enabled}"/><TextBlock Grid.Row="4" Grid.Column="2" Text="Fires when an enabled MOD reports Failed/Missing/Misconfigured/Attention" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+              </Grid>
+              <Button Classes="success" Content="Save Rules" HorizontalAlignment="Left" Command="{Binding SaveAlertRulesCommand}"/>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- SECURITY -->
+        <StackPanel IsVisible="{Binding IsSecurityPage}" Spacing="16">
+          <Border Classes="card"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"><StackPanel Spacing="4"><TextBlock Text="Security" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{Binding SecurityState}" Classes="muted" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshSecurityCommand}" VerticalAlignment="Top"/></Grid></Border>
+          <Border Classes="card" IsVisible="{Binding HasLastCreatedPrincipalToken}"><StackPanel Spacing="6"><TextBlock Text="New token (shown once — copy it now)" FontWeight="SemiBold" Foreground="#F4B83F"/><SelectableTextBlock Text="{Binding LastCreatedPrincipalToken}" FontFamily="Consolas, monospace"/></StackPanel></Border>
+          <Border Classes="card" IsEnabled="{Binding CanManagePrincipals}">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Create Principal" FontSize="17" FontWeight="SemiBold"/>
+              <Grid ColumnDefinitions="150,*" ColumnSpacing="10"><TextBox Text="{Binding NewPrincipalName}" Watermark="Name"/><ComboBox Grid.Column="1" ItemsSource="{Binding MystTiqRoles}" SelectedItem="{Binding NewPrincipalRole}"/></Grid>
+              <Button Classes="success" Content="Create" HorizontalAlignment="Left" Command="{Binding CreatePrincipalCommand}"/>
+            </StackPanel>
+          </Border>
+          <Border Classes="card"><StackPanel Spacing="8"><TextBlock Text="Principals" FontSize="17" FontWeight="SemiBold"/>
+            <ListBox ItemsSource="{Binding Principals}" SelectedItem="{Binding SelectedPrincipal}" MaxHeight="360"><ListBox.ItemTemplate><DataTemplate x:DataType="models:MystTiqPrincipalDto"><Border Classes="statuscard" Margin="0,3"><Grid ColumnDefinitions="*,120,Auto" ColumnSpacing="10"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding Role}"/><TextBlock Grid.Column="2" Text="{Binding IsExpired}"/></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+            <Button Classes="danger" Content="Revoke Selected" HorizontalAlignment="Left" Command="{Binding RevokePrincipalCommand}" IsEnabled="{Binding CanManagePrincipals}"/>
+          </StackPanel></Border>
+        </StackPanel>
+
+        <!-- FLEET -->
+        <StackPanel IsVisible="{Binding IsFleetPage}" Spacing="16">
+          <Border Classes="card"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"><StackPanel Spacing="4"><TextBlock Text="Fleet" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{Binding FleetState}" Classes="muted" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshFleetCommand}" VerticalAlignment="Top"/></Grid></Border>
+          <Border Classes="card" IsEnabled="{Binding CanManageAdmin}">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Fleet Actions" FontSize="17" FontWeight="SemiBold"/>
+              <TextBlock Text="Runs across every configured server profile, staggered so they don't all fire at once." Classes="muted" TextWrapping="Wrap"/>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="success" Content="Backup All" Command="{Binding BackupAllCommand}"/>
+                <Button Content="Doctor All" Command="{Binding DoctorAllCommand}"/>
+                <Button Content="Update All" Command="{Binding UpdateAllCommand}"/>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Classes="card" IsEnabled="{Binding CanManageAdmin}">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Clone World" FontSize="17" FontWeight="SemiBold"/>
+              <TextBlock Text="Duplicates the currently connected profile's entire installation (game binaries + world/config) into a brand-new profile, with ports offset so both can run together. The source server must be stopped first. The new profile requires a MystTiq service restart to come online." Classes="muted" TextWrapping="Wrap"/>
+              <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="10">
+                <TextBox Watermark="New profile ID (e.g. world-2)" Text="{Binding CloneNewProfileId}"/>
+                <TextBox Grid.Column="1" Watermark="Display name (optional)" Text="{Binding CloneNewProfileName}"/>
+                <Button Grid.Column="2" Content="Clone" Command="{Binding CloneWorldCommand}"/>
+              </Grid>
+              <TextBlock Text="{Binding CloneWorldStatusText}" Classes="muted" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+          <Border Classes="card"><StackPanel Spacing="8"><TextBlock Text="Server Profiles" FontSize="17" FontWeight="SemiBold"/>
+            <ListBox ItemsSource="{Binding FleetServers}" MaxHeight="360"><ListBox.ItemTemplate><DataTemplate x:DataType="models:ServerProfileSummaryDto"><Border Classes="statuscard" Margin="0,3"><Grid ColumnDefinitions="*,140,Auto" ColumnSpacing="10"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding Runtime}" Classes="muted"/><TextBlock Grid.Column="2" Text="{Binding StatusText}"/></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+          </StackPanel></Border>
+          <Border Classes="card"><StackPanel Spacing="8"><TextBlock Text="Last Fleet Action Results" FontSize="17" FontWeight="SemiBold"/>
+            <ListBox ItemsSource="{Binding FleetActionResults}" MaxHeight="240"><ListBox.ItemTemplate><DataTemplate x:DataType="models:FleetActionResultDto"><Border Classes="statuscard" Margin="0,3"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><TextBlock Text="{Binding ServerProfileId}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding Success}"/></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
           </StackPanel></Border>
         </StackPanel>
 

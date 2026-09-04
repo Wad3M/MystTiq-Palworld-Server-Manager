@@ -37,6 +37,7 @@ public sealed class HeadlessPlayerGuildExplorerService
                 [],
                 [],
                 [],
+                [],
                 DateTimeOffset.UtcNow,
                 "No active Palworld world containing Level.sav was discovered.");
         }
@@ -192,6 +193,15 @@ public sealed class HeadlessPlayerGuildExplorerService
             ? $"{players.Count} player identity record(s), {guilds.Count} guild(s) from authoritative decoded GroupSaveDataMap evidence."
             : $"{players.Count} player save identity record(s). Guild semantics are unavailable until decoded Level.sav.json evidence is present.";
 
+        // v0.6.6.0 "World Explorer 2" -- abandoned-base detection, cheap to derive since orphaned
+        // guilds already carry their own BaseIds: any base belonging to a guild with no present
+        // leader is a real candidate for cleanup review, not just a display label on the guild row.
+        var abandonedBaseIds = guilds
+            .Where(guild => guild.Health == "Orphaned / Needs Review")
+            .SelectMany(guild => guild.BaseIds)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
         return new HeadlessPlayerGuildSnapshot(
             true,
             semanticAvailable,
@@ -200,6 +210,7 @@ public sealed class HeadlessPlayerGuildExplorerService
             semanticPath,
             players,
             guilds,
+            abandonedBaseIds,
             semanticWarnings.Distinct().Take(100).ToArray(),
             DateTimeOffset.UtcNow,
             detail);
@@ -692,6 +703,7 @@ public sealed record HeadlessPlayerGuildSnapshot(
     string? DecodedLevelJsonPath,
     IReadOnlyList<HeadlessPlayerExplorerItem> Players,
     IReadOnlyList<HeadlessGuildExplorerItem> Guilds,
+    IReadOnlyList<string> AbandonedBaseIds,
     IReadOnlyList<string> Warnings,
     DateTimeOffset ObservedAt,
     string Detail);

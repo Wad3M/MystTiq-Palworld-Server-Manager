@@ -63,6 +63,7 @@ public sealed class PlayerGuildSnapshotDto
     [JsonPropertyName("decodedLevelJsonPath")] public string? DecodedLevelJsonPath { get; init; }
     [JsonPropertyName("players")] public IReadOnlyList<PlayerExplorerItemDto> Players { get; init; } = [];
     [JsonPropertyName("guilds")] public IReadOnlyList<GuildExplorerItemDto> Guilds { get; init; } = [];
+    [JsonPropertyName("abandonedBaseIds")] public IReadOnlyList<string> AbandonedBaseIds { get; init; } = [];
     [JsonPropertyName("warnings")] public IReadOnlyList<string> Warnings { get; init; } = [];
     [JsonPropertyName("observedAt")] public DateTimeOffset ObservedAt { get; init; }
     [JsonPropertyName("detail")] public string Detail { get; init; } = string.Empty;

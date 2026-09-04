@@ -13,6 +13,9 @@ public sealed class HeadlessBackupService
     private readonly HeadlessActivityLogService activity;
     private readonly SemaphoreSlim backupGate = new(1, 1);
     private readonly string verificationPath;
+    private readonly string classificationPath;
+    private readonly object classificationGate = new();
+    private readonly Dictionary<string, HeadlessBackupClassificationEntry> classifications;
     private readonly Dictionary<string, HeadlessBackupRetentionPreview> retentionPreviews = new(StringComparer.Ordinal);
 
     public HeadlessBackupService(
@@ -26,6 +29,8 @@ public sealed class HeadlessBackupService
         var stateRoot = Path.Combine(paths.ManagerRuntimeRoot, "backups");
         Directory.CreateDirectory(stateRoot);
         verificationPath = Path.Combine(stateRoot, "verification.json");
+        classificationPath = Path.Combine(stateRoot, "classification.json");
+        classifications = LoadClassifications();
     }
 
     public HeadlessBackupInventory GetInventory()
@@ -39,7 +44,8 @@ public sealed class HeadlessBackupService
                 file.Name,
                 file.Length,
                 file.LastWriteTimeUtc,
-                IsArchiveReadable(file.FullName)))
+                IsArchiveReadable(file.FullName),
+                ClassOf(file.Name)))
             .ToList();
 
         return new HeadlessBackupInventory(
@@ -51,19 +57,41 @@ public sealed class HeadlessBackupService
             $"{items.Count} managed backup(s) in {paths.BackupRoot}.");
     }
 
-    public async Task<HeadlessBackupOperationResult> CreateAsync(CancellationToken cancellationToken)
+    // Unclassified/legacy backups (created before this milestone, or by manual file operations)
+    // default to Manual -- the most-protected class -- so they never silently become eligible for
+    // the new class-scoped retention pruning below.
+    private BackupClass ClassOf(string fileName)
+    {
+        lock (classificationGate)
+            return classifications.TryGetValue(fileName, out var entry) ? entry.Class : BackupClass.Manual;
+    }
+
+    public async Task<HeadlessBackupOperationResult> CreateAsync(BackupClass backupClass, CancellationToken cancellationToken)
     {
         if (!await backupGate.WaitAsync(0, cancellationToken))
             return HeadlessBackupOperationResult.Conflict("A backup operation is already in progress.");
 
         try
         {
-            return await CreateInternalAsync("manual", cancellationToken);
+            return await CreateInternalAsync(backupClass.ToString().ToLowerInvariant(), backupClass, cancellationToken);
         }
         finally
         {
             backupGate.Release();
         }
+    }
+
+    public HeadlessBackupClassificationEntry SetClass(string fileName, BackupClass backupClass, string? reason)
+    {
+        ResolveManagedBackup(fileName, requireExists: true);
+        var entry = new HeadlessBackupClassificationEntry(backupClass, DateTimeOffset.UtcNow, reason);
+        lock (classificationGate)
+        {
+            classifications[fileName] = entry;
+            PersistClassifications();
+        }
+        activity.Record("Information", "Backups", "Reclassified backup", $"file={fileName}; class={backupClass}");
+        return entry;
     }
 
     public async Task<HeadlessBackupOperationResult> DeleteAsync(
@@ -120,7 +148,7 @@ public sealed class HeadlessBackupService
             if (Directory.Exists(paths.SaveRoot) &&
                 Directory.EnumerateFiles(paths.SaveRoot, "*", SearchOption.AllDirectories).Any())
             {
-                var safety = await CreateInternalAsync("pre-restore", cancellationToken);
+                var safety = await CreateInternalAsync("pre-restore", BackupClass.Safety, cancellationToken);
                 if (!safety.Success)
                     return HeadlessBackupOperationResult.Failure(
                         "Restore aborted because the pre-restore safety backup failed: " + safety.Message);
@@ -216,9 +244,15 @@ public sealed class HeadlessBackupService
     {
         var keepLatest = Math.Clamp(request.KeepLatest, 1, 1000);
         var maxAgeDays = Math.Clamp(request.MaxAgeDays, 1, 3650);
+        // Default to Scheduled only -- this is what actually protects Manual/Emergency/Safety
+        // backups from routine pruning: the retention tool literally cannot see them unless an
+        // admin explicitly opts a class in.
+        var includeClasses = request.IncludeClasses is { Count: > 0 }
+            ? request.IncludeClasses
+            : (IReadOnlySet<BackupClass>)new HashSet<BackupClass> { BackupClass.Scheduled };
         var inventory = GetInventory();
         var cutoff = DateTimeOffset.UtcNow.AddDays(-maxAgeDays);
-        var candidates = inventory.Items.Skip(keepLatest).Where(x => x.CreatedAt < cutoff)
+        var candidates = inventory.Items.Where(x => includeClasses.Contains(x.Class)).Skip(keepLatest).Where(x => x.CreatedAt < cutoff)
             .Select(x => new HeadlessBackupRetentionItem(x.FileName, x.SizeBytes, x.CreatedAt)).ToArray();
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
         var preview = new HeadlessBackupRetentionPreview(token, keepLatest, maxAgeDays, candidates,
@@ -307,8 +341,28 @@ public sealed class HeadlessBackupService
         File.Move(partial, verificationPath, true);
     }
 
+    private Dictionary<string, HeadlessBackupClassificationEntry> LoadClassifications()
+    {
+        try
+        {
+            return File.Exists(classificationPath)
+                ? JsonSerializer.Deserialize<Dictionary<string, HeadlessBackupClassificationEntry>>(File.ReadAllText(classificationPath)) ?? []
+                : [];
+        }
+        catch { return []; }
+    }
+
+    // Caller must already hold classificationGate.
+    private void PersistClassifications()
+    {
+        var partial = classificationPath + ".partial";
+        File.WriteAllText(partial, JsonSerializer.Serialize(classifications, new JsonSerializerOptions { WriteIndented = true }));
+        File.Move(partial, classificationPath, true);
+    }
+
     private async Task<HeadlessBackupOperationResult> CreateInternalAsync(
         string reason,
+        BackupClass backupClass,
         CancellationToken cancellationToken)
     {
         if (!Directory.Exists(paths.SaveRoot) ||
@@ -340,6 +394,12 @@ public sealed class HeadlessBackupService
 
                 File.Move(partialPath, finalPath, overwrite: false);
             }, cancellationToken);
+
+            lock (classificationGate)
+            {
+                classifications[fileName] = new HeadlessBackupClassificationEntry(backupClass, DateTimeOffset.UtcNow, reason);
+                PersistClassifications();
+            }
 
             return new HeadlessBackupOperationResult(
                 true,
@@ -415,11 +475,17 @@ public sealed class HeadlessBackupService
     }
 }
 
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+public enum BackupClass { Manual, Scheduled, Emergency, Safety }
+
+public sealed record HeadlessBackupClassificationEntry(BackupClass Class, DateTimeOffset ClassifiedUtc, string? Reason);
+
 public sealed record HeadlessBackupItem(
     string FileName,
     long SizeBytes,
     DateTimeOffset CreatedAt,
-    bool Verified);
+    bool Verified,
+    BackupClass Class);
 
 public sealed record HeadlessBackupInventory(
     int Count,
@@ -448,7 +514,8 @@ public sealed record HeadlessBackupVerificationResult(bool Success, string FileN
     public static HeadlessBackupVerificationResult Conflict(string fileName) => new(false, fileName, null, 0, 0, DateTimeOffset.UtcNow, "A backup operation is already in progress.");
 }
 public sealed record HeadlessBackupVerificationBatch(IReadOnlyList<HeadlessBackupVerificationResult> Results, DateTimeOffset VerifiedAt, string Message);
-public sealed record HeadlessBackupRetentionRequest(int KeepLatest, int MaxAgeDays);
+public sealed record HeadlessBackupRetentionRequest(int KeepLatest, int MaxAgeDays, IReadOnlySet<BackupClass>? IncludeClasses = null);
+public sealed record HeadlessBackupSetClassRequest(BackupClass Class, string? Reason);
 public sealed record HeadlessBackupRetentionItem(string FileName, long SizeBytes, DateTimeOffset CreatedAt);
 public sealed record HeadlessBackupRetentionPreview(string Token, int KeepLatest, int MaxAgeDays, IReadOnlyList<HeadlessBackupRetentionItem> Items, long ReclaimBytes, DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt, string Message);
 public sealed record HeadlessBackupRetentionApplyRequest(string Token);

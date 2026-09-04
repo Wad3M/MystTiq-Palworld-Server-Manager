@@ -4,15 +4,21 @@ using MystTiq.Core.Services;
 namespace MystTiq.Core.Operations;
 
 // Central coordinator for long-running/destructive actions. Persists one JSON
-// file per operation under ManagerRuntimeRoot/operations/journals/, reusing
+// file per operation under ManagerRuntimeRoot/operations/journals/{profile}/, reusing
 // the exact atomic-temp-file-then-move pattern already proven by
 // HeadlessWorldTransactionJournal (WorldTransactionJournalService.Advance) --
 // just promoted to Core and made kind-agnostic instead of copied per feature.
+//
+// v0.6.2.0: this is now a fleet-level singleton shared by every server profile (constructed
+// once against the fleet root, not any one profile's paths) so a Fleet dashboard can see
+// operations across the whole fleet. Resource locks are keyed by (profile, resourceKey) so a
+// "world-mutation" lock on one server never blocks another -- same-profile locking is
+// unaffected (still reject-if-conflicting within that profile).
 public sealed class OperationCoordinator : IOperationCoordinator
 {
     private readonly IServerPathProfile paths;
     private readonly object gate = new();
-    private readonly Dictionary<string, OperationId> resourceLocks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<(ServerProfileId Profile, string Key), OperationId> resourceLocks = new();
     private readonly Dictionary<OperationId, OperationRecord> records = [];
     private readonly List<OperationId> order = [];
 
@@ -28,15 +34,15 @@ public sealed class OperationCoordinator : IOperationCoordinator
         {
             foreach (var key in resourceKeys)
             {
-                if (resourceLocks.TryGetValue(key, out var holder))
-                    throw new InvalidOperationException($"Blocked: resource '{key}' is held by operation {holder} until it completes. Try again once that operation finishes.");
+                if (resourceLocks.TryGetValue((profile, NormalizeKey(key)), out var holder))
+                    throw new InvalidOperationException($"Blocked: resource '{key}' on server '{profile}' is held by operation {holder} until it completes. Try again once that operation finishes.");
             }
 
             var id = OperationId.New();
-            foreach (var key in resourceKeys) resourceLocks[key] = id;
+            foreach (var key in resourceKeys) resourceLocks[(profile, NormalizeKey(key))] = id;
 
             var now = DateTimeOffset.UtcNow;
-            var journalPath = Path.Combine(paths.ManagerRuntimeRoot, "operations", "journals", $"operation-{id}.json");
+            var journalPath = Path.Combine(paths.ManagerRuntimeRoot, "operations", "journals", profile.Value, $"operation-{id}.json");
             var record = new OperationRecord
             {
                 OperationId = id,
@@ -53,7 +59,7 @@ public sealed class OperationCoordinator : IOperationCoordinator
             records[id] = record;
             order.Add(id);
             Persist(record);
-            return Task.FromResult(new OperationHandle(this, id, resourceKeys));
+            return Task.FromResult(new OperationHandle(this, profile, id, resourceKeys));
         }
     }
 
@@ -103,11 +109,16 @@ public sealed class OperationCoordinator : IOperationCoordinator
         }
     }
 
-    public IReadOnlyList<OperationRecord> ListRecent(int max = 50)
+    public IReadOnlyList<OperationRecord> ListRecent(int max = 50) => ListRecent(null, max);
+
+    public IReadOnlyList<OperationRecord> ListRecent(ServerProfileId? profile, int max = 50)
     {
         lock (gate)
         {
-            return order.AsEnumerable().Reverse().Take(max).Select(id => records[id]).ToList();
+            var sequence = order.AsEnumerable().Reverse().Select(id => records[id]);
+            if (profile is { } filter)
+                sequence = sequence.Where(r => r.ServerProfileId.Equals(filter));
+            return sequence.Take(max).ToList();
         }
     }
 
@@ -119,17 +130,20 @@ public sealed class OperationCoordinator : IOperationCoordinator
         }
     }
 
-    internal void ReleaseLocks(OperationId id, IReadOnlyList<string> resourceKeys)
+    internal void ReleaseLocks(ServerProfileId profile, OperationId id, IReadOnlyList<string> resourceKeys)
     {
         lock (gate)
         {
             foreach (var key in resourceKeys)
             {
-                if (resourceLocks.TryGetValue(key, out var holder) && holder.Equals(id))
-                    resourceLocks.Remove(key);
+                var normalized = (profile, NormalizeKey(key));
+                if (resourceLocks.TryGetValue(normalized, out var holder) && holder.Equals(id))
+                    resourceLocks.Remove(normalized);
             }
         }
     }
+
+    private static string NormalizeKey(string key) => key.ToUpperInvariant();
 
     private static void Persist(OperationRecord record)
     {

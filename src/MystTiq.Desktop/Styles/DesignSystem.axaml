@@ -110,6 +110,31 @@
       <GradientStop Offset="0.6" Color="#8A3E8CE8"/>
       <GradientStop Offset="1" Color="#9C7F5EEE"/>
     </LinearGradientBrush>
+    <!-- Softer, translucent Start/Stop treatment: same glass structure and alpha weight as
+         PrimaryGlassGradient above (so Start/Stop read at the same visual intensity as every
+         other ribbon button), just tinted green/red instead of full-opacity danger/success fills. -->
+    <LinearGradientBrush x:Key="SuccessGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#9A7FE5B0"/>
+      <GradientStop Offset="0.22" Color="#7A4FC48C"/>
+      <GradientStop Offset="0.6" Color="#68389E70"/>
+      <GradientStop Offset="1" Color="#7A5A9A6E"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="SuccessGlassHoverGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#C49EF0C4"/>
+      <GradientStop Offset="0.22" Color="#9E6BD4A0"/>
+      <GradientStop Offset="0.6" Color="#8A4CAE84"/>
+      <GradientStop Offset="1" Color="#9C88B080"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="DangerGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#9AF0989C"/>
+      <GradientStop Offset="0.6" Color="#68C4666F"/>
+      <GradientStop Offset="1" Color="#7AA9525E"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="DangerGlassHoverGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#C4F5B4B7"/>
+      <GradientStop Offset="0.6" Color="#8AD68890"/>
+      <GradientStop Offset="1" Color="#9CBF7480"/>
+    </LinearGradientBrush>
 
     <!-- v0.5.0.8 surface lighting: brighter upper-left edge, deeper lower-right face. -->
     <LinearGradientBrush x:Key="CommandSurfaceGradient" StartPoint="0%,0%" EndPoint="100%,100%">
@@ -128,12 +153,14 @@
       <GradientStop Offset="0.88" Color="#521E5A9E"/>
       <GradientStop Offset="1" Color="#260E2648"/>
     </LinearGradientBrush>
+    <!-- Darkened to match the connection-profile tab strip's near-black selected look, instead
+         of fading up to a light lavender/white top edge. -->
     <LinearGradientBrush x:Key="NavSelectedGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Offset="0" Color="#C0A0B0D8"/>
-      <GradientStop Offset="0.38" Color="#B078BEEC"/>
-      <GradientStop Offset="0.68" Color="#7C4076C8"/>
-      <GradientStop Offset="0.9" Color="#48285690"/>
-      <GradientStop Offset="1" Color="#220E2648"/>
+      <GradientStop Offset="0" Color="#D0182838"/>
+      <GradientStop Offset="0.38" Color="#C0142230"/>
+      <GradientStop Offset="0.68" Color="#B00E1A24"/>
+      <GradientStop Offset="0.9" Color="#A00A1218"/>
+      <GradientStop Offset="1" Color="#9A05080C"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="NavHoverGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
       <GradientStop Offset="0" Color="#A882C0E0"/>
@@ -145,11 +172,11 @@
          shift (checked's own Background otherwise wins over pointerover's with no change at all),
          so this is a uniformly lightened pass of NavSelectedGlassGradient's stops. -->
     <LinearGradientBrush x:Key="NavSelectedHoverGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Offset="0" Color="#D8C0CEE8"/>
-      <GradientStop Offset="0.38" Color="#CC98D0FC"/>
-      <GradientStop Offset="0.68" Color="#9C5C96E0"/>
-      <GradientStop Offset="0.9" Color="#6C3C6CA8"/>
-      <GradientStop Offset="1" Color="#3C1C3C68"/>
+      <GradientStop Offset="0" Color="#E0203444"/>
+      <GradientStop Offset="0.38" Color="#D01A2C3C"/>
+      <GradientStop Offset="0.68" Color="#C0142230"/>
+      <GradientStop Offset="0.9" Color="#B00E1A24"/>
+      <GradientStop Offset="1" Color="#A80A1218"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="DashboardGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
       <GradientStop Offset="0" Color="#4C1C3D62"/>
@@ -474,16 +501,32 @@
     <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="18" Color="#35B9FF" Opacity="0.72"/></Setter>
   </Style>
   <!-- Same fix for ribbon+danger (Stop): without this, the ribbon flat fill silently wins over
-       the red danger background too. -->
+       the danger background too. Uses the softer translucent DangerGlassGradient (not the fully-
+       opaque DangerGradient other danger buttons use elsewhere) so Stop reads at the same lighter
+       intensity as Start below, rather than standing out as the one saturated ribbon button. -->
   <Style Selector="Button.ribbon.danger">
-    <Setter Property="Background" Value="{DynamicResource DangerGradient}"/>
-    <Setter Property="BorderBrush" Value="#FF858C"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#FF646D" Opacity="0.3"/></Setter>
+    <Setter Property="Background" Value="{DynamicResource DangerGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="#E39399"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#FF646D" Opacity="0.22"/></Setter>
   </Style>
   <Style Selector="Button.ribbon.danger:pointerover">
-    <Setter Property="Background" Value="{DynamicResource DangerGradient}"/>
+    <Setter Property="Background" Value="{DynamicResource DangerGlassHoverGradient}"/>
     <Setter Property="BorderBrush" Value="#FFC0C4"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="#FF646D" Opacity="0.6"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="#FF646D" Opacity="0.45"/></Setter>
+  </Style>
+  <!-- Start uses this (Classes="ribbon success") instead of ribbon.primary, so it reads as a
+       distinct, lightly-green-highlighted action: the same translucent glass weight as Stop's
+       danger treatment above, just tinted green, rather than sharing the generic blue "primary"
+       look every other ribbon button already uses. -->
+  <Style Selector="Button.ribbon.success">
+    <Setter Property="Background" Value="{DynamicResource SuccessGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="#8FE0B0"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#63DF7B" Opacity="0.22"/></Setter>
+  </Style>
+  <Style Selector="Button.ribbon.success:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SuccessGlassHoverGradient}"/>
+    <Setter Property="BorderBrush" Value="#C4F1D9"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="#63DF7B" Opacity="0.45"/></Setter>
   </Style>
 
   <Style Selector="Button.ribbon StackPanel">

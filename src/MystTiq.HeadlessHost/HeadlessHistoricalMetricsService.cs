@@ -89,8 +89,35 @@ public sealed class HeadlessHistoricalMetricsService
                 Trend(selected.Select(x => x.CpuPercent)),
                 Trend(selected.Select(x => x.MemoryMb)),
                 DateTimeOffset.UtcNow,
-                $"{selected.Count} sample(s) in the selected range." );
+                $"{selected.Count} sample(s) in the selected range.",
+                FindGaps(selected),
+                FindRestartMarkers(selected));
         }
+    }
+
+    // A gap wider than 3x the minimum sample interval means the server (or MystTiq itself) was
+    // offline for that stretch -- without this, a chart would draw a misleading straight line
+    // across the outage instead of showing it as a break.
+    private static IReadOnlyList<HistoricalGapMarker> FindGaps(IReadOnlyList<HeadlessHistoricalMetricSample> selected)
+    {
+        var threshold = MinimumSampleInterval * 3;
+        var gaps = new List<HistoricalGapMarker>();
+        for (var i = 1; i < selected.Count; i++)
+        {
+            var delta = selected[i].ObservedAt - selected[i - 1].ObservedAt;
+            if (delta > threshold) gaps.Add(new HistoricalGapMarker(selected[i - 1].ObservedAt, selected[i].ObservedAt));
+        }
+        return gaps;
+    }
+
+    private static IReadOnlyList<DateTimeOffset> FindRestartMarkers(IReadOnlyList<HeadlessHistoricalMetricSample> selected)
+    {
+        var markers = new List<DateTimeOffset>();
+        for (var i = 1; i < selected.Count; i++)
+        {
+            if (selected[i].UptimeMinutes < selected[i - 1].UptimeMinutes) markers.Add(selected[i].ObservedAt);
+        }
+        return markers;
     }
 
     private static IReadOnlyList<HeadlessHistoricalMetricSample> Downsample(IReadOnlyList<HeadlessHistoricalMetricSample> source, int max)
@@ -161,6 +188,8 @@ public sealed record HeadlessHistoricalMetricSample(
     long WorldSizeBytes,
     double UptimeMinutes);
 
+public sealed record HistoricalGapMarker(DateTimeOffset StartUtc, DateTimeOffset EndUtc);
+
 public sealed record HeadlessHistoricalMetricsSnapshot(
     IReadOnlyList<HeadlessHistoricalMetricSample> Samples,
     double AverageCpu,
@@ -172,4 +201,6 @@ public sealed record HeadlessHistoricalMetricsSnapshot(
     string CpuTrend,
     string MemoryTrend,
     DateTimeOffset ObservedAt,
-    string Detail);
+    string Detail,
+    IReadOnlyList<HistoricalGapMarker> Gaps,
+    IReadOnlyList<DateTimeOffset> RestartMarkers);

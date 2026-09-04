@@ -4,10 +4,16 @@ using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
 
+// Data/annotation only in this pass -- not auto-enforced against any live provider hook (no
+// automatic kick/ban/mute follows from setting a flag).
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+public enum PlayerFlag { None, Watchlisted, Banned, Trusted }
+
 public sealed record PlayerWarningRecord(string Message, DateTimeOffset CreatedAt, string Actor);
-public sealed record PlayerMetadataRecord(string PlayerId, string Notes, IReadOnlyList<PlayerWarningRecord> Warnings, DateTimeOffset UpdatedAt);
+public sealed record PlayerMetadataRecord(string PlayerId, string Notes, IReadOnlyList<PlayerWarningRecord> Warnings, DateTimeOffset UpdatedAt, PlayerFlag Flag = PlayerFlag.None);
 public sealed record PlayerNotesRequest(string Notes);
 public sealed record PlayerWarningRequest(string Message);
+public sealed record PlayerFlagRequest(PlayerFlag Flag);
 
 public sealed class HeadlessPlayerMetadataService
 {
@@ -64,6 +70,21 @@ public sealed class HeadlessPlayerMetadataService
             store[id] = updated;
             Save(store);
             activity.Record("Warning", "Players", "Player warning added", $"playerId={id}; warningCount={warnings.Length}");
+            return updated;
+        }
+    }
+
+    public PlayerMetadataRecord SetFlag(string playerId, PlayerFlag flag)
+    {
+        var id = NormalizeId(playerId);
+        lock (gate)
+        {
+            var store = Load();
+            var current = store.TryGetValue(id, out var record) ? record : new PlayerMetadataRecord(id, string.Empty, [], DateTimeOffset.UtcNow);
+            var updated = current with { Flag = flag, UpdatedAt = DateTimeOffset.UtcNow };
+            store[id] = updated;
+            Save(store);
+            activity.Record("Information", "Players", "Player flag updated", $"playerId={id}; flag={flag}");
             return updated;
         }
     }

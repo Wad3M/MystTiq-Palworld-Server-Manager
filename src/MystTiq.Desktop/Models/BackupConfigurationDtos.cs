@@ -8,10 +8,20 @@ public sealed class BackupItemDto
     [JsonPropertyName("sizeBytes")] public long SizeBytes { get; init; }
     [JsonPropertyName("createdAt")] public DateTimeOffset CreatedAt { get; init; }
     [JsonPropertyName("verified")] public bool Verified { get; init; }
+    [JsonPropertyName("class")] public string Class { get; init; } = "Manual";
 
     public string SizeText => $"{SizeBytes / 1024d / 1024d:F2} MB";
     public string CreatedText => CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
     public string VerificationText => Verified ? "Verified" : "Unreadable";
+}
+
+public sealed record BackupSetClassRequestDto(string Class, string? Reason);
+
+public sealed class BackupClassificationEntryDto
+{
+    [JsonPropertyName("class")] public string Class { get; init; } = "Manual";
+    [JsonPropertyName("classifiedUtc")] public DateTimeOffset ClassifiedUtc { get; init; }
+    [JsonPropertyName("reason")] public string? Reason { get; init; }
 }
 
 public sealed class BackupInventoryDto

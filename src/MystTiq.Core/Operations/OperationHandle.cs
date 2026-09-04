@@ -9,12 +9,14 @@ namespace MystTiq.Core.Operations;
 public sealed class OperationHandle : IDisposable
 {
     private readonly OperationCoordinator coordinator;
+    private readonly ServerProfileId profile;
     private readonly IReadOnlyList<string> resourceKeys;
     private bool disposed;
 
-    internal OperationHandle(OperationCoordinator coordinator, OperationId id, IReadOnlyList<string> resourceKeys)
+    internal OperationHandle(OperationCoordinator coordinator, ServerProfileId profile, OperationId id, IReadOnlyList<string> resourceKeys)
     {
         this.coordinator = coordinator;
+        this.profile = profile;
         Id = id;
         this.resourceKeys = resourceKeys;
     }
@@ -25,6 +27,6 @@ public sealed class OperationHandle : IDisposable
     {
         if (disposed) return;
         disposed = true;
-        coordinator.ReleaseLocks(Id, resourceKeys);
+        coordinator.ReleaseLocks(profile, Id, resourceKeys);
     }
 }
