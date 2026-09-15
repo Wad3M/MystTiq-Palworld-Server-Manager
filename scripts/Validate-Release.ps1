@@ -52,6 +52,7 @@ $activeFiles = Get-ChildItem $root -File -Recurse -Include *.cs,*.xaml,*.csproj,
     $relativePath -ne 'docs\index.html' -and
     -not ($relativePath -like 'scripts\Test-v*-Logic.ps1') -and
     -not ($relativePath -like 'scripts\Test-v*-RuntimeSmoke.ps1') -and
+    -not ($relativePath -like 'scripts\Test-v*-RouteSmoke.ps1') -and
     -not ($relativePath -like 'scripts\Test-v*-LinuxAcceptance.sh') -and
     -not ($relativePath -like 'scripts\Test-v*-ProductionReadiness.sh')
 }

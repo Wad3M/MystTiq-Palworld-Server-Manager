@@ -107,7 +107,9 @@ public sealed class HeadlessMonitoringService
                         GetAny(player, "ping"),
                         DetectPlayerPlatform(userId, steamId),
                         GetAny(player, "level"),
-                        GetAny(player, "buildingCount", "buildingcount", "building_count")));
+                        GetAny(player, "buildingCount", "buildingcount", "building_count"),
+                        GetAny(player, "location_x", "locationX", "x"),
+                        GetAny(player, "location_y", "locationY", "y")));
                 }
             }
 
@@ -152,6 +154,14 @@ public sealed class HeadlessMonitoringService
                     $"Showing the newest {lines.Count} line(s) from {only.Label}.");
             }
 
+            // v0.6.14.0: a trailing merged.TakeLast(maxLines) here used to silently crop out an
+            // entire earlier source once a later source's own chunk alone filled the requested
+            // window -- reproduced live: MystTiq's own lifecycle/stdout log (added first, and the
+            // one carrying every Start/Stop narrative line) was completely evicted by Pal.log's
+            // chunk (added second) even though the MystTiq lines were the freshest content by far.
+            // Each source is already independently bounded to perSource lines via ReadTailLines, so
+            // the merged total is naturally bounded too (sources.Count * (perSource + 1 header)) --
+            // no further global crop needed, and every source's own tail is now genuinely preserved.
             var merged = new List<string>();
             var perSource = Math.Max(12, maxLines / sources.Count);
             foreach (var source in sources)
@@ -163,7 +173,7 @@ public sealed class HeadlessMonitoringService
             return new HeadlessLogTailSnapshot(
                 true,
                 string.Join(" + ", sources.Select(x => x.Label)),
-                merged.TakeLast(maxLines).ToList(),
+                merged,
                 DateTimeOffset.UtcNow,
                 "Combined MystTiq lifecycle/stdout, Pal.log, and available server-mod log evidence into the in-app console.");
         }
@@ -192,6 +202,16 @@ public sealed class HeadlessMonitoringService
         var result = new List<(string Label, string Path)>();
         Add(result, "MystTiq redirected stdout/stderr + lifecycle", Path.Combine(paths.LogsRoot, "MystTiq-PalServer-Console.log"));
         Add(result, "Pal.log", Path.Combine(paths.LogsRoot, "Pal.log"));
+        // v0.7.50.0: Pal.log is where these lines assumed real PalServer/UE4SS activity would land,
+        // but confirmed live against a real, actively-modded production install that this file is
+        // never actually created by Palworld's Windows dedicated server build (consistent with
+        // -ABSLOG also producing nothing, per the v0.7.46.0/v0.7.47.0 console-capture investigation)
+        // -- so this source has silently never contributed anything on a real server. UE4SS DOES
+        // write its own real, substantial log (hook registrations, hundreds of hundreds of lines per
+        // session) to UE4SS.log, which this method never looked for at all -- confirmed present with
+        // real content (1947 lines from the current session alone) on the same real install.
+        Add(result, "UE4SS.log", Path.Combine(paths.Ue4ssRoot, "UE4SS.log"));
+        Add(result, "UE4SS.log (legacy layout)", Path.Combine(paths.RuntimeBinaryRoot, "UE4SS.log"));
 
         var adminLogs = Path.Combine(paths.RuntimeBinaryRoot, "ue4ss", "Mods", "AdminCommands", "Scripts", "logs", "serverlogs");
         var latestAdmin = FindNewestTextLog(adminLogs);
@@ -200,6 +220,16 @@ public sealed class HeadlessMonitoringService
         var legacyAdminLogs = Path.Combine(paths.RuntimeBinaryRoot, "Mods", "AdminCommands", "Scripts", "logs", "serverlogs");
         var latestLegacyAdmin = FindNewestTextLog(legacyAdminLogs);
         if (latestLegacyAdmin is not null) Add(result, "AdminCommands legacy log", latestLegacyAdmin);
+
+        // v0.7.71.0: PalDefender (a UE4SS-loaded anti-cheat mod) writes its own timestamped
+        // per-session log under its own Logs folder -- confirmed live against a real production
+        // install to carry exactly the content a user-reported console screenshot showed (PalDefender
+        // startup narration, its REST API port, and even PalServer's own "Running Palworld dedicated
+        // server on :PORT" banner line, which apparently reaches PalDefender's own logger too) that
+        // no other source here captures. Never looked for before this version.
+        var palDefenderLogs = Path.Combine(paths.RuntimeBinaryRoot, "PalDefender", "Logs");
+        var latestPalDefender = FindNewestTextLog(palDefenderLogs);
+        if (latestPalDefender is not null) Add(result, "PalDefender log", latestPalDefender);
 
         if (result.Count == 0)
         {
@@ -223,9 +253,59 @@ public sealed class HeadlessMonitoringService
         catch { return null; }
     }
 
+    // v0.7.9.0: Palworld's official /v1/api/metrics endpoint reports the game's own simulation
+    // performance (serverfps/serverframetime), which degrades with base/Pal count independent of
+    // host-level CPU% -- the thing operators actually watch for lag, which the process-level
+    // sampling below cannot see. Reuses the exact REST client construction GetPlayersAsync already
+    // uses (same config file, same port/password, same Basic auth) rather than duplicating a
+    // second copy of that setup. Best-effort: any failure here must not affect the host-level
+    // metrics GetMetricsAsync already reports, so failures are swallowed to (null, null) rather
+    // than thrown.
+    private async Task<(double? Fps, double? FrameTimeMs)> GetGamePerformanceAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var settingsPath = Path.Combine(paths.ConfigRoot, "PalWorldSettings.ini");
+            if (!File.Exists(settingsPath)) return (null, null);
+            var text = await File.ReadAllTextAsync(settingsPath, cancellationToken);
+            if (ReadBooleanOption(text, "RESTAPIEnabled") is not true) return (null, null);
+
+            var restPort = ReadIntegerOption(text, "RESTAPIPort") ?? 8212;
+            var adminPassword = ReadQuotedOption(text, "AdminPassword");
+            if (string.IsNullOrWhiteSpace(adminPassword)) return (null, null);
+
+            using var handler = new SocketsHttpHandler { UseProxy = false, AllowAutoRedirect = false, PooledConnectionLifetime = TimeSpan.FromMinutes(2) };
+            using var client = new HttpClient(handler)
+            {
+                BaseAddress = new Uri($"http://127.0.0.1:{restPort}/v1/api/"),
+                Timeout = TimeSpan.FromSeconds(5),
+                DefaultRequestVersion = HttpVersion.Version11,
+                DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact
+            };
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"admin:{adminPassword}")));
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, "metrics") { Version = HttpVersion.Version11, VersionPolicy = HttpVersionPolicy.RequestVersionExact };
+            request.Headers.ConnectionClose = true;
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken);
+            if (!response.IsSuccessStatusCode) return (null, null);
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(body) ? "{}" : body);
+            double? fps = document.RootElement.TryGetProperty("serverfps", out var fpsElement) && fpsElement.TryGetDouble(out var fpsValue) ? fpsValue : null;
+            double? frameTime = document.RootElement.TryGetProperty("serverframetime", out var frameTimeElement) && frameTimeElement.TryGetDouble(out var frameTimeValue) ? frameTimeValue : null;
+            return (fps, frameTime);
+        }
+        catch
+        {
+            return (null, null);
+        }
+    }
+
     public async Task<HeadlessRuntimeMetricsSnapshot> GetMetricsAsync(CancellationToken cancellationToken)
     {
         var status = await lifecycle.GetStatusAsync(cancellationToken);
+        var gamePerformance = await GetGamePerformanceAsync(cancellationToken);
         var processIds = status.Processes.Select(x => x.ProcessId)
             .Concat(status.NativeProcessId.HasValue ? [status.NativeProcessId.Value] : Array.Empty<int>())
             .Where(id => id > 0)
@@ -237,7 +317,8 @@ public sealed class HeadlessMonitoringService
             ResetMetricSample();
             return new HeadlessRuntimeMetricsSnapshot(
                 false, null, null, 0, 0, DateTimeOffset.UtcNow,
-                "PalServer is not currently running.");
+                "PalServer is not currently running.",
+                gamePerformance.Fps, gamePerformance.FrameTimeMs);
         }
 
         try
@@ -295,7 +376,8 @@ public sealed class HeadlessMonitoringService
             {
                 ResetMetricSample();
                 return new HeadlessRuntimeMetricsSnapshot(false, status.NativeProcessId, null, 0, 0, now,
-                    "PalServer processes exited before runtime metrics could be sampled.");
+                    "PalServer processes exited before runtime metrics could be sampled.",
+                    gamePerformance.Fps, gamePerformance.FrameTimeMs);
             }
 
             var cpuPercent = cpuSamples > 0 ? Math.Clamp(totalCpuPercent, 0d, 100d) : (double?)null;
@@ -308,14 +390,17 @@ public sealed class HeadlessMonitoringService
                 now,
                 cpuPercent.HasValue
                     ? $"PalServer runtime metrics aggregated across {liveIds.Count} managed process(es)."
-                    : $"PalServer runtime metrics baseline captured across {liveIds.Count} managed process(es); CPU percent will be available on the next sample.");
+                    : $"PalServer runtime metrics baseline captured across {liveIds.Count} managed process(es); CPU percent will be available on the next sample.",
+                gamePerformance.Fps,
+                gamePerformance.FrameTimeMs);
         }
         catch (Exception ex)
         {
             ResetMetricSample();
             return new HeadlessRuntimeMetricsSnapshot(
                 false, status.NativeProcessId, null, 0, 0, DateTimeOffset.UtcNow,
-                $"Unable to sample PalServer runtime metrics: {ex.Message}");
+                $"Unable to sample PalServer runtime metrics: {ex.Message}",
+                gamePerformance.Fps, gamePerformance.FrameTimeMs);
         }
     }
 
@@ -451,6 +536,12 @@ public sealed class HeadlessMonitoringService
     }
 }
 
+// v0.6.16.0: LocationX/LocationY come from the same real-time /v1/api/players response every
+// other field here already reads -- Palworld's official REST API returns flat "location_x"/
+// "location_y" per online player (confirmed against the official docs and an independently
+// reverse-derived OpenAPI spec that lands on the same field set). No mod or save decode needed;
+// this was simply never captured before. String, matching every sibling field's convention here
+// (Ping/Level/BuildingCount), parsed downstream where a numeric value is actually needed.
 public sealed record HeadlessPlayerSnapshot(
     string Name,
     string UserId,
@@ -460,7 +551,9 @@ public sealed record HeadlessPlayerSnapshot(
     string Ping,
     string Platform,
     string Level,
-    string BuildingCount);
+    string BuildingCount,
+    string LocationX = "",
+    string LocationY = "");
 
 public sealed record HeadlessPlayersSnapshot(
     bool Available,
@@ -483,4 +576,9 @@ public sealed record HeadlessRuntimeMetricsSnapshot(
     long WorkingSetBytes,
     int ThreadCount,
     DateTimeOffset ObservedAt,
-    string Detail);
+    string Detail,
+    // v0.7.9.0: real in-game simulation performance from Palworld's own REST /metrics endpoint --
+    // null (not 0) when the REST API is disabled/misconfigured/unreachable, same convention as
+    // CpuPercent above, distinguishing "not available" from "genuinely zero".
+    double? ServerFps = null,
+    double? ServerFrameTimeMs = null);

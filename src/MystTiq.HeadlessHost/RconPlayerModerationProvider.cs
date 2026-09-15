@@ -23,7 +23,10 @@ public sealed class RconPlayerModerationProvider : IPlayerModerationProvider
     public string ProviderId => "rcon";
     public string DisplayName => "Palworld RCON";
 
-    public bool SupportsAction(string action) => (action ?? string.Empty).Trim().ToLowerInvariant() is "kick" or "ban";
+    // v0.7.8.0: "unban" added. Palworld's REST API (HeadlessPalworldAdminService, the other
+    // IPlayerModerationProvider) has no unban endpoint at all -- only RCON's UnBanPlayer command
+    // does -- so this is intentionally the one action only this provider supports.
+    public bool SupportsAction(string action) => (action ?? string.Empty).Trim().ToLowerInvariant() is "kick" or "ban" or "unban";
 
     public Task<ProviderDescriptor> GetHealthAsync(CancellationToken cancellationToken)
     {
@@ -43,7 +46,12 @@ public sealed class RconPlayerModerationProvider : IPlayerModerationProvider
         if (!SupportsAction(normalizedAction))
             return new PlayerModerationResult(false, false, ProviderId, normalizedAction, playerId, $"Palworld RCON does not expose a '{normalizedAction}' command.");
 
-        var command = normalizedAction == "kick" ? $"KickPlayer {playerId}" : $"BanPlayer {playerId}";
+        var command = normalizedAction switch
+        {
+            "kick" => $"KickPlayer {playerId}",
+            "unban" => $"UnBanPlayer {playerId}",
+            _ => $"BanPlayer {playerId}",
+        };
         var result = await rcon.ExecuteAsync(command, cancellationToken);
         if (!result.Success)
         {

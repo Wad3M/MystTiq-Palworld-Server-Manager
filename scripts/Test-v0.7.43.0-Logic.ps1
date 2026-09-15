@@ -1,0 +1,182 @@
+[CmdletBinding()]
+param(
+    [string]$ProjectRoot = '.',
+    [switch]$RunBuild,
+    [bool]$ExportJson = $true,
+    [bool]$ExportJUnit = $true
+)
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
+
+$root = (Resolve-Path $ProjectRoot).Path
+$framework = Join-Path $root 'scripts\Testing\MystTiq.TestFramework.ps1'
+if (-not (Test-Path $framework -PathType Leaf)) {
+    throw "MystTiq test framework not found: $framework"
+}
+. $framework
+
+$ctx = New-MystTiqTestContext -ProjectRoot $root -Version '0.7.43.0' -Suite 'Logic'
+
+# ---------------------------------------------------------------------------
+# 1. Version / build identity
+# ---------------------------------------------------------------------------
+Test-MystTiqTextMatch $ctx 'Directory.Build.props' `
+    '<VersionPrefix>0\.7\.43\.0</VersionPrefix>' `
+    'Versioning' 'Directory.Build.props reports v0.7.43.0' -Severity Critical
+
+Test-MystTiqTextMatch $ctx 'src\PalworldManager\app.manifest' `
+    'assemblyIdentity version="0\.7\.43\.0"' `
+    'Versioning' 'app.manifest reports v0.7.43.0' -Severity Critical
+
+# ---------------------------------------------------------------------------
+# 2. Existing architecture remains present (regression)
+# ---------------------------------------------------------------------------
+Test-MystTiqFile $ctx 'src\MystTiq.Core\MystTiq.Core.csproj' 'Regression'
+Test-MystTiqFile $ctx 'src\MystTiq.HeadlessHost\MystTiq.HeadlessHost.csproj' 'Regression'
+Test-MystTiqFile $ctx 'src\MystTiq.Desktop\MystTiq.Desktop.csproj' 'Regression'
+Test-MystTiqFile $ctx 'scripts\Test-v0.7.15.0-RouteSmoke.ps1' 'Regression' 'v0.7.15.0 route smoke script is still present' -Severity Critical
+Test-MystTiqFile $ctx 'scripts\Test-v0.7.12.0-RouteSmoke.ps1' 'Regression' 'v0.7.12.0 route smoke script is still present' -Severity Critical
+Test-MystTiqFile $ctx 'scripts\Test-v0.7.17.0-RemoteEnableSmoke.ps1' 'Regression' 'v0.7.17.0 api-remote-enable regression smoke script is still present' -Severity Critical
+
+$mainWindowAxamlText = Get-Content (Join-Path $root 'src\MystTiq.Desktop\MainWindow.axaml') -Raw
+$mainWindowVmText = Get-Content (Join-Path $root 'src\MystTiq.Desktop\ViewModels\MainWindowViewModel.cs') -Raw
+$designSystemText = Get-Content (Join-Path $root 'src\MystTiq.Desktop\Styles\DesignSystem.axaml') -Raw
+
+Add-MystTiqCheck $ctx 'Regression' 'v0.7.42.0 cross-page ribbon branches are still present' `
+    ($mainWindowVmText -match 'else if \(IsUpdateCenterPage\)') `
+    -Severity Critical
+
+# ---------------------------------------------------------------------------
+# 3. v0.7.43.0 contract presence -- findings completeness fixes
+# ---------------------------------------------------------------------------
+Add-MystTiqCheck $ctx 'v0.7.43.0 Contracts' 'Nav pane icons are 56x56 across exactly 25 destinations, column widened to 60px' `
+    ($(
+        $icons = [regex]::Matches($mainWindowAxamlText, 'Width="56" Height="56" Stretch="Uniform"')
+        $columns = [regex]::Matches($mainWindowAxamlText, 'ColumnDefinitions="60,\*" ColumnSpacing="12"')
+        $icons.Count -eq 25 -and $columns.Count -eq 25
+    )) `
+    -Severity Critical
+
+Add-MystTiqCheck $ctx 'v0.7.43.0 Contracts' 'Nav row height grew from 58 to 72 to fit the larger icon' `
+    ($designSystemText -match 'Setter Property="Height" Value="72"' -and
+     $designSystemText -notmatch 'Setter Property="Height" Value="58"') `
+    -Severity Critical
+
+Add-MystTiqCheck $ctx 'v0.7.43.0 Contracts' 'MOD Dashboard has a read-only Installed MODs list + details panel' `
+    ($mainWindowAxamlText -match 'Grid ColumnDefinitions="1\.6\*,\*" ColumnSpacing="12" IsVisible="\{Binding IsModDashboardPage\}">' -and
+     $mainWindowAxamlText -match 'Text="Installed MODs" FontSize="18" FontWeight="SemiBold"/>\s*<TextBlock Text="Read-only here\.') `
+    -Severity Critical
+
+Add-MystTiqCheck $ctx 'v0.7.43.0 Contracts' 'MOD Dashboard list has no mutation buttons (stays read-only, matching its own framing)' `
+    ($mainWindowAxamlText -match '(?s)Grid ColumnDefinitions="1\.6\*,\*".*?IsVisible="\{Binding !HasSelectedMod\}"/>\s*</Grid>\s*</Border>\s*</Grid>' ) `
+    -Severity High
+
+Add-MystTiqCheck $ctx 'v0.7.43.0 Contracts' 'BusyElapsedText property and a dedicated 1-second busy timer exist' `
+    ($mainWindowVmText -match 'public string BusyElapsedText \{ get => _busyElapsedText; private set => SetField\(ref _busyElapsedText, value\); \}' -and
+     $mainWindowVmText -match 'private readonly DispatcherTimer _busyElapsedTimer = new\(\) \{ Interval = TimeSpan\.FromSeconds\(1\) \};') `
+    -Severity Critical
+
+Add-MystTiqCheck $ctx 'v0.7.43.0 Contracts' 'RaiseIsBusyDependents starts/stops the elapsed timer and captures the busy server name' `
+    ($mainWindowVmText -match '_busyElapsedTimer\.Start\(\);' -and
+     $mainWindowVmText -match '_busyElapsedTimer\.Stop\(\);' -and
+     $mainWindowVmText -match '_busyServerName = ActiveTab\?\.ProfileName;') `
+    -Severity Critical
+
+Add-MystTiqCheck $ctx 'v0.7.43.0 Contracts' 'Footer shows BusyElapsedText alongside the reason text' `
+    ($mainWindowAxamlText -match 'Text="\{Binding BusyElapsedText\}" Classes="muted" VerticalAlignment="Center" IsVisible="\{Binding IsBusy\}"') `
+    -Severity Critical
+
+Test-MystTiqFile $ctx 'docs\architecture\v0.7.43.0-findings-completeness-fixes.md' 'v0.7.43.0 Contracts' 'v0.7.43.0 architecture doc is present' -Severity Critical
+
+# ---------------------------------------------------------------------------
+# 4. Documentation
+# ---------------------------------------------------------------------------
+$docText = (Get-ChildItem (Join-Path $root 'docs') -Recurse -File -Include *.md | ForEach-Object { Get-Content $_.FullName -Raw }) -join "`n"
+
+Add-MystTiqCheck $ctx 'Documentation' 'v0.7.43.0 is documented' `
+    ([regex]::IsMatch($docText, 'v0\.7\.43\.0')) `
+    -Severity High
+
+# ---------------------------------------------------------------------------
+# 5. PowerShell syntax safety
+# ---------------------------------------------------------------------------
+Test-MystTiqPowerShellSyntax $ctx -RelativePath 'scripts' -Area 'PowerShell Safety'
+
+# ---------------------------------------------------------------------------
+# 6. Existing v0.7.42.0 gate retained as baseline evidence
+# ---------------------------------------------------------------------------
+Test-MystTiqFile $ctx 'scripts\Test-v0.7.42.0-Logic.ps1' `
+    'Regression Baseline' 'v0.7.42.0 logic gate remains available' -Severity High
+
+# ---------------------------------------------------------------------------
+# 7. Optional build/runtime execution
+# ---------------------------------------------------------------------------
+if ($RunBuild) {
+    $frozenZip = Join-Path $root '..\_Backups\MystTiqPalworldServer\v0.7.42.0\MystTiqPalworldServer_v0.7.42.0_FullSource.zip'
+    if (-not (Test-Path $frozenZip -PathType Leaf)) {
+        throw "Frozen v0.7.42.0 regression baseline checkpoint not found: $frozenZip"
+    }
+    $frozenRoot = Join-Path ([System.IO.Path]::GetTempPath()) 'MystTiq-v0.7.42.0-frozen-baseline'
+    if (-not (Test-Path $frozenRoot)) {
+        Expand-Archive -Path $frozenZip -DestinationPath $frozenRoot -Force
+    }
+    $frozenProjectRoot = if (Test-Path (Join-Path $frozenRoot 'Directory.Build.props')) { $frozenRoot } else {
+        (Get-ChildItem $frozenRoot -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'Directory.Build.props') } | Select-Object -First 1).FullName
+    }
+
+    $frozenGateLog = Join-Path ([System.IO.Path]::GetTempPath()) 'MystTiq-v0.7.42.0-frozen-gate-output.txt'
+    try {
+        & (Join-Path $frozenProjectRoot 'scripts\Test-v0.7.42.0-Logic.ps1') -ProjectRoot $frozenProjectRoot *> $frozenGateLog
+    } catch { }
+    $frozenGateOutput = Get-Content $frozenGateLog -Raw
+    $frozenGateOutput -split "`n" | Where-Object { $_ -match '^\[FAIL\]' } | ForEach-Object { Write-Host $_ }
+    $unexpectedFrozenFailures = @(
+        [regex]::Matches($frozenGateOutput, '(?m)^\[FAIL\]\s+([^:]+?)\s*::') |
+            ForEach-Object { $_.Groups[1].Value.Trim() }
+    )
+    Add-MystTiqCheck $ctx 'Regression Logic' 'Frozen v0.7.42.0 checkpoint logic gate still passes' `
+        ($unexpectedFrozenFailures.Count -eq 0) `
+        -Severity Critical `
+        -Details ($(if ($unexpectedFrozenFailures.Count -gt 0) { "Unexpected failures: $($unexpectedFrozenFailures -join ', ')" } else { '' }))
+
+    Test-MystTiqCommand $ctx 'Build' 'Strict validation passes' {
+        & (Join-Path $root 'Build.ps1') Validate -StrictValidation
+    } -Severity Critical | Out-Null
+
+    Test-MystTiqCommand $ctx 'Build' 'Release solution build passes' {
+        & (Join-Path $root 'Build.ps1') Build -Configuration Release
+    } -Severity Critical | Out-Null
+
+    Test-MystTiqCommand $ctx 'Regression Runtime' 'v0.5.1.5 isolated runtime smoke still passes' {
+        & (Join-Path $root 'scripts\Test-v0.5.1.5-RuntimeSmoke.ps1') -ProjectRoot $root
+    } -Severity Critical | Out-Null
+
+    # v0.7.43.0 is Desktop-only (MOD Dashboard list, footer timer, nav icon sizing), so every
+    # server-side route/CLI smoke test carried forward from prior versions is expected to pass
+    # unchanged -- regression evidence, not new ground. All need Build.ps1 DesktopWindows's
+    # sidecar output, the same known quirk every version's -RunBuild already works around.
+    Test-MystTiqCommand $ctx 'Regression New Tests' 'v0.7.12.0 whitelist enforcement harness (6 scenarios) still passes' {
+        Push-Location (Join-Path $root 'scripts\Testing\MystTiq.LogicHarness')
+        try { & dotnet run -c Release }
+        finally {
+            Pop-Location
+            Remove-Item (Join-Path $root 'scripts\Testing\MystTiq.LogicHarness\bin') -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item (Join-Path $root 'scripts\Testing\MystTiq.LogicHarness\obj') -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    } -Severity Critical | Out-Null
+
+    Test-MystTiqCommand $ctx 'Regression New Tests' 'v0.7.12.0 route smoke gate still passes' {
+        & (Join-Path $root 'scripts\Test-v0.7.12.0-RouteSmoke.ps1') -ProjectRoot $root
+    } -Severity Critical | Out-Null
+
+    Test-MystTiqCommand $ctx 'Regression New Tests' 'v0.7.15.0 route smoke gate still passes' {
+        & (Join-Path $root 'scripts\Test-v0.7.15.0-RouteSmoke.ps1') -ProjectRoot $root
+    } -Severity Critical | Out-Null
+
+    Test-MystTiqCommand $ctx 'Regression New Tests' 'v0.7.17.0 api-remote-enable smoke gate still passes' {
+        & (Join-Path $root 'scripts\Test-v0.7.17.0-RemoteEnableSmoke.ps1') -ProjectRoot $root
+    } -Severity Critical | Out-Null
+}
+
+Complete-MystTiqTestContext $ctx -ExportJson:$ExportJson -ExportJUnit:$ExportJUnit

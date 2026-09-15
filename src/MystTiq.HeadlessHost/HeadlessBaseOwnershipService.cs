@@ -192,6 +192,7 @@ public sealed class HeadlessBaseOwnershipService
                 throw new InvalidDataException("The active Level.sav failed final validation after replacement.");
 
             Advance(journal, "Committed", $"Verified save committed atomically to the active world. Result hash: {HashFile(op.LevelSavePath)}");
+            HeadlessSaveCodecService.RefreshExplorerSidecar(op.LevelSavePath, verifyJsonPath);
             activity.Record("Information", "Base Ownership", "Applied Transfer Base Ownership",
                 $"base={op.BaseId}; from={op.SourceGuildId}; to={op.TargetGuildId}; retagged={retagged}; backup={safety.FileName}");
             coordinator.Complete(operation.Id, $"Base {op.BaseId} transferred from {op.SourceGuildName} to {op.TargetGuildName}.");
@@ -373,6 +374,7 @@ public sealed class HeadlessBaseOwnershipService
                 throw new InvalidDataException("The active Level.sav failed final validation after replacement.");
 
             Advance(journal, "Committed", $"Verified save committed atomically to the active world. Result hash: {HashFile(op.LevelSavePath)}");
+            HeadlessSaveCodecService.RefreshExplorerSidecar(op.LevelSavePath, verifyJsonPath);
             activity.Record("Information", "Base Ownership", "Applied Recover Base",
                 $"base={op.BaseId}; guild={op.GuildId}; removed={removed}; backup={safety.FileName}");
             coordinator.Complete(operation.Id, $"Base {op.BaseId} and {removed} owned record(s) were permanently removed from {op.GuildName}.");

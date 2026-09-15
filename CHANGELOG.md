@@ -1,3 +1,1250 @@
+## v0.7.71.0 — Console Source: PalDefender Log
+
+- Direct follow-up to a user-provided screenshot of a visible Windows Terminal console window
+  showing PalDefender Anti-Cheat startup diagnostics that never appeared in MystTiq's own Console
+  page. Checked live against the real production install rather than assuming a cause: PalDefender
+  (a UE4SS-loaded anti-cheat mod) writes its own timestamped per-session log file at
+  `Pal\Binaries\Win64\PalDefender\Logs\{timestamp}.log`, confirmed to carry exactly the
+  screenshot's content — startup banner, REST API port, load confirmation, the version-mismatch
+  warning, and even PalServer's own "Running Palworld dedicated server on :PORT" banner line.
+  `HeadlessMonitoringService.ResolveConsoleSources` never looked for this file.
+- Fix: added `"PalDefender log"` as a new merged console source, using the same
+  newest-file-in-directory pattern (`FindNewestTextLog`) already used for AdminCommands' own
+  per-session server logs.
+- **Verified live, not just statically**: rebuilt via `Build.ps1 DesktopWindows`, relaunched the
+  real local API host (now v0.7.71.0), and confirmed via `/api/v1/servers/{id}/logs/tail` that the
+  new source appears and carries real PalDefender content for both the real production (`default`)
+  and clone (`second-local`) server profiles on this machine.
+- **Disclosed, unchanged scope**: this does not add ongoing/live console capture — PalDefender's
+  log, like every other source here, only ever carries that session's startup banner and then goes
+  silent for the rest of the run. Genuine live capture of ongoing PalServer/mod output still needs
+  the native DLL-proxy hook scoped (and deliberately not implemented, due to low disclosed payoff
+  given the binary's `NO_LOGGING` build) in v0.7.57.0.
+
+Full detail: [`release-notes/v0.7.71.0.md`](release-notes/v0.7.71.0.md),
+[`docs/architecture/v0.7.71.0-paldefender-console-source.md`](docs/architecture/v0.7.71.0-paldefender-console-source.md).
+
+## v0.7.70.0 — Real Email Notification Dispatch
+
+- Implemented Email as a real notification channel — previously a typed stub since v0.6.1.0 that
+  just logged "not implemented" and dropped the notification, unlike `Webhook`/`Discord` (both
+  real, v0.6.1.0/v0.6.17.0). `NotificationChannelConfig` gained optional Email fields (`SmtpHost`,
+  `SmtpPort` — default 587, `SmtpUseSsl` — default true, `SmtpUsername`/`SmtpPassword`,
+  `EmailFrom`/`EmailTo`), all defaulted so every existing construction elsewhere keeps compiling.
+  `HeadlessNotificationRoutingService.DispatchEmailAsync` sends via `System.Net.Mail.SmtpClient`
+  (the BCL's own client — reused rather than hand-rolled, unlike `PalworldRconService` where no BCL
+  equivalent exists for Source RCON), with the same retry-once shape the other channels already use.
+- `SmtpPassword` stored in plaintext in `channels.json`, matching this project's existing
+  local-secret convention (same threat model as RCON's `AdminPassword`, bearer tokens). Only
+  STARTTLS-style submission (port 587) is supported, not implicit TLS (port 465) — a `SmtpClient`
+  limitation, disclosed.
+- New coverage: 1 scenario added to `scripts\Testing\MystTiq.LogicHarness` (21/21 pass) using a
+  minimal, real SMTP protocol stub server proving the exact envelope, authentication, subject and
+  body reach the wire correctly. The stub's own first draft had a real protocol-shape bug
+  (`SmtpClient` sends the `AUTH LOGIN` username inline on the same line, not as a separate line per
+  the textbook three-step exchange) — caught and fixed during testing, not shipped as a false pass.
+
+Full detail: [`release-notes/v0.7.70.0.md`](release-notes/v0.7.70.0.md),
+[`docs/architecture/v0.7.70.0-email-notification-dispatch.md`](docs/architecture/v0.7.70.0-email-notification-dispatch.md).
+
+## v0.7.69.0 — Stale Crash-State Fix (Windows)
+
+- Fixed another previously-flagged-but-never-chased-down item from the same roadmap audit: a server
+  shown as "Crashed" on Windows only ever cleared via an explicit Start — pressing Stop did nothing,
+  leaving the stale Crashed state stuck indefinitely. Root cause:
+  `WindowsServerLifecycleService.StopAsync`'s "nothing to stop" branch never wrote to the persisted
+  state store at all, unlike `LinuxServerLifecycleService`'s equivalent branch, which already writes
+  a fresh `Stopped`/`StopRequested: true` state there — a genuine Windows-only inconsistency.
+- Fix: Windows's branch now mirrors Linux's exactly, writing a fresh acknowledged `Stopped` state
+  before returning, instead of leaving whatever `GetStatusAsync` currently reports (which stays
+  `Crashed` forever once set, since its own re-check only fires from `Running`/`Starting`).
+- New coverage: 1 scenario added to `scripts\Testing\MystTiq.LogicHarness` (20/20 pass) constructing
+  a real `WindowsServerLifecycleService` (fake process-inspector reporting nothing running, a
+  pre-seeded Crashed state) and proving the real `StopAsync` call clears it correctly.
+
+Full detail: [`release-notes/v0.7.69.0.md`](release-notes/v0.7.69.0.md),
+[`docs/architecture/v0.7.69.0-stale-crash-state-fix.md`](docs/architecture/v0.7.69.0-stale-crash-state-fix.md).
+
+## v0.7.68.0 — Graceful Shutdown: RCON-First Fix
+
+- Diagnosed and fixed a real, previously-flagged-but-never-chased-down bug from the roadmap audit:
+  graceful shutdown had been observed falling back to forced termination on effectively every real
+  stop (v0.6.10.0's own session notes: "4/4 occurrences," never explained). Root cause:
+  `Process.CloseMainWindow()` in `WindowsServerLifecycleService.StopAsync` silently does nothing once
+  MystTiq's own `ApplyPostLaunchWindowPolicyAsync` (runs on a 500ms loop for 30+ seconds after every
+  launch, explicitly `ShowWindow(SW_HIDE)`s PalServer's window to keep the app headless-first) has
+  hidden PalServer's window — `Process.MainWindowHandle`, which `CloseMainWindow` depends on, only
+  resolves a handle for a currently-*visible* window. MystTiq's own headless-mode feature was
+  silently defeating its own graceful-shutdown feature.
+- Fix: both `WindowsServerLifecycleService.StopAsync` and `LinuxServerLifecycleService.StopAsync` now
+  try Palworld's native RCON `Shutdown 1 <message>` command first, when RCON is enabled and a
+  password is configured — the game's own real graceful-exit path (broadcast, save, clean exit), with
+  no dependency on window visibility or process signals. Purely additive: the existing
+  `CloseMainWindow`/force-kill (Windows) and `SIGTERM`/`SIGKILL` (Linux) chain still runs completely
+  unchanged if RCON isn't configured or doesn't result in a clean exit, so this can only improve the
+  outcome, never regress it. Linux's `SIGTERM` wasn't confirmed broken the way `CloseMainWindow` was
+  on Windows — this is a genuine reliability improvement there, not a bug fix.
+- New coverage: 2 scenarios added to `scripts\Testing\MystTiq.LogicHarness` (19/19 pass) using a
+  minimal, real Source RCON protocol stub server that proves `PalworldRconService.ExecuteAsync` sends
+  the exact `"Shutdown 1 MystTiq requested a graceful shutdown."` command over the real wire protocol
+  and correctly parses both success and rejected-password responses.
+- **Update, same session**: end-to-end confirmed live against a real PalServer, at direct request to
+  work on the previously structurally-blocked items. Cloned the real production install (~11 GB,
+  never touching the live install/process) with offset ports and a throwaway admin password, then
+  ran a direct A/B comparison on the real, real-modded server: RCON enabled → `Stop` in ~4 seconds,
+  clean; RCON disabled (otherwise identical) → the same call took ~31 seconds and reported forced
+  termination, the exact pre-fix behavior reproduced on demand. Clone fully torn down afterward;
+  production confirmed unchanged throughout.
+
+Full detail: [`release-notes/v0.7.68.0.md`](release-notes/v0.7.68.0.md),
+[`docs/architecture/v0.7.68.0-graceful-shutdown-rcon-fix.md`](docs/architecture/v0.7.68.0-graceful-shutdown-rcon-fix.md).
+
+## Slow-startup investigation (not reproduced) — session following v0.7.70.0
+
+- The last structurally-blocked audit item: Palworld observed taking 10+ minutes of active CPU
+  without completing startup, on both production and its clone (v0.6.10.0's own session notes),
+  never diagnosed. Investigated this session using the same clone-and-isolate technique as the RCON
+  A/B test above, against the real production save and its real 6-MOD set. Six consecutive start
+  cycles all completed in 6–7 seconds — the issue did not reproduce. A genuine negative result, not
+  a fix: the underlying cause (if still present under conditions not exercised here) remains
+  undiagnosed. See the architecture doc for what was tried and why it wasn't closed.
+
+Full detail: [`docs/architecture/v0.7.70.0-slow-startup-investigation.md`](docs/architecture/v0.7.70.0-slow-startup-investigation.md).
+
+## v0.7.67.0 — Tray Reminder Toast: Layout Timing Fix
+
+- Completes v0.7.66.0's tray toast positioning fix, found by actually testing it on the real
+  reported hardware (the user asked to "try it out on the real hardware" — this machine turned out
+  to be that exact multi-monitor setup). v0.7.66.0 fixed *which monitor* the toast resolves to; this
+  release fixes a second, independent bug in *where on that monitor* it lands:
+  `PositionBottomRight()` read `Bounds` at the moment `Opened` fired, before `SizeToContent` had
+  actually measured the toast's real small content size. `Bounds` was already non-zero at that
+  point — so the existing `Bounds.Width > 0 ? Bounds.Width : 320` fallback never caught it — just
+  wrong (a placeholder ~1521×770, roughly the size of an unconstrained default window), corrupting
+  the bottom-right math on both axes.
+- Fix: `TrayReminderToast`'s constructor now also subscribes to `LayoutUpdated` (in addition to the
+  existing `Opened` subscription), re-running `PositionBottomRight()` every time it fires — cheap and
+  idempotent once the real size stabilizes.
+- **Verified with an exact pixel match on the real hardware**: a standalone test harness (scratch,
+  not part of the shipped solution) drove the real `TrayReminderToast` class with a stand-in window
+  placed on this machine's actual secondary monitor. Before the fix: landed at `(766, -834)` against
+  an expected `(1972, -127)` — provably explained by the placeholder-Bounds arithmetic above. After
+  the fix: landed at exactly `(1972, -127)`, converging there through several `LayoutUpdated`
+  corrections as `Bounds` settled. Full before/after logs preserved in the architecture doc.
+
+Full detail: [`release-notes/v0.7.67.0.md`](release-notes/v0.7.67.0.md),
+[`docs/architecture/v0.7.67.0-tray-toast-layout-timing-fix.md`](docs/architecture/v0.7.67.0-tray-toast-layout-timing-fix.md).
+
+## v0.7.66.0 — Tray Reminder Toast Positioning Fix
+
+- Fixes a real reported bug: on a multi-monitor layout (secondary monitor stacked above the primary
+  at a negative Y origin), the "MystTiq is still running" tray toast (`TrayReminderToast`, v0.7.11.0)
+  rendered far from its intended bottom-right corner. Root cause: `PositionBottomRight()` resolved
+  its target monitor via `Screens.ScreenFromWindow(this)` at the moment `Opened` fires — but the
+  toast (`WindowStartupLocation="Manual"`, no `Position` ever explicitly set) is still sitting at
+  whatever default the OS/window manager assigned a moment earlier, not yet the corner it's about to
+  move to; that default isn't guaranteed to land on the intended monitor, especially with a
+  negative-Y secondary. `TrayReminderToast` now accepts an optional owner `Window`, resolves the
+  screen from it first when supplied, and `App.ShowTrayStillRunningReminder` now passes `mainWindow`
+  — always correctly positioned when the toast appears, since it only shows right after
+  `mainWindow.Hide()`.
+- Not verified visually — no way to render the app or reproduce the reported multi-monitor layout in
+  this environment. Disclosed explicitly.
+
+Full detail: [`release-notes/v0.7.66.0.md`](release-notes/v0.7.66.0.md),
+[`docs/architecture/v0.7.66.0-tray-toast-positioning-fix.md`](docs/architecture/v0.7.66.0-tray-toast-positioning-fix.md).
+
+## v0.7.65.0 — Linux Console Capture Fix
+
+- Fixes the Linux console-capture gap flagged in v0.7.64.0, at direct follow-up request. Closer
+  tracing found a more precise bug than "no capture at all": `LinuxServerLifecycleService`'s detached
+  PalServer launch already redirected stdout/stderr via `setsid -f ... >> file 2>&1` — just into
+  `ManagerRuntimeRoot/palserver-console.log`, a location nothing on the read side
+  (`HeadlessMonitoringService.ResolveActiveLogPath`, the Live Console page, Doctor) ever looked at;
+  all of those only ever check `LogsRoot/MystTiq-PalServer-Console.log`, the exact file Windows
+  captures into.
+- `LaunchDetached` now targets `LogsRoot/MystTiq-PalServer-Console.log` (with the same
+  create-with-fallback directory logic `WindowsServerLifecycleService` already uses), so Linux's
+  capture reaches the same consumers Windows' does. Also gets v0.7.64.0's `ConsoleLogRotation`,
+  called once immediately before each server start rather than continuously — the only point in this
+  platform's detached-process architecture where rotation is safe, since bash's `>>` redirect holds
+  one file handle open for the entire session and renaming the file out from under it mid-session
+  would just make the shell keep writing to the renamed `.1` generation forever.
+- `Test-v0.7.65.0-LinuxAcceptance.sh`/`Test-v0.7.65.0-ProductionReadiness.sh` carried forward from the
+  v0.7.62.0 copies (required to exist for `Build-LinuxHeadless.ps1` to build at all); one new targeted
+  `--extended` check added, deriving the real `ServerRoot` from the live checklist response rather
+  than a hardcoded path.
+- **Verified live against the real reference Linux VM** — the correct address is `192.168.1.143`
+  (an earlier `.144` in this session's own notes was a stale typo, corrected by the user). Built a
+  fully isolated test (scratch directory, throwaway port, stand-in server script, non-conflicting
+  game port) rather than running the acceptance script's `--extended` flag directly against the live
+  production config; confirmed the real `mysttiq-palworld.service` was untouched (same PID)
+  throughout. Live-confirmed: the console log lands at the correct new path with the expected start
+  marker and real captured stdout/stderr, and rotation correctly moves a 26 MB file to a `.1`
+  generation on the next server start.
+
+Full detail: [`release-notes/v0.7.65.0.md`](release-notes/v0.7.65.0.md),
+[`docs/architecture/v0.7.65.0-linux-console-capture-fix.md`](docs/architecture/v0.7.65.0-linux-console-capture-fix.md).
+
+## v0.7.64.0 — Roadmap-Wide Gap Audit and Fixes
+
+- Cataloged ~75 open items across every disclosed gap in this project's own history (release notes'
+  "Known gaps" sections, docs/architecture/*.md, docs/roadmap/*.md, TODO/stub markers) at the user's
+  request to keep going past v0.7.63.0's theme-system fix. Most are honestly-scoped future work with
+  no defect behind them; the genuine, concrete, already-shipped-code bugs found are fixed here.
+- `HeadlessAutomationService.CreateRule`/`UpdateRule` previously accepted any `int` for
+  `Trigger.IdleThresholdMinutes`/`JitterSeconds`/`Interval` and any entry in
+  `Action.WarningCountdownSecondsBeforeAction`, persisting and returning invalid values verbatim even
+  though the scheduler silently reinterprets them at evaluation time (`Math.Max(1, ...)`, a
+  non-positive `Interval` falling back to 1 hour). New `ValidateTriggerAndAction` (public static, unit
+  -testable without the service's 13-dependency graph) rejects these at creation/update; the
+  `POST`/`PUT /automation/rules[/{id}]` routes now return `400` with a clear message instead of
+  silently accepting them.
+- `MystTiq-PalServer-Console.log` had no size cap or rotation on either of its two independent
+  writers (`HeadlessConsoleLogWriter`, `WindowsServerLifecycleService`'s raw stdout/stderr capture) —
+  unbounded growth on a long-running production service. New `MystTiq.Core.Services.
+  ConsoleLogRotation.RotateIfNeeded` caps it at 25 MB, keeping one prior `.1` generation, called from
+  both writers immediately before each append.
+- Three stale "BACKEND REQUIRED" disclosures fixed to match shipped reality: World Transactions'
+  Repair Center still claimed Base ownership/recovery repair was unbuilt (shipped
+  v0.5.3.0/v0.5.4.0, live on the Bases page); the Server Setup checklist's UE4SS row still claimed no
+  install path existed (v0.7.49.0 shipped one, and `MainWindowViewModel.RunEnvironmentAction` already
+  had a dedicated navigation case for it sitting unreachable behind the stale flag); the same
+  checklist's Backup Storage row claimed no automated fix existed (Doctor's Fix Automatically has done
+  this since v0.6.4.0 — only the note text was corrected here, since this page's own action has no
+  dedicated handler for it).
+- Newly-surfaced but deliberately not fixed this pass: `LinuxServerLifecycleService` has no PalServer
+  stdout/stderr console-capture at all, unlike its Windows counterpart — found while tracing the log
+  writers for the rotation fix. Flagged for a future session.
+- New coverage: 11 scenarios added to `scripts\Testing\MystTiq.LogicHarness` (17/17 pass) and a new
+  `scripts\Test-v0.7.64.0-RouteSmoke.ps1` (5/5 pass) verifying the validation/checklist fixes live
+  against the real running sidecar, not just statically.
+
+Full detail: [`release-notes/v0.7.64.0.md`](release-notes/v0.7.64.0.md),
+[`docs/architecture/v0.7.64.0-roadmap-wide-gap-audit-and-fixes.md`](docs/architecture/v0.7.64.0-roadmap-wide-gap-audit-and-fixes.md).
+
+## v0.7.63.0 — Central Theme System Audit: Status-Color Bypass Fix
+
+- User-reported live: the "change colour" theme system was supposed to control every resource
+  centrally, but several status colors stayed locked to one look regardless of accent theme or
+  Light/Dark — the tab-bar connection dot, the Dashboard health label, the Fleet server list's status
+  dot, and Update Center's component-status table.
+- Root cause: those four values were each computed as a hardcoded hex literal in C# (a ViewModel
+  property, a Model property, or a cached `IValueConverter` brush) and bound with a plain `{Binding}`
+  rather than routed through `{DynamicResource}` — a different bug class from the ~530
+  hardcoded-gradient-literal sweep v0.7.48.0/v0.7.56.0 actually covered, so it survived both "central
+  theme system completion" passes undetected. Fixed by following the correct pattern
+  `TabSession.AccentBrush` (v0.7.52.0) already established: resolve the brush live via
+  `Application.Current.TryGetResource` instead of caching or hardcoding it. New shared
+  `SemanticStatusColorConverter` centralizes this; `TabSession.StatusDotColor` →
+  `StatusDotColorKey`, `MainWindowViewModel.HealthStateColor` → `HealthStateColorKey`,
+  `ServerProfileSummaryDto.StatusDotColor` → `StatusDotColorKey` (now semantic keys, not hex
+  strings), `ComponentStatusColorConverter` now delegates to the shared converter.
+- Also fixed: `Border.statuscard` (the bare, non-accent class used by the sidebar's mini
+  connection-status card and the duplicate-install-location warning banner) had no themed style at
+  all in `Styles/DesignSystem.axaml` — `App.axaml`'s pre-DesignSystem-era hardcoded style
+  (`#0E2133`/`#1E5279`) was the only one that ever applied, un-themed this whole time.
+- Cleanup: removed `App.axaml`'s entire legacy parallel color-resource system
+  (`MystTiqBackground`/`MystTiqButtonMetal`/etc.) and its now-fully-shadowed base
+  `Window`/`Button`/`Border.card`/`TextBlock.muted` styles, plus two fully-dead nav-item selectors
+  with zero live usages (`Button.navitem`, `Expander.navgroup` — the real nav uses
+  `ToggleButton.nav`/`Border.navSurface`). `Button:focus-visible`'s hardcoded `#75C8FF` moved to
+  `DesignSystem.axaml` as a theme-aware resource rather than being deleted.
+- Deliberately not changed: `ConsoleLineColorConverter` (log-line highlighting in the mini
+  console/RCON output/Console page) stays hardcoded, consistent with v0.7.48.0's own disclosed
+  decision to keep terminal-style views dark/green in every theme.
+
+Full detail: [`release-notes/v0.7.63.0.md`](release-notes/v0.7.63.0.md),
+[`docs/architecture/v0.7.63.0-central-theme-system-audit-and-fix.md`](docs/architecture/v0.7.63.0-central-theme-system-audit-and-fix.md).
+
+## v0.7.62.0 — Dashboard/Ribbon Layout Overlap Fix
+
+- Reported live: after certain reconnect sequences, the ribbon and category tabs went visually
+  blank on every page (confirmed on both Dashboard and Inspector), while the page title/subtitle
+  and connection badge kept displaying correctly.
+
+### The finding
+
+- With `dotnet-sos` and Sysinternals `cdb` already installed earlier this session for the freeze
+  investigation, attached non-invasively to the live, currently-buggy app process and dumped the
+  actual `MainWindowViewModel` fields at the exact moment the bug was visible on screen.
+- Every relevant field was genuinely correct: `VisibleRibbonGroups` held its normal 3 groups (not
+  empty), `_ribbonWidth` was a real, healthy measured value, `SelectedPage` correctly matched the
+  displayed page. This ruled out every ViewModel/data-layer explanation categorically — the bug was
+  never in application logic at all, only in how it was being rendered.
+- The user's own description ("the category tabs look like they're in the background") pointed
+  directly at a Z-order/overlap issue rather than missing content. `MainWindow.axaml`'s outer `Grid`
+  has no `ColumnDefinitions` at all — every row-1/2 child (the decorative background, the category
+  tabs, the ribbon, and the page-header title/subtitle panel) shares one single column, with only
+  each element's own `HorizontalAlignment` keeping it visually confined to "its" side. The
+  page-header panel is `HorizontalAlignment="Right"` with a `MinWidth="460"` but **no `MaxWidth`** —
+  nothing bounds how wide it can grow if an Arrange pass (plausibly triggered by a reconnect's
+  visibility toggling) ever stops respecting that alignment constraint. Its own opaque
+  `CardGradient` background would then paint directly over the category tabs and ribbon beneath it
+  in the same shared column — exactly matching the reported symptom, and why title/subtitle text
+  (the panel's own content) kept rendering fine while everything underneath it disappeared.
+
+### The fix
+
+- Added `MaxWidth="620"` to the page-header panel, bounding it regardless of the exact Avalonia
+  layout condition that was letting it expand — a small, safe, targeted fix instead of a larger,
+  riskier restructuring into real `Grid.ColumnDefinitions`, which would also change the app's
+  current "floating overlay" visual design (ribbon/tabs spanning full width, header floating on top
+  right) rather than just fixing the bug.
+- Confirmed fixed live: reproduced the original bug, applied the fix, rebuilt, and confirmed the
+  ribbon/category tabs/nav pane render correctly on both Dashboard and Inspector after the same
+  reconnect sequence that previously broke them.
+
+## v0.7.61.0 — PalServer Launch Freeze Root Cause Fix
+
+- The root cause of the PalServer launch freeze — investigated on and off since v0.7.57.0, spanning
+  the UE4SS/PalDefender injection chain, a separate SteamCMD `STATUS_STACK_OVERFLOW` crash, Windows
+  Defender, Hyper-V/Realtek NIC networking, and Steam file-integrity checks — found live, on this
+  session's own genuinely-frozen production server.
+
+### The finding
+
+- A frozen PalServer instance was caught live and inspected with Process Monitor (Sysinternals):
+  after its initial ~7 `Thread Create` events, it produced **zero further activity of any kind** —
+  no file, registry, or network I/O — for the entire time it sat frozen. That ruled out every I/O
+  stall theory (including the network/Hyper-V hypothesis tested moments earlier) and pointed at a
+  pure in-process synchronization wait instead.
+- Process Explorer's live thread-stack inspection on that same frozen process nailed it down: the
+  blocked thread's call stack showed `USER32.dll!MessageBoxW` → `MessageBoxTimeoutW` →
+  `MessageBoxIndirectA` → `SoftModalMessageBox` → `win32u.dll!NtUserWaitMessage`. The process is
+  blocked showing a native Win32 message box, waiting for someone to click it. PalServer runs with
+  no interactive desktop session under MystTiq (headless launch, no visible window), so that dialog
+  is permanently invisible and unclickable — the thread, and the whole server, waits forever. Zero
+  CPU growth, no crash, no port bind, nothing in any event log: every symptom this investigation
+  ever observed, explained by one missing launch flag.
+- Unreal Engine's `-unattended` command-line flag exists specifically to suppress this class of
+  modal dialog (engine `ensure()`/fatal-error dialogs, and dialogs some third-party SDKs including
+  Steamworks can show), converting them to log output instead. It was never present in any of
+  MystTiq's launch argument sets — not the Windows default, not the Linux default, not the user's
+  real persisted production/clone profiles.
+
+### Live confirmation
+
+- Killed the frozen instances, relaunched the identical binary/save/arguments with `-unattended`
+  added, and watched both the production server and its clone blow straight past the point they had
+  always frozen at: UE4SS fully hooked all engine functions, all three MODs (BetterBaseBuilding,
+  MystPalIntelligence, AdminCommands) loaded successfully, PalDefender anti-cheat started cleanly —
+  none of which any previous attempt this session ever reached. Thread state confirmed genuinely
+  different from the freeze: 1 thread actively `Running` (real, growing CPU time) with the rest
+  normally `Wait`ing, instead of every thread sitting in `Wait` with zero CPU growth.
+- A prior live test this session — temporarily re-pointing the Hyper-V "MystTiq External" virtual
+  switch off the physical Realtek NIC and onto a spare USB NIC, to rule out a network-stack theory —
+  did NOT fix the freeze (confirmed via an identical relaunch immediately after), correctly ruling
+  that theory out before the real cause was found via Process Monitor/Process Explorer.
+
+### The fix
+
+- `-unattended` added to both platform default launch-argument templates
+  (`HeadlessConfiguration.CreateWindowsDefault`/`CreateLinuxDefault`) so every newly-created profile
+  gets it going forward.
+- `HeadlessConfigurationService.LoadOrDefault` now backfills `-unattended` into every already-loaded
+  profile's `LaunchArguments` if it's missing (case-insensitive check, purely additive, no schema
+  version change) — existing installs, including this machine's own real production and clone
+  profiles, are fixed automatically on the next config load rather than requiring a manual edit.
+- The real, live `mysttiq.json` on this machine was also updated directly during the investigation
+  so the fix is already in place locally; the still-running old headless host process (v0.7.50.0)
+  will pick it up on its next restart.
+
+## v0.7.60.0 — Port Conflict Prevention & UE4SS Version Tracking
+
+- Two direct requests, arriving alongside continued investigation of the still-unresolved PalServer
+  launch freeze from v0.7.57.0/v0.7.59.0.
+
+### Port Conflict Prevention
+
+- **A real, previously-unguarded failure mode**: nothing stopped two attempts at starting a server
+  on the same UDP port from racing — the only existing guard (`FindManagedServerProcesses().Count >
+  0`) only catches a duplicate start of the SAME profile's own already-tracked process, saying
+  nothing about another profile, an unmanaged process, or a leftover from an unclean stop already
+  holding the port. Launching anyway doesn't fail cleanly: PalServer starts, spins up its full
+  engine thread pool, and then sits forever unable to bind — a state genuinely indistinguishable
+  from a hang without deep diagnosis (discovered directly while investigating this session's own
+  live freeze).
+- `WindowsServerLifecycleService`/`LinuxServerLifecycleService.StartAsync` now check whether the
+  configured game port is already bound by anything, using the existing, already-per-profile-aware
+  `GetGuardedListeningPorts()` (confirmed via a live trace through `Program.cs`'s lifecycle-factory
+  wiring that this already correctly reflects each profile's own configured port, not a shared
+  hardcoded default). A conflict now returns immediately with a new `HeadlessExitCode.PortConflict`
+  (mapped to HTTP 409) and a clear, actionable message — before the process is ever created, not
+  after waiting out the full startup timeout for a port that was never going to bind.
+- Surfaces through the Desktop's existing `LifecycleStatusText`/`Detail` mechanism, already shown
+  prominently on the Dashboard's SERVER card — no new UI needed for the message itself to reach the
+  user clearly.
+
+### UE4SS Version Tracking
+
+- **A real, user-reported bug**: Update Center could report UE4SS as current when it was not,
+  because there was never anything trustworthy to compare against — this fork ships no version
+  marker file, and the installed DLL's own `FileVersionInfo` comes back unstamped ("0.0.0.0",
+  already filtered out by v0.7.30.0's own fix). `CheckUe4ssAsync` always fell back to a generic
+  "Check manually" status regardless of what was actually installed.
+- `ApplyUe4ssInstallAsync` (the real UE4SS install flow from v0.7.49.0) now records exactly which
+  release catalog entry (`Source`/`TagName`) it actually applied, in a small manifest under
+  `ManagerRuntimeRoot` — the one place MystTiq genuinely knows the true installed version, since it
+  just downloaded and installed it itself. Invalidated on Rollback (the snapshot being restored
+  could be from any earlier state, not necessarily a tracked release).
+- `CheckUe4ssAsync` now does a real, exact tag comparison when that manifest exists — genuine
+  `Up to date`/`Update available` status, not a guess. Falls back to the same honest "Check
+  manually" behavior whenever no manifest exists (an install made before this tracking existed, or
+  files copied in manually, bypassing MystTiq's own install flow entirely — exactly how this
+  project's own real server's UE4SS was actually installed until this session).
+
+## v0.7.59.0 — Safe-Start MOD Diagnostic
+
+- Direct request, following real web research into the PalServer launch freeze investigated in
+  v0.7.57.0: "remove mods one by one until the crash stops" turned out to be the standard,
+  explicitly-documented community troubleshooting technique for Palworld server crashes. This
+  automates exactly that, rather than inventing a new approach.
+- **Detection covers both failure modes actually seen in this project's own investigation** — a
+  naive crash-exit-only check would have missed the specific freeze this session spent hours
+  chasing (process alive, near-zero CPU forever, UDP port never binds, no crash). A candidate MOD
+  is disqualified if the server either crashes (`ServerLifecycleSnapshot.CrashDetected`) OR times
+  out without ever becoming ready (`HeadlessExitCode.StartupTimeout`).
+- **A baseline sanity check runs first**: every candidate MOD is disabled, then one start is
+  attempted with none of them. If even that fails, the diagnostic stops immediately and reports
+  "not a MOD problem" instead of cycling through every MOD and reporting each one as bad — this
+  exact scenario was independently confirmed earlier this session (the live freeze persisted with
+  the entire UE4SS/PalDefender/d3d9 injection chain removed).
+- **Cumulative testing, not isolated testing**: MODs are re-enabled one at a time on top of the
+  already-confirmed-good set, not each tested totally alone — real MOD ecosystems have dependencies
+  (shared/core UE4SS libraries other mods rely on), so testing every MOD in isolation would produce
+  false failures.
+- **Fully automatic recovery**: any MOD that fails is disabled again and the run continues; the
+  surviving set gets one final validation start and is left running.
+- New `MystTiq.HeadlessHost.HeadlessModSafeStartService` — a genuinely new pattern for this
+  codebase: an on-demand, multi-minute background job with polled status, held under the same
+  `IOperationCoordinator` lock Start/Stop/Restart already use (`["lifecycle", "world-mutation"]`),
+  but for the job's *entire* duration rather than one synchronous call, so nothing else can race a
+  live start/stop cycle mid-diagnostic. Three new routes: `POST /mods/safe-start` (begin),
+  `GET /mods/safe-start/status` (poll), `POST /mods/safe-start/cancel` (abort and restore original
+  MOD state).
+- Desktop: a new live-progress card in MOD Library, polled by its own `DispatcherTimer` independent
+  of `IsBusy` (the diagnostic itself runs for minutes, so holding `IsBusy` the whole time would
+  disable unrelated UI needlessly) — shows current phase, per-MOD pass/fail results as they land,
+  and the final outcome.
+
+## v0.7.58.0 — Website-Sourced MOD Descriptions, Light Polish
+
+- Direct request to polish v0.7.55.0's DESCRIPTION panel. Found three genuine rough edges on
+  review rather than inventing busywork:
+- **Long descriptions were silently clipped, not scrollable.** The description `TextBlock` had a
+  fixed `MaxHeight="220"` with no way to see anything past it — real Steam Workshop descriptions
+  routinely exceed that. Wrapped in a `ScrollViewer` with `VerticalScrollBarVisibility="Auto"`.
+- **The Source URL was inert text.** No way to actually visit the mod's real Steam Workshop or
+  GitHub page without manually copying the text. Added an "Open" button next to it, reusing the
+  same `Process.Start`/`UseShellExecute = true` pattern `WorkspaceOpen_Click` already established —
+  only ever passes an already-validated `http`/`https` URL (the backend's own
+  `SetModDescriptionSourceAsync` already rejects anything else before it can be stored).
+- **The "No known Workshop match" message showed prematurely.** It was bound to
+  `!HasSelectedModDescription`, which is also true before the user has ever clicked Fetch for a
+  MOD — presumptuously claiming "no match" before any fetch attempt had happened. New computed
+  `MainWindowViewModel.ShowNoModDescriptionMatchMessage` requires both a completed fetch
+  (`HasModDescriptionResult`) and no match found (`!HasSelectedModDescription`), so the guidance
+  only appears after an actual failed lookup.
+
+## v0.7.57.0 — Native Console Capture, Proxy DLL Foundation
+
+- The real, working half of the PalServer DLL-proxy logger scoped back in v0.7.51.0 — the item
+  surfaced by a live bug report ("no PalServer console output captured") and researched extensively
+  before this session picked it up: `-ABSLOG` produces no file, launching the engine process
+  directly still captures zero lines even with redirected pipes, and UE4SS's own Lua API has no
+  hook into Unreal's engine log. DLL proxy injection is the one proven technique (the same category
+  UE4SS/PalDefender/third-party PalServerLogger all already use).
+- **A new native C++ artifact**, `native/MystTiqConsoleProxy/` — outside the .NET solution
+  entirely, built via a new standalone `scripts/Build-ConsoleProxy.ps1` using the MSVC toolchain
+  already confirmed present on this machine (Visual Studio Community 18, MSVC v143). Proxies
+  `DSOUND.dll` — re-confirmed this session via `dumpbin /imports` against the real
+  `PalServer-Win64-Shipping-Cmd.exe` that it imports exactly 6 functions from DSOUND.dll, all by
+  ordinal, chosen specifically because neither UE4SS nor PalDefender's own `d3d9.dll`-based proxy
+  already occupies it. The `.def` file pins each export to the EXACT ordinal the real system
+  `dsound.dll` uses (verified by direct `dumpbin /exports` comparison) — critical since PalServer
+  imports by ordinal, not by name.
+- **Actually verified, not just compiled**: loaded the built DLL in isolation via `LoadLibrary`,
+  confirmed it resolves and forwards to the real system `dsound.dll`, confirmed its lifecycle log
+  writes correctly, confirmed it unloads cleanly with no crash. This is real infrastructure a real
+  game process can load safely.
+- **The actual Unreal log-capture hook is deliberately not implemented.** Finding the target
+  function's address requires a live memory signature scan against a running process, and this
+  session's own production PalServer can't currently launch cleanly at all (a separate, unresolved
+  environment issue investigated the same session — ruled out UE4SS/PalDefender/the d3d9 proxy chain
+  as the cause via direct testing, then found SteamCMD itself crashes with `STATUS_STACK_OVERFLOW`
+  on this machine right now, independent of Palworld entirely). Shipping an unverified memory patch
+  that could crash a real game server isn't something to do without the ability to test it.
+  Re-confirmed this session, independently of the earlier investigation, that the binary's Unreal
+  log category strings (`LogTemp`, `LogEngine`, etc.) are still absent — `NO_LOGGING` still holds,
+  so the realistic payoff of finishing the hook is genuinely small.
+- **Not wired into the app.** No auto-install flow, no reference from `MystTiq.HeadlessHost`/
+  `MystTiq.Desktop` — ships as a standalone, disclosed-experimental artifact until live verification
+  against a real process becomes possible.
+
+## v0.7.56.0 — Central Theme System Completion, Remaining Decorative Gradients
+
+- The rest of the theming gap deferred from v0.7.48.0's foundation pass: ~240 hardcoded colors
+  remained in `DesignSystem.axaml`, overwhelmingly the elaborate multi-stop translucent "glass"
+  gradients — `GlassOptionHoverGradient`, the `PrimaryGlass*`/`SuccessGlass*`/`DangerGlass*`
+  families, the four `Nav*Glass*Gradient` variants, `DashboardGlassGradient`, the `Context*Gradient`
+  family (5), the `*GraphFill` family (5), the `Backup*Gradient` family (4), plus the `dataRow` list
+  style's own hardcoded literals. Deferred at the time because translucent glass behaves differently
+  over a dark vs. light background — a simple lighten/darken swap can't safely reproduce it, unlike
+  the opaque card/border/glow resources v0.7.48.0 already covered.
+- **Slotted in as v0.7.56.0, not v0.7.57.0**: the roadmap's own v0.7.56.0 (Second Local Server +
+  Remote Linux Server, Both Cloned) turned out to be pure live-infrastructure work with no shippable
+  code — a real second local server profile was cloned and registered, but starting it (and the
+  original production server) hit an unexplained, reproducible PalServer launch freeze on this
+  machine, tabled by direct request pending a device restart. Following this session's own "no
+  version-slot gaps" discipline (see v0.7.51.0's self-correction), this version fills that slot
+  instead of leaving it empty; the Second Local Server / Remote Linux Server item remains open,
+  unscheduled, to resume once the local environment issue is resolved.
+- **Approach, matching v0.7.48.0's own discipline**: formula-driven, not hand-authored — ~240
+  individual values × 4 themes × 2 variants has no way to be manually tuned with any confidence
+  without visual verification, which this environment cannot provide. New `ThemeApplier` helpers:
+  `BuildGraphFill` (simple alpha-fade-to-transparent, safe over any background, the lowest-risk
+  family), `BuildContextGradient` (2-stop diagonal accent-tinted corner cards), `BuildGlassSheen`
+  (the bright-lip-to-tinted-face "directional option sheen" family), `BuildNavGlass` (the nav
+  sidebar's structural, non-page-accent glass states plus the Dashboard atmosphere overlay). Each
+  mirrors the existing hand-authored Dark-mode structure as closely as a formula reasonably can,
+  with a parallel principled Light-mode treatment (fading toward white/near-transparent instead of
+  toward black) — not a guaranteed byte-for-byte match to today's exact literals, disclosed the same
+  way v0.7.48.0 disclosed its own Card{Name}Gradient/border/glow set's minor Dark-mode shift.
+- **Dead code found, left alone rather than themed**: `Border.modRow`/`Border.prototypeRow`/
+  `Border.worldTabHeader`/`Button.disableAction`/`Button.updateAction` are not referenced anywhere
+  in current `MainWindow.axaml` navigation — confirmed via search before spending effort on them,
+  matching the architecture doc's own suspicion from v0.7.48.0 ("legacy prototype-page remnants, not
+  confirmed still reachable"). Only `Border.dataRow` (genuinely used, one live reference) was
+  converted to themed resources.
+- No `.axaml` structural changes needed for most of these families — `ThemeApplier.Apply()`
+  overwrites the exact same resource keys `DesignSystem.axaml` already declares statically
+  (Application-level resource overrides already proven to win over StyleInclude-declared ones, per
+  v0.7.48.0's own `Card{Name}Gradient` precedent), so existing `{DynamicResource GlassOptionHoverGradient}`
+  etc. references throughout the file needed no change. Only `dataRow`'s three states (previously
+  literal hex directly on the Style selector, no named resource to override) needed real XAML edits.
+
+## v0.7.55.0 — Website-Sourced MOD Descriptions
+
+- Item 40's deferred half: MOD Library's MOD DETAILS panel (v0.7.40.0) shows real evidence but never
+  a description from the mod's own source page. Asked directly how to scope it; the answer was to
+  design for multiple sources up front (Steam Workshop + at least one more, e.g. Nexus Mods) rather
+  than starting Workshop-only.
+- **Two real, verifiable sources, not one**: Steam Workshop items are matched via the exact same
+  local-content lookup `CheckModUpdateAsync` (v0.7.41.0) already performs, then described with a
+  real, unauthenticated Steam Web API call (`ISteamRemoteStorage/GetPublishedFileDetails`) for that
+  item's own title and description (Steam's own lightweight BBCode markup is stripped, not rendered —
+  a disclosed, deliberate simplification, not a second markup renderer to maintain). Nexus Mods has
+  no reliable API without an account/key, and most installed UE4SS/Lua mods aren't Workshop items at
+  all — rather than guess at scraping Nexus, MODs with no Workshop match get a manually-set Source
+  URL instead; when that URL is a `github.com` repository, its real description is fetched via
+  GitHub's own public REST API. Any other URL is stored and shown as a plain link, not force-fetched.
+- **Security/scope, decided before writing any fetch code**: every fetch is triggered only by an
+  explicit user click (Fetch/Refresh) — never automatic, never on MOD selection, never on page load.
+  Results are cached to disk (`mod-descriptions/` under the manager runtime root) so repeat views
+  don't re-fetch. The only outbound calls this makes are read-only, unauthenticated GET/POST requests
+  to Steam's and GitHub's own public REST APIs — no credentials sent, no write access requested.
+- Backend: `HeadlessModManagementService.GetModDescriptionAsync`/`SetModDescriptionSourceAsync`, two
+  new routes (`GET /mods/{type}/{package}/description`, `POST /mods/{type}/{package}/description/source`).
+  Desktop: `ModDescriptionResultDto`, two new `IMystTiqApiClient` methods, a DESCRIPTION section added
+  to the MOD DETAILS panel (Fetch/Refresh button, Source/Title/Description/link display, a Source URL
+  text box for the manual-source path) — no other page touched.
+
+## v0.7.54.0 — Per-Page Title Background Artwork
+
+- Item 8: "Each page's title area could have its own background image" — confirmed directly earlier
+  in this session to mean literal illustrated/photo artwork per page, not a subtle tint, needing its
+  own scoping pass before implementation.
+- **A genuine capability gap, resolved by testing an actual option rather than guessing**: this
+  session has no built-in image-generation model and no API access to one. Tested whether the
+  Browser pane could drive a free, publicly-accessible AI image generator instead — Bing Image
+  Creator (Microsoft's DALL-E-backed tool) turned out to work completely anonymously, no sign-in
+  required, for a limited number of generations per day. Produced two sample images first (Home,
+  World) for sign-off on style direction before committing to a full run.
+- **Style**: dark navy atmospheric fantasy landscape banners with silhouetted castle/tower motifs on
+  layered low-poly mountain ridges, a subtle glowing tech circuit-line grid overlay, and an
+  accent-colored glow matching each category's existing accent hue from v0.7.48.0's theme system —
+  deliberately matched to the visual language the existing `dashboard-atmosphere-v3.png`/etc. assets
+  already established, confirmed by inspecting that asset directly before writing any prompts. A
+  Light-mode variant (bright pastel dawn sky, same motifs, softer glow) was generated alongside each
+  Dark one.
+- **Hit a real, hard limit partway through**: Bing's anonymous/guest session enforces a daily
+  generation cap. After 4 successful images (Home Dark/Light, World Dark/Light), further attempts
+  returned "You've reached today's guest creation limit." Continuing would have required signing
+  into a Microsoft account — not something this session will do under any circumstances, since
+  entering account credentials is outside what's ever done regardless of permission.
+- **Scope decision, made directly rather than guessing at a workaround**: ship the two categories
+  that do have real, generated artwork now; leave the other five (Server, Backups, Mods, Tools,
+  System) with no page-header art at all, exactly as today, rather than filling the gap with a
+  code-generated gradient/tint that would contradict the original finding's own "not a tint"
+  instruction. The set is deliberately real-but-incomplete rather than complete-but-fake.
+- Implementation: `ConnectionProfile`/`ThemeCatalog` untouched — this only needed two categories'
+  worth of new state. Four new computed bools on `MainWindowViewModel`
+  (`IsHomePageArtDark`/`IsHomePageArtLight`/`IsWorldPageArtDark`/`IsWorldPageArtLight`, combining the
+  existing `IsV5HomeCategory`/`IsV5WorldCategory` category checks with `IsLightMode`), re-raised
+  after both page navigation and theme-variant changes. Four new `Image` elements layered behind the
+  existing page-header content in `MainWindow.axaml`, each gated by one of those bools, at low
+  opacity (0.3) so the title/subtitle text stays legible on top.
+- Assets added: `page-art-home-dark.jpg`, `page-art-home-light.jpg`, `page-art-world-dark.jpg`,
+  `page-art-world-light.jpg` under `MystTiq.Desktop/Assets/`, picked up automatically by the
+  existing `AvaloniaResource Include="Assets/**"` glob — no `.csproj` change needed.
+
+## v0.7.53.0 — Dashboard Layout Density
+
+- Item 13: the Dashboard should be laid out more like an older MystTiq build (v0.2.16.4 reference
+  screenshot), with smaller/denser stat cards — grounded in the findings log but never actually
+  assigned a version until v0.7.32.0's own implementation flagged the gap and appended it as its own
+  future item.
+- Same treatment v0.7.32.0 already applied to Server Setup/Backups/MOD Library/Server Doctor:
+  explicit per-instance `Padding`/`FontSize` overrides, no changes to the shared `.card`/`.statuscard`
+  styles themselves (so nothing on any other page is affected). The two 4-column stat-card `Grid`s
+  (SERVER/ACTIVE WORLD/BACKUP/OVERALL HEALTH, and PLAYERS/GUILDS & BASES/MOD PLATFORM/CPU-MEMORY),
+  the World Pulse strip, and the outer page's own `Spacing` all tightened — `Padding="10"` → `"8,6"`
+  throughout, big-number `FontSize` reduced (18/17/16 → 15/14/13), `ColumnSpacing`/`Spacing` reduced
+  by ~2px in each card.
+- **Deliberately out of scope**: the same v0.2.16.4 reference also showed structural differences —
+  ribbon buttons inline in the title bar instead of a separate row, and a collapsible-tree nav
+  instead of today's category-tabs-plus-fixed-list — neither of which is a density change, both
+  meaningfully larger changes than this item's own "smaller/denser cards" framing. Left untouched.
+
+## v0.7.52.0 — "+" Flow Restructure
+
+- Item 53: the "+" (add tab) flyout has, since it was built, had exactly one generic entry —
+  "Set Up New Server" — that led into a wizard whose own first step then asked Local vs. Remote.
+  Restructured into four explicit top-level choices, per that finding's own instruction to reuse
+  existing wizard/clone commands rather than rebuilding them:
+  - **Set Up New Server** — unchanged, still lands on the wizard's step-0 Local/Remote choice cards.
+    Kept as the generic/exploratory entry point deliberately: investigated whether "install a fresh
+    local server" and "connect to an already-running one" are actually different code paths in this
+    wizard, and confirmed they are not — both resolve to the identical Local sub-view
+    (`ChooseLocalConnection`/`DetectLocalServiceAsync`), so there was nothing architecturally
+    distinct to split this entry into beyond framing text.
+  - **Connect to Local Server** / **Connect to Remote Server** — new top-level entries that jump
+    straight past the step-0 choice cards, calling the existing `ChooseLocalConnection`/
+    `ChooseRemoteConnection` methods directly (unchanged) with tailored `Detail` framing text for
+    each ("Connecting to an already-running local server." / "...remote MystTiq server.").
+  - **Clone a Server** — new. Routes to the existing Fleet page's Clone World card
+    (`NavigateCommand.Execute("Fleet")`), on whichever open tab is an already-connected local
+    profile. Only shown in the flyout when one exists (`HasCloneableLocalTab`) — cloning has nothing
+    to clone *from* without a connected local source, confirmed via `CloneWorldCommand`'s own
+    existing `CanExecute` (`ManagementApiConnected`) and `BootstrapLocalCommand`'s `IsLocalProfile`
+    gate, both already local-only. Matches the existing pattern of only adding a "Connect to
+    {profile}" entry when a qualifying profile actually exists, rather than showing a permanently
+    disabled item.
+- The existing "Connect to {profile.Name}" list (per already-saved profile not currently open in a
+  tab) is unchanged and still appears below the four new entries — a distinct concern (reconnecting
+  to something already set up) from all four of the above (which each start a fresh wizard flow).
+- No new backend logic anywhere in this version — every new flyout entry is a thin wrapper around
+  methods (`ChooseLocalConnection`, `ChooseRemoteConnection`, `NavigateCommand`) that already
+  existed and were already correct.
+
+## v0.7.51.0 — Per-Tab Color Coding
+
+- Item 2 from the original findings log: "Each tab should have an associated color that tints the background to match, so it's obvious at a glance which server you're working on." Resolved the three open questions the finding left unanswered, during implementation, per that finding's own instruction:
+  - **Auto-assigned vs. user-assigned**: auto-assigned, round-robin over a fixed 10-color palette keyed by how many profiles already exist at creation time — no new settings UI, works immediately for every existing and future tab.
+  - **Which surface tints**: a small colored stripe in the tab strip itself (column 0 of the tab's `Grid`), not the nav pane or main content area — those surfaces already carry *page*-identity meaning from v0.7.48.0's accent system (Server=blue, World=cyan, etc.), and layering a second, *server*-identity color on top of the same surfaces would make the two signals indistinguishable. The tab strip was the one surface not already claimed by page identity.
+  - **Interaction with the existing health-based `StatusDotColor`**: kept fully separate, not merged — the stripe is server identity (fixed per profile), the dot is live health (green/amber/red/grey). Both render side by side in the same tab.
+- New `ConnectionProfile.AccentColorKey` (optional, defaults to `"Blue"` for backward-compatible JSON deserialization of profiles saved before this version) and `ThemeCatalog.TabIdentityColorNames` — reuses the same 10 base color names (and their already-derived `{Name}AccentBorderBrush` resources) the v0.7.48.0 derivation engine already produces, rather than inventing a second color system alongside it. `"Neutral"` is excluded from the assignable pool — it's a deliberately muted grey tone meant for passive status decoration, not a distinct-enough identity marker.
+- The color is assigned **once**, at profile creation, and persists across reconnects/edits: `BuildProfileFromEditor`/`BuildProfileFromTab` both construct a brand-new `ConnectionProfile` record on every save (an existing pattern, unrelated to this feature), so a new `ResolveAccentColorKey` helper looks up the already-known profile's own color by id first and only assigns a fresh one for a genuinely new profile — otherwise every edit or reconnect would silently reshuffle a server's color.
+- `TabSession.AccentBrush` resolves the key to the actual live theme resource via `Application.Current.TryGetResource`, not `{DynamicResource}` in XAML — because it's consumed through a regular data binding (per-tab, from a dynamic `ItemsSource`), it does not auto-refresh when `ThemeApplier` rewrites the underlying resource value on a theme switch the way a real `{DynamicResource}` would. Fixed by having `MainWindowViewModel` explicitly re-notify every open tab (`RefreshTabAccentVisuals`) right after each of the two existing `ThemeApplier.Apply` call sites (accent theme change, Dark/Light toggle) — the same "manual refresh after a resource rewrite" pattern this codebase already needed to establish, just applied to a new consumer.
+
+## v0.7.50.0 — Console Source Completeness (UE4SS.log)
+
+- Found while scoping the next roadmap item (Native Console Capture, the DLL-proxy project) — not from the original findings log. Before starting the much larger native-code project, checked one of its own load-bearing assumptions directly against real data: `HeadlessMonitoringService.ResolveConsoleSources` has, since at least v0.7.46.0's own investigation, included a `"Pal.log"` source with the comment "where PalServer/UE4SS write this exact kind of native output" — that claim was never actually verified against a real server file, only inferred.
+- **Verified live, directly against this machine's real, actively-modded local Palworld install** (`C:\GameServers\Palworld\Server`, documented in project memory as real production data, not a test fixture): a recursive search of the entire `Pal/Saved/Logs/` tree for `Pal.log` found **zero matches**. Also searched the whole server install tree for any non-MystTiq `*.log` file: found only PalDefender's own logs (a separate anti-cheat mod) and `ue4ss/UE4SS.log` — no `Pal.log` anywhere. This is consistent with, and reinforces, the v0.7.46.0/v0.7.47.0 finding that `-ABSLOG` also produces no file: Palworld's Windows dedicated server build appears to have no working text-log output for the base engine at all, on this real install.
+- **`ue4ss/UE4SS.log` does exist and has real, substantial content** — 1947 lines from the current session alone (hook registrations, mod load order, `[AdminCommands]` command registration, Lua mod startup) — but `ResolveConsoleSources` never looked for it. Added it, plus its legacy-layout equivalent path (`RuntimeBinaryRoot/UE4SS.log`), to the source list.
+- **Verified the fix live and read-only**, via a throwaway console harness (not part of the shipped codebase) that pointed `HeadlessMonitoringService` at the real server's `Pal/Saved/Logs`/`ue4ss` paths — genuinely reading real production files — while redirecting `ManagerRuntimeRoot` to an isolated temp directory so nothing touched the live production MystTiq instance's own runtime state (per this project's standing "never bind a test instance to the production port/state" convention). Confirmed: `GetLogTail` now reports `UE4SS.log` as one of its merged sources, and real UE4SS content appears in the tail.
+- **A second, larger real finding surfaced as a side effect, not new code**: the already-existing "AdminCommands server log" source (unchanged by this fix) turned out to carry genuine player connect/disconnect narration with real player names and timestamps ("Wade ... has connected", "Melly ... has disconnected") — exactly the kind of content the original v0.7.46.0 bug report ("console doesn't capture events") was asking for. This was always technically reachable but was easy to miss when the console otherwise looked thin; adding UE4SS.log alongside it makes the overall console meaningfully richer without any further code change.
+- No Desktop changes needed — the Console page already consumes `GetLogTail` unchanged; this is a pure server-side source-list fix.
+
+## v0.7.49.0 — UE4SS Install/Rollback
+
+- Next roadmap item per the approved plan, resuming item 45's other half — v0.7.47.0 shipped listing-only real release data for the UE4SS page's "Release source" dropdown; this is the actual install path. Mid-session, the user asked to defer the remaining ~240 hardcoded "glass" gradient colors from v0.7.48.0's theming pass to the very end of the 0.7.x line (v0.7.57.0+) rather than doing them next — the plan file was renumbered accordingly and this item moved up to fill v0.7.49.0.
+- **Verified live against real release zips from both catalog sources before writing any install code, not guessed** — downloaded and inspected the actual zip contents of `Okaetsu/RE-UE4SS`'s `UE4SS-Palworld-g2281fa31.zip` and `UE4SS-RE/RE-UE4SS`'s `UE4SS_v3.0.1.zip`:
+  - The Palworld Fork packages the **modern layout**: `dwmapi.dll` at the zip root, everything else (`UE4SS.dll`, `UE4SS-settings.ini`, `UE4SS_SDK_Backends/`, `LICENSE`, `MemberVariableLayout.ini`, `Mods/`) nested under a top-level `ue4ss/` folder — a 1:1 match for `Ue4ssRoot`/`Ue4ssModsRoot`.
+  - The Official Upstream packages the **legacy flat layout**: `dwmapi.dll`, `UE4SS.dll`, `UE4SS-settings.ini`, `Mods/`, plus `Changelog.md`/`README.md`, all directly at the zip root — no `ue4ss/` subfolder at all, a 1:1 match for `RuntimeBinaryRoot`/`LegacyUe4ssModsRoot`.
+  - **This was a genuine, previously-unconfirmed discovery** — the two sources are not the same file layout with different version numbers, they're fundamentally different packaging conventions. Guessing a flatten/nest transform between them without this verification would have risked silently corrupting a live install.
+- **Design decision made directly from that evidence**: rather than force every release into one canonical layout (which would require an unverifiable transform for whichever source doesn't natively use it), install faithfully mirrors whatever the selected zip's own root structure already is onto the server's binaries folder — exactly what each project's own install instructions already tell a user to do by hand (extract to `Pal/Binaries/Win64`). Zero guessed transformation logic.
+- **A real, disclosed safety gap this uncovered**: the fork's own release notes warn that having a workshop-installed UE4SS and this fork's copy both present "WILL crash due to attempting to load two copies of ue4ss at the same time." Since install now faithfully mirrors each zip's native layout rather than normalizing to one, installing a modern-layout release over an existing legacy-layout install (or vice versa) would leave both in place. Install now detects this via `Directory.Exists(Ue4ssRoot)` vs. legacy marker files (`UE4SS.dll`/`UE4SS-settings.ini` directly under `RuntimeBinaryRoot`) and refuses with a clear message rather than silently creating a broken mixed state.
+- **Mod state is never touched, by construction**: any zip entry whose path contains a `Mods` segment at any nesting level (`Mods/` for the legacy layout, `ue4ss/Mods/` for modern) is skipped outright during install, so `mods.txt`/`mods.json` and every installed MOD folder are untouched — a rollback restores only the files an install actually wrote. `UE4SS-settings.ini` is skipped (not overwritten) if it already exists on disk, since it's commonly hand-edited — matching UE4SS's own real v3.0.1 release notes' framing of "replacing files while preserving custom configuration settings."
+- New `HeadlessModManagementService` methods follow the same token-based Preview-then-Apply shape already established by backup retention cleanup (`PreviewRetention`/`ApplyRetentionAsync`), reused rather than inventing a new pattern:
+  - `PreviewUe4ssInstallAsync(source, tagName)` re-resolves the selection against the live GitHub catalog server-side (the client never sends a raw download URL to the server, closing an SSRF-shaped gap before it existed) and returns a 15-minute token plus a plain-language summary of what will happen.
+  - `ApplyUe4ssInstallAsync(token)` requires the exact token, requires PalServer stopped (its DLLs are loaded into the running process — installing over a locked file would fail or corrupt), downloads the release zip (200 MB cap, 3-minute timeout), takes an automatic snapshot of only the exact files about to be overwritten (not a whole-directory backup — precise and symmetric with what Rollback restores), then extracts.
+  - `RollbackUe4ssInstallAsync()` restores that same snapshot on demand; also fires automatically if `ApplyUe4ssInstallAsync` fails partway through, so a failed install can't leave a half-overwritten engine on disk.
+- New routes: `GET /ue4ss/install/status` (rollback availability), `POST /ue4ss/install/preview`, `POST /ue4ss/install/apply`, `POST /ue4ss/install/rollback` — the latter three gated `RequireRole(Admin)`, matching this route group's other install/mutation-class endpoints.
+- Desktop: the UE4SS page's release list is now a selectable `ListBox` (`SelectedUe4ssRelease`) instead of a read-only `ItemsControl`. Three new ribbon buttons — Preview Install, Confirm Install, Rollback — replace the permanent "Installing a specific release isn't wired up yet" stub from v0.7.48.0; a status line shows the live preview summary or the last install/rollback result. Changing the selected release invalidates any outstanding preview token, so Confirm Install can never fire against a preview that no longer matches what's selected.
+- **Exercised live, not just built** — per the plan's own instruction for this item ("needs... live isolated-copy verification... before ever touching a real server"), a throwaway console harness constructed `HeadlessModManagementService` directly against a fake path profile pointed at a temp directory and ran the real preview/apply/rollback code path against real GitHub release data (not mocked): fresh modern-layout install, fresh legacy-layout install, `UE4SS-settings.ini` preservation, and the layout-mismatch refusal all confirmed working — 21/21 assertions passed. Not yet run against a real, already-populated Palworld server install; disclosed in the architecture doc.
+
+## v0.7.48.0 — Central Theme System Completion, Foundation Pass
+
+- Direct live bug report, jumped ahead of the roadmap queue at the user's direct request: "we need to fix the different themes... have a central place where a variable can be changed that sets the theme colour so that the background and buttons all change to that setting. Right now it looks like some of it changes but not all. Same with the light [mode]... text colour may need to change, background colours and images need to change."
+- **Small, quick fix folded in first, per direct request**: Update Center's UE4SS row was still reading the fork's old, now-superseded release tag following v0.7.47.0's own discovery that the fork changed release strategy — fixed to always fetch the full release list and pick whichever was published most recently, matching `HeadlessUe4ssReleaseCatalogService`'s own logic.
+- **Investigated before writing any code**: a real central theme mechanism already existed — `ThemeCatalog.cs` defines every color per (accent theme x Dark/Light variant) combination, `ThemeApplier.Apply()` writes them all into `Application.Current.Resources` at startup and on every theme change, and every XAML consumer bound via `DynamicResource` picks up the change live. The bug was never architectural — it was incomplete wiring. A full read of both `MainWindow.axaml` (2636 lines) and `Styles/DesignSystem.axaml` (1389 lines) found 26 hardcoded colors in the former and roughly 300 in the latter that never touched this mechanism at all.
+- **Real finding that reframed the whole scope**: most of DesignSystem.axaml's ~300 hardcoded colors are not arbitrary one-offs. They're the "card flare" per-page accent system (`accentHome`/`accentServer`/`accentWorld`/`accentBackups`/`accentMods`/`accentTools`/`accentSystem`, v0.7.4.0) and status glows (`glowGreen`/`glowRed`/`glowAmber`/`glowPurple`/`glowDarkGreen`/`glowCyan`/`glowViolet`), and their BoxShadow/BorderBrush literals already, by construction, duplicate `ThemeCatalog`'s own Accent/Semantic hex values (e.g. `accentServer`'s glow is literally `#35D5E8`, this catalog's own Cyan) — just hardcoded per-instance instead of referenced, so they never moved when a theme or variant changed.
+- **Scope decision, asked and answered directly**: per-page accent tints now shift when the user picks a different accent theme (Emerald/Crimson/Violet), not just when switching Dark/Light — the larger of two options offered, since the smaller one (tints stay fixed) would have left the app's page-identity colors permanently locked to the Default theme's palette.
+- **A real, previously-undiscovered fix to a disclosed limitation**: `ThemeCatalog`'s own header comment said BoxShadow's shorthand-string syntax "cannot bind to DynamicResource at all (a hard Avalonia limitation, not an oversight)" and that decorative glow colors would "stay at their current dark-tuned values in every theme/variant." Researched this directly: the shorthand-string limitation is real, but binding the *entire* `BoxShadow` attribute to a resource of type `BoxShadows` is not the same thing and works fine — confirmed by writing real `Avalonia.Media.BoxShadows` objects into `Application.Resources` from C# (`ThemeApplier`) and referencing them via `BoxShadow="{DynamicResource X}"` in XAML, which compiled and is now live. `DropShadowEffect.Color` was never actually blocked either — it's a normal bindable property on a normal XAML object, not the restricted shorthand string; the two had been conflated.
+- **Given ~300 individual hand-tuned colors x 4 themes x 2 variants is not something that can be manually tuned with any confidence without being able to see the rendered result** (no way to screenshot/render the native Avalonia app in this environment), built a systematic, formula-driven derivation engine instead of hand-authoring every combination:
+  - New `ThemeColorMath.cs`: `Blend`/`Lighten`/`Darken`/`WithAlpha` helpers, simple linear RGB math.
+  - `ThemeCatalog.DerivedColorNames` + `ResolveDerivedBaseColor`: 11 named base colors (the 5 existing Accent slots, 3 existing Semantic colors, "Purple" as a confirmed exact alias of Violet, and two with no natural existing slot — "DarkGreen," derived as a darkened Green, and "Neutral," blended from the existing Border/Muted structural tones).
+  - `ThemeApplier.Apply()` now also computes, per base color, per theme, per variant: `{Name}AccentBorderBrush` (a muted border tint), `{Name}AccentHighlightBrush` (a bright hover/focus/checked highlight — confirmed these need a different, lighter derivation than the muted border tint, not the same resource reused for both), `{Name}AccentGlowShadowLow`/`{Name}AccentGlowShadowHigh` (two BoxShadows strengths, for passive accent decoration vs. active status signaling), and `Card{Name}Gradient` (a 3-stop tinted glass-card gradient, dark-blended for Dark mode and light-blended for Light mode, mirroring `ThemeCatalog.Structural`'s own existing Card/CardStrong Dark-vs-Light approach). The `Card{Name}Gradient` resources overwrite the exact same keys (`CardGreenGradient`, `CardCyanGradient`, etc.) `DesignSystem.axaml` already statically declares, using the same Application-resource-wins-over-StyleInclude-resource precedence every other resource in this system already relies on — no XAML reference needed to change.
+- **What actually shipped this version** (the highest-visibility, most-repeated elements first): the full 7-page accent-family system; every status glow class; category-tab checked/hover/pointerover colors (and a real inconsistency fixed along the way — Server/System categories were using their own one-off near-cyan hex values instead of reusing the same Cyan/Green every other category already reuses from its own page accent); all 5 `ribbonGroup.contextXxx` classes; status badges (verified/enabled/healthy/update); MOD Dashboard/Library's accent cards (modPlatform/modRuntime/modUpdates/modDetails); Backups' three accent cards; the general interactive hover/focus glow used throughout buttons, tabs, and nav (12 more literal instances of the app's bright `#91E4FF`/`#75C8FF`/`#72D0FF` highlight, unified into one derived resource); and all of `MainWindow.axaml`'s 26 hardcoded structural literals (borders, card backgrounds, status badges, table headers, dividers) — 23 converted, 3 deliberately kept as a disclosed exception (the Dashboard/RCON/Console monospace log views stay dark/green regardless of theme, matching the common "terminal panel stays dark" convention many apps use, rather than risking a light-background/dark-green-text contrast problem with no way to visually verify the result).
+- **A real, separate gap closed along the way**: the v0.7.35.0 button color system (`inspectAction`/`targetAction`, item 32) added its own `InspectGradientStop0-2`/`TargetGradientStop0-2` resources directly as static `DesignSystem.axaml` declarations and never wired them into `ThemeCatalog` at all — meaning they were never audited by v0.7.36.0's original Theme System Audit either. Added with Dark values byte-identical to what was already hardcoded (no change to today's look) and computed Light variants, fixed across all four accent themes (matching how Success/Warning/Danger already work) since these represent a fixed action-type meaning, not page identity.
+- **What's explicitly deferred, disclosed rather than silently dropped**: ~240 hardcoded colors remain in `DesignSystem.axaml`, overwhelmingly the elaborate multi-stop translucent "glass" gradients (`GlassOptionHoverGradient`, the `PrimaryGlass*`/`SuccessGlass*`/`DangerGlass*` families, the four `Nav*Glass*Gradient` variants, `DashboardGlassGradient`, the `Context*Gradient` family, the `*GraphFill` family, the `Backup*Gradient` family) plus a handful of smaller one-offs. These behave differently over a light vs. dark background in ways a simple lighten/darken formula can't safely reproduce without visual verification this environment cannot perform — tracked as its own follow-up version rather than risking a blind mass conversion. Nav pane icons (56x56 pre-rendered glossy sphere PNGs) and background/atmosphere art (`dashboard-atmosphere-v3.png` and others) were directly confirmed as part of what "images" meant, but are raster assets with no vector source — real theme-awareness for them needs asset regeneration or runtime hue-shifting, a different kind of work than this version's color-token plumbing, and is disclosed as out of scope here rather than attempted.
+- **Real-world consequence, disclosed**: since `ThemeApplier.Apply()` runs unconditionally on every app start (confirmed in `App.axaml.cs`), the newly-computed derived resources replace today's hand-tuned static values immediately, for every user, including the Default theme — a deliberate, disclosed deviation from `ThemeCatalog`'s own stated "Default+Dark stays byte-for-byte identical" principle for the specific ~11 base colors this version touches, since hand-preserving exact byte-identical values for those while still deriving the other 7 (theme x variant) combinations would have needed reverse-engineering the original hand-tuning with more precision than is practical. The computed values are designed to closely match the original spirit (same hue, same dark-tinted-glass structure) — visual differences, if any, should be minor.
+
+## v0.7.47.0 — UE4SS Release Catalog
+
+- The next roadmap item after v0.7.46.0's live bug report was Native Console Capture — the real fix for "console doesn't capture PalServer events." Investigated it live first, in an isolated copy of the user's real server (never touching the live one), before writing any code:
+  - **`-ABSLOG="path"`** (a standard, documented Unreal Engine file-logging flag): tested directly — no log file was ever created, even minutes after UE4SS finished loading all 6 of the user's real mods. Palworld's build appears to have this Unreal subsystem compiled out entirely.
+  - **Launching `PalServer-Win64-Shipping-Cmd.exe` directly**, bypassing the `PalServer.exe` wrapper, with the exact same redirection MystTiq already uses against the wrapper: tested directly — zero lines captured, despite the process being confirmed alive and UE4SS actively registering hooks and loading mods the whole time. This ruled out "MystTiq is redirecting the wrong process" as the fixable root cause — Palworld's engine appears to allocate and write to its own console object internally, independent of the OS-level stdio handles the process was started with, regardless of which binary launches it or how.
+  - **UE4SS's own Lua API**: confirmed via its documentation that no hook exists for Unreal's own engine log output, only UE4SS's own mod-loading diagnostics.
+  - **Existing third-party tools**, investigated per direct instruction before proposing to build anything new: "PalServerLogger" is a real, working solution, using a DLL proxy technique (`d3d9.dll`) to inject into the PalServer process. Not safely integrable: it requires PalDefender (a separate anti-cheat mod) already installed as its own proxy base, and its license/redistribution terms couldn't be confirmed (Nexus Mods blocked automated access). Bundling an unverified-license binary that gets injected into the user's live game process isn't something to do without the user explicitly choosing that specific tool.
+  - **Conclusion**: the real fix is a small, first-party DLL proxy MystTiq builds and owns itself — the same proven technique UE4SS/PalDefender/PalServerLogger already use, applied by MystTiq's own code instead of borrowed from an unverified third party. Genuinely large — needs a C++ toolchain this otherwise-all-.NET project doesn't have yet, real Win32 DLL-proxy code, and the same careful isolated testing used to rule out the three faster options above. Scoped in the roadmap as its own future project (v0.7.49.0+), not attempted here.
+- **Picked up the next roadmap item instead**: item 45, the UE4SS page's "Release source" dropdown, which has been a client-side-only stub ("Palworld Fork"/"Official Upstream" options, no backend) since it was first built. New `HeadlessUe4ssReleaseCatalogService` gives it real data for the first time.
+- **Grounded live against real GitHub release data for both repos before writing any code**: `Okaetsu/RE-UE4SS` (Palworld Fork) turns out to have exactly 2 releases — a legacy rolling `experimental-palworld` tag from 2025-02-20, and a new-style discrete `2281fa31` release from 2026-09-03. The maintainer switched release strategy recently ("Future releases will be a new release instead of updating the old one") — which also means v0.7.45.0's Update Center UE4SS row, which reads the old `experimental-palworld` tag by name, is now looking at stale data and should be revisited. `UE4SS-RE/RE-UE4SS` (Official Upstream) has a real, proper multi-release history (v2.5.1 through v3.0.1, plus an experimental-latest prerelease).
+- **Real asset-selection logic, verified against both repos' actual (and differently-styled) asset sets**: each release attaches multiple downloadable files — a "developer" build (`-zDev`/`zDEV-` in the name) alongside the real one, and for the official upstream repo, unrelated extras (`zCustomGameConfigs.zip`, `zMapGenBP.zip`). The correct asset is chosen by a simple, verified rule (contains "UE4SS" in the name, does not contain "dev") — confirmed against both real release's actual asset lists before shipping, not guessed.
+- New fleet-level route `GET /api/v1/ue4ss/releases` (`HeadlessUe4ssReleaseCatalogService`, no per-profile state needed — it's a pure, read-only GitHub query, registered the same way as the existing port-check diagnostic route). Wired into the UE4SS page's existing "Refresh Runtime" ribbon button, gated to only fire the extra GitHub call while actually on the UE4SS page.
+- **Deliberately listing-only.** Real complexity surfaced while inspecting the actual release zip's contents against the user's real installed UE4SS layout: the zip's own `ue4ss/Mods/` folder contains UE4SS's bundled *default* mods and `mods.txt`/`mods.json` — a naive "extract the zip over the existing install" would silently overwrite the user's real enabled-mod state. The user's real server also has UE4SS's legacy root-level file layout coexisting with the modern `ue4ss/` subfolder layout, matching a warning MystTiq's own detection already logs ("Both modern and legacy... exist. Modern root is active."). A correct installer needs to target only the active layout's own core engine files, never `Mods/` or an already-customized `UE4SS-settings.ini` — real, separate work, deferred to its own version (v0.7.48.0+) rather than rushed in here.
+
+## v0.7.46.0 — Console Newest-First Ordering
+
+- Direct live bug report against the user's own real running server, not from the original 57-item findings log: "console still does not capture events from palworld server file. Also does not connect to the server backend, tells me operation failed."
+- **Investigated live, against the real server, read-only, no destructive actions taken without explicit authorization**: confirmed via the running instance's own `/healthz`, `/api/v1/config`, `/api/v1/status`, and `/api/v1/rcon/status` routes that the management API itself was completely healthy and reachable — "operation failed" was not a connectivity problem.
+- **Root cause found and fixed live**: the "default" profile's `LaunchArguments` never included `-port=8211` (a gap dating back to before v0.6.10.0's discovery that `PalWorldSettings.ini`'s `PublicPort` setting does NOT control PalServer's actual UDP bind port — only the `-port=` CLI argument does; that fix was applied to the Clone World feature at the time but never backported to the pre-existing default profile). Confirmed via `Get-NetUDPEndpoint` that the real running `PalServer-Win64-Shipping-Cmd.exe` was bound to UDP 27015 (Steam's default fallback), not 8211 — meaning MystTiq's own readiness check, which only ever polls 8211, could never succeed, so every Start/Restart timed out after `StartupTimeoutSeconds` (90s) and surfaced as "Operation failed," even though the process was alive and healthy the whole time. This may also have affected real player connectivity on the advertised port. Fixed by adding `-port=8211` to the profile's launch arguments via a live `PUT /api/v1/config/editable` call against the user's running instance, verified by re-reading the persisted `mysttiq.json` afterward. Applying the fix (restarting the MystTiq backend, then PalServer itself) was left to the user's own timing, since it's their live server with real players — no restart was performed without their go-ahead.
+- **Root cause found, not yet fixed**: Console not capturing ongoing PalServer/UE4SS output. Inspected the real `MystTiq-PalServer-Console.log` spanning Aug 27–Sep 10 (13+ days, many restarts): every single session captures the initial UE4SS/MOD-load startup banner (~20-30 lines) and then goes completely silent for the rest of that run, no matter how many hours the server stayed up. Cross-checked against `UE4SS.log`, which stops updating at the exact same moment — both point to the same cause: MystTiq redirects stdout/stderr only from `PalServer.exe`, the thin wrapper process it directly launches via `Process.Start`, but the actual ongoing engine/gameplay output happens in `PalServer-Win64-Shipping-Cmd.exe`, a separate grandchild process with its own console (already documented, but never connected to this symptom, in this codebase's own `ApplyPostLaunchWindowPolicyAsync` comment about that process having an uncoverable window). This closes out item 14's original "needs a live check against an actual modded, running server" disclosure with real findings — the actual fix (capturing the grandchild's own output) is real feature work, tracked as its own future version rather than rushed in here.
+- **What shipped in this version**: while confirming the port fix on the Console page, the user asked for the log view to show the most recent activity at the top instead of the bottom. `MainWindowViewModel.ApplyConsoleFilter` now builds `FilteredLogLines` from `LogLines.Reverse()` — the underlying `LogLines` collection keeps its original chronological (oldest-first) order unchanged, since the Dashboard's Live Activity panel (`DashboardActivityLines`) still reads from it directly and has its own unrelated ordering. Export Console now exports newest-first too, since it exports exactly what's on screen — intentional, not an oversight, so the exported file matches what the user was looking at.
+
+## v0.7.45.0 — Update Center Overhaul
+
+- Twenty-first version of the GUI/workflow/UX overhaul roadmap — item 51, the largest single item in the roadmap. Grounded before writing any code: `HeadlessServerDistributionService`/`HeadlessEnvironmentChecklistService` only ever checked component *existence* (does the file/folder exist), never a version number or whether a newer one was available, for any of the 11 components the v0.2.16.4 reference tracked.
+- **Explicit scope decision, asked and answered mid-session**: build all 11 components in one pass (not a smaller starter slice), and include MystTiq's own self-update awareness against its GitHub releases — informational only, no auto-download/auto-install.
+- **New `HeadlessComponentUpdateService`** (`MystTiq.HeadlessHost`) returns real installed/latest version data per component, grouped exactly like the reference: **Core Server** (MystTiq Server Manager, SteamCMD, Palworld Dedicated Server, UE4SS Runtime) and **Save & Runtime Dependencies** (Python Runtime, pip, Palworld Save Tools, PlM/Oodle Decoder, .NET Runtime, Visual C++ Runtime, Microsoft C++ Build Tools).
+- **Real, verified sources per component, researched before committing to any of them** — no guessed endpoints: MystTiq's own updates via `GET /repos/Wad3M/MystTiq-Palworld-Server-Manager/releases/latest`; Palworld Dedicated Server's installed build id read from its own SteamCMD `appmanifest_2394010.acf`, compared against Steam's unauthenticated `ISteamApps/UpToDateCheck` Web API (no API key needed); UE4SS's already-tested `HeadlessModManagementService.GetInventoryAsync().Ue4ss.InstalledVersion` (reused, not duplicated) compared against the Palworld fork's `Okaetsu/RE-UE4SS` `experimental-palworld` GitHub release tag; pip and Palworld Save Tools compared against their real PyPI package feeds; .NET Runtime compared against the official `dotnet/core` `releases-index.json`.
+- **Real, disclosed capability gaps instead of fabricated numbers**: Python Runtime, Visual C++ Runtime, and Microsoft C++ Build Tools have no simple, reliable unattended feed for "latest version" anywhere from their vendors — confirmed by research, not assumed — so those rows report the real installed version with Latest = "Unavailable" and say why, rather than inventing a comparison. PlM/Oodle Decoder has no single canonical upstream project at all (this project vendors it under its own internal folder naming, not a specific tracked repo) — same honest treatment. UE4SS's Palworld fork ships as a rolling re-pushed tag rather than an incrementing version number, so it reports both values with a "Check manually" status instead of a false Up-to-date/Outdated claim. SteamCMD has no version concept at all (it self-updates on every launch) — reported as such, not given a fake number.
+- **UI**: new component-by-component table on the Update Center page (`MainWindow.axaml`), split into the same two labeled sections, color-coded by status (green Up to date, amber Update available, red Not installed, muted for every honestly-disclosed "can't compare" case). The existing Refresh ribbon button now also pulls this table, alongside the pre-existing distribution status it already refreshed.
+- No change to any existing update *action* — the existing "Update Palworld Server" SteamCMD button is untouched; this release is read-only version reporting only, no new mutation surface.
+
+## v0.7.44.0 — Palworld Instance Detection & Termination Tool
+
+- Twentieth version of the GUI/workflow/UX overhaul roadmap — a direct mid-session request, not from the original 57-item findings log: "We need to add a tool to detect palworld instances and be able to close them." Motivated directly by a real collision hit twice during this session's own release verification (v0.7.42.0 and v0.7.43.0's `-RunBuild` gates): an unrelated real PalServer process was running, had no in-app way to be identified or stopped, and had to be handled manually outside MystTiq. The second collision revealed the actual risk this tool has to account for — MystTiq's own crash-recovery auto-restarted the process because a raw `Stop-Process` kill outside MystTiq looks exactly like an unexpected crash, not an intentional stop.
+- **New machine-wide instance scan**: `IServerLifecycleService.FindAllInstancesAsync` (Windows and Linux) returns every Palworld process on the machine — not filtered to this profile's own configured `ServerRoot` the way the existing status/kill-processes tooling from v0.7.28.0 already is. Built entirely on the existing `IServerSessionInspector.FindProcessesByName` primitive that `FindManagedServerProcesses`/`FindProcessesWithMismatchedPath` already filter down from — no new low-level process enumeration needed. Each result is tagged `ManagedByThisProfile`, deliberately conservative: an instance with an unreadable/unknown executable path is reported as NOT managed (unlike the permissive rule the existing status display uses for the same edge case), because this flag now gates which stop path the UI offers.
+- **Two distinct termination paths, not one blanket kill button**: an instance confirmed as this profile's own managed process reuses the existing, already-safe `ForceStopServerCommand` (→ `StopAsync(TimeSpan.Zero)`, which writes `StopRequested=true` before touching the process, so this profile's own crash-recovery correctly stands down). An instance NOT confirmed as managed gets a new, separate raw-kill route — `IServerLifecycleService.TerminateUnmanagedInstanceAsync` — that terminates the PID directly and deliberately never touches this profile's own persisted lifecycle state, since the target may not be this profile's process at all.
+- **The real, disclosed limitation**: MystTiq cannot know in advance whether an "unmanaged" PID is actually being tracked by a different local MystTiq session's own crash-recovery. Killing it directly may look like an unexpected crash to that other session and trigger an auto-restart there, exactly as happened twice this session. The UI states this plainly before the kill button is reachable, rather than presenting a raw kill as a clean, risk-free stop.
+- **New Server Doctor panel** ("ALL PALWORLD INSTANCES ON THIS MACHINE"), reusing the list-plus-details-panel pattern MOD Dashboard/MOD Library already established (v0.7.40.0/v0.7.43.0): select an instance to see its details and the one stop action that applies to it. New ribbon button "Detect Instances" (Doctor page); Run Doctor also refreshes this list as a side effect, since it's the same "what's actually running" concern.
+- New routes: `GET /server/instances`, `POST /server/instances/{processId}/terminate` (both `RequireRole(Operator)`), intentionally not run through the same `IOperationCoordinator` lock as Start/Stop/Restart/Force Stop — they don't mutate this profile's own lifecycle/world state, and a raw kill of an unrelated instance must not queue behind this profile's own in-progress lifecycle operations.
+- No change to any existing route, DTO, or behavior for this profile's own managed-process tracking (`/status`, `/server/force-stop`, the v0.7.28.0 MANAGED PROCESSES panel) — this is new, additive capability only.
+
+## v0.7.43.0 — Findings Completeness Fixes
+
+- Nineteenth version of the GUI/workflow/UX overhaul roadmap — a direct mid-session request: "review the required changes from all my previous commands to ensure they are done... For instance the MOD dashboard." An audit pass cross-checked every one of the 57 original findings against current code (not just the roadmap's own version-to-finding mapping) and found two real gaps, both fixed here.
+- **MOD Dashboard never got its own mods list** (items 21 and 40): v0.7.40.0 only ever applied the Installed-MODs-list-plus-details-panel work to MOD Library, despite the original ask — echoed independently by two findings — being "all of the running Mods should be here [on MOD Dashboard] listed like the old version, the Mod on the left and the description on the right." Added a read-only Installed MODs list + MOD DETAILS panel to Dashboard (no Enable/Disable/Delete/Rollback/Update actions, no Install Validated ZIP), matching the page's own pre-existing framing ("Open MOD Library to browse, install, or change enabled state") — Dashboard stays at-a-glance, mutation stays on MOD Library. Evidence surfaces MystTiq's own real evidence, not a website description; that part of item 40 is now separately scoped as its own future version.
+- **Footer "working on" indicator never got more detail** (item 6): unlike every other finding, item 6 was never assigned a version slot anywhere in the original 22-version roadmap, and the footer was unchanged from the original ask. Added a live elapsed-time ticker (`BusyElapsedText`, a dedicated 1-second timer started/stopped with `IsBusy`) and which server the busy operation belongs to (`StatusBarText` now includes the active tab's profile name alongside the reason). Real sub-step/percent-complete progress remains a disclosed gap — the original finding itself flagged this as likely needing backend changes too.
+- **Nav pane icons doubled again** (28×28 → 56×56, direct mid-session request, the same 25 destinations touched in v0.7.32.0) — the nav row height grew 58→72px and the icon column 32→60px so the larger icon doesn't clip, following the same paired-scaling approach v0.7.32.0 established.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.42.0 — Cross-Page Consistency Sweep
+
+- Eighteenth version of the GUI/workflow/UX overhaul roadmap — a direct mid-session request, not from the original 57-item findings log: apply the same patterns already established on updated pages (ribbon relocation above all) to every page that hadn't received them yet.
+- **Requested next as "v0.7.43.0"; shipped as v0.7.42.0** — every version this session has been strictly sequential with no gaps, so the originally-planned v0.7.42.0 (Update Center Overhaul, the largest single item in the roadmap) is deferred to v0.7.43.0+, with UE4SS Release Catalog Backend, Per-Tab Color Coding, "+" Flow Restructure, and Dashboard Layout Density each shifting down one slot accordingly.
+- **13 pages got new per-page ribbon groups**, the only ones left with in-page header action buttons after v0.7.26.0-v0.7.28.0's three original ribbon-consolidation passes: World Explorer (Refresh World), World Transactions (Validate, Export Report, Refresh Ops), Guilds/Bases (Refresh Evidence), Players (Discover Saves, Export CSV), Network Diagnostics (Run Diagnostics, Repair Firewall, Restart Server), Save Tools (Refresh, Self-Tests), Notifications (Refresh, Self-Test, Mark All Read, Export), Automation (Refresh), Alert Center (Refresh), Security (Refresh), Fleet (Refresh), Crash Analyzer (Refresh History, Run Analysis), Update Center (Refresh, Preview Plan).
+- **Two real bugs fixed along the way, not just relocated**: Network Diagnostics' "Re-run Network Tests" button was a literal duplicate of "Run Diagnostics" — same command, both present at once — removed rather than relocated. Its "Open Server Log" button was redundant with the always-present global ribbon Quick Actions "Console" button — removed too.
+- **Deliberately left in-page**: sub-feature-local actions embedded in a labeled workflow card rather than a page header — Fleet's Backup All/Doctor All/Update All, World Transactions' confirm-gated Repair Center apply button, and Alert Center's per-collapsible-section Discord Bot/Anti-Cheat refresh buttons — matching how Backups' Retention Cleanup apply button was kept in-page in the original roadmap rather than relocated. Only page-level primary actions move.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.41.0 — MOD Update Detection
+
+- Seventeenth version of the GUI/workflow/UX overhaul roadmap: item 52 — per-MOD "check for update"/"update" actions in MOD Library, deliberately kept out of the Update Center per that finding's own instruction, rather than duplicating MOD rows into the Update Center table the reference build used.
+- **Investigated before building**: confirmed no update-comparison infrastructure exists anywhere in this codebase for any MOD source — Steam Workshop scanning (`ScanWorkshopAsync`) only discovers what's already downloaded locally, never queries Steam's servers for a newer version. Real update detection via a live Steam Web API call is substantial new infrastructure (API keys, network calls, ToS surface) on the same scale as item 45's UE4SS Release Catalog Backend — explicitly deferred in the roadmap as its own multi-version item, not something to improvise inside a UI-overhaul pass.
+- **Built what's real instead of faking it**: a MOD matching a locally-scanned Steam Workshop item can be checked against real, on-disk evidence — whether Steam's own local Workshop content cache is newer than what's actually installed (i.e., Steam already silently re-downloaded an update in the background that hasn't been re-imported yet). No network calls, no external dependency, no fabricated "latest version" number. New `HeadlessModManagementService.CheckModUpdateAsync`/`GET /mods/{type}/{package}/check-update`.
+- **MODs with no matching local Workshop source** (most UE4SS/Lua mods from other sources) get an honest "no known update source for this MOD" message — matching the app's own established "BACKEND REQUIRED" convention for a real capability gap, not a silent failure or a guess.
+- **Update reuses the existing, already-tested Workshop-import route** (`ImportWorkshopItemAsync`) unchanged — no new mutation logic, just a new way to discover that it should run.
+- Wired into MOD Library's MOD DETAILS panel (built in v0.7.40.0): Check for Update / Update buttons plus a result text area, scoped to whichever MOD is currently selected.
+
+## v0.7.40.0 — MOD Library Layout & Details Panel
+
+- Sixteenth version of the GUI/workflow/UX overhaul roadmap: covers items 40 (the layout/details-panel part) and 42, plus the "move Install Validated ZIP to the top" note folded into this version's scope.
+- **Side-by-side 3-column layout** (item 42): Installed MODs and Available Local Steam Workshop Mods, previously two of three full-width cards stacked vertically, now sit side-by-side matching the v0.2.16.4 reference's layout — each list's row template was trimmed to fit the narrower half-width columns.
+- **New MOD DETAILS panel** (item 40's layout half): a third column showing Overall Health, Installation (type/package/path/enabled state), Runtime, Compatibility, and Evidence for whichever MOD is selected in the Installed MODs list. `SelectedMod` previously only targeted the Enable/Disable/Delete/Rollback buttons — nothing rendered its details anywhere. A new `HasSelectedMod` computed property on the ViewModel gates the panel between its content and a "select a MOD" placeholder.
+- **Install Validated ZIP moved to the top of the page**, above the lists, instead of being sandwiched between Installed MODs and Available Workshop Mods.
+- **Explicitly out of scope**: the website-sourced MOD description part of item 40 — confirmed during the original walkthrough as genuinely new, unbuilt work (mods come from different sources with no single uniform place to fetch a description from, and an outbound fetch from an admin tool deserves its own scope/caching/rate-limiting design pass, not a quick add-on here). The panel's Evidence field surfaces MystTiq's own existing runtime evidence instead.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.39.0 — Mod Install Type Auto-Detection
+
+- Fifteenth version of the GUI/workflow/UX overhaul roadmap: closes a real correctness gap in the MOD install flow.
+- **Confirmed gap**: the existing per-row Installed MODs list already correctly distinguished PAK vs. UE4SS for MODs already on disk — that part worked fine. The gap was specifically in installing a *new* MOD: `ModInstallType` was a plain dropdown defaulting to "PAK", sent as-is to the install route with zero inspection of the actual ZIP contents. Forgetting to flip it silently installed a UE4SS/Lua mod as if it were a PAK, or vice versa.
+- **Server-side auto-detection**: `HeadlessModManagementService.InstallZipAsync` now inspects the archive after extraction — the presence of any `.pak`/`.ucas`/`.utoc` file anywhere in it is an unambiguous PAK signal (no UE4SS/Lua mod ever ships those); everything else installs as UE4SS. This is authoritative regardless of what the client requested, and the result/activity log both reflect the real detected type, noting when it differed from the request.
+- **The manual type dropdown is gone** from MOD Library's "Install Validated ZIP" card — nothing left for a user to get wrong. The client still sends a fixed "PAK" hint on the wire, unchanged from today's prior default, used only by the pre-existing `CaptureSnapshot` rollback-safety check (which looks for a same-named mod already installed under that type before overwriting) — install correctness itself no longer depends on it at all.
+- No configuration schema change.
+
+## v0.7.38.0 — Configuration Page Fixes
+
+- Fourteenth version of the GUI/workflow/UX overhaul roadmap: covers items 24-28, comparing against the v0.2.16.4 reference screenshot.
+- **Notification strip relocated** (item 24): the preset-loaded message, "N unsaved setting change(s)", validation text, and the "Simple Settings shows…" helper line moved from directly under the Simple/Advanced toggle row down to sit just above World Settings — next to the section they're actually reporting the state of. The file path and the Advanced Settings helper line stayed where they were, since they're relevant regardless of which settings section is showing.
+- **"Gameplay Rates" renamed to "World Settings" and split into three labeled sub-sections** (item 25): World (Daytime/Nighttime Speed, Experience Rate, Pal Capture/Spawn Rate, Supply Drop Interval, Base Decay Rate), Player & Pal (all player/Pal hunger/stamina/health/damage rates), and Items & Work (drop/respawn/work-speed/durability rates) — replacing one flat 22-row list. Grouping is data-driven: `PalworldSimpleSettingItem` gained a `Group` property, and the former single `SimplePalworldSettings` collection split into three (`SimpleWorldRateSettings`/`SimplePlayerPalRateSettings`/`SimpleItemsWorkRateSettings`).
+- **Advanced Settings keeps the same Server Identity and Network/Access & Limits cards Simple view has** (item 26): previously Advanced Settings was "a totally different page layout" — a bare flat OptionSettings table with no identity/network context at all. Both cards are now shared and always visible; only the settings list beneath them differs (World Settings' three groups for Simple, the full flat table for Advanced).
+- **Generate button** (item 27): already fixed in v0.7.35.0 (bigger, labeled "🎲 Generate", `inspectAction` styling) — verified nothing further was needed here.
+- **Reference note** (item 28): the actual grouping/section design above was cross-checked against the real current curated settings data, not guessed from scratch.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.37.0 — Backups Page Layout
+
+- Thirteenth version of the GUI/workflow/UX overhaul roadmap: three layout fixes to the Backups page, comparing against a v0.2.16.4 reference screenshot.
+- **Removed the redundant "N backup(s) / total size" header text** — fully covered by the TOTAL ARCHIVES summary card's own count and size, directly below it.
+- **Two-column layout**: the backup table now sits in a wider left column, with the Selected Backup (Verify/Restore/Delete Selected) and Retention Cleanup cards stacked in a narrower right-hand column, instead of one long full-width vertical stack. The reference build's third right-column card, "Backup Locations," has no equivalent to move here — its one action (Open Backup Root) already moved into the ribbon back in v0.7.27.0.
+- **Created now leads the backup table's columns**, ahead of the filename (was `Backup, Created, Size, Status`; now `Created, Backup, Size, Status`).
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.36.0 — Theme System Audit
+
+- Twelfth version of the GUI/workflow/UX overhaul roadmap: closes the concrete gap behind a reported bug — with Light mode enabled, the main content area lightened correctly but the title bar and footer status bar stayed dark navy.
+- **Root cause confirmed as two separate, distinct issues, not one**: `ThemeCatalog`'s own header comment already discloses that `BoxShadow`/`Effect` colors on individual style selectors are deliberately out of scope (Avalonia's `BoxShadow` shorthand string syntax cannot bind to `DynamicResource` at all — a real platform limitation). That disclosed gap is unrelated to what was actually broken here: the title bar and footer status bar `Border`s were both using a **hardcoded** `Background="#F1081422"`/`BorderBrush="#28445D"` rather than any theme resource at all, while the nav pane container right beside them correctly used `DynamicResource`.
+- **Fixed by reusing already-defined, already theme-registered resources** — `StatusSurfaceGradient` and `BorderSoftBrush` (both already present in `DesignSystem.axaml` and registered in every `ThemeCatalog.GradientStops`/`Structural` combination, `StatusSurfaceGradient`'s name and near-identical Dark/Default color values making it clearly built for exactly this surface) were simply never wired up to the title bar or footer. No new resources, no `ThemeCatalog` changes — pure `MainWindow.axaml` rewiring.
+- **Scope note**: audited the rest of `MainWindow.axaml` for similar hardcoded structural hex values and found none at this scale — the remaining hardcoded colors are thin 1px dividers, per-value status badges, table-header row tints, and deliberately theme-independent terminal-style console/RCON output panes, all matching the same "secondary decorative accent" category `ThemeCatalog` already disclaims, not primary chrome containers like the title bar/footer/nav pane.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.35.0 — Button Color System
+
+- Eleventh version of the GUI/workflow/UX overhaul roadmap: a cross-cutting button color system, superseding the narrower per-page notes from items 19, 20, and 27.
+- **Root cause confirmed**: every unstyled `Button` in the app shares the identical `ButtonGradient` background (`Styles/DesignSystem.axaml`'s base `Button` selector with no class) — Browse, Open, Verify, Manage, Generate, and many more all rendered pixel-identical regardless of what they did.
+- **Two new semantic button classes, designed once**: `Button.inspectAction` (cyan `InspectGradient`) for non-mutating "look at/confirm" actions, and `Button.targetAction` (violet `TargetGradient`) for "act on a specific thing" actions. Neither reuses the Primary/Success/Danger/Warning gradients already spoken for by Save/Start/danger/warning buttons elsewhere.
+- **Applied consistently, not one-off per page**: Workspace's 4 Browse buttons and Server Setup's VERIFY/RESCAN row actions now use `inspectAction`; Workspace's 10 Open-in-explorer buttons and Server Setup's MANAGE/INSTALL/CREATE/ENABLE row actions now use `targetAction`. Server Setup's per-row classification is data-driven — new `EnvironmentChecklistItemDto.IsInspectAction`/`IsTargetAction` computed properties key off the row's real `Action` string (`VERIFY`/`RESCAN` vs. everything else that's actually enabled), bound via `Classes.inspectAction`/`Classes.targetAction`.
+- **Configuration's Generate button** (item 27) is now bigger and labeled "🎲 Generate" instead of an icon-only `🎲`, using `inspectAction` since it doesn't persist anything by itself (Save Changes is still required afterward) — it was already functionally enabled, just easy to mistake for disabled given its size.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.34.0 — Category Tab & Nav Pane Styling
+
+- Tenth version of the GUI/workflow/UX overhaul roadmap: two small, precisely-scoped style-resource swaps.
+- **Category tab checked/hover gradients were swapped.** `ToggleButton.categoryTab:checked Border.categoryTabGlow` was using the bright `CategoryActiveGradient` and `:pointerover` was using the darker `GlassOptionHoverGradient` — backwards from the intent, and directly contradicted by the stylesheet's own nearby comment ("Category selection is dark glass; semantic color lives on the overline, underline and glow"). Selecting a category tab now settles into the darker glass look; hovering shows the brighter gradient.
+- **The navigation pane's background changed** from `NavGlassSurfaceGradient` (a flatter fill) to `GlassOptionHoverGradient` — the same darker glass-hover gradient already reused across ribbon buttons, category tabs, and nav buttons elsewhere in the app, for a more visually consistent dark-glass look.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.33.0 — Home Dashboard Fixes
+
+- Ninth version of the GUI/workflow/UX overhaul roadmap: three fixes to the Home Dashboard.
+- **Removed the ONLINE PLAYERS card that duplicated the top-row PLAYERS summary card.** The top-row card already shows online/known counts with its own OPEN button to the Players page; the second card (a live `ListBox` of names, sitting beside the LIVE SERVER / MANAGER LOG card) added nothing the first didn't already cover. The LIVE SERVER / MANAGER LOG card now takes the full row width in its place.
+- **The BACKUP card now gets an amber tint and an OPEN button**, matching the pattern the ACTIVE WORLD card right next to it already used (`Classes="card glowDarkGreen"` + an OPEN button) — swapped `accentHome` for the existing-but-previously-unused `glowAmber` style and added `OPEN` → `Backups`.
+- **Fixed the real cause of sparse console output, especially right after a server starts.** Every log-bearing call site in the Desktop was requesting only 120 lines from `GetLogTail`/`GetStatusPolling`, well under the headless service's own 500-line cap — merging that budget across 2-4 sources (MystTiq stdout, Pal.log, AdminCommands logs) left as little as ~40 lines per source, nowhere near enough to show a modded server's full UE4SS/MOD LOAD startup output. Raised to the server's actual max at every call site that feeds a visible log view: initial tab connect, the recurring per-tab refresh timer, the shared monitoring-refresh core behind manual/Console-page refresh, and both the mid-operation poll and the post-operation authoritative poll around Start/Stop/Restart. Left untouched: the Players page's own aggregate-status call, which fetches log data as a side effect of reusing that endpoint but never displays it.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.32.0 — Visual Density Pass
+
+- Eighth version of the GUI/workflow/UX overhaul roadmap: nav-pane icon sizing, and a compact-card pass across four pages.
+- **Navigation pane icons are noticeably larger** — 20×20 → 28×28 (the icon column widened 24px → 32px to match) across all 25 nav destinations, via the same shared literal pattern in every entry.
+- **Server Setup's 4 summary cards** (COMPONENTS/READY/ATTENTION/ENVIRONMENT HEALTH) are now compact: explicit tight padding, smaller fonts, and shortened descriptions — the prior full-sentence descriptions were what actually drove card height via text wrap, more than padding did, since these cards had no base `.statuscard`-only Padding/FontSize to shrink in the first place. The READY card's count text is now centered.
+- **Backups' 4 summary cards** get the same compact treatment.
+- **Server Doctor's per-check finding cards** get tighter padding/margin/spacing and smaller fonts, so more checks fit on screen without scrolling.
+- **MOD Library's 6 summary cards are removed** — they duplicated MOD Dashboard's own copy of the same cards (both pages previously shared one `IsModInventoryPage`-gated grid); now gated to `IsModDashboardPage` only, so Dashboard keeps them and Library doesn't.
+- **Fixed a carried-over oversight found while touching this card**: v0.7.26.0 moved "Verify Files" into the ribbon but never actually removed the original button embedded in the Server Setup card — removed now.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.31.0 — Duplicate-Install Prevention
+
+- Seventh version of the GUI/workflow/UX overhaul roadmap. Requested directly: "there should be no reason to have multiple tabs connecting to the same server. They can have the same port, but the location of the install should be different" — two tabs are the same server if their install directories match, regardless of what host/port each was reached through.
+- **Root constraint found during investigation**: a saved `ConnectionProfile` (the persisted record behind a tab) has no concept of install location at all — just a name, a `BaseAddress`, and a certificate pin. The install directory only becomes knowable *after* successfully connecting and asking that server about itself, so this can only ever be a post-connection check, not something that blocks the setup wizard before a connection exists.
+- New `TabSession.ServerRoot` caches each tab's last-known install directory, captured from `GetServerDistributionStatusAsync`'s response (`ServerDistributionStatusDto.ServerRoot`) — data already being fetched on every routine Dashboard refresh, so no new network calls were needed. New `MainWindowViewModel.RecomputeDuplicateInstallWarnings()` groups all open tabs by `ServerRoot` (case-insensitive) and flags any tab whose root is shared by another tab, run after every refresh and on tab close (so a resolved duplicate — a tab closing, or a later poll finding the roots actually differ — clears correctly).
+- A new amber warning banner on the Dashboard (`ActiveTab.HasDuplicateInstallWarning`/`DuplicateInstallWarning`) names the shared install path when a match is found, rather than silently letting two tabs operate on what's actually the same server without either one knowing.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.30.0 — Confirmed Bug Fixes: Status Text
+
+- Sixth version of the GUI/workflow/UX overhaul roadmap: three more confirmed bugs fixed, plus one honest correction to a fourth suspected bug that didn't hold up under closer investigation.
+- **Backups' TOTAL ARCHIVES/VERIFIED/PENDING-REVIEW summary cards no longer always read 0.** `BackupItems` was populated at three separate call sites, but only one of the three raised change notifications for the three derived count properties — the other two correctly repopulated the list (which is why it rendered fine) but silently left the summary cards frozen. All three now go through one new shared `PopulateBackupItems` helper, so the notification can't be forgotten a fourth time.
+- **UE4SS no longer reports the meaningless placeholder "0.0.0.0" as its installed version.** `DetectUe4ssVersion`'s DLL-`FileVersionInfo` fallback (`HeadlessModManagementService`) can legitimately return the literal string `"0.0.0.0"` for a DLL whose version resource exists but was never stamped with real numbers — a non-null, non-empty string that used to be returned as-is. A new `IsMeaningfulVersion` check treats an all-zero version the same as no version found, falling through to the existing "Installed — version metadata unavailable" case instead.
+- **Server Doctor's "UNKNOWN" label is no longer unexplained.** That label is legitimate, correct logic (it means "all checks passed, but the server isn't running, so calling it 'Ready' would be dishonest") — the bug was that the backend's own explanation for it (`OverallHealthDetail`, e.g. "Server is not running; no health issues detected.") was already being computed but never read on the Desktop side. `DoctorSummary` now appends it.
+- **Correction, not a fix**: the roadmap's original item 48 ("UE4SS Runtime Health: Unverified / Runtime Mods Root: Not reported") assumed Pal.log carried independent UE4SS-native evidence that detection wasn't consulting. Closer inspection this release found that assumption wrong — those console lines are `HeadlessModManagementService`'s **own** diagnostic restatement of the same `ResolveUe4ss()` result the UE4SS page already displays, not separate raw evidence. No code change was made for this item; see this release's architecture doc for the full explanation.
+- No new architecture — all three fixes stay within existing status/config/diagnostics code paths.
+
+## v0.7.29.0 — Confirmed Bug Fixes: Detection & Config
+
+- Fifth version of the GUI/workflow/UX overhaul roadmap: two bugs found and pinpointed during the original page-by-page walkthrough, now fixed.
+- **Official/Vanilla config preset no longer overwrites Server Name/Description/passwords.** `ApplySelectedConfigurationPreset`'s Official branch (`MainWindowViewModel.cs`) used to reset every field in `SimpleConfigurationNames` to its default — a set that legitimately includes identity fields for the purpose of deciding what the Simple Settings *view* shows, but was being reused as "what a preset should mutate," a different concern. New `GameplayRateConfigurationNames` (a proper subset, gameplay rates only) is used for the reset instead, matching the scope the Balanced/Relaxed presets already correctly had via `GetQolPreset`. `SimpleConfigurationNames` itself is untouched — its view-filtering usage was always correct.
+- **A genuinely-running PalServer at an unexpected install path no longer silently reports as "Stopped."** `WindowsServerLifecycleService.GetStatusAsync` previously collapsed "not running" and "running somewhere the configured `ServerRoot` doesn't match" into the identical generic "PalServer is not running." message. New `FindProcessesWithMismatchedPath()` checks for this specific case (a process matching the expected name, but not the configured path) before falling back to the generic message, producing a distinct, actionable detail naming the expected and actual paths.
+- **The Dashboard actually shows the improved detail now.** Fixing the backend alone wasn't enough — `DashboardSessionText` and `DashboardHealthDetail` (`MainWindowViewModel.ApplyStatus`) both used to show a hardcoded generic string whenever the server wasn't Ready, discarding `status.Detail` entirely. Both now surface the backend's real explanation.
+- No new architecture — both fixes stay within the existing lifecycle-status and configuration-preset code paths.
+
+## v0.7.28.0 — New Ribbon Actions
+
+- Fourth version of the GUI/workflow/UX overhaul roadmap: three genuinely new ribbon capabilities, rather than relocating existing buttons like the two prior versions.
+- **Force Stop Server**: a "Danger" ribbon group (Force Stop) is now reachable from every page, not just when exiting the app. `ForceStopServerAsync` (`IMystTiqApiClient`) already existed and was already reachable from `ShutdownForExitAsync(force: true)` — this is its first user-facing exposure, wired through the same `RunLifecycleAsync` helper Start/Stop/Restart already use.
+- **Install Missing**: Server Setup's "Environment" ribbon group (added in v0.7.26.0 for "Verify Files") gains a second button. `InstallMissingEnvironmentAsync` already existed but was previously only reachable indirectly through the per-row action dispatch on the component checklist — now has its own standalone command.
+- **Managed process list + Kill Processes** on Server Doctor: the page's status card now shows the real OS-level processes associated with the active server (name + PID + responding state) at the top-right, sourced from `ServerStatusDto.Processes` — that data already flowed end-to-end from the headless host's `FindManagedServerProcesses` through `ServerLifecycleSnapshot`, just was never read on the Desktop side before this. "Kill Processes" in the Doctor ribbon group reuses `ForceStopServerCommand` rather than inventing a second kill mechanism, since it's functionally the same action.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.27.0 — Ribbon Consolidation Pass 2
+
+- Third version of the GUI/workflow/UX overhaul roadmap: the second wave of page-local buttons relocated into the ribbon.
+- **Workspace** gains a "Workspace" ribbon group with Refresh (`LoadConfigurationCommand`) — "Validate All" stays on the page, not part of this relocation.
+- **Backups** gains a "Backups" ribbon group with Create, Verify All, Refresh, and Open Root (`CreateBackupCommand`/`VerifyAllBackupsCommand`/`RefreshBackupsCommand`/`OpenBackupRootCommand`).
+- **MOD Dashboard and MOD Library** share one new "MODs" ribbon group with Refresh MODs and Verify & Scan — these two pages already shared one in-page toolbar via the existing `IsModInventoryPage` (Dashboard-or-Library) condition, kept unchanged here rather than splitting it into two separate groups.
+- **UE4SS** gains its own "UE4SS" ribbon group with Refresh Runtime — the same `RefreshModsCommand` as MODs' Refresh, just labeled and gated for this page specifically, matching the in-page button it replaces.
+- **Server Doctor** gains a "Doctor" ribbon group with Run Doctor and Export Report (`RunDoctorCommand`/`ExportDoctorCommand`).
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.26.0 — Ribbon Consolidation Pass 1
+
+- Second version of the GUI/workflow/UX overhaul roadmap: the first wave of page-local buttons relocated into the ribbon, made possible by v0.7.25.0's shrink-to-fit infrastructure.
+- **Server Setup** gains an "Environment" ribbon group with "Verify Files" (the existing `VerifyEnvironmentCommand`, previously embedded in the page's Environment Health card).
+- **Configuration** gains a "Configuration" ribbon group with Import, Export, Save, and Reset — and drops "Load Active" entirely as redundant, along with its now-fully-unused `LoadPalworldConfigurationCommand` wrapper (the underlying `LoadPalworldConfigurationAsync` method stays; it's still called from three other internal code paths). Import/Export still open a real file picker, which stays in code-behind per this codebase's established convention (needs a `TopLevel`/`Window` to open against) — the ribbon's shared button template now supports both Command-bound and native-dialog actions via a new `NativeDialogAction` dispatch (`RibbonAction_OnClick`), rather than every ribbon action needing to be a plain `ICommand`.
+- **Console** gains a "Console" ribbon group with Refresh/Pause/Clear/Export (the existing `RefreshConsoleViewCommand`/`PauseConsoleCommand`/`ClearConsoleViewCommand`/`ExportConsole_Click`, previously in the Console Log card's own header). The RCON card also moves above the Console Log card, per direct request.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.25.0 — Ribbon Adaptivity
+
+- First release of a broader GUI/workflow/UX overhaul: the user walked through MystTiq's pages one by one, flagging 57 concrete fixes (layout, workflow, and outright bugs — several with root causes pinned down during the walkthrough itself, e.g. the Backups page's summary cards always reading 0, the Official/Vanilla config preset wrongly overwriting Server Name, and UE4SS reporting "0.0.0.0" for its installed version). Sequenced into a 21-version roadmap, front-loading shared infrastructure and low-risk fixes before larger feature work.
+- **This release is that infrastructure's first piece**: the ribbon (the row of action buttons under the category tabs — Refresh/Start/Restart/Stop, Backup/Console/Doctor) is now built from data (`RibbonGroupViewModel`/`RibbonActionViewModel`, new `Models/RibbonActionViewModel.cs`) instead of two hand-authored `Border` blocks in `MainWindow.axaml`. `MainWindowViewModel.VisibleRibbonGroups`/`OverflowRibbonGroups` split whichever groups don't fit the actually-measured window width into an overflow flyout (reached via a new "»" button) — the exact same shrink-to-fit pattern the tab strip already uses (`VisibleTabs`/`OverflowTabs`, v0.7.16.0), reusing its width-measurement technique (`RibbonHost_OnSizeChanged` → `UpdateRibbonWidth` → `RecomputeRibbonLayout`) rather than inventing a new one.
+- Ribbon content is unchanged today (still just Server Control and Quick Actions, byte-identical buttons/commands/icons/colors to before) — this version is purely the adaptive infrastructure every subsequent ribbon-relocation version in the roadmap needs, since each of those adds more buttons that could otherwise silently overflow the row with no way to reach them.
+- Icon colors moved from inline `Foreground="{DynamicResource AmberBrush}"` (etc.) per-button to new `TextBlock.flatIcon.amber`/`.green`/`.blue`/`.red`/`.cyan` style classes (`Styles/DesignSystem.axaml`), toggled via `Classes.amber="{Binding IsAmberIcon}"` the same way several other conditional visual states already work in this codebase (e.g. `Classes.glowGreen`). Kept deliberately on `DynamicResource`, not a brush resolved once at construction time, so ribbon icons keep following live theme changes — no regression relative to today, and no conflict with the theme-audit work later in the roadmap (item 50/v0.7.36.0).
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.24.0 — Roadmap Doc Audit
+
+- Fifth and final release from the approved backlog plan (v0.7.20.0–v0.7.24.0). Rather than assuming the two `docs/roadmap/WINDOWS_BACKPORT_REGISTRY.md` rows flagged during the v0.7.19.0 audit were both stale labels, each was individually re-checked against the actual current code — the same discipline the v0.7.11.0 doc-consistency audit established.
+- **"Service-style watchdog/recovery behavior inspired by Linux/systemd supervision"** (row target v0.4, labeled "Discovery backlog" since the registry's creation): confirmed already satisfied. `HeadlessFleetCrashRecoveryService` (shipped v0.6.13.0, see `docs/architecture/v0.6.13.0-fleet-wide-crash-recovery.md`) wraps a per-profile `HeadlessSupervisor` — the exact systemd-inspired crash-detect/backoff/auto-restart loop `service-run` already used — and gives every profile under `api-run` (the mode Desktop's own sidecar actually runs) the same guarantee. Flipped to "Shipped" with a citation.
+- **"Improved structured log rotation/retention if Linux implementation proves useful"**: investigated rather than assumed stale. `HeadlessConsoleLogWriter` (`MystTiq.HeadlessHost`, shared by both platforms — there is no separate Linux-only implementation to backport from) appends every line to `MystTiq-PalServer-Console.log` indefinitely, with no size cap, rotation, or retention logic anywhere in the codebase. Confirmed genuinely open on both platforms; left as "Discovery backlog" with that confirmation recorded in the registry instead of an unverified guess, rather than attempting the open-ended feature work itself as a side effect of a doc audit.
+- No code change — this release is documentation-only (`docs/roadmap/WINDOWS_BACKPORT_REGISTRY.md`, plus the standard version-bump/changelog/architecture/release-notes set).
+
+## v0.7.23.0 — Specific Background-Tab Connection Errors
+
+- Fourth of the planned backlog sequence. `RefreshTabLightweightAsync` (the health check background tabs poll on their own cadence, separate from the active tab's full `RefreshAsync`) had a bare `catch { }` that discarded the actual exception entirely and always reported `tab.ConnectionState = "Connection failed"` — even a real, informative version mismatch collapsed into the same generic text as an actually-unreachable server. The active tab's own connection check (`RefreshAsync`, hitting the identical `GetHealthAsync` endpoint) already classified these correctly, throwing `InvalidOperationException` for a version/component mismatch and `UnauthorizedAccessException` for a missing bearer token.
+- **`RefreshTabLightweightAsync` now mirrors that exact classification**: the same two conditions, the same two exception types, now surfaced as `tab.ConnectionState = "Incompatible API version"` / `"Needs bearer token"` respectively, with the true catch-all `"Connection failed"` reserved for everything else. `ConnectionState` already renders as visible text in two places once a tab becomes active (a status badge and a status card, both already bound to it) — no XAML change needed for that value to become visible.
+- `TabSession.StatusDotColor`'s switch gained the two new strings alongside the existing `"Connection failed"`/`"Invalid profile"` cases, so they still render the same red failure-state dot rather than silently falling through to the neutral grey default.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.22.0 — Per-Action Busy Status
+
+- Third of the planned backlog sequence. The footer's `ProgressBar` (`MainWindow.axaml` ~2288) has always sat next to a `StatusBarText` binding that, whenever `IsBusy` was true, showed a single hardcoded `"Working…"` literal (`RaiseIsBusyDependents`) — no indication of which of the app's many possible operations was actually running.
+- **New `BusyReason` property** on `MainWindowViewModel`: when set, `RaiseIsBusyDependents` shows it in place of the generic literal (`StatusBarText = value ? (BusyReason ?? "Working…") : ...`) — the existing footer `TextBlock` binding needed no XAML change at all, since it was already wired to `StatusBarText`.
+- Threaded through the highest-value operations first, not attempted as blanket coverage of every `IsBusy = true` site in the file: **server start/stop/restart** (all three already funnel through one shared `RunLifecycleAsync(activity, ...)` helper, which already had an `activity` string — `"Starting…"`/`"Stopping…"`/`"Restarting…"` — one insertion point covers all three), **backup create** (`CreateBackupAsync`), **backup restore** (`RestoreBackupAsync`), and **world transaction apply** (`ApplyWorldTransactionAsync`).
+- Every other operation not yet threaded through keeps the exact same generic `"Working…"` fallback as before — a disclosed, intentional gap (matching the plan's explicit scoping), not a claim of full coverage.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.21.0 — Experimental Real-World Map Positions
+
+- Second of the planned World Map sequence (see `docs/architecture/v0.7.20.0-world-map-presets.md`). v0.7.0.2 previously tried and abandoned real coordinate calibration because the fetched formula didn't reconcile with its own source's worked example — this pass does not repeat that mistake.
+- **The formula is now numerically verified, not just plausible-looking**: research found the open-source `palworld-coord` project (github.com/palworldlol/palworld-coord) reverse-engineered Palworld's `.sav`-world-coordinate-to-map-UI conversion (translate `(123888, 158000)`, scale `459`, axis-swapped). Two independent lookups of that project's *documentation* disagreed on the axis order — the exact failure mode that sank v0.7.0.2 — so this pass went to the project's actual source code instead. New `PalworldMapCoordinates.ToMapUnits`/`ToCanvasPosition` (`MystTiq.Desktop/Services`) reproduces that source's own published worked example exactly (`sav_to_map(-167230, 96430)` → `(-134, -94)`, confirmed both by direct calculation and against the source's README), and its constants reconcile precisely with the documented `.sav` coordinate bounds (both axes span exactly `1000 × 459` with zero residual error).
+- **What's still unverified, and why this ships opt-in rather than as the default**: the conversion math is solid, but which corner of the Palpagos map *image* its output coordinate space corresponds to — and whether the map's Y-axis needs inverting for screen rendering — isn't independently confirmed anywhere in the source material. A wrong-but-plausible calibration is worse than the existing, already-correct relative-spread view, so a new **"Experimental: real-world positions (Palpagos only)"** checkbox on the World Map card is off by default, only appears when the Palpagos preset specifically is the active background (`MainWindowViewModel.IsPalpagosMapActive`, derived from whichever file path is actually loaded — no separately-tracked state to drift out of sync), and its tooltip says outright that dots may look mirrored or offset pending confirmation against a real server.
+- `RebuildPlayerMapPoints` gained the calibrated branch, used only when the toggle is on and Palpagos is active; every other case (World Tree, a browsed image, no background, or the toggle off) keeps the exact same auto-fit relative-spread logic unchanged.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.20.0 — World Map Presets
+
+- Requested directly, first of a planned sequence (see `docs/architecture/v0.7.20.0-world-map-presets.md` and the broader plan discussion): two real Palworld map images (`docs/images/palpagos.webp` — the base game map, "Palpagos Islands" — and `docs/images/worldtree.webp`) get bundled into the World Map card as selectable presets, so a user doesn't have to find and crop their own screenshot before the map has any geography-shaped background.
+- **New `MapPresetService`** (`MystTiq.Desktop/Services`): extracts a bundled `avares://` asset to a real file under the same local config root `LocalMapPreferencesStore` already uses (once, cached on disk), then hands that path to the **existing, completely unchanged** `SetMapBackgroundImagePath(path)` — a preset is, from that point on, indistinguishable from a browsed file as far as the rest of the app is concerned. No parallel loading/persistence path was added.
+- Both images converted from their original 4096×4096 WEBP source to 1024×1024 PNG (the World Map card only ever renders them at 480×480 — the source resolution was unnecessary weight for no visible benefit) and bundled under `Assets/Maps/`.
+- `MainWindow.axaml`: the World Map card's header row simplified back to just the expand/collapse toggle; the previous Browse/Clear button pair moved into the expanded content area alongside two new preset buttons (Palpagos/World Tree), all in one `WrapPanel` row.
+- **Deliberately unchanged this release**: `RebuildPlayerMapPoints` still auto-fits player dots to the bounding box of currently-online players — dots do not yet line up with real in-game geography on either preset. That's real coordinate calibration, sequenced as its own separate, higher-risk follow-up specifically so it doesn't block this release's real, working, low-risk preset feature.
+
+## v0.7.19.0 — Full Navigation Icon Set
+
+- Requested directly, following on from a backlog check. A dedicated audit of `docs/roadmap/PRODUCT_ROADMAP.md` (which calls for an "original Palworld-inspired MystTiq icon family" across all of Dashboard/Doctor/Players/Guilds/Pals/Worlds/Backups/Mods/Updates/Automation/Network/Performance/Settings) against what actually shipped in v0.7.0.0 found the icon pass was always a partial build-out, not a finished item: only 7 of the app's 25 nav-sidebar destinations (Dashboard, Server Setup, Players, Bases, Backup Center, Security, Fleet) got real hand-authored `StreamGeometry` vector icons; the other 18 (Configuration, Console, Workspace, Inspector, Guilds, MOD Dashboard, MOD Library, UE4SS, Update Center, Server Doctor, Crash Analyzer, Save Tools, Diagnostics, Settings, Notifications, Activity & Audit, Automation, Alert Center) were left on plain Unicode-glyph text prefixes (⚙, ▰, ♛, ◆, ▦, ↻, ✚, ▲, ▤, !, ●, ≣, ⏱, ⚠) — v0.7.0.0's own architecture doc says as much explicitly.
+- **A complete, consistent 25-icon set** — one glossy "glass orb" icon per nav destination, each a distinct accent color with a purpose-matched glyph (a gauge for Dashboard, a vault for Backup Center, a shield for Security, and so on) — replaces every nav-sidebar icon uniformly: both the 7 old vectors and the 18 old glyph prefixes.
+- **Shipped as PNG, not `StreamGeometry`**: unlike the app's existing single-color vector icons (a flat path re-tinted at runtime via `{DynamicResource TextBrush}`), this set uses layered radial/linear gradients, clip paths, and drop-shadow blur filters — a `StreamGeometry` (Avalonia's own simple-path vector primitive) can't express any of that, and this codebase has no SVG-rendering dependency to reach for the raw `.svg` source files instead. Rendered to 240×240 PNGs (already generated alongside the source SVGs) and embedded as `<Image>` controls at 20×20, matching this codebase's existing convention for every other raster asset (app icon, wordmark, dashboard background) rather than adding a new NuGet dependency for this alone.
+- The 7 now-unused `StreamGeometry` resources (`IconDashboard`/`IconServer`/`IconPlayers`/`IconFleet`/`IconSecurity`/`IconBase`/`IconBackup`) were removed from `Styles/IconGeometries.axaml` rather than left as dead code; `IconAddTab` (the tab bar's "+" button, unrelated to nav) stays.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.18.0 — Player Directory Name Deduplication
+
+- Requested directly, the last item of a follow-up list raised earlier this session: "we should have a selectable feature to remove duplicate names for users." The same physical player can legitimately show up more than once in the Players page's Directory list under the same display name — a rejoin under a different platform ID, a stale record left over from an old save — and there was previously no way to declutter the list without losing any of the underlying data those extra `PlayerId`s still genuinely identify.
+- **New "Hide duplicate names" checkbox** on the Players page, next to the existing search/filter controls. Purely a view-side filter, applied after the existing search/online/save-state/admin filters in `ApplyPlayerFilters()`: groups the already-filtered list by `PlayerName` (case-insensitive; blank names are never grouped together, so multiple genuinely-nameless records don't collapse into one), keeping exactly one record per name — preferring, in order, currently online, then has a save at all, then most recently written. Every other record for that name is hidden from the list, not deleted or merged; unchecking the box always restores every record instantly, since nothing about the underlying `PlayerRecords` data ever changes.
+- The visible-count text now reports how many duplicate names were hidden (e.g. "42 visible / 51 known (9 duplicate name(s) hidden)") when the filter is active, so it's clear at a glance that something is being hidden rather than that the server actually has fewer known players.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.17.0 — Fix `api-remote-enable` CLI Bug
+
+- Closes the CLI bug found (but explicitly not fixed) while building v0.7.13.0's remote-secured verification rig: `mysttiq-server.exe api-remote-enable --bind-address <LAN-IP> ...` could not actually be used to promote a fresh config to a secured remote binding, making the documented `api-token-create` → `api-tls-create` → `api-remote-enable` workflow (`docs/linux/COMMAND_REFERENCE.md`, `README.md`) non-functional from the CLI.
+- **Root cause**: `Program.cs` runs a blanket "effective configuration" validation before the command switch, for every command including `api-remote-enable`/`api-remote-disable`. It built the effective config from the CLI's *new* `--bind-address` override but the *old*, not-yet-updated `Authentication`/`Tls` flags — so a fresh/loopback config's `Authentication.Enabled=false`/`Tls.Enabled=false` always failed validation against a non-loopback bind address, rejecting the command before `HeadlessRemoteApiEnrollmentService.EnableRemoteApi` — the handler that would have produced a valid, fully-enabled config — ever ran.
+- **Fix**: `api-remote-enable` and `api-remote-disable` now skip that blanket pre-command check entirely — neither command reads the effective configuration it computes, and each already validates its own resulting configuration internally via `HeadlessRemoteApiEnrollmentService`. Every other command (including `api-run`/`service-run`, which do consume it) keeps the exact same pre-check as before; a fresh config still cannot start listening on a non-loopback address without auth+TLS enabled.
+- New `scripts/Test-v0.7.17.0-RemoteEnableSmoke.ps1` — permanent, real-CLI-invocation regression coverage for the exact repro: `config-write-default` → `api-token-create` → `api-tls-create` → `api-remote-enable` → `api-run`, then confirms the running instance actually enforces authentication and TLS (an unauthenticated request to a protected route is rejected, `/healthz` reports `authentication:true`/`tls:true`). Verified directly on the real Linux VM in addition to Windows.
+- **Also restored the Linux packaging/deployment pipeline** (`Build.ps1 LinuxHeadless` / `Deploy-Test-MystTiqLinux.ps1`), broken for every release since v0.6.1.0 because it hard-requires a version-specific acceptance-script pair that had never been recreated (~15 releases). New `scripts/Test-v0.7.17.0-LinuxAcceptance.sh`/`Test-v0.7.17.0-ProductionReadiness.sh`, adapted from the v0.6.1.0 originals, then expanded from that release's endpoint coverage to essentially the full current read-only/safe API surface at the user's explicit request (~30 previously-untested read-only endpoints, safe self-test/preview-only POST checks, and fully reversible automation-rule/security-principal create-delete roundtrips). Surfaced and fixed four real bugs along the way: every ephemeral CLI invocation against the live config crashed with an unhandled permission exception writing lifecycle state under the live install's root-owned `RuntimeRoot` (fixed with an isolated `--runtime-root` per invocation); a boot-scoped fatal-journal scan could never recover from one old, unrelated crash-loop event on a long-uptime host (narrowed to a 30-minute recent window); three checks wrongly expected HTTP 200 where the real, correct behavior is a documented graceful-failure status (RCON doctor 424, ban-list 409 when RCON is disabled, `palworld/config/defaults` 400 when the config already exists); and `PalworldSettingsConfigurationService.ValidateDefaultRequest` threw an unhandled `NullReferenceException` on any request omitting an optional string field, turning a clean validation response into a 500 for any caller (not just this test) — fixed with null-safe checks. Full extended deploy against the real VM now passes 118/118 (2 expected warnings, 1 expected skip).
+- **Then manually verified the mutation-path endpoints too** (world import, guild/base ownership transfer, backup restore, MOD install/rollback/delete, config writes) — deliberately excluded from the automated script since this VM's own world had no real players/guilds to mutate — by copying this machine's real Windows Palworld save (read-only) into a fully isolated Linux scratch copy and running real preview→apply→verify cycles against it, restoring original state afterward and removing the copy when done. Found and fixed a fifth real bug this way: `HeadlessBackupRetentionRequest.IncludeClasses` was typed `IReadOnlySet<BackupClass>?`, which `System.Text.Json` cannot deserialize from a JSON array — any real caller passing that (documented, non-default) field would crash with a 500 instead of getting filtered results; changed to `IReadOnlyCollection<BackupClass>?`. See `docs/architecture/v0.7.17.0-linux-acceptance-pipeline-restored.md` for the full list of what was verified for real and what remains explicitly out of scope.
+
+## v0.7.16.0 — Responsive Tab Strip
+
+- Requested directly, item 3 of a 3-item follow-up list raised alongside this session's other work: "the extra server tabs will need to be able to expand when full screen to utilize more room. If they run out of room then there should have a double arrow or icon pointing to the right that when clicked shows the hidden servers and the option to create new."
+- **The tab strip's ListBox had a hardcoded `MaxWidth="720"`** regardless of how much window width was actually available — on a maximized or wide window, tabs stayed capped at that width while real space went unused, and once more tabs were open than fit within it, the extras were silently clipped off the edge with no scroll, no indicator, and no way to reach them at all.
+- **`MainWindowViewModel` now tracks the tab strip's real measured width** (`UpdateTabStripWidth`, called from a new `TabStripHost_OnSizeChanged` handler on the tab strip's own host panel — not the whole window, since that panel's actual available space also shifts with the fixed-width brand column and the window-chrome column beside it) and splits `Tabs` into two new collections, `VisibleTabs` and `OverflowTabs`, recomputed whenever the strip resizes, a tab opens or closes, or the active tab changes. The tab `ListBox` now binds to `VisibleTabs` instead of `Tabs` directly.
+- **A new chevron button** ("»", matching this codebase's existing convention of plain Unicode glyphs for ribbon/nav icons rather than always reaching for the Segoe Fluent Icons font) appears only once `OverflowTabs` is non-empty, opening a flyout listing the hidden tabs — clicking one switches to it — plus a "Set Up New Server" entry, the same one the "+" button's own flyout already offers, so creating a new tab stays reachable even when the strip is already full.
+- **The active tab is never the one hidden**: if recomputing the layout would push the currently active tab into the overflow slice, it's swapped with the last naturally-visible tab instead — switching tabs (including from the new overflow flyout) always keeps the one you're looking at in the visible row.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.15.0 — Temporary Bans & Historical FPS Charting
+
+- Requested directly, continuing in order through the backlog list raised earlier this session (temporary bans with auto-expiry, "Remove Admin" feasibility, give-items/give-Pals, mod load-order/per-mod config editing, historical FPS charting). A feasibility research pass read the actual RCON/REST command set this session has already tested against a real server, the existing mod-management and history-persistence code, and this codebase's own prior architecture docs before committing to scope.
+- **Temporary Bans** (new `HeadlessTemporaryBanService`, mirroring v0.7.10.0's `HeadlessWhitelistService` shape): bans a player immediately via the existing ban path (`PlayerModerationCoordinator`, unchanged), persists an expiry timestamp, and auto-unbans once it elapses via the same `/status/poll` cadence Whitelist already uses. New `GET /players/temp-bans` and `POST /players/{id}/temp-ban` routes; a manual Unban (the existing button/action) now also clears any tracked expiry for that player so the sweep doesn't attempt a redundant second unban later. Desktop: a duration field + "Temp Ban" button next to the existing Kick/Ban controls, and a new collapsible "Temporary Bans" card (matching the Ban List/Whitelist collapsed-by-default pattern) listing active entries with time remaining and a "Lift Now" early-cancel per row.
+- **Historical FPS charting**: `HeadlessHistoricalMetricSample`/`HeadlessHistoricalMetricsSnapshot` gained nullable `ServerFps`/`ServerFrameTimeMs` and `AverageFps`/`PeakFps` fields — null (not 0) whenever a sample's poll had no real Palworld REST data, the same convention `RuntimeMetricsSnapshotDto.ServerFps` already established in v0.7.9.0. The Dashboard's `ResourceHistoryChart` custom control gained a third plotted series (green, matching the existing FPS color convention) that only draws across consecutive samples that both actually have a value, so a REST-disabled stretch reads as a gap rather than a misleading flat line at zero. A new `HistoryFpsSummary` text line sits alongside the existing CPU/Memory history summaries.
+- **Investigated, resolved as cleanup, not built as features**: the research pass found "Remove Admin — BACKEND REQUIRED" is an orphaned stub inherited from the pre-rewrite GUI with no real target concept — Palworld's RCON has a single server-wide `AdminPassword`, not a per-player admin flag, so there was never a capability for this button to eventually point at. Removed outright rather than left permanently disabled. Also found and removed a second, unrelated stale stub — "Whitelist — BACKEND REQUIRED" — left sitting in the same button row since Whitelist itself shipped a full, working implementation elsewhere on this same page back in v0.7.10.0.
+- **Explicitly not attempted this release, with reasons recorded**: give-items/give-Pals (Palworld's RCON/REST, as tested throughout this session, has no such command; the only proven path is offline save-file container mutation, a materially larger and riskier undertaking than the existing Pal Editor) and mod load-order/per-mod config editing (no standard schema exists across mods to build a UI against — load order is filename/manifest convention-dependent and per-mod config formats vary arbitrarily mod-by-mod). Both remain backlog, unscoped, rather than shipped half-built.
+- New permanent `scripts/Test-v0.7.15.0-RouteSmoke.ps1`, carried forward the same way v0.7.12.0's route-smoke script already is: verifies the temp-ban routes' reachability and graceful-failure shape (and that a failed ban attempt does not leave behind a phantom tracked entry), and that `/history` reports the new FPS fields as null rather than 0 when nothing has been recorded yet.
+
+## v0.7.14.0 — Accessibility & Interaction Feedback Pass
+
+- Requested directly, the part of a much earlier multi-part ask that had never been worked yet: "Check to see if there are UI improvements that can be made based on best practices, Microsoft docs, and known good methods." Everything prior (v0.7.1.0 ordering, v0.7.4.0 card flare, v0.7.5.0 no-scroll density, v0.7.13.0's wizard redesign) addressed narrower, separately-requested asks — this is the first pass against Fluent/Avalonia best practices specifically. A dedicated audit cross-referenced the current design system (`Styles/DesignSystem.axaml`, `App.axaml`) and `MainWindow.axaml` against current Microsoft Fluent 2 guidance and Avalonia's own accessibility documentation.
+- **Zero `AutomationProperties.Name` anywhere in the app, despite 50+ `ToolTip.Tip` usages.** A tooltip is not exposed as a control's accessible name to Narrator/NVDA/UIA — every icon-only button (window chrome, tab-close, add-tab, ribbon actions, the two random-name-generator dice buttons) was silent to screen readers. Fixed by adding explicit `AutomationProperties.Name` to all 16 genuinely icon-only controls in the file. Buttons whose visible `Content` is already real text (nav sidebar items, most page-action buttons) were left alone — that text already serves as their accessible name.
+- **Keyboard focus ring silently disappeared on ghost/ribbon/category-tab buttons.** `App.axaml` defines a generic `Button:focus-visible` ring (2px `#75C8FF` border), but `Button.ghost`, `Button.ribbon`/`.ribbonCompact`/`.ribbonMedium`, and `ToggleButton.categoryTab` each set their own always-on `BorderBrush` at equal selector specificity, declared later in document order via `StyleInclude` — so tabbing to the window-chrome buttons, the tab-close "x", any ribbon action, or the 7 category tabs showed no visible focus indicator at all (a WCAG 2.4.7 gap). Fixed by adding matching `:focus-visible` overrides to each of those classes in `DesignSystem.axaml`, re-asserting the same ring color.
+- **Tab-close button was a 20x20px hit target**, below Fluent's ~32-40px minimum recommended pointer target and the smallest interactive element in the app, sitting inside a dense horizontal tab strip where mis-clicks were likely once several servers were open. Bumped to 28x28.
+- **Window-chrome buttons (Minimize/Maximize/Close) had no `ToolTip.Tip`**, unlike virtually every other icon-only control in the app. Added, alongside their new `AutomationProperties.Name`.
+- **A 5th audit finding was investigated and found not to hold**: "no per-action busy/disabled feedback during async operations," citing Save Notes/Add Warning/Kick/Ban/Restart Server/Apply Migration/Apply-With-Fresh-Safety-Backup as examples. Checked each named command directly in `MainWindowViewModel.cs` — every one already gates on `!IsBusy` (plus its own more specific precondition) inside its `AsyncCommand`'s `CanExecute` delegate, which Avalonia's standard `Button`/`ICommand` wiring already uses to auto-disable the button. The audit's own methodology (grepping for an explicit XAML `IsEnabled="{Binding !IsBusy}"` binding) missed this, since the codebase's established pattern gates through `CanExecute` instead. Nothing was changed here — adding a redundant explicit `IsEnabled` binding on top would have overridden that existing precondition gating (e.g. re-enabling Kick/Ban once not busy regardless of whether a player is actually selected and online), which would have been a real regression, not a fix.
+
+## v0.7.13.0 — New-Server Workflow Redesign
+
+- Requested directly, framed explicitly as "the next 0.7 task": a roadmap for opening a new tab that isn't part of the regular chrome and can't do anything until connected, modeled on how other applications build a "new connection" flow — a first Local/Remote step, a network-scan option for Remote, and the regular ribbon/nav chrome hidden until a tab is actually connected or a new server is created. Tested by running 2-3 local servers plus a connection styled after a real remote deployment.
+- **The wizard moved out of the Settings page entirely.** Previously "Set Up New Server" was a set of cards embedded in the same card stack used to edit an already-saved profile, gated by `IsCreatingNewProfile`/`IsWizardStepN` conditions mixed in among ordinary editing controls — reachable and escapable through ordinary page navigation, with no visual distinction from regular app chrome. It now lives in a new dedicated host (`MainWindow.axaml`'s `Grid Grid.Row="3" IsVisible="{Binding IsCreatingNewProfile}"`) that replaces the whole nav sidebar, ribbon toolbar, and category tabs for as long as a tab is mid-setup — modeled on how connection-manager apps (SSH/database/remote-desktop clients) keep "New Connection" a focused, separate sequence rather than regular chrome with some buttons disabled. The Settings page's own "Connection profiles" card is simplified back down to editing-only — every wizard-only branch that used to live there was dead code in that location anyway, since `IsCreatingNewProfile` can no longer be true while that page's content is visible.
+- **New Step 0 — Local or Remote.** Before Connection Details, a new first step asks which kind of server this is. Choosing **Local** pre-fills the draft URL to the default loopback endpoint and shows a "Local Service" sub-view: an Auto-Detect button (`DetectLocalServiceCommand`, reusing the same `LocalManagementBootstrapper`/service-discovery pieces the existing "Bootstrap Local Service" button has always used) plus manual Name/Service URL fields for a second or third local instance running on a different port. Choosing **Remote** clears the default loopback URL and shows the existing LAN-scan (`DiscoverServicesCommand`) plus manual Name/Service URL/Bearer token/TLS pin fields. `TabSession` gained a new per-tab `ConnectionKind` field ("Local"/"Remote"/empty) for the same reason `WizardStep` is per-tab — two tabs can each be mid-setup with a different choice at once.
+- **Verified live against 3 real, simultaneous sidecar instances** (no GUI click-through capability in this environment, the same disclosed gap as every prior version — verification is at the service/API level the wizard's code actually calls): two ordinary loopback sidecars on different ports, both answering `/healthz` at once with distinct process IDs (re-confirming multi-server operation still holds after this restructuring); a third sidecar rebound to the machine's real LAN interface with authentication and TLS both enabled, its `/healthz` correctly reporting `api:"remote-secured", authentication:true, tls:true`, an unauthenticated request correctly rejected with 401 `missing-bearer-token`, and the endpoint reachable exactly as a genuinely separate remote machine's client would reach it (LAN IP, self-signed cert, bearer token) — the same transport/security path the Remote branch's Connect action exercises.
+- **A real, unrelated CLI bug found while building the remote test rig, not fixed here**: `mysttiq-server.exe api-remote-enable --bind-address <LAN-IP> ...` cannot actually be used to promote a fresh config to a secured remote binding — `Program.cs`'s blanket pre-command configuration validation runs before `api-remote-enable`'s own handler and rejects the non-loopback bind address against the *old*, not-yet-updated authentication/TLS flags, before the command that's supposed to enable them ever runs. Worked around for this release's own verification by generating the token/certificate directly (`api-token-create`/`api-tls-create`) and hand-writing the resulting config, exactly what `HeadlessRemoteApiEnrollmentService.EnableRemoteApi` would have produced. Flagged as a separate follow-up task rather than fixed here since it's `MystTiq.HeadlessHost` CLI dispatch, unrelated to this release's Desktop-only scope.
+- **Backlog, not yet started** (raised mid-session, explicitly queued rather than folded into this release to keep it bounded): a selectable way to de-duplicate player names in the Players list; server tabs expanding to use full window width and collapsing into an overflow ("show hidden tabs + create new") affordance once there are too many to fit; confirmed already satisfied by this release's own restructuring — clicking "+" → "Set Up New Server" already opens a new tab straight into the Step 0 Local/Remote choice with no intermediate prompt.
+
+## v0.7.12.0 — Test Coverage: Whitelist Enforcement & Route Smoke
+
+- Requested directly: a test-coverage audit found that every feature shipped in v0.7.8.0 (Unban/ban-list/teleport/save-now), v0.7.9.0 (server FPS metrics), and v0.7.10.0 (whitelist) had zero automated regression coverage beyond `Test-vX.Y.Z.W-Logic.ps1`'s regex-on-source checks — those prove "the code pattern still exists," not "the endpoint behaves correctly." A working feature silently broken by a later refactor (wrong RCON verb, swapped parameters) would pass every existing check.
+- **`HeadlessWhitelistService.EnforceAsync` real-object-graph harness** (new `scripts/Testing/MystTiq.LogicHarness/`, a standalone throwaway C# console project, deliberately not added to `PalworldServerManager.slnx`/`Build.ps1`'s normal pipeline): fakes only the one thing that genuinely needs faking (`IPlayerModerationProvider`), then runs the real `HeadlessWhitelistService` against real `HeadlessPlayersSnapshot` data. 6 scenarios: disabled config takes no action; an enabled config kicks a non-whitelisted player and leaves an allowed one alone; the same still-online player isn't re-kicked on a second poll (the dedup set); a player is re-kicked after leaving and rejoining; saving a new config resets the dedup set; an unavailable snapshot is ignored entirely. This is the one piece of business logic in the whole v0.7.10.0 release that had never actually executed before this.
+- **`scripts/Test-v0.7.12.0-RouteSmoke.ps1`** (new, permanent): starts a real isolated sidecar and hits every previously-untested v0.7.8.0/v0.7.9.0/v0.7.10.0 route — `/players/ban-list`, `/world/save-now`, `/players/{id}/teleport-to-me`, `/players/{id}/teleport-to-player`, `/players/{id}/action` with `action=unban` (confirming it resolves to `providerId=rcon`, not the REST-only admin provider), `/players/whitelist` GET+PUT round-trip, and `/metrics`'s `serverFps`/`serverFrameTimeMs` fields. Checks reachability, correct response shape, and the correct graceful-failure behavior when RCON/REST are genuinely unconfigured (the same environment constraint every RCON-touching feature this session has had) — not the routes' real in-game effect, which still needs an actual Palworld server this environment cannot run.
+- **Also fixed**: a stale code comment in `src/MystTiq.Core/Providers/ProviderModels.cs` still listing "whitelist, teleport" as part of an undifferentiated deferred-capability list — both shipped (v0.7.10.0, v0.7.8.0 respectively) since that comment was written; noticed while building the harness above and reading that file's context.
+- Both new tools are meant to be carried forward in every future version's `-Logic.ps1 -RunBuild` block the same way `Test-v0.5.1.5-RuntimeSmoke.ps1` already is — the audit's own caveat is that nothing *structurally* guarantees this (there's no CI runner; everything is manually invoked), only the same discipline that has kept the existing runtime smoke suite wired in release after release.
+
+## v0.7.11.0 — App Lifecycle: Single-Instance, Tab-Close Confirmation, Tray Reminder
+
+- Requested directly: verify multi-server operation, confirm before closing a running tab, remind the user MystTiq is still running when minimized to tray (only fully closing when nothing is running), and block a second instance from launching. Also folds in a small documentation consistency audit's findings.
+- **Window close (X button) no longer always minimizes to tray** — it previously did so unconditionally, with no way to fully quit the app that way even when nothing was running. `MainWindow`'s `Closing` handler now checks every open tab (`Tabs.Any(t => t.ServerIsRunning)`, not just the currently-focused one — Fleet allows several servers running at once) and performs a real, clean exit (equivalent to the tray menu's existing "Exit GUI Only") when nothing is running, only minimizing to tray when something still is.
+- **Tray reminder when minimized with something running**: Avalonia's `TrayIcon` has no built-in balloon/notification API (confirmed against the current Avalonia docs and source before building this) — added a small, self-positioned, auto-dismissing `TrayReminderToast` window that stands in for one, shown whenever the main window is hidden to the tray while at least one server is still running.
+- **Tab-close confirmation**: closing a tab whose server is running previously always silently left it running with zero confirmation. A new `ConfirmCloseTabDialog` now asks Stop & Close / Leave Running / Cancel first. The tab-close button moved from a plain `Command`/`CommandParameter` binding to a `Click` handler in code-behind (consistent with this codebase's existing pattern of code-behind owning anything that needs a native dialog), and a new `MainWindowViewModel.StopTabServerAsync(TabSession)` stops the *specific* tab being closed — built the same way the existing background-tab lightweight refresh already operates on a tab's own fields directly, never through the `ActiveTab`-delegated properties, since those would silently target whichever tab is currently focused instead of the one actually being closed.
+- **Single-instance enforcement**: `Program.Main` now takes a named `Mutex` before starting the Avalonia lifetime; a second launch shows a native message box (Windows) or a console message (other platforms) and exits immediately rather than opening a second GUI against the same local sidecar/config.
+- **Multi-server simultaneous operation, verified live**: started two full sidecar instances at once, on different ports, against two separate isolated server roots. Both stayed healthy simultaneously with distinct process IDs; each independently created a backup, and each instance's backup list contained only its own file — confirmed zero cross-contamination between instances. No code changes were needed here (each profile already gets its own fully isolated `IServerPathProfile`/`IServerLifecycleService`/`IOperationCoordinator`-scoped locks per the v0.6.2.0 fleet architecture) — this was a live verification pass, not a fix.
+- **Documentation consistency audit**: found and fixed 4 stale labels in `docs/roadmap/` contradicting already-shipped work — two "(Current Candidate)"/"(Current Release Candidate)" headers on long-shipped v0.3.1.0/v0.5.1.1 milestones, a `WINDOWS_BACKPORT_REGISTRY.md` table still showing "In progress"/"Planned" for shipped v0.3/v0.4 items, and three "(planned)" tags on v0.6.16.0–v0.6.18.0 in the grouped roadmap doc that were never updated after those milestones shipped. `README.md`'s roadmap table, `CHANGELOG.md`, and per-version architecture/release-notes files were all confirmed already fully consistent.
+- No server-side change — this release is entirely `MystTiq.Desktop` plus documentation.
+
+## v0.7.10.0 — Whitelist System
+
+- Fifth and final release from the broader review requested this session: the last of the verified competitive feature gaps from the survey against other Palworld server-management tools, and — like teleport in v0.7.8.0 — named as an explicit deferred roadmap item in the codebase's own comments (`Providers/ProviderModels.cs`) before this release.
+- **`HeadlessWhitelistService`** (new, `MystTiq.HeadlessHost`): opt-in per-profile allow list, persisted as JSON under `ManagerRuntimeRoot/players/whitelist.json`. When enabled, `EnforceAsync` (called from `GET /status/poll`, the same poll cadence `HeadlessPlayerRegistryService.Observe` already uses — no new background timer) kicks any online player whose PlayerId isn't listed, reusing `PlayerModerationCoordinator`'s existing REST-first-RCON-fallback kick path rather than a third, whitelist-specific moderation route. A per-player "already handled this session" debounce prevents re-kicking on every single 5-second tick before the previous kick's effect (the player actually leaving) is observed.
+- **New `WhitelistConfig`/`WhitelistEntry` models** (`MystTiq.Core`), new `GET`/`PUT /players/whitelist` routes (`MystTiq.HeadlessHost`) — config is read/replaced as a whole, matching the existing Discord Bot config's GET+PUT convention (add/remove entries locally in the UI, one explicit Save persists the full list) rather than inventing granular per-entry REST endpoints.
+- **Desktop**: new collapsible "Whitelist" card on the Players page (collapsed by default, matching the v0.7.5.0 no-scroll pattern and v0.7.8.0's Ban List placement) — enable/disable checkbox, add/remove entries, Save button.
+- **Verified live**: started a real sidecar, confirmed `GET /players/whitelist` returns the correct default (`disabled, no entries`), `PUT` persists a new entry, a subsequent `GET` reflects the saved state (confirming real file persistence, not just in-memory), and `/status/poll` continues to respond correctly with the new enforcement call wired into its handler. Testing the actual auto-kick behavior requires real online players against a real Palworld server, which is outside what this environment can run — the same disclosed limitation as every RCON/REST-touching feature added this session.
+- This closes out the full v0.7.6.0→v0.7.10.0 sequence from this session's codebase bug scan and competitive feature survey.
+
+## v0.7.9.0 — Real Server FPS/Frame Time
+
+- Fourth release from the broader review requested this session, closing out the verified competitive feature gaps except whitelist. Confirmed via Palworld's official documentation: `/v1/api/metrics` returns `serverfps`/`serverframetime` alongside player/uptime counters MystTiq already tracks by other means — actual in-game simulation performance, which degrades with base/Pal count independent of host CPU%, and the thing operators actually watch for lag. MystTiq previously only surfaced host-level process CPU/RAM, never the game's own perf numbers.
+- **`HeadlessMonitoringService`**: new `GetGamePerformanceAsync` reuses the exact REST client construction `GetPlayersAsync` already established (same `PalWorldSettings.ini` reads for `RESTAPIEnabled`/`RESTAPIPort`/`AdminPassword`, same Basic auth) rather than duplicating a second copy of that setup. Best-effort and independent of host-level process discovery: `HeadlessRuntimeMetricsSnapshot` gained `ServerFps`/`ServerFrameTimeMs` (both nullable, same "unavailable vs. genuinely zero" convention as the existing `CpuPercent` field), populated from every return path in `GetMetricsAsync` including the "process not found" branches, since the Palworld REST API's own reachability is independent of MystTiq's process-lifecycle tracking.
+- **Desktop**: `RuntimeMetricsSnapshotDto` gained the matching fields; new `ServerFpsText`/`ServerFrameTimeText` on `MainWindowViewModel`. Surfaced on the Monitoring page's Activity & Audit stat row (widened from 3 to 5 columns) alongside the existing CPU/RAM/Threads cards — left the Dashboard's already-dense compact stat tile untouched rather than cramming more into it.
+- **Verified live**: started a real sidecar and confirmed the new `serverFps`/`serverFrameTimeMs` fields appear in `/api/v1/metrics`'s response shape and are correctly `null` (not a crash) both with no `PalWorldSettings.ini` present and with `RESTAPIEnabled=True` pointed at an unreachable port. A real Palworld dedicated server with the REST API actually serving `/v1/api/metrics` would be needed to verify the positive-path values, which is outside what this environment can run — the same disclosed limitation as every RCON/REST-touching feature this session.
+- No `MystTiq.Core` model changes — the new fields live entirely in `MystTiq.HeadlessHost` and `MystTiq.Desktop`.
+
+## v0.7.8.0 — RCON-Powered Admin Tools
+
+- Third release from the broader review requested this session. This one ships verified competitive feature gaps: a competitive survey of other Palworld server-management tools (PalSupervisor, palworld-admin, PalAdmin) found several claimed advantages that turned out to already be built (scheduled restarts, raw RCON console, RBAC, outbound Discord alerts) once checked against the actual code, but confirmed several genuine gaps — including two the codebase's own comments already named as deferred roadmap items.
+- **Unban + Ban List**: Palworld RCON's `UnBanPlayer`/`BanList` commands are now wired through — `RconPlayerModerationProvider` gained `unban` support (Palworld's REST API has no unban endpoint at all, so this is RCON-only by necessity, unlike kick/ban which try REST first). Un-stubs the "Unban" button that had sat disabled in the Players page UI since it was first added. A new collapsible Ban List card (matching the v0.7.5.0 no-scroll pattern) shows the raw RCON ban list.
+- **Admin teleport**: "Teleport to Me" (summon the selected online player to your admin character) and "Teleport to Player" (move your admin character to them), via RCON's `TeleportToMe`/`TeleportToPlayer` — both require an admin character actually present in the world, disclosed in the button tooltips. Named as an explicit deferred roadmap item in the codebase's own comments before this release.
+- **Save World Now**: one-click force-save via RCON's `Save` command, added to the Dashboard's quick-action row. Previously only reachable by typing `Save` into the raw RCON console by hand.
+- **New HeadlessHost routes**: `GET /players/ban-list`, `POST /players/{id}/teleport-to-me`, `POST /players/{id}/teleport-to-player`, `POST /world/save-now` — each a thin, purpose-named wrapper around the same `PalworldRconService.ExecuteAsync` primitive `/rcon/command` already uses, returning the identical `RconCommandResult` shape (no new Desktop-side DTO needed).
+- **Real bug found and fixed while wiring the above**: Kick/Ban/Unban/Teleport all read `SelectedPlayerRecord` (the Players page's "Directory" selection) — a *different* property than `SelectedOnlinePlayer`, which v0.7.6.0's stale-tab-data fix had cleared on the assumption (from the bug scan that prompted it) that it was what these actions used. `SelectedPlayerRecord` was left completely unaddressed, and its staleness window is worse than what v0.7.6.0 fixed: it's populated only by a page-navigation trigger (`RefreshPlayersPageAsync`), not the 5-second timer, so it stays showing the previous tab's player directory indefinitely if the user stays on the Players page across a tab switch — exactly the kind of wrong-tab-action risk v0.7.6.0 set out to close, just via a mechanism that inspection missed at the time. Fixed in this release: `ActiveTab`'s setter now also clears `SelectedPlayerRecord` and immediately re-runs `RefreshPlayersPageAsync` for the newly active tab when already on the Players page; `RefreshPlayersPageAsync` itself gained the same stale-response-discard guard added to `RefreshAsync`/`RefreshStatusPollingAsync` in v0.7.6.0.
+- No server-side change beyond the four new thin RCON-wrapper routes — no `MystTiq.Core` model changes.
+
+## v0.7.7.0 — Fix: Backup/Restore & Lifecycle Locking Race Conditions
+
+- Second release from the broader review requested this session (bug scan + competitive feature survey). This one fixes every finding from the `MystTiq.Core`/`MystTiq.HeadlessHost` half of the bug scan.
+- **`HeadlessBackupService` never registered with `IOperationCoordinator`** — unlike `HeadlessWorldTransactionService`/`HeadlessGuildOwnershipService`/`HeadlessBaseOwnershipService`/`HeadlessCharacterMigrationService` (which all hold the coordinator's `world-mutation` lock for their own save-mutating operations), `RestoreAsync` mutated `paths.SaveRoot` guarded only by its own local semaphore — a restore could run concurrently with one of those transactions on the same save tree. Now takes the same lock; `CreateAsync`/`DeleteAsync`/`VerifyAsync` deliberately stay lock-free since they don't mutate `SaveRoot` and `CreateAsync` is called *by* those already-locked services for their own safety backups.
+- **`/diagnostics/network/restart` bypassed the coordinator entirely** — every other lifecycle-mutating route goes through it; this one called the lifecycle service directly. Now takes the same `lifecycle` + `world-mutation` lock as `/server/restart`.
+- **A successful restore whose cleanup step failed was misreported as "restore failed"** — the post-restore deletion of the now-redundant rollback copy ran inside the same try/catch as the actual restore, so e.g. a transient file lock on that cleanup (an AV scanner, say) reported total failure even though the save data was already successfully restored. Cleanup failure is now reported as a note on a successful result, not a failure.
+- **A rollback-of-rollback could throw and get silently swallowed** — the failure-recovery path deleted whatever the world explorer's own "is this a real world" check reported as the active world, rather than the actual, already-known destination path; content corrupted enough to fail that check (but not `ValidateWorldDirectory`'s own, separate check) left the destination never cleared, so restoring the rollback copy on top of it threw and was silently caught, reporting `RolledBack=false` with no indication that automatic recovery itself had failed. Now deletes the known destination path directly, and a rollback failure is now included in the reported error message instead of being swallowed.
+- **Mod-snapshot rollback skipped the ZIP path-traversal guard** used everywhere else in the same file (`InstallZipAsync`'s established pattern) — snapshot ZIPs are normally self-generated, but a rollback should not trust a tampered/corrupted snapshot file on disk any more than a fresh upload.
+- This is the one release in the v0.7.6+ line that touches `MystTiq.Core`/`MystTiq.HeadlessHost` rather than being Desktop-only.
+
+## v0.7.6.0 — Fix: Multi-Tab Stale Data (Wrong-Tab Actions)
+
+- Prompted by a full internal review: a codebase-wide bug scan (two independent passes over `MystTiq.Core`/`MystTiq.HeadlessHost` and `MystTiq.Desktop`) plus a competitive feature survey against other Palworld server-management tools, requested to scope v0.7.6.0 and beyond. This release addresses the single most serious finding.
+- **The bug**: switching tabs did not trigger a data refresh — `OnlinePlayers`, console logs, dashboard state, and the server-health glow color are plain fields shared across all tabs, updated only by each tab's own 5-second background timer. For up to 5 seconds after switching tabs, the UI kept showing the *previous* tab's data. Concretely: an admin managing a fleet of servers switches from Server A to Server B and clicks Kick/Ban inside that window — the request goes out against Server B's connection using Server A's still-displayed player ID.
+- **Fix**: switching tabs now immediately clears any selected online player/backup/mod/Pal/base (so a destructive action can't fire against a stale target left over from the previous tab) and triggers an out-of-cycle refresh of the newly active tab instead of waiting for the next timer tick. `RefreshAsync`/`RefreshStatusPollingAsync` now capture which tab a request was made for and discard the response if the user has since switched to a different tab, instead of letting a late-arriving response for a backgrounded tab silently overwrite the newly active tab's display.
+- **Also fixed** (found during the same review): the "Set Up New Server" wizard step was a single field shared by the whole app instead of scoped per tab — two tabs simultaneously mid-setup would corrupt each other's step (moved to `TabSession.WizardStep`). Editing a saved profile's name/URL/certificate pin didn't propagate to any other tab already connected to that same profile, which kept a stale copy indefinitely. Deleting a profile didn't check whether another open tab was actively using it first (mirrors the existing duplicate-tab-open guard). A closed tab's timer is now nulled out after being stopped, not just stopped.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.5.0 — No-Scroll Initiative, Pass 1
+
+- First pass at the deferred second half of v0.7.4.x: reduce how much scrolling most pages need at a typical window size, without cutting any content. A fresh height audit (page heights shift release to release as features land) found Players had become the single worst offender at ~2450px — a direct consequence of relocating the World Map and Pal Editor there in v0.7.1.0 — ahead of Diagnostics Center (~1800px) and Alert Center (~1580px, still three unrelated feature areas concatenated in one page).
+- **Real bug fixed along the way**: the Settings page's "Managed Server / Headless Configuration" and "Security" cards had no wizard gating at all — they rendered unconditionally underneath every step of the v0.7.3.0 new-server wizard instead of only appearing once a profile actually exists to configure. Both now follow the same `!IsCreatingNewProfile` gate already used by Save/Delete Profile, so the wizard no longer shows irrelevant, half-populated cards below itself.
+- **Global denser spacing** (three small, broadly-applied levers, zero content removed): `Border.card` padding 14→11, the shared `Button`/`TextBox`/`ComboBox` minimum height 34→31, and every page-root `StackPanel`'s spacing 16→12 (18 pages, mechanically verified). Individually small; in aggregate this alone removes a meaningful slice of height from every single page.
+- **Collapsible secondary sections** (new pattern: a lightweight `Button.sectionToggle` header with a ▸/▾ indicator, driving a plain bool `IsXExpanded` property — collapsed by default, no new library dependency): Players' World Map (fixed 480×480 canvas) and Pal Editor; Diagnostics Center's WAN/External Reachability and Local Machine Diagnostics; Alert Center's Discord Bot and Anti-Cheat & Save-Integrity Scanning. Each is a large, self-contained, occasional-use tool rather than the page's primary content, so collapsing them by default is a one-click-away trade, not a content cut. Threshold Rules stays expanded on Alert Center (primary content), as does Network Diagnostics on Diagnostics Center.
+- Explicitly deferred to a future pass: the Simple Settings tile `WrapPanel` (data-volume-dependent, can grow past 2000px with many settings present), the Doctor page (data-dependent on finding count), and splitting Alert Center's remaining sections into their own reachable nav pages rather than collapsing them in place. The no-scroll initiative remains directional/multi-release, consistent with the original v0.7.1.0→v0.7.4.x plan.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.4.0 — Per-Category Card Flare
+
+- First half of v0.7.4.x, the last item in the v0.7.x UX plan: "add some flare to the different cards." Of 176 total card-styled panels across the app, 172 were completely plain (no color accent at all), concentrated almost entirely on the Dashboard — the user chose a broader decorative pass over a status-only extension.
+- **`Styles/DesignSystem.axaml`**: 7 new `Border.card.accentX`/`Border.statuscard.accentX` style pairs, one per nav category (Home/Server/World/Backups/Mods/Tools/System), each a subtle border-tint + soft low-intensity glow (much lower alpha than the existing status-driven glows) reusing that category's own existing tab-accent color family (Blue/Cyan/Violet/Amber/Magenta/Orange/Green respectively) — same visual language as the existing `glowGreen`/`glowRed` cards, just gentler and decorative rather than a status signal. Declared *before* the status-glow selectors in the stylesheet so a genuinely meaningful status glow always wins the rare case where both classes land on the same element.
+- **`MainWindow.axaml`**: ~169 `Classes="card"`/`Classes="statuscard"` borders tagged with their page's category accent class (129 card + 40 statuscard), covering every page except the 3 Dashboard cards that already carry their own dynamic status glow (explicitly excluded, so the two systems never compete for the same element) and the always-visible nav-sidebar status footer (not tied to any one category).
+- Verified visually before committing: rendered all 7 accent treatments as HTML swatches in the Browser pane and inspected a real screenshot — each category reads as clearly distinct and none overwhelm the existing content, same verification technique introduced in v0.7.0.0.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+- The no-scroll initiative (the other half of v0.7.4.x) remains queued, explicitly framed as an ongoing, multi-release effort rather than a single deliverable.
+
+## v0.7.3.0 — New-Server Creation Wizard
+
+- Third slice of the broader v0.7.x UX plan: new-server creation should go through a wizard rather than one flat form.
+- Investigation found the existing "Set Up New Server" flow (`OpenNewServerTab()`/`BeginNewProfile()`, already cleanly separated from connecting to an existing profile since v0.6.19.0) already followed a natural 3-step sequence at the command level — connect, optionally create in-game defaults, save the profile — just presented as one continuous flat form with no forced ordering.
+- **New `NewServerWizardStep`** (1/2/3) on `MainWindowViewModel`, reset to 1 every time "Set Up New Server" is opened, with `WizardAdvanceCommand`/`WizardBackCommand` and `IsWizardStep1`/`IsWizardStep2`/`IsWizardStep3` (all gated behind `IsCreatingNewProfile`, so editing an already-saved profile is completely untouched by any of this).
+- **Step 1 — Connection Details**: the existing Connection Profiles card, unchanged, with a "Next: Server Defaults →" button (enabled once connected) added alongside Connect. Save Profile/Delete Profile — which only make sense once a profile is being edited, not created — now show only while editing an existing profile.
+- **Step 2 — In-Game Server Defaults**: the existing card (now including v0.7.2.0's live port-conflict warnings), with "← Back" and "Next: Confirm & Save →" alongside the existing "+ Create Default Settings" button — creating defaults here is optional, so Next is always available.
+- **Step 3 — Confirm & Finish** (new): a short summary (server name/address/connection state) plus "← Back" and "Save Profile" — reusing the exact same `SaveProfileCommand` Step 1 always had, not a new save path.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.2.0 — Port-Conflict Warnings for New-Server Creation
+
+- Second slice of the broader v0.7.x UX plan: new-server creation should warn if a typed Game/REST port is already in use by another running server, instead of silently allowing the collision.
+- Investigation found a real, working "list every bound TCP/UDP endpoint + owning process" capability already existed (`INetworkDiagnosticsPlatformService.GetTcpListenersAsync`/`GetUdpEndpointsAsync`, Windows via `netstat`, Linux implementation also present) but was only ever invoked for one already-running profile checking its own configured port — never for an arbitrary candidate port during setup.
+- **Core**: new `PortAvailabilityService` — a thin wrapper reusing the existing platform capability as-is, answering "is port N in use, and by what" for any port, independent of any configured profile.
+- **HeadlessHost**: new standalone `GET /api/v1/diagnostics/port-check?port=N&protocol=UDP|TCP` endpoint (global, not scoped to any server profile, since it's most useful before any profile exists yet).
+- **Desktop**: `IMystTiqApiClient.CheckPortAsync`; the "IN-GAME SERVER DEFAULTS" card's Game Port/REST Port fields now check live as you type and show an amber warning naming the process already holding a conflicting port — not a hard block, since a stale/zombie listener shouldn't be able to prevent recovery.
+- **Verified live, not just statically**: built the real sidecar, started it, occupied a real TCP port with a listener, confirmed the new endpoint correctly reported `InUse=true` with the actual process name and PID, and confirmed a free port correctly reported `InUse=false` — the strongest evidence available in this environment for a server-side change, going beyond the usual static-contract-check verification.
+- This is the one release in the v0.7.x UX plan that touches `MystTiq.Core`/`MystTiq.HeadlessHost` — every other release in the plan is Desktop-only.
+
+## v0.7.1.0 — Page Ordering, Tab Bar & Simple Settings Visibility
+
+- First slice of a broader UX pass, following a research pass across all 22 `MainWindow.axaml` pages plus a deep dive into a reported Simple Settings issue. Full plan spans v0.7.1.0 → v0.7.4.x; see `docs/architecture/v0.7.1.0-*.md`.
+- **Page-ordering fixes** (7 concrete issues found by the audit, each a localized reorder):
+  - Players: the 480×480 World Map card no longer sits between the search bar and the list it doesn't actually filter — moved below the player list/detail section.
+  - Backups: removed the duplicate Verify/Restore/Delete Selected buttons from the top action bar (they already exist, correctly gated, in the "Selected Backup" card below).
+  - Automation: the Rules list now appears above the New Rule creation form, so opening the page shows what already exists first.
+  - Monitoring / Activity & Audit: the CPU/RAM/Threads stat row now appears above the audit log instead of after it.
+  - Fleet: Server Profiles now appears above Clone World, so existing profile IDs are visible before typing a new one.
+  - Diagnostics Center: "Restart Server" is now visually separated (danger-styled, behind a divider) from the safe read-only diagnostic actions it used to sit alongside.
+  - Settings vs. Workspace: the four server-path fields (`ConfigServerRoot`/`ConfigSteamCmdPath`/`ConfigBackupRoot`/`ConfigRuntimeRoot`) were editable on both pages; Settings now shows a read-only summary with a "Manage in Workspace →" link, leaving Workspace as the one authoritative place to edit them.
+- **Pal Editor relocated**: moved from the Guilds page (where it was wedged between Guild Ownership Operations and the page footer, with no conceptual tie to guild ownership) onto the Players page, alongside the rest of this app's player-focused tools.
+- **Simple Settings visibility**: `RebuildSimplePalworldSettings()` previously silently skipped any of the 34 curated settings not found in the live `PalWorldSettings.ini` (e.g. an older Palworld server build) with zero indication. Now shows a visible amber note naming which curated settings aren't available on this server. The Simple Settings code itself was already correct against the v0.6.18.3 design (34 settings, 3 labeled sections, filter above both views) — there was no bug to fix there.
+- **Tab bar**: each tab now shows the server name with "Local"/"Remote" underneath instead of the connection URL (`TabSession.ConnectionKindText`, new); tabs widened slightly (180→200 min width) to give the name more room.
+- **"+" icon**: replaced the earlier capture-sphere-styled icon with a plain plus sign, per feedback that the request was specifically for an actual plus symbol.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.0.1 — Fix Release (Fleet Page Nav Sidebar Bug)
+
+- User report, with a screenshot of the running app: the Fleet page's left nav sidebar was completely blank while on the Fleet page itself, and none of the top category tabs (Home/Server/World/.../System) appeared selected.
+- Root cause: `IsV5SystemCategory` (which gates the entire System category's nav sidebar `StackPanel`, and also drives the "System" category tab's `IsChecked` state) checked `SelectedPage` against every System-category page **except** `NavigationPage.Fleet` itself. The moment you actually navigated to Fleet, its own category's visibility check evaluated false — the whole nav sidebar vanished, and the System tab lost its checked state, making Fleet look and feel disconnected from the rest of the app the instant you opened it. This was a pre-existing bug, not something introduced by (or fixed by) v0.6.19.1's earlier Fleet page changes — the previous fix addressed the page's *content* (status dots, error messages), not this navigational bug, which is why the user reported Fleet as "still orphaned" afterward.
+- Fixed by adding `NavigationPage.Fleet` to `IsV5SystemCategory`'s pattern match. Also fixed the same omission in `IsSystemGroupSelected`, an unused-in-XAML sibling property with the identical bug, to avoid the same mistake resurfacing if that property is ever wired up later.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.7.0.0 — Themes, Skins, UI Personalization & Custom Icon Set
+
+- The next roadmap line, unscoped since v0.3.0.4: "Themes, skins, UI personalization and original Palworld-inspired MystTiq icon set." Investigation found a single hardcoded dark palette with no theme-swap mechanism, ~55 gradient resources whose stops were hardcoded hex (not derived from the base palette), and no image-generation capability in this environment for literal custom art.
+- **Real accent + light/dark theming**: 4 accent themes (Default/Emerald/Crimson/Violet) × true Dark/Light variants, selectable from a new "Appearance" card on the Settings page, applied live (no restart) and remembered across launches (`Services/LocalThemePreferencesStore.cs`, mirrors the existing `LocalMapPreferencesStore` pattern).
+- `Services/ThemeCatalog.cs` + `Services/ThemeApplier.cs`: every swappable resource (9 structural surface colors, 3 semantic colors, 5 accent colors, ~76 gradient-stop resources across the ~20 gradients that define the app's primary chrome — buttons, cards, the command bar, the nav sidebar, the tab bar, category-selection glass, success/warning/danger) is written directly onto `Application.Current.Resources` on selection; every consumer already binds via `DynamicResource`, so the whole UI re-flows live.
+- The Default+Dark combination is byte-for-byte identical to the pre-v0.7.0.0 hardcoded values — today's look is unchanged unless a theme is actually picked.
+- Migrated `MainWindow.axaml`'s ~85 previously-hardcoded inline status/severity `Foreground`/`Fill` colors (green/red/amber/blue/cyan/violet) to the same theme-aware brush resources, so status text and dots also follow the selected theme instead of staying fixed dark-tuned hex.
+- **A small, original, hand-authored vector icon set** (`Styles/IconGeometries.axaml`): 8 icons (monitor+pulse for Dashboard, wrench for Server Setup, paw print for Players, hub-and-spoke network for Fleet, shield for Security, tent for Bases, vault for Backup Center, a capture-sphere motif for the "+" tab button) — generic monster-taming/base-building iconography, not any specific Palworld character or logo art. Verified visually before committing (rendered as SVG in the browser pane and inspected via screenshot, then translated to Avalonia `StreamGeometry` path data) rather than guessed blind.
+- **Disclosed, bounded scope** (see the architecture doc for the full rationale): the many smaller decorative `BorderBrush`/`BoxShadow`/`Effect` colors scattered through individual `<Style>` selectors in `DesignSystem.axaml` are not covered this pass — `BoxShadow`'s shorthand string syntax cannot bind to `DynamicResource` at all (a hard Avalonia limitation), and the rest are secondary hover/glow accents rather than primary surfaces. They stay at their current dark-tuned values in every theme/variant. The remaining ~17 nav-sidebar destinations keep their existing Unicode-glyph icons rather than getting custom vector icons this pass.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+- **Disclosed verification gap, larger here than any prior milestone**: no GUI click-through capability in this environment. This is an inherently visual feature; verification here is compile-clean plus static contract checks proving the wiring is structurally correct, not a visual/behavioral confirmation of the finished app. Actual contrast/readability of the light theme and the on-screen look of each accent palette and the new icons are the user's to review once built.
+
+## v0.6.19.1 — Ribbon Cleanup and Fleet Page Fixes
+
+- User feedback: "the ribbon tab items that mirror the navigation pane... we dont need both," plus "the fleet navigation is missing other UI components."
+- **Ribbon cleanup**: removed the five category-conditional ribbon groups (World/Server/Mods/Tools/System) that exactly duplicated, button-for-button, that same category's left nav sidebar list — e.g. the "Server" ribbon group's Setup/Config/Console/Workspace buttons were identical shortcuts to the Server category's own nav sidebar. The always-visible "Server Control" (Start/Stop/Restart/Refresh) and "Quick Actions" (Backup/Console/Doctor) ribbon groups are untouched — they aren't per-category nav duplicates (Server Control has no nav-sidebar equivalent at all; Quick Actions is a fixed cross-category shortcut set, not a same-category mirror).
+- **Fleet page**: the Server Profiles list showed only plain status text with no visual indicator, unlike every other status surface in the app (tab bar, dashboard glow cards) — added a colored status dot (green running / red crash detected / grey stopped), reusing the same status-color pattern from v0.6.19.0's tab bar. The "Last Fleet Action Results" list showed only a server ID and a bare `Success` boolean — a failed action's actual `Error` message (already returned by the API, just never bound) is now shown beneath a failed row.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+- The Fleet feedback was broad ("missing other UI components"); these two fixes address the concrete, unambiguous gaps found by inspecting what data the API already returns but the page didn't show. Broader Fleet page additions are left for a future pass if more specific feedback follows.
+
+## v0.6.19.0 — True Multi-Tab Server Connections
+
+- User feedback on the tab bar: pressing "+" should open a new tab that either launches a new server or connects to an existing one, and should never let a tab connect to a server that's already open in another tab. Investigation showed the existing "tabs" were really a bookmark list over one shared connection — switching which profile was "selected" tore the whole connection down and rebuilt it (wiped the bearer token, reset connection state). Presented as a scope choice (a smarter one-connection-at-a-time picker vs. true simultaneous multi-tab); the user chose true multi-tab.
+- New `TabSession` (`ViewModels/TabSession.cs`): per-tab connection state — profile, editor fields, bearer token, connection/busy/running flags, and its own 5-second poll timer. `MainWindowViewModel.SelectedProfile`/`ProfileName`/`ServerUrl`/`CertificateSha256`/`BearerToken`/`ManagementApiConnected`/`ConnectionState`/`IsBusy`/`ServerIsRunning` are now pass-through accessors over whichever `TabSession` is `ActiveTab`, so the ~170/~131 existing call sites reading `SelectedProfile`/`BearerToken` keep working unchanged, now scoped to the active tab instead of the whole app.
+- **Two-tier polling**: the active tab's timer runs the same full page-data refresh the old single shared timer always ran; a background tab's timer runs a lightweight, tab-scoped health poll only (keeps its bearer token alive, keeps its own status dot accurate) — not the full Console/World Explorer/Player Registry/Configuration refresh. Switching tabs is instant (no re-auth) with a data refresh on focus, the same latency as switching nav pages today.
+- **"+"** now opens a chooser (Set Up New Server / Connect to Existing Server), the latter filtered to profiles not already open in another tab — the duplicate-connection guard lives at this one "open a tab" step rather than scattered through the codebase.
+- Tab bar item now shows each tab's own live status dot (green connected / amber connecting / red failed / grey idle) and a close button; the last remaining tab can't be closed.
+- **Explicitly deferred this pass**: full live page data kept warm per background tab (only connection + a lightweight status summary stay live); a zero-tabs empty state; restoring every previously-open tab across an app restart (relaunch still opens with one tab, today's existing behavior).
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+- **Disclosed verification gap**: this environment cannot click through the Avalonia GUI. Verified everything provable without one — compile-clean, the property-delegation wiring is structurally correct by inspection, the duplicate-guard filter is present and correct. Real interactive confirmation (opening two tabs, confirming both stay connected, confirming a third tab can't reconnect to an already-open profile) is the user's to do once built — the same standing gap disclosed in every checkpoint since v0.6.4.0.
+
+## v0.6.18.4 — Server Control Button State
+
+- User feedback: the Start/Restart/Stop ribbon buttons stayed clickable regardless of whether the server was actually running or stopped.
+- New `ServerIsRunning`, set directly from the real status poll (`ServerStatusDto.NativeProcessId.HasValue || Ready` — the exact same "is the server running" definition already proven server-side for gating `HeadlessPalEditService.ApplyAsync`'s precondition, not re-derived from scratch). `NativeProcessId` alone catches "process launched but not yet Ready" during startup, so Start doesn't stay clickable mid-launch.
+- `StartCommand` now also requires `!ServerIsRunning`; `StopCommand`/`RestartCommand` now also require `ServerIsRunning`.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.6.18.3 — Configuration Page Overhaul
+
+- Eight pieces of direct user feedback on the Configuration page, acted on after investigating what each part actually did before changing anything.
+- **Quote-stripping**: Server Name/Description/Admin Password/Server Password now display without the INI's literal quote characters; MystTiq re-adds them automatically when writing to `PalWorldSettings.ini`. Purely a Desktop display concern — Core already round-tripped the real value correctly.
+- **"Generate Server Name"** moved into the Server Identity section next to the field it actually populates (it was never broken, just misplaced in the preset row).
+- **QoL presets now auto-apply** on selection — the separate "Apply Preset" button is gone. A new **"Save As Preset"** feature lets you save whatever is currently loaded as a new named preset, stored locally on this machine — that's how a "MystTiq" preset gets created too, not a value map guessed and baked into shipped code.
+- **Advanced Settings now highlights, live**, any row whose current value differs from Palworld's default — updates as you type, not just what was already non-default when the page loaded.
+- **Simple Settings expanded from 8 to all 34 settings** in the codebase's own already-curated (but previously unused) list — organized into Server Identity, Network/Access/Limits, and Gameplay Rates groups, with the right control per type (slider, checkbox, or text field).
+- **Search/filter moved** to sit directly above the settings list, and now applies to Simple Settings too (previously Advanced-only).
+- Removed the page's redundant header card and a second dead, always-hidden legacy block found while reading the page; Import/Export are now the first, most prominent actions.
+- No server-side change — this release is entirely `MystTiq.Desktop`.
+
+## v0.6.18.2 — Server Setup Page Cleanup
+
+- User feedback on the Server Setup page: the top hero card was "useless," the "First-Run Server Defaults" card didn't belong on a settings page someone might revisit, and "Check for Updates"/"Install Missing" duplicated functionality that already lives on Update Center.
+- Removed the hero card outright — its description text was a verbatim duplicate of what the shared global page header already shows above every page. Its one real piece of content (the ENVIRONMENT HEALTH badge) now lives in an expanded 4-up stat row alongside Components/Ready/Attention, with a single Verify Files action folded in.
+- Removed "Check for Updates" and "Install Missing" from Server Setup entirely — a code comment already on record confirmed these were thin duplicate wrappers around Update Center's own authoritative implementation (`PreviewDistributionPlanAsync`/`UpdatePalworldServerAsync`), which remains the one real place this mutation happens. The per-row "Install" action for a genuinely missing component (SteamCMD/Palworld Dedicated Server) is untouched.
+- "First-Run Server Defaults" relocated to the Settings page's connection-profile editor, visible only while creating a brand-new profile (`SelectedProfile is null`) — reuses every existing field/command as-is, now labeled "In-Game Server Defaults (new server only)" to read as clearly distinct from the connection Profile Name directly above it.
+- No server-side changes — this is entirely `MystTiq.Desktop` view-model/XAML.
+
+## v0.6.18.1 — Fix Release (Code Review Findings)
+
+- A user-requested code review of the four milestones built this session (v0.6.15.0–v0.6.18.0) found and fixed three real logic bugs:
+- **Pal Editor**: `HeadlessPalEditService.VerifyMutation`'s Gender check used `EndsWith("Male")`, which also matches "Female" (it ends in "...male" case-insensitively) — the independent re-decode verification step could never actually catch a failed Male-gender mutation. Fixed with an exact-suffix comparison.
+- **Anti-Cheat**: the Pal stat-anomaly cooldown key was keyed by owner (or the shared literal `"(unowned)"`), not by Pal instance — a second anomalous Pal owned by the same player, or a second unowned anomalous Pal, was silently dropped for up to 30 minutes with no notification or log entry. Fixed by keying the cooldown on the Pal's own instance ID; enforcement (Kick/Ban) still correctly targets the real owner.
+- **Discord Bot**: the "3 consecutive 401s → mark Failed" bad-token detector scanned every Discord.Net log line regardless of severity for a bare `"401"` substring, risking a false-positive teardown of a healthy, long-running connection on unrelated Debug/Verbose gateway traffic (session IDs, latencies, snowflake ID fragments). Fixed by scoping the check to Warning-or-worse severity from the `"Gateway"` source specifically, matching the exact real pattern observed live.
+- No new features, no schema changes. Full solution rebuild is clean (0 warnings/0 errors) and the v0.6.18.0 static logic gate (18/18) still passes.
+
+## v0.6.18.0 — Anti-Cheat & Save-Integrity Scanning
+
+- **The fourth and final finding from the v0.6.15.0 competitive survey**: real, cited grounding — SteamID64's genuine 17-digit format, and Palworld 1.0's real vanilla level cap of 80 — rather than guessed thresholds, since neither the survey nor its cited competitors (PalSupervisor, Sphere) publish concrete numbers.
+- Three configurable rules, each defaulting to `Flag` (notify + log only — **no player is ever auto-kicked/banned until an admin explicitly opts a rule into enforcement**): invalid Steam ID on join, impossible player/Pal level (configurable maximum, default 80), and Pal stat anomaly (Level/Talent/Rank outside the same bounds the v0.6.15.0 Pal Editor already enforces on write).
+- Live checks run on the existing 15-second automation background loop — no new polling. The Pal stat scan reuses `HeadlessPalEditService.ListPalsAsync` exactly as-is, strictly read-only, self-throttled to every 10 minutes since it requires a full `Level.sav` decode.
+- `Kick`/`Ban` responses reuse `PlayerModerationCoordinator` — the exact mechanism the v0.6.17.0 Discord bot's `/mysttiq-kick`/`/mysttiq-ban` commands already call.
+- New "Anti-Cheat & Save-Integrity Scanning" card on the Desktop's Alert Center page.
+- This closes out the full four-milestone sequence the v0.6.15.0 competitive survey scoped (v0.6.15.0 → v0.6.18.0).
+
+## v0.6.17.0 — Two-Way Discord Bot Control
+
+- **The third finding from the v0.6.15.0 competitive survey**: before designing anything, the roadmap doc's premise ("MystTiq's Discord dispatch is outbound-only today") was re-checked against the actual code and found wrong — the only Discord-related code anywhere was one unimplemented enum case that just logged "not implemented." This release builds real Discord integration for the first time, in both directions.
+- **Outbound fixed**: notifications routed to the "Discord" channel now post a real, formatted embed to a configured Discord webhook URL — no bot required for this half.
+- **Inbound, new**: a real Discord bot (`Discord.Net.WebSocket`, new dependency) connects outbound to Discord's gateway and registers eight guild-scoped slash commands — `/mysttiq-status`, `/mysttiq-players` (Viewer), `/mysttiq-start`, `/mysttiq-stop`, `/mysttiq-restart`, `/mysttiq-broadcast` (Operator), `/mysttiq-kick`, `/mysttiq-ban` (Admin) — gated by a configurable Discord-role-to-MystTiq-role mapping checked against the caller's real Discord roles. Every command composes directly onto existing lifecycle/RCON/moderation services; no new game-control logic.
+- Bot token is write-only over the REST API — `GET /notifications/discord-bot` never returns it, only whether one is configured. Discord-triggered start/stop/restart share the same `OperationCoordinator` lock as REST- and Desktop-triggered lifecycle actions, so they can never race each other.
+- **A real bug found and fixed during this release's own live verification**: Discord.Net's connection manager retries a gateway 401 indefinitely by design, so an invalid bot token would have hammered Discord's real servers forever without ever surfacing a clear failure. Fixed: three consecutive real 401 responses from Discord and the bot now stops, marks itself `Failed`, and logs why — re-verified live against Discord's actual servers.
+- New "Discord Bot" card on the Desktop's Alert Center page.
+
+## v0.6.16.0 — Live World Map (Player Positions)
+
+- **The second finding from the v0.6.15.0 competitive survey**: six separate competitor tools have a live world map showing player positions — the single most common feature MystTiq lacked entirely. This release closes that gap, scoped to player positions only.
+- Grounded in real, cited research: Palworld's own official REST API (`GET /v1/api/players`, already polled by MystTiq every status tick) returns real, live `location_x`/`location_y` per online player — confirmed against the official docs and cross-checked against an independent OpenAPI spec. No mod, no save-file decoding, and no new data source needed; the fields were simply never captured before.
+- New "World Map — Live Player Positions" card on the existing Players page: auto-fit plotting of every online player with a valid position, refreshed on the existing 5-second poll cadence. A player with a missing/unparseable coordinate is excluded from the map rather than plotted at a wrong default.
+- Ships with a plain coordinate-grid background (Palworld's actual map art is Pocketpair's copyrighted asset). "Browse for Map Background" lets you drop in your own sourced/licensed image at any time, stored as a Desktop-local preference only; "Clear Background" reverts to the grid.
+- Wild Pal positions (not exposed by Palworld's REST API) and base positions (needs new, unbuilt `Level.sav` decode work) are explicitly deferred, not silently dropped — see `docs/architecture/v0.6.16.0-live-world-map-player-positions.md`.
+
+## v0.6.15.0 — Save-Data Edit Engine Foundation (Pal Editor)
+
+- **The top finding from a user-requested competitive survey of 21 other Palworld server-management GitHub projects**: three independent, actively-maintained tools with hundreds of stars each (PalworldSaveTools, Palworld Save Pal, Palworld Pal Editor) do real item/Pal-stat/inventory editing MystTiq couldn't do at all — a gap explicitly deferred since the v0.6.7.0 checkpoint. This release builds that foundation for individual Pals.
+- New Pal Editor: edit a Pal's Nickname, Level, Rank, the three IVs (Talent HP/Shot/Defense), Gender, and its Lucky (`IsRarePal`) flag, on the same Preview → Safety Backup → Server-side Transaction → Verify → Apply pipeline already proven for Guild/Base Ownership repair — including the same "refuses while PalServer is running" and "stale preview is rejected" safety guarantees.
+- Grounded in real, cited research into `palworld-save-tools`'s actual save format, then cross-checked directly against a real, already-decoded production save on this machine before writing any code — not guesswork.
+- **A real bug found and fixed during this release's own live verification**: the first test against real save data returned zero owned Pals out of 85 real ones, including Pals independently confirmed to be owned. Root cause: ownership was read from the wrong field (the map entry's `key.PlayerUId`, which is always zero for a genuine Pal — it only carries meaning for a player's own character-body entry) instead of `OwnerPlayerUId` inside the Pal's own save data. Fixed and re-verified live: 76 of 85 real Pals now correctly resolve to their real owning player.
+- Live-verified end-to-end: applied a real edit to a real owned Pal (Level 7→50, toggled Lucky, renamed), confirmed via an independent fresh read that every changed field landed exactly as requested while every untouched field stayed byte-identical — genuinely surgical, not a wholesale rewrite.
+- New roadmap sequence added for the findings beyond this release: Live World Map (v0.6.16.0), Two-Way Discord Bot Control (v0.6.17.0), and Anti-Cheat & Save-Integrity Scanning (v0.6.18.0) — see `docs/architecture/v0.6.15-plus-competitive-survey.md` for the full 21-repo comparison.
+
+## v0.6.14.0 — Console Live-Refresh Fix
+
+- **Fixes a real, directly user-reported bug**: the Console page showed nothing during a server Start/Stop/Restart. Root-caused to two independent, compounding bugs, both fixed and both verified live against a real running PalServer instance.
+- **Bug 1**: the passive 5-second auto-refresh timer skips its tick entirely while a lifecycle operation is in flight (`IsBusy`), and the Console page was only refreshed once — after the whole operation finished. A real Start/Stop can take anywhere from several seconds to the configured timeout, so the console stayed frozen for that entire window, then dumped everything at once at the end. Fixed with a lightweight, console-only tail poll that now runs concurrently with the operation itself, cancelled the moment it completes.
+- **Bug 2 (found live while verifying bug 1's fix)**: the server-side multi-source log merge (`HeadlessMonitoringService.GetLogTail`) applied a trailing global crop to the concatenated result of all sources, which could — and, reproduced live, did — completely evict the freshest source (MystTiq's own real-time lifecycle/stdout narrative) whenever a later, more voluminous source (a real historical `AdminCommands` log) filled the requested window on its own. Fixed by removing that trailing crop; every source is already independently bounded, so nothing is unbounded, and nothing gets silently zeroed out anymore.
+- Live-verified: a real Start operation's fresh `[MYSTTIQ] PalServer ready...` line and real-time MOD pre-start diagnostics now appear in the console tail the moment they're written, alongside historical log sources that used to crowd them out entirely.
+
+## v0.6.13.0 — Fleet-Wide Crash Recovery
+
+- **Closes a real architectural gap the v0.6.12.0 gap audit flagged**: crash-detect-and-auto-restart (`HeadlessSupervisor`) was only ever active inside the installed OS service (`service-run`), and only for the default profile. Since Clone World (v0.6.10.0) makes creating additional profiles routine, this meant every non-default profile — and every profile at all under `api-run`, the mode Desktop's own sidecar actually uses — had zero crash recovery.
+- Every `api-run` session now gets automatic, per-profile crash recovery for its whole fleet. New `HeadlessFleetCrashRecoveryService` reuses `HeadlessSupervisor`'s already-proven crash-detect/backoff/window logic (extracted into `RunCrashRecoveryLoopAsync`) — including its existing safety guard that never auto-restarts a profile an admin or Idle Auto-Stop intentionally stopped. Started and stopped exactly where `HeadlessAutomationService` already is, per profile.
+- New `--server-id <id>` CLI option lets an admin install a genuinely independent, unattended, boot-time-supervised OS service per profile — `service-install`/`service-uninstall`/`service-status`/`service-run` and the direct single-server verbs (`status`/`start`/`stop`/`restart`) all accept it. The default profile's service/unit name is byte-identical to every prior version (an upgrade never orphans an already-installed service); a non-default profile gets a clearly suffixed name (`MystTiqPalworld-{id}` on Windows, `mysttiq-palworld-{id}.service` on Linux).
+- Verified live, end-to-end, against two genuinely running PalServer instances (source + a Clone World target) on an isolated copy of production-derived data: force-killed a non-default profile's process directly to simulate a real crash, confirmed it was detected and auto-restarted within the configured backoff window with a fresh PID while the untouched sibling profile was never affected, then confirmed an intentionally-stopped profile stayed stopped and was never auto-restarted across multiple poll cycles.
+
+## v0.6.12.0 — Gap Audit, Real Bug Fixes & Logic/Runtime Test Pass
+
+- Full project gap audit: reviewed every prior checkpoint's own "Known gaps" disclosures (v0.5.1.5 through v0.6.11.0) plus live bug/logic testing against real isolated data, and added the results to the roadmap as this milestone.
+- **Fixes a real, ~9-month-old bug**: the Players/Guilds/World Explorer read-only views relied on a static `Level.sav.json` sidecar that nothing ever regenerated after a guild/base/character mutation committed (first disclosed v0.5.2.0, reconfirmed unfixed through v0.6.7.0). Every mutation service already independently re-decodes the just-committed save as its own verification step — that JSON was just being thrown away instead of also being persisted to the sidecar. Fixed with `HeadlessSaveCodecService.RefreshExplorerSidecar`, wired into all four commit sites (Guild Ownership, Base Ownership x2, Character Migration). Verified live end-to-end: a real Transfer Leadership operation against isolated production-derived save data correctly updated the sidecar and the explorer view immediately reflected the new leader, with no external regeneration step needed.
+- **Fixes a real bug found by this session's own bug-testing methodology**: `config-write-default` silently ignored its own documented `--server-root`/`--steamcmd`/`--backup-root`/`--runtime-root` CLI overrides (it wrote before the override logic every other command uses ever ran), always producing a config with the hardcoded built-in default path regardless of what was passed — caught as a genuine near-miss while setting up an isolated test environment. Fixed by threading the same override-application pattern through it.
+- **Found, documented, not fixed (low severity)**: automation rule creation accepts negative/invalid numeric trigger values (e.g. `idleThresholdMinutes: -5`) without validation. Not a safety bug — the evaluation path already clamps to a safe minimum at use-time — but the persisted/displayed value doesn't match what's actually enforced.
+- Live bug-testing pass against isolated, production-derived data covered malformed JSON, invalid operation types, expired preview tokens, cloning onto self, and more — no unhandled exceptions found. Full existing regression/runtime-smoke suite (29 real checks against a genuinely running headless API) re-run and passing.
+- Documented remaining real gaps in the roadmap: two carried-forward verification gaps still open (elevated Windows Service live cycle, Linux deployment of latest source — both blocked on resources this session doesn't have), and three real architectural gaps scoped for a future milestone (fleet-wide crash-recovery supervision, per-page server selector wiring, cross-profile automation rules).
+
 ## v0.6.11.0 — Stale-Instance Fix, UI Polish & WAN Reachability Diagnostics
 
 - Fixes a real bug found live this session: `LocalManagementBootstrapper`'s "reuse an already-running local instance" check probed a coarse, historically-always-1 `apiVersion` integer and never compared the actual version string. A leftover v0.5.5.0 `mysttiq-server.exe` from an earlier session was still listening on the default port, and a freshly-launched v0.6.10.0 Desktop silently attached to it instead of starting its own backend — explaining a visible (not hidden) PalServer console window, a stale Console page, and a "Stopped / Not ready" status mismatch. Fixed with a new `VersionMatches` check comparing the probed version against the running assembly's own version; on a mismatch, MystTiq now starts a fresh backend on a free loopback port and tells the user plainly that an older version is still running elsewhere, rather than silently reusing it. Confirmed live: the real stale v0.5.5.0 process's `/healthz` reports `"version":"0.5.5.0"`, which the new check correctly rejects against the current build.

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using MystTiq.Core.Models;
+using MystTiq.Core.Operations;
 
 namespace MystTiq.Core.Services;
 
@@ -11,21 +12,34 @@ public interface ILinuxServiceManager
     Task<bool> UninstallAsync(CancellationToken cancellationToken = default);
 }
 
+// v0.6.13.0: profile-aware, same rationale as WindowsServiceManager -- the default profile's
+// UnitName/UnitPath are unchanged from every prior version (an upgrade never orphans an
+// already-installed unit); a non-default profile gets a suffixed unit name. A true systemd
+// @-template unit (mysttiq-palworld@.service + %i) was considered and rejected: it needs a
+// materially different install mechanism and has no clean Windows analog, where the suffixed-name
+// approach keeps both platforms' mental model identical.
 [SupportedOSPlatform("linux")]
 public sealed class LinuxSystemdServiceManager : ILinuxServiceManager
 {
-    public const string UnitName = "mysttiq-palworld.service";
-    public const string UnitPath = "/etc/systemd/system/" + UnitName;
     public const string InstallDirectory = "/opt/mysttiq/bin";
     public const string InstalledExecutable = InstallDirectory + "/mysttiq-server";
 
     private readonly IServerPathProfile paths;
+    private readonly ServerProfileId profileId;
+    private readonly bool isDefault;
 
-    public LinuxSystemdServiceManager(IServerPathProfile paths)
+    public string UnitName { get; }
+    public string UnitPath { get; }
+
+    public LinuxSystemdServiceManager(IServerPathProfile paths, ServerProfileId profileId)
     {
         if (!OperatingSystem.IsLinux())
             throw new PlatformNotSupportedException("systemd service management requires Linux.");
         this.paths = paths ?? throw new ArgumentNullException(nameof(paths));
+        this.profileId = profileId;
+        isDefault = profileId.Value.Equals(HeadlessConfiguration.DefaultServerProfileId, StringComparison.OrdinalIgnoreCase);
+        UnitName = isDefault ? "mysttiq-palworld.service" : $"mysttiq-palworld-{profileId.Value}.service";
+        UnitPath = "/etc/systemd/system/" + UnitName;
     }
 
     public async Task<LinuxServiceStatus> GetStatusAsync(CancellationToken cancellationToken = default)
@@ -171,7 +185,7 @@ public sealed class LinuxSystemdServiceManager : ILinuxServiceManager
         }
     }
 
-    private static string BuildUnit(string serviceUser, string configurationPath) =>
+    private string BuildUnit(string serviceUser, string configurationPath) =>
         "[Unit]\n" +
         "Description=MystTiq Palworld Headless Server Manager\n" +
         "Documentation=https://github.com/Wad3M/MystTiq-Palworld-Server-Manager\n" +
@@ -184,7 +198,7 @@ public sealed class LinuxSystemdServiceManager : ILinuxServiceManager
         "Type=simple\n" +
         $"User={serviceUser}\n" +
         "WorkingDirectory=/opt/mysttiq\n" +
-        $"ExecStart={InstalledExecutable} service-run --config {QuoteSystemdArgument(configurationPath)}\n" +
+        $"ExecStart={InstalledExecutable} service-run --config {QuoteSystemdArgument(configurationPath)}{(isDefault ? "" : $" --server-id {profileId.Value}")}\n" +
         "ExecStop=/bin/kill -s TERM $MAINPID\n" +
         "Restart=on-failure\n" +
         "RestartSec=10\n" +

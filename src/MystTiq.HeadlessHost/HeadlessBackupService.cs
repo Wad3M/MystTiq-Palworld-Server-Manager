@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
+using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
@@ -11,6 +12,8 @@ public sealed class HeadlessBackupService
     private readonly IServerPathProfile paths;
     private readonly IServerLifecycleService lifecycle;
     private readonly HeadlessActivityLogService activity;
+    private readonly IOperationCoordinator coordinator;
+    private readonly ServerProfileId profile;
     private readonly SemaphoreSlim backupGate = new(1, 1);
     private readonly string verificationPath;
     private readonly string classificationPath;
@@ -21,11 +24,15 @@ public sealed class HeadlessBackupService
     public HeadlessBackupService(
         IServerPathProfile paths,
         IServerLifecycleService lifecycle,
-        HeadlessActivityLogService activity)
+        HeadlessActivityLogService activity,
+        IOperationCoordinator coordinator,
+        ServerProfileId profile)
     {
         this.paths = paths;
         this.lifecycle = lifecycle;
         this.activity = activity;
+        this.coordinator = coordinator;
+        this.profile = profile;
         var stateRoot = Path.Combine(paths.ManagerRuntimeRoot, "backups");
         Directory.CreateDirectory(stateRoot);
         verificationPath = Path.Combine(stateRoot, "verification.json");
@@ -131,18 +138,42 @@ public sealed class HeadlessBackupService
         if (!await backupGate.WaitAsync(0, cancellationToken))
             return HeadlessBackupOperationResult.Conflict("A backup operation is already in progress.");
 
+        // v0.7.7.0: unlike HeadlessWorldTransactionService/HeadlessGuildOwnershipService/
+        // HeadlessBaseOwnershipService/HeadlessCharacterMigrationService (which all hold the
+        // coordinator's "world-mutation" lock for their own save-mutating operations),
+        // RestoreAsync previously mutated paths.SaveRoot guarded only by the local backupGate
+        // above -- so a restore could run concurrently with one of those transactions on the same
+        // save tree. CreateAsync/DeleteAsync/VerifyAsync deliberately do NOT take this lock: they
+        // don't mutate SaveRoot, and CreateAsync is called BY those already-locked transactions for
+        // their own safety backups, so it must stay lock-free to avoid rejecting its own caller.
+        OperationHandle? operation = null;
+        try
+        {
+            operation = await coordinator.BeginAsync(profile, "backup-restore", "HeadlessBackupService", ["world-mutation"], cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            backupGate.Release();
+            return HeadlessBackupOperationResult.Conflict("Another world-mutating operation is in progress: " + ex.Message);
+        }
+
         try
         {
             var status = await lifecycle.GetStatusAsync(cancellationToken);
             if (status.NativeProcessId.HasValue || status.Ready)
             {
-                return HeadlessBackupOperationResult.Failure(
-                    "Stop PalServer before restoring a backup.");
+                const string busyMessage = "Stop PalServer before restoring a backup.";
+                coordinator.Fail(operation.Id, busyMessage);
+                return HeadlessBackupOperationResult.Failure(busyMessage);
             }
 
             var archivePath = ResolveManagedBackup(fileName, requireExists: true);
             if (!IsArchiveReadable(archivePath))
-                return HeadlessBackupOperationResult.Failure("The selected backup archive could not be verified.");
+            {
+                const string unreadableMessage = "The selected backup archive could not be verified.";
+                coordinator.Fail(operation.Id, unreadableMessage);
+                return HeadlessBackupOperationResult.Failure(unreadableMessage);
+            }
 
             string? safetyBackup = null;
             if (Directory.Exists(paths.SaveRoot) &&
@@ -150,8 +181,11 @@ public sealed class HeadlessBackupService
             {
                 var safety = await CreateInternalAsync("pre-restore", BackupClass.Safety, cancellationToken);
                 if (!safety.Success)
-                    return HeadlessBackupOperationResult.Failure(
-                        "Restore aborted because the pre-restore safety backup failed: " + safety.Message);
+                {
+                    var safetyMessage = "Restore aborted because the pre-restore safety backup failed: " + safety.Message;
+                    coordinator.Fail(operation.Id, safetyMessage);
+                    return HeadlessBackupOperationResult.Failure(safetyMessage);
+                }
                 safetyBackup = safety.FileName;
             }
 
@@ -170,34 +204,48 @@ public sealed class HeadlessBackupService
                     Directory.Move(paths.SaveRoot, rollback);
 
                 Directory.Move(staging, paths.SaveRoot);
-
-                if (Directory.Exists(rollback))
-                    Directory.Delete(rollback, recursive: true);
             }
-            catch
+            catch (Exception ex)
             {
                 TryDeleteDirectory(staging);
 
                 if (!Directory.Exists(paths.SaveRoot) && Directory.Exists(rollback))
                     Directory.Move(rollback, paths.SaveRoot);
 
+                coordinator.Fail(operation.Id, ex.Message);
                 throw;
             }
 
-            return new HeadlessBackupOperationResult(
-                true,
-                fileName,
-                safetyBackup,
-                safetyBackup is null
-                    ? $"Backup restored: {fileName}"
-                    : $"Backup restored: {fileName}. Safety backup: {safetyBackup}");
+            // v0.7.7.0: the restore itself has already succeeded once control reaches here --
+            // SaveRoot now holds the restored content. A failure to delete the now-redundant
+            // rollback copy below must not be reported as "restore failed"; previously it was,
+            // because this deletion ran inside the same try/catch as the actual restore above, so
+            // e.g. an AV scanner holding a file lock on the rollback copy for a moment would make a
+            // successful restore return Failure() while leaving the good data already in place.
+            string? leftoverRollback = null;
+            if (Directory.Exists(rollback))
+            {
+                try { Directory.Delete(rollback, recursive: true); }
+                catch { leftoverRollback = rollback; }
+            }
+
+            var message = safetyBackup is null
+                ? $"Backup restored: {fileName}"
+                : $"Backup restored: {fileName}. Safety backup: {safetyBackup}";
+            if (leftoverRollback is not null)
+                message += $" Note: a temporary rollback copy could not be cleaned up automatically ({Path.GetFileName(leftoverRollback)}) -- safe to delete manually.";
+
+            coordinator.Complete(operation.Id, message);
+            return new HeadlessBackupOperationResult(true, fileName, safetyBackup, message);
         }
         catch (Exception ex)
         {
+            coordinator.Fail(operation.Id, ex.Message);
             return HeadlessBackupOperationResult.Failure(ex.Message);
         }
         finally
         {
+            operation.Dispose();
             backupGate.Release();
         }
     }
@@ -249,7 +297,7 @@ public sealed class HeadlessBackupService
         // admin explicitly opts a class in.
         var includeClasses = request.IncludeClasses is { Count: > 0 }
             ? request.IncludeClasses
-            : (IReadOnlySet<BackupClass>)new HashSet<BackupClass> { BackupClass.Scheduled };
+            : (IReadOnlyCollection<BackupClass>)new[] { BackupClass.Scheduled };
         var inventory = GetInventory();
         var cutoff = DateTimeOffset.UtcNow.AddDays(-maxAgeDays);
         var candidates = inventory.Items.Where(x => includeClasses.Contains(x.Class)).Skip(keepLatest).Where(x => x.CreatedAt < cutoff)
@@ -514,7 +562,10 @@ public sealed record HeadlessBackupVerificationResult(bool Success, string FileN
     public static HeadlessBackupVerificationResult Conflict(string fileName) => new(false, fileName, null, 0, 0, DateTimeOffset.UtcNow, "A backup operation is already in progress.");
 }
 public sealed record HeadlessBackupVerificationBatch(IReadOnlyList<HeadlessBackupVerificationResult> Results, DateTimeOffset VerifiedAt, string Message);
-public sealed record HeadlessBackupRetentionRequest(int KeepLatest, int MaxAgeDays, IReadOnlySet<BackupClass>? IncludeClasses = null);
+// IReadOnlyCollection, not IReadOnlySet -- System.Text.Json's default deserializer cannot
+// populate an IReadOnlySet<T> from a JSON array (it's abstract/read-only from its perspective),
+// so any caller providing includeClasses would crash the whole request with a 500.
+public sealed record HeadlessBackupRetentionRequest(int KeepLatest, int MaxAgeDays, IReadOnlyCollection<BackupClass>? IncludeClasses = null);
 public sealed record HeadlessBackupSetClassRequest(BackupClass Class, string? Reason);
 public sealed record HeadlessBackupRetentionItem(string FileName, long SizeBytes, DateTimeOffset CreatedAt);
 public sealed record HeadlessBackupRetentionPreview(string Token, int KeepLatest, int MaxAgeDays, IReadOnlyList<HeadlessBackupRetentionItem> Items, long ReclaimBytes, DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt, string Message);

@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Windows.Input;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using MystTiq.Core.Services;
 using MystTiq.Desktop.Models;
@@ -15,21 +17,40 @@ public sealed class MainWindowViewModel : ViewModelBase
 {
     private readonly IMystTiqApiClient _api;
     private readonly IConnectionProfileStore _profileStore;
+    private readonly CredentialStore _credentialStore;
+    private readonly TabSessionStore _tabSessionStore;
     private readonly ILocalInstallationDiscoveryService _localDiscovery;
     private readonly IMystTiqServiceDiscoveryService _serviceDiscovery;
     private readonly ILocalManagementBootstrapper _localBootstrapper;
     private readonly LocalDiagnosticsService _localDiagnostics = new();
-    private readonly DispatcherTimer _refreshTimer;
+    private readonly LocalMapPreferencesStore _mapPreferences = new();
+    private readonly MapPresetService _mapPresets = new();
+    private string? _mapBackgroundPath;
+    private string? _busyReason;
+    // v0.7.43.0: findings-completeness fix (item 6) -- the footer used to show only a static
+    // reason string with no elapsed time and no indication of which server it was for. Captured
+    // together whenever a busy operation starts, cleared together when it ends.
+    private DateTimeOffset? _busyStartedAt;
+    private string? _busyServerName;
+    private string _busyElapsedText = string.Empty;
+    private readonly DispatcherTimer _busyElapsedTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private bool _useCalibratedWorldPositions;
+    private IReadOnlyList<PlayerSnapshotDto> _lastPlayersForMap = [];
+    private readonly LocalConfigPresetStore _configPresetStore = new();
+    // v0.7.79.0: theme is now per-tab (read/written through ActiveTab.Profile.AccentTheme/
+    // ThemeVariant -- see SelectedAccentTheme/IsLightMode below), so the app-wide
+    // LocalThemePreferencesStore fields this class used to hold are gone. App.axaml.cs still loads
+    // it once, before this class even exists, purely to paint something reasonable on the very
+    // first frame before any profile's own theme is known a few milliseconds later.
+    private TabSession? _activeTab;
+    private bool _hasOverflowTabs;
+    private double _tabStripWidth = 720;
+    private bool _hasOverflowRibbonGroups;
+    private double _ribbonWidth = 620;
+    private List<RibbonGroupViewModel> _allRibbonGroups = [];
 
     private NavigationPage _selectedPage = NavigationPage.Dashboard;
-    private ConnectionProfile? _selectedProfile;
 
-    private string _profileName = "Local MystTiq";
-    private string _serverUrl = ConnectionProfile.LocalDefault.BaseAddress.ToString().TrimEnd('/');
-    private string _bearerToken = string.Empty;
-    private string _certificateSha256 = string.Empty;
-
-    private string _connectionState = "Not connected";
     private string _serverState = "Unknown";
     private string _serviceState = "Unknown";
     private string _detail = "Choose a connection profile or configure a secured remote MystTiq service.";
@@ -38,12 +59,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _lastObservedText = "Never";
     private string _lastTransitionText = "Unknown";
     private string _uptimeText = "—";
-    private bool _isBusy;
     private bool _autoRefreshEnabled = true;
     private int _refreshTick;
     private string _playersState = "Not sampled";
     private string _onlinePlayerCountText = "—";
     private string _cpuText = "—";
+    private string _serverFpsText = "—";
+    private string _serverFrameTimeText = "—";
     private string _memoryText = "—";
     private string _threadCountText = "—";
     private string _monitoringDetail = "Connect to a MystTiq service to begin monitoring.";
@@ -96,6 +118,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _diagnosticsReportDetail = string.Empty;
     private string _distributionState = "Not checked";
     private string _distributionDetail = "Connect to inspect Palworld server installation.";
+    private string _componentVersionsCheckedAtText = string.Empty;
     private string _steamCmdState = "Unknown";
     private string _serverInstallState = "Unknown";
     private string _distributionPlatform = "—";
@@ -136,6 +159,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _playerSearchText = string.Empty;
     private string _selectedPlayerViewFilter = "All Players";
     private string _selectedPlayerAdminFilter = "All Records";
+    private bool _hideDuplicatePlayerNames;
     private string _playersPageState = "Not loaded";
     private string _playersPageDetail = "Connect to discover live and saved player records.";
     private string _playerVisibleCountText = "0 visible";
@@ -160,6 +184,20 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _guildOperationPreviewToken = string.Empty;
     private bool _guildOperationConfirmed;
     private string _guildOperationStatusText = "Select a guild, choose an operation, and enter the target player's ID.";
+    private PalInstanceDto? _selectedExplorerPal;
+    private string _palEditNickName = string.Empty;
+    private int _palEditLevel;
+    private int _palEditRank;
+    private int _palEditTalentHp;
+    private int _palEditTalentShot;
+    private int _palEditTalentDefense;
+    private string _palEditGender = "Male";
+    private bool _palEditIsRarePal;
+    private string _palEditPreviewToken = string.Empty;
+    private bool _palEditConfirmed;
+    private string _palEditStatusText = "Refresh Pals, select one, and adjust its fields below.";
+    private Bitmap? _mapBackgroundBitmap;
+    private string _mapBackgroundStatusText = "Background: plain coordinate grid.";
     private string _baseTransferTargetGuildId = string.Empty;
     private string _baseTransferPreviewToken = string.Empty;
     private bool _baseTransferConfirmed;
@@ -182,8 +220,14 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _ue4ssWarning = string.Empty;
     private string _ue4ssInstalledVersion = "Not detected";
     private string _selectedUe4ssFork = "Palworld Fork";
+    private string _ue4ssReleaseCatalogStatusText = "Refresh Runtime also checks the release catalog.";
+    private Ue4ssReleaseDto? _selectedUe4ssRelease;
+    private string _ue4ssInstallToken = string.Empty;
+    private string _ue4ssInstallState = "Select a release, then Preview Install.";
+    private bool _ue4ssRollbackAvailable;
     private ModItemDto? _selectedMod;
-    private string _modInstallType = "PAK";
+    private ServerInstanceDto? _selectedInstance;
+    private string _instanceTerminationResultText = string.Empty;
     private string _modInstallPackage = string.Empty;
     private WorkshopItemDto? _selectedWorkshopItem;
     private string _workshopScanState = "Refresh to scan local Steam Workshop content.";
@@ -234,7 +278,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _statusBarObservedText = "Not sampled";
     private string _discoveryStateText = "LAN discovery has not run.";
     private DiscoveredMystTiqService? _selectedDiscoveredService;
-    private bool _managementApiConnected;
     private string _lifecycleStatusText = "No lifecycle operation has been requested.";
     private string _activityState = "Not loaded";
     private string _activityFileText = "No activity log selected";
@@ -267,6 +310,20 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _alertCenterState = "Open Alert Center to load threshold rules.";
     private AlertRuleSetDto _alertRules = new();
     private DiskSpacePredictionDto? _diskSpacePrediction;
+    private string _discordBotState = "Open Alert Center to load Discord bot configuration.";
+    private DiscordBotConfigurationDto _discordBotConfig = new();
+    private WhitelistConfigDto _whitelistConfig = new();
+    private string _whitelistState = "Click Refresh to load the whitelist.";
+    private string _newWhitelistPlayerId = string.Empty;
+    private string _newWhitelistLabel = string.Empty;
+    private WhitelistEntryDto? _selectedWhitelistEntry;
+    private bool _discordBotTokenConfigured;
+    private string _discordBotConnectionState = "NotConfigured";
+    private string _newRoleMappingDiscordRoleId = string.Empty;
+    private string _newRoleMappingRole = "Viewer";
+    private DiscordRoleMappingDto? _selectedRoleMapping;
+    private string _antiCheatState = "Open Alert Center to load anti-cheat rules.";
+    private AntiCheatRuleSetDto _antiCheatRules = new();
     private string _fleetState = "Open Fleet to list configured server profiles.";
     private string _cloneNewProfileId = string.Empty;
     private string _cloneNewProfileName = string.Empty;
@@ -276,6 +333,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _saveToolsPaths = "Not inspected";
     private SaveFileDto? _selectedSaveFile;
     private string _playerAdminStatusText = "Right-click a player for administration actions.";
+    private string _banListText = "Click Refresh to load the RCON ban list.";
     private string _moderationProviderStatusText = string.Empty;
     private string _playerRegistrySummaryText = string.Empty;
     private string _playerActionMessage = "Removed by administrator.";
@@ -284,9 +342,22 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _palworldConfigPath = "Not loaded";
     private bool _palworldConfigLoaded;
     private bool _isConfigSimpleView = true;
+    private bool _isWorldMapExpanded;
+    private bool _isPalEditorExpanded;
+    private bool _isWanDiagnosticsExpanded;
+    private bool _isLocalDiagnosticsExpanded;
+    private bool _isDiscordBotExpanded;
+    private bool _isAntiCheatExpanded;
+    private bool _isBanListExpanded;
+    private bool _isWhitelistExpanded;
+    private bool _isTemporaryBansExpanded;
+    private string _temporaryBanState = "Click Refresh to load active temporary bans.";
+    private double _newTemporaryBanDurationHours = 24;
     private string _configSearchText = string.Empty;
     private string _selectedConfigCategory = "All Categories";
     private string _selectedConfigPreset = "Balanced QoL";
+    private IReadOnlyList<string> _palworldConfigPresets = ["Official / Vanilla", "Balanced QoL", "Relaxed QoL", "Custom"];
+    private string _newConfigPresetName = string.Empty;
     private string _palworldConfigDirtyText = "No unsaved changes";
     private string _palworldConfigValidationText = "Load the active configuration to validate settings.";
     private bool _palworldConfigHasValidationErrors;
@@ -303,21 +374,37 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _setupMaximumPlayers = "32";
     private string _setupGamePort = "8211";
     private string _setupRestPort = "8212";
+    private string _setupGamePortWarningText = string.Empty;
+    private string _setupRestPortWarningText = string.Empty;
     private bool _setupCreateConfirmed;
     private string _selectedHistoryRange = "1 Hour";
     private string _historyCpuSummary = "CPU history collecting…";
     private string _historyMemorySummary = "Memory history collecting…";
+    private string _historyFpsSummary = "FPS history collecting…";
     private string _historySampleSummary = "0 samples";
     private string _historyStatusText = "Collecting";
     private DateTimeOffset _lastHistoryRefresh = DateTimeOffset.MinValue;
 
-    public MainWindowViewModel(IMystTiqApiClient api, IConnectionProfileStore profileStore, ILocalInstallationDiscoveryService localDiscovery, IMystTiqServiceDiscoveryService serviceDiscovery, ILocalManagementBootstrapper? localBootstrapper = null)
+    public MainWindowViewModel(IMystTiqApiClient api, IConnectionProfileStore profileStore, ILocalInstallationDiscoveryService localDiscovery, IMystTiqServiceDiscoveryService serviceDiscovery, ILocalManagementBootstrapper? localBootstrapper = null, LocalThemePreferencesStore? themeStore = null, CredentialStore? credentialStore = null, TabSessionStore? tabSessionStore = null)
     {
         _api = api;
         _profileStore = profileStore;
         _localDiscovery = localDiscovery;
         _serviceDiscovery = serviceDiscovery;
         _localBootstrapper = localBootstrapper ?? new LocalManagementBootstrapper();
+        _credentialStore = credentialStore ?? new CredentialStore();
+        _tabSessionStore = tabSessionStore ?? new TabSessionStore();
+        Tabs.CollectionChanged += (_, _) => RecomputeTabLayout();
+        // v0.7.43.0: footer elapsed-time ticker (item 6) -- started/stopped from
+        // RaiseIsBusyDependents, only runs while an operation is actually busy.
+        _busyElapsedTimer.Tick += (_, _) =>
+        {
+            if (_busyStartedAt is not { } startedAt) return;
+            var elapsed = DateTimeOffset.UtcNow - startedAt;
+            BusyElapsedText = elapsed.TotalMinutes >= 1
+                ? $"{(int)elapsed.TotalMinutes}m {elapsed.Seconds}s"
+                : $"{(int)elapsed.TotalSeconds}s";
+        };
 
         foreach (var finding in _localDiagnostics.GetLocalMachineFindings())
             LocalMachineFindings.Add(finding);
@@ -325,6 +412,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         foreach (var profile in _profileStore.Load())
             Profiles.Add(profile);
 
+        ActiveTab = CreateTab();
         SelectedProfile = Profiles.FirstOrDefault() ?? ConnectionProfile.LocalDefault;
 
         ConnectCommand = new AsyncCommand(RefreshAsync, () => !IsBusy);
@@ -354,6 +442,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         RevokePrincipalCommand = new AsyncCommand(RevokePrincipalAsync, () => !IsBusy && SelectedPrincipal is not null);
         RefreshAlertCenterCommand = new AsyncCommand(RefreshAlertCenterAsync, () => !IsBusy);
         SaveAlertRulesCommand = new AsyncCommand(SaveAlertRulesAsync, () => !IsBusy);
+        RefreshDiscordBotConfigCommand = new AsyncCommand(RefreshDiscordBotConfigAsync, () => !IsBusy);
+        SaveDiscordBotConfigCommand = new AsyncCommand(SaveDiscordBotConfigAsync, () => !IsBusy);
+        AddDiscordRoleMappingCommand = new RelayCommand(AddDiscordRoleMapping);
+        RemoveDiscordRoleMappingCommand = new RelayCommand(RemoveDiscordRoleMapping);
+        RefreshWhitelistCommand = new AsyncCommand(RefreshWhitelistAsync, () => !IsBusy);
+        SaveWhitelistCommand = new AsyncCommand(SaveWhitelistAsync, () => !IsBusy);
+        AddWhitelistEntryCommand = new RelayCommand(AddWhitelistEntry);
+        RemoveWhitelistEntryCommand = new RelayCommand(RemoveSelectedWhitelistEntry);
+        RefreshAntiCheatCommand = new AsyncCommand(RefreshAntiCheatAsync, () => !IsBusy);
+        SaveAntiCheatRulesCommand = new AsyncCommand(SaveAntiCheatRulesAsync, () => !IsBusy);
         RefreshFleetCommand = new AsyncCommand(RefreshFleetAsync, () => !IsBusy);
         CloneWorldCommand = new AsyncCommand(CloneWorldAsync, () => !IsBusy && ManagementApiConnected && !string.IsNullOrWhiteSpace(CloneNewProfileId));
         BackupAllCommand = new AsyncCommand(BackupAllAsync, () => !IsBusy && ManagementApiConnected);
@@ -371,6 +469,11 @@ public sealed class MainWindowViewModel : ViewModelBase
         AddPlayerWarningCommand = new AsyncCommand(AddSelectedPlayerWarningAsync, () => !IsBusy && SelectedPlayerRecord is not null && !string.IsNullOrWhiteSpace(NewPlayerWarning));
         KickSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("kick"), () => !IsBusy && SelectedPlayerRecord?.Online == true);
         BanSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("ban"), () => !IsBusy && SelectedPlayerRecord?.Online == true);
+        UnbanSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("unban", requireOnline: false), () => !IsBusy && SelectedPlayerRecord is not null);
+        TeleportPlayerToMeCommand = new AsyncCommand(() => RunTeleportAsync(toMe: true), () => !IsBusy && SelectedPlayerRecord?.Online == true);
+        TeleportToPlayerCommand = new AsyncCommand(() => RunTeleportAsync(toMe: false), () => !IsBusy && SelectedPlayerRecord?.Online == true);
+        SaveWorldNowCommand = new AsyncCommand(SaveWorldNowAsync, () => !IsBusy);
+        RefreshBanListCommand = new AsyncCommand(RefreshBanListAsync, () => !IsBusy);
         WhisperSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("whisper"), () => false);
         PromoteSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("promote"), () => false);
         GiveItemSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("give-item"), () => false);
@@ -387,11 +490,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         SaveConfigurationCommand = new AsyncCommand(SaveConfigurationAsync, () => !IsBusy && ConfigLoaded);
         ValidateWorkspaceCommand = new RelayCommand(ValidateWorkspacePaths, () => ConfigLoaded);
         BootstrapLocalCommand = new AsyncCommand(BootstrapLocalAsync, () => !IsBusy && IsLocalProfile);
-        LoadPalworldConfigurationCommand = new AsyncCommand(LoadPalworldConfigurationAsync, () => !IsBusy);
         SavePalworldConfigurationCommand = new AsyncCommand(SavePalworldConfigurationAsync, () => !IsBusy && PalworldConfigLoaded && PalworldConfigIsDirty && !PalworldConfigHasValidationErrors);
         ShowSimpleConfigCommand = new RelayCommand(() => SetConfigurationView(true));
         ShowAdvancedConfigCommand = new RelayCommand(() => SetConfigurationView(false));
-        ApplyConfigPresetCommand = new RelayCommand(ApplySelectedConfigurationPreset, () => PalworldConfigLoaded && !IsBusy && !string.Equals(SelectedConfigPreset, "Custom", StringComparison.Ordinal));
         ResetConfigChangesCommand = new RelayCommand(ResetPalworldConfigurationChanges, () => PalworldConfigLoaded && PalworldConfigIsDirty && !IsBusy);
         GenerateServerNameCommand = new RelayCommand(GenerateServerName, () => PalworldConfigLoaded && !IsBusy);
         GenerateSetupServerNameCommand = new RelayCommand(() => SetupServerName = GenerateRandomServerName());
@@ -407,8 +508,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         RestartFromDiagnosticsCommand = new AsyncCommand(RestartFromDiagnosticsAsync, () => !IsBusy);
         RefreshEnvironmentCommand = new AsyncCommand(RefreshEnvironmentAsync, () => !IsBusy);
         VerifyEnvironmentCommand = new AsyncCommand(VerifyEnvironmentAsync, () => !IsBusy);
-        InstallMissingEnvironmentCommand = new AsyncCommand(InstallMissingEnvironmentAsync, () => !IsBusy);
-        CheckEnvironmentUpdatesCommand = new AsyncCommand(CheckEnvironmentUpdatesAsync, () => !IsBusy);
         CreateDefaultServerSettingsCommand = new AsyncCommand(CreateDefaultServerSettingsAsync, () => !IsBusy && SetupCreateConfirmed);
         EnvironmentActionCommand = new RelayCommand<EnvironmentChecklistItemDto>(RunEnvironmentAction);
         RefreshDistributionCommand = new AsyncCommand(RefreshDistributionAsync, () => !IsBusy);
@@ -422,6 +521,14 @@ public sealed class MainWindowViewModel : ViewModelBase
         OpenSelectedGuildLeaderCommand = new AsyncCommand(OpenSelectedGuildLeaderAsync, () => !IsBusy && SelectedExplorerGuild is not null && !string.IsNullOrWhiteSpace(SelectedExplorerGuild.LeaderPlayerId));
         PreviewGuildOwnershipCommand = new AsyncCommand(PreviewGuildOwnershipAsync, () => !IsBusy && SelectedExplorerGuild is not null && !string.IsNullOrWhiteSpace(GuildOperationPlayerId));
         ApplyGuildOwnershipCommand = new AsyncCommand(ApplyGuildOwnershipAsync, () => !IsBusy && GuildOperationConfirmed && !string.IsNullOrWhiteSpace(GuildOperationPreviewToken));
+        RefreshPalsCommand = new AsyncCommand(RefreshPalsAsync, () => !IsBusy);
+        PreviewPalEditCommand = new AsyncCommand(PreviewPalEditAsync, () => !IsBusy && SelectedExplorerPal is not null);
+        ApplyPalEditCommand = new AsyncCommand(ApplyPalEditAsync, () => !IsBusy && PalEditConfirmed && !string.IsNullOrWhiteSpace(PalEditPreviewToken));
+        ClearMapBackgroundCommand = new RelayCommand(ClearMapBackground);
+        SetMapPresetCommand = new RelayCommand<MapPreset>(SetMapPreset);
+        LoadMapBackgroundPreference();
+        SaveCurrentAsPresetCommand = new RelayCommand(SaveCurrentAsPreset, () => PalworldConfigLoaded && !IsBusy && !string.IsNullOrWhiteSpace(NewConfigPresetName));
+        RebuildConfigPresetList();
         PreviewBaseTransferCommand = new AsyncCommand(PreviewBaseTransferAsync, () => !IsBusy && SelectedExplorerBase is not null && !string.IsNullOrWhiteSpace(BaseTransferTargetGuildId));
         ApplyBaseTransferCommand = new AsyncCommand(ApplyBaseTransferAsync, () => !IsBusy && BaseTransferConfirmed && !string.IsNullOrWhiteSpace(BaseTransferPreviewToken));
         PreviewBaseRecoveryCommand = new AsyncCommand(PreviewBaseRecoveryAsync, () => !IsBusy && SelectedExplorerBase is not null);
@@ -437,35 +544,77 @@ public sealed class MainWindowViewModel : ViewModelBase
         RepairModsCommand = new AsyncCommand(RepairModsAsync, () => !IsBusy);
         ScanWorkshopModsCommand = new AsyncCommand(ScanWorkshopModsAsync, () => !IsBusy);
         ImportSelectedWorkshopModCommand = new AsyncCommand(ImportSelectedWorkshopModAsync, () => !IsBusy && SelectedWorkshopItem is not null && !SelectedWorkshopItem.AlreadyInstalled);
+        CheckSelectedModUpdateCommand = new AsyncCommand(CheckSelectedModUpdateAsync, () => !IsBusy && SelectedMod is not null);
+        PreviewUe4ssInstallCommand = new AsyncCommand(PreviewUe4ssInstallAsync, () => !IsBusy && SelectedUe4ssRelease is not null);
+        ApplyUe4ssInstallCommand = new AsyncCommand(ApplyUe4ssInstallAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(Ue4ssInstallToken));
+        RollbackUe4ssInstallCommand = new AsyncCommand(RollbackUe4ssInstallAsync, () => !IsBusy && Ue4ssRollbackAvailable);
+        UpdateSelectedModCommand = new AsyncCommand(UpdateSelectedModAsync, () => !IsBusy && _selectedModUpdateWorkshopId is not null);
+        FetchSelectedModDescriptionCommand = new AsyncCommand(FetchSelectedModDescriptionAsync, () => !IsBusy && SelectedMod is not null);
+        SetSelectedModDescriptionSourceCommand = new AsyncCommand(SetSelectedModDescriptionSourceAsync, () => !IsBusy && SelectedMod is not null);
+        BeginModSafeStartCommand = new AsyncCommand(BeginModSafeStartAsync, () => !IsBusy && ModSafeStartStatus is not { IsRunning: true });
+        CancelModSafeStartCommand = new AsyncCommand(CancelModSafeStartAsync, () => ModSafeStartStatus is { IsRunning: true });
         ExportDoctorCommand = new RelayCommand(ExportDoctorReport, () => DoctorChecks.Count > 0);
-        StartCommand = new AsyncCommand(StartServerAsync, () => !IsBusy && (ManagementApiConnected || LocalPalServerStatus == "Found"));
-        StopCommand = new AsyncCommand(StopServerAsync, () => !IsBusy && ManagementApiConnected);
-        RestartCommand = new AsyncCommand(RestartServerAsync, () => !IsBusy && ManagementApiConnected);
+        StartCommand = new AsyncCommand(StartServerAsync, () => !IsBusy && (ManagementApiConnected || LocalPalServerStatus == "Found") && !ServerIsRunning);
+        StopCommand = new AsyncCommand(StopServerAsync, () => !IsBusy && ManagementApiConnected && ServerIsRunning);
+        RestartCommand = new AsyncCommand(RestartServerAsync, () => !IsBusy && ManagementApiConnected && ServerIsRunning);
+        ForceStopServerCommand = new AsyncCommand(ForceStopServerAsync, () => !IsBusy && ManagementApiConnected && ServerIsRunning);
+        InstallMissingEnvironmentCommand = new AsyncCommand(InstallMissingEnvironmentAsync, () => !IsBusy);
+        RefreshAllInstancesCommand = new AsyncCommand(RefreshAllInstancesAsync, () => !IsBusy && ManagementApiConnected);
+        TerminateSelectedInstanceCommand = new AsyncCommand(TerminateSelectedInstanceAsync, () => !IsBusy && ManagementApiConnected && SelectedInstance is { ManagedByThisProfile: false });
+        SetAccentThemeCommand = new RelayCommand<string>(theme => SelectedAccentTheme = theme ?? "Default");
         SaveProfileCommand = new RelayCommand(SaveProfile);
-        NewProfileCommand = new RelayCommand(BeginNewProfile);
+        SetUpNewServerTabCommand = new RelayCommand(OpenNewServerTab);
+        ConnectLocalServerTabCommand = new RelayCommand(OpenConnectLocalServerTab);
+        ConnectRemoteServerTabCommand = new RelayCommand(OpenConnectRemoteServerTab);
+        CloneServerFlowCommand = new RelayCommand(OpenCloneServerFlow, () => HasCloneableLocalTab);
+        WizardAdvanceCommand = new RelayCommand(AdvanceWizardStep);
+        WizardBackCommand = new RelayCommand(GoBackWizardStep);
+        ChooseLocalConnectionCommand = new RelayCommand(ChooseLocalConnection);
+        ChooseRemoteConnectionCommand = new RelayCommand(ChooseRemoteConnection);
+        DetectLocalServiceCommand = new AsyncCommand(DetectLocalServiceAsync, () => !IsBusy);
+        ConnectExistingProfileTabCommand = new RelayCommand<ConnectionProfile>(ConnectExistingProfileTab);
+        CloseTabCommand = new RelayCommand<TabSession>(CloseTab, _ => Tabs.Count > 1);
+        CloseActiveTabCommand = new RelayCommand(() => CloseTab(ActiveTab), () => ActiveTab is not null && Tabs.Count > 1);
         DeleteProfileCommand = new RelayCommand(DeleteSelectedProfile, () => SelectedProfile is not null && SelectedProfile.Id != ConnectionProfile.LocalDefault.Id);
+        // CanExecute deliberately only checks SelectedProfile, not whether a token is currently
+        // saved for it -- nothing re-evaluates this command's CanExecute when a save/forget happens
+        // elsewhere, so a BearerToken-based condition would go stale (e.g. staying disabled after a
+        // successful Connect just saved one). Delete-on-nothing-to-delete is a safe no-op either way.
+        ForgetSavedTokenCommand = new RelayCommand(ForgetSavedToken, () => SelectedProfile is not null);
         NavigateCommand = new RelayCommand<string>(Navigate);
-
-        _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        _refreshTimer.Tick += async (_, _) =>
+        ToggleWorldMapCommand = new RelayCommand(() => IsWorldMapExpanded = !IsWorldMapExpanded);
+        TogglePalEditorCommand = new RelayCommand(() => IsPalEditorExpanded = !IsPalEditorExpanded);
+        ToggleWanDiagnosticsCommand = new RelayCommand(() => IsWanDiagnosticsExpanded = !IsWanDiagnosticsExpanded);
+        ToggleLocalDiagnosticsCommand = new RelayCommand(() => IsLocalDiagnosticsExpanded = !IsLocalDiagnosticsExpanded);
+        ToggleDiscordBotCommand = new RelayCommand(() => IsDiscordBotExpanded = !IsDiscordBotExpanded);
+        ToggleAntiCheatCommand = new RelayCommand(() => IsAntiCheatExpanded = !IsAntiCheatExpanded);
+        ToggleBanListCommand = new RelayCommand(() =>
         {
-            if (!AutoRefreshEnabled || IsBusy)
-                return;
-
-            if (SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id && ConnectionState != "Connected")
-            {
-                await RefreshLocalInstallationAsync();
-                return;
-            }
-
-            if (ConnectionState != "Connected")
-                return;
-
-            await RefreshStatusPollingAsync();
-            _refreshTick++;
-        };
-        _refreshTimer.Start();
-        Dispatcher.UIThread.Post(async () => await InitializeLocalDashboardAsync());
+            IsBanListExpanded = !IsBanListExpanded;
+            if (IsBanListExpanded) Dispatcher.UIThread.Post(async () => await RefreshBanListAsync());
+        });
+        ToggleWhitelistCommand = new RelayCommand(() =>
+        {
+            IsWhitelistExpanded = !IsWhitelistExpanded;
+            if (IsWhitelistExpanded) Dispatcher.UIThread.Post(async () => await RefreshWhitelistAsync());
+        });
+        ToggleTemporaryBansCommand = new RelayCommand(() =>
+        {
+            IsTemporaryBansExpanded = !IsTemporaryBansExpanded;
+            if (IsTemporaryBansExpanded) Dispatcher.UIThread.Post(async () => await RefreshTemporaryBansAsync());
+        });
+        RefreshTemporaryBansCommand = new AsyncCommand(RefreshTemporaryBansAsync, () => !IsBusy);
+        CreateTemporaryBanCommand = new AsyncCommand(CreateTemporaryBanForSelectedPlayerAsync, () => !IsBusy && SelectedPlayerRecord?.Online == true);
+        // No generic async command primitive exists in this codebase for a per-row action bound via
+        // CommandParameter -- following the same Dispatcher.UIThread.Post(async () => ...) pattern
+        // already used by ToggleWhitelistCommand/ToggleBanListCommand above rather than adding one.
+        CancelTemporaryBanCommand = new RelayCommand<string>(playerId => Dispatcher.UIThread.Post(async () => await CancelTemporaryBanAsync(playerId)));
+        RebuildRibbonGroups();
+        Dispatcher.UIThread.Post(async () =>
+        {
+            await InitializeLocalDashboardAsync();
+            await RestoreTabSessionAsync();
+        });
     }
 
     public string ProductName => "MystTiq";
@@ -474,10 +623,301 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ProfileStorageText => $"Profiles: {_profileStore.StoragePath}";
     public string SecretPolicyText => "Bearer token is process-memory-only and is never written to the profile file.";
     public bool IsLocalProfile => SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id;
+    // Gates the relocated "In-Game Server Defaults" card on the Settings page profile
+    // editor -- only shown while setting up a brand-new connection (SelectedProfile is null, the
+    // state BeginNewProfile() puts the app in), not while editing/reconnecting to a saved one.
+    public bool IsCreatingNewProfile => SelectedProfile is null;
+
+    // v0.7.3.0: the "Set Up New Server" wizard's current step (0=Local/Remote choice,
+    // 1=Connection Details, 2=In-Game Server Defaults, 3=Confirm & Finish). Only meaningful while
+    // IsCreatingNewProfile -- editing an already-saved profile never shows or uses this, and its
+    // Connection Details card/Save/Delete buttons are completely unaffected by the wizard. Reset to
+    // 0 by BeginNewProfile() every time "Set Up New Server" is opened.
+    // v0.7.6.0: delegates to ActiveTab.WizardStep (was a single shared field) so two tabs mid-setup
+    // at once no longer corrupt each other's step -- see TabSession.WizardStep.
+    // v0.7.13.0: gained step 0 (Local/Remote choice) -- previously the wizard started directly on
+    // Connection Details with no distinction between a local and a remote target, and the whole
+    // wizard was embedded inside the Settings page alongside unrelated app chrome, contrary to how
+    // comparable apps (a connection-manager's "New Connection" flow) keep setup a focused, separate
+    // sequence. See MainWindow.axaml's dedicated wizard host, shown in place of the normal nav
+    // sidebar/ribbon/page content while IsCreatingNewProfile is true.
+    public int NewServerWizardStep
+    {
+        get => ActiveTab?.WizardStep ?? 0;
+        private set
+        {
+            if (!SetActiveTabField(t => t.WizardStep, (t, v) => t.WizardStep = v, value)) return;
+            RaisePropertyChanged(nameof(IsChoosingConnectionKind));
+            RaisePropertyChanged(nameof(IsWizardStep1));
+            RaisePropertyChanged(nameof(IsWizardStep2));
+            RaisePropertyChanged(nameof(IsWizardStep3));
+        }
+    }
+    public bool IsChoosingConnectionKind => IsCreatingNewProfile && NewServerWizardStep == 0;
+    public bool IsWizardStep1 => IsCreatingNewProfile && NewServerWizardStep == 1;
+    public bool IsWizardStep2 => IsCreatingNewProfile && NewServerWizardStep == 2;
+    public bool IsWizardStep3 => IsCreatingNewProfile && NewServerWizardStep == 3;
+    public ICommand WizardAdvanceCommand { get; }
+    public ICommand WizardBackCommand { get; }
+
+    // v0.7.13.0: the Step 0 choice, delegating to ActiveTab.ConnectionKind the same way
+    // NewServerWizardStep delegates to ActiveTab.WizardStep, for the same reason (two tabs mid-setup
+    // at once must not corrupt each other's choice).
+    public string ConnectionKind
+    {
+        get => ActiveTab?.ConnectionKind ?? string.Empty;
+        private set
+        {
+            if (!SetActiveTabField(t => t.ConnectionKind, (t, v) => t.ConnectionKind = v, value)) return;
+            RaisePropertyChanged(nameof(IsLocalConnectionChoice));
+            RaisePropertyChanged(nameof(IsRemoteConnectionChoice));
+        }
+    }
+    public bool IsLocalConnectionChoice => ConnectionKind == "Local";
+    public bool IsRemoteConnectionChoice => ConnectionKind == "Remote";
+    public ICommand ChooseLocalConnectionCommand { get; }
+    public ICommand ChooseRemoteConnectionCommand { get; }
+    public ICommand DetectLocalServiceCommand { get; }
+
+    // The open-tab list backing true multi-tab connections. ActiveTab is what
+    // SelectedProfile/BearerToken/ManagementApiConnected/ConnectionState/IsBusy/ServerIsRunning
+    // now delegate through -- see TabSession.cs for why.
+    public ObservableCollection<TabSession> Tabs { get; } = [];
+
+    // v0.7.16.0: the tab strip's ListBox binds to VisibleTabs, not Tabs directly -- once more tabs
+    // are open than fit the actual available window width, the overflow ones move here instead of
+    // being silently clipped with no way to reach them. ActiveTab is always kept in VisibleTabs
+    // (see RecomputeTabLayout) so switching to a tab never hides the one you're looking at.
+    public ObservableCollection<TabSession> VisibleTabs { get; } = [];
+    public ObservableCollection<TabSession> OverflowTabs { get; } = [];
+    public bool HasOverflowTabs { get => _hasOverflowTabs; private set => SetField(ref _hasOverflowTabs, value); }
+
+    // v0.7.25.0: same shrink-to-fit/overflow pattern as VisibleTabs/OverflowTabs above, applied to
+    // the ribbon -- as more per-page ribbon groups get added in later versions, whichever ones don't
+    // fit the actually-available width move here instead of being silently clipped. Whole groups
+    // overflow together (not individual buttons within a still-visible group), since a group's
+    // buttons are a semantic unit (e.g. "Server Control").
+    public ObservableCollection<RibbonGroupViewModel> VisibleRibbonGroups { get; } = [];
+    public ObservableCollection<RibbonGroupViewModel> OverflowRibbonGroups { get; } = [];
+    public bool HasOverflowRibbonGroups { get => _hasOverflowRibbonGroups; private set => SetField(ref _hasOverflowRibbonGroups, value); }
+
+    public TabSession? ActiveTab
+    {
+        get => _activeTab;
+        set
+        {
+            if (ReferenceEquals(_activeTab, value)) return;
+            _activeTab = value;
+            // v0.7.79.0: theme is per-tab now (see SelectedAccentTheme/IsLightMode/ApplyProfileTheme)
+            // -- switching tabs re-renders the WHOLE app in the newly active tab's own remembered
+            // theme, not just its data. A wizard tab with no Profile yet (mid "Set Up New Server")
+            // has no theme of its own to switch to, so the app simply keeps showing whatever was
+            // last applied rather than snapping to some default. RefreshTabAccentVisuals below still
+            // runs via RaiseActiveTabPropertiesChanged either way, since every open tab's identity
+            // stripe/border needs to reflect whichever theme resources are now live, not just the
+            // newly active tab's own.
+            if (value?.Profile is { } activeProfile)
+            {
+                ThemeApplier.Apply(activeProfile.AccentTheme, activeProfile.ThemeVariant);
+                RefreshTabAccentVisuals();
+            }
+            // v0.7.6.0: OnlinePlayers/backups/mods/Pal lists are per-server data that isn't yet
+            // itself tab-scoped (see RefreshActiveTabDataAsync below) -- until the newly active
+            // tab's own data arrives, a leftover selection from the PREVIOUS tab must not still be
+            // clickable, since e.g. a destructive action would otherwise fire against this tab's
+            // connection using the previous tab's target.
+            // v0.7.8.0 correction: v0.7.6.0 cleared SelectedOnlinePlayer here on the assumption
+            // (from the bug scan that prompted it) that it was what Kick/Ban/Ban-list-driven actions
+            // read -- direct inspection while adding Unban/Teleport here found that assumption was
+            // wrong. Kick/Ban/Unban/Teleport all actually read SelectedPlayerRecord, the Players
+            // page's "Directory" selection (a completely different, and until now unaddressed,
+            // property), which is populated only by RefreshPlayersPageAsync -- a page-navigation
+            // trigger, not the 5-second timer -- so it was not only unfixed by v0.7.6.0 but has an
+            // even wider staleness window (indefinite, not 5 seconds) if the user stays on the
+            // Players page across a tab switch. Clearing it here and, if already on the Players
+            // page, immediately re-running that page's own refresh for the newly active tab closes
+            // the actual mechanism these player-targeted actions use, not just the one this class of
+            // bug was first reported against.
+            SelectedOnlinePlayer = null;
+            SelectedPlayerRecord = null;
+            SelectedBackup = null;
+            SelectedMod = null;
+            SelectedExplorerPal = null;
+            SelectedExplorerBase = null;
+            // v0.7.74.0: reported live -- switching tabs previously left whatever page the PREVIOUS
+            // tab was on displayed for the newly active one too, rather than returning to wherever
+            // this tab itself was last left. Restoring before RaiseActiveTabPropertiesChanged/the
+            // Players-page check below so both react to the correct, now-current page.
+            SelectedPage = value?.LastPage ?? NavigationPage.Dashboard;
+            RaiseActiveTabPropertiesChanged();
+            RecomputeTabLayout();
+            _ = RefreshActiveTabDataAsync();
+            if (SelectedPage == NavigationPage.Players) _ = RefreshPlayersPageAsync();
+        }
+    }
+
+    // v0.7.75.0: fixes a real bug found live -- MainWindow.axaml had several elements bound
+    // directly to "ActiveTab.AccentBrush" (nav pane border, footer border, page-header border,
+    // title-bar strip), expecting the per-tab identity color from v0.7.63.0/v0.7.74.0 to update on
+    // every tab switch. It never did: ActiveTab's own setter above never raises PropertyChanged for
+    // "ActiveTab" itself, only for the fixed list of pass-through properties
+    // RaiseActiveTabPropertiesChanged() re-raises -- exactly why every other tab-scoped value in
+    // this class (BearerToken, ServerUrl, etc.) is exposed as its own explicit pass-through property
+    // rather than bound directly as "ActiveTab.X" in XAML. This follows that same established
+    // pattern instead of the ad-hoc direct-path bindings that silently never refreshed.
+    public IBrush ActiveTabAccentBrush => ActiveTab?.AccentBrush ?? Brushes.Transparent;
+    // v0.7.77.0: BoxShadows companion to ActiveTabAccentBrush -- see TabSession.AccentGlowShadow's
+    // own comment for why a plain {Binding} to a resolved value, not {DynamicResource}, is what
+    // makes this able to bind at all.
+    public BoxShadows ActiveTabAccentGlowShadow => ActiveTab?.AccentGlowShadow ?? default;
+
+    private bool SetActiveTabField<T>(Func<TabSession, T> getter, Action<TabSession, T> setter, T value, [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+    {
+        if (ActiveTab is null) return false;
+        if (EqualityComparer<T>.Default.Equals(getter(ActiveTab), value)) return false;
+        setter(ActiveTab, value);
+        RaisePropertyChanged(propertyName);
+        return true;
+    }
+
+    // Replays, for the newly active tab, exactly the notifications each delegated property's own
+    // setter would have raised had its value changed just now -- so switching tabs updates every
+    // bound control (status dot, Start/Stop/Restart buttons, glow states, page visibility) to the
+    // newly active tab's real state, without re-running any value-dependent business logic (e.g.
+    // SelectedProfile's "reset BearerToken/ConnectionState for a freshly chosen profile" logic,
+    // which must NOT replay just because focus moved to an already-connected background tab).
+    private void RaiseActiveTabPropertiesChanged()
+    {
+        RaisePropertyChanged(nameof(SelectedProfile));
+        RaisePropertyChanged(nameof(ProfileName));
+        RaisePropertyChanged(nameof(ServerUrl));
+        RaisePropertyChanged(nameof(CertificateSha256));
+        RaisePropertyChanged(nameof(BearerToken));
+        RaisePropertyChanged(nameof(ManagementApiConnected));
+        RaisePropertyChanged(nameof(ConnectionState));
+        RaisePropertyChanged(nameof(IsBusy));
+        RaisePropertyChanged(nameof(ServerIsRunning));
+        RaisePropertyChanged(nameof(IsLocalProfile));
+        RaisePropertyChanged(nameof(IsCreatingNewProfile));
+        RaisePropertyChanged(nameof(IsChoosingConnectionKind));
+        RaisePropertyChanged(nameof(IsWizardStep1));
+        RaisePropertyChanged(nameof(IsWizardStep2));
+        RaisePropertyChanged(nameof(IsWizardStep3));
+        RaisePropertyChanged(nameof(ConnectionKind));
+        RaisePropertyChanged(nameof(IsLocalConnectionChoice));
+        RaisePropertyChanged(nameof(IsRemoteConnectionChoice));
+        RaisePropertyChanged(nameof(ActiveTabAccentBrush));
+        RaisePropertyChanged(nameof(ActiveTabAccentGlowShadow));
+        RaiseWorkspaceSummaryProperties();
+        RaiseManagementApiConnectedDependents();
+        RaiseConnectionStateDependents();
+        RaiseServerIsRunningDependents();
+        RaiseIsBusyDependents(IsBusy);
+        (DeleteProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (BootstrapLocalCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (DiagnoseConnectionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (CloseActiveTabCommand as RelayCommand)?.RaiseCanExecuteChanged();
+    }
+
+    // v0.7.79.0: Appearance is now per-tab -- requested directly ("the colour mode selected should
+    // only apply to the tab, not the other tabs"). Reads/writes through to ActiveTab.Profile's own
+    // AccentTheme/ThemeVariant (see ConnectionProfile.cs) instead of one shared app-wide field.
+    // AccentThemeOptions drives the Settings page's swatch-button row.
+    public IReadOnlyList<string> AccentThemeOptions { get; } = ThemeCatalog.AccentThemes;
+    public string SelectedAccentTheme
+    {
+        get => ActiveTab?.Profile?.AccentTheme ?? "Default";
+        set
+        {
+            if (ActiveTab?.Profile is not { } profile || profile.AccentTheme == value) return;
+            ApplyProfileTheme(profile with { AccentTheme = value });
+        }
+    }
+    public bool IsLightMode
+    {
+        get => (ActiveTab?.Profile?.ThemeVariant ?? "Dark") == "Light";
+        set
+        {
+            if (ActiveTab?.Profile is not { } profile) return;
+            var variant = value ? "Light" : "Dark";
+            if (profile.ThemeVariant == variant) return;
+            ApplyProfileTheme(profile with { ThemeVariant = variant });
+        }
+    }
+
+    // v0.7.79.0: shared by both setters above -- persists the updated profile (this tab's and the
+    // saved-profile-list's copies both need to point at the same new record), re-renders the whole
+    // app in its theme, and refreshes every open tab's per-tab-color visuals (see
+    // RefreshTabAccentVisuals's own comment for why that nudge is needed independent of the theme
+    // switch itself).
+    private void ApplyProfileTheme(ConnectionProfile updated)
+    {
+        if (ActiveTab is not { } tab) return;
+        tab.Profile = updated;
+        var index = Profiles.ToList().FindIndex(p => p.Id == updated.Id);
+        if (index >= 0) Profiles[index] = updated;
+        _profileStore.Save(Profiles);
+
+        // v0.7.80.0 bugfix: reported live -- clicking any theme button dropped the active tab into
+        // "Set Up New Server" mode. Root cause: Profiles[index] = updated above replaces the item
+        // with a new object (ConnectionProfile is an immutable record), which desyncs the Settings
+        // page's ComboBox -- it's two-way bound to SelectedProfile via SelectedItem, so when Avalonia
+        // notices the object it had selected is no longer present in the collection, it clears its
+        // own selection, propagating back through the two-way binding as SelectedProfile = null.
+        // That flips IsCreatingNewProfile true for the instant before this line runs. Restoring
+        // tab.Profile here (a plain reassignment -- unlike SelectedProfile's own setter, it doesn't
+        // reset BearerToken/ConnectionState) and re-raising every property that transient null
+        // touched puts the tab back exactly where it was, just with the new theme.
+        tab.Profile = updated;
+        RaisePropertyChanged(nameof(SelectedProfile));
+        RaisePropertyChanged(nameof(IsLocalProfile));
+        RaisePropertyChanged(nameof(IsCreatingNewProfile));
+        RaisePropertyChanged(nameof(IsChoosingConnectionKind));
+        RaisePropertyChanged(nameof(IsWizardStep1));
+        RaisePropertyChanged(nameof(IsWizardStep2));
+        RaisePropertyChanged(nameof(IsWizardStep3));
+
+        ThemeApplier.Apply(updated.AccentTheme, updated.ThemeVariant);
+        RefreshTabAccentVisuals();
+        RaisePropertyChanged(nameof(SelectedAccentTheme));
+        RaisePropertyChanged(nameof(IsLightMode));
+        RaisePropertyChanged(nameof(IsHomePageArtDark));
+        RaisePropertyChanged(nameof(IsHomePageArtLight));
+        RaisePropertyChanged(nameof(IsWorldPageArtDark));
+        RaisePropertyChanged(nameof(IsWorldPageArtLight));
+    }
+
+    // v0.7.52.0: TabSession.AccentBrush is a plain bound value, not a {DynamicResource}, so it does
+    // not auto-refresh when ThemeApplier rewrites the underlying resource on a theme switch -- every
+    // open tab needs an explicit nudge afterward. v0.7.63.0: HealthStateColorKey has the exact same
+    // problem (its own value doesn't change on a theme switch, but the brush SemanticStatusColorConverter
+    // resolves it to does) -- nudged here too rather than a separate method, since both fire from the
+    // same two call sites (SelectedAccentTheme/IsLightMode setters).
+    private void RefreshTabAccentVisuals()
+    {
+        foreach (var tab in Tabs) tab.RefreshAccentVisual();
+        RaisePropertyChanged(nameof(HealthStateColorKey));
+    }
+
+    // v0.7.52.0: Per-Tab Color Coding (item 2) -- resolves the AccentColorKey a profile should use
+    // when (re)building it from the editor/tab fields. Reuses an already-known profile's own color
+    // (looked up by id, since BuildProfileFromEditor/BuildProfileFromTab construct a brand-new
+    // ConnectionProfile record on every save/reconnect) so it survives reconnects and edits rather
+    // than being silently reassigned; only a genuinely new profile gets a fresh one, round-robin
+    // over ThemeCatalog.TabIdentityColorNames keyed off how many profiles already exist.
+    private string ResolveAccentColorKey(string? existingId, ConnectionProfile? tabProfile)
+    {
+        if (tabProfile is { AccentColorKey.Length: > 0 }) return tabProfile.AccentColorKey;
+        var known = !string.IsNullOrWhiteSpace(existingId) ? Profiles.FirstOrDefault(p => p.Id == existingId) : null;
+        if (known is not null) return known.AccentColorKey;
+        var pool = ThemeCatalog.TabIdentityColorNames;
+        return pool[Profiles.Count % pool.Length];
+    }
 
     public ObservableCollection<ConnectionProfile> Profiles { get; } = [];
     public ObservableCollection<DiscoveredMystTiqService> DiscoveredServices { get; } = [];
     public ObservableCollection<PlayerSnapshotDto> OnlinePlayers { get; } = [];
+    public ObservableCollection<PlayerMapPointDto> PlayerMapPoints { get; } = [];
     public ObservableCollection<string> LogLines { get; } = [];
     public ObservableCollection<string> FilteredLogLines { get; } = [];
     public ObservableCollection<string> RconOutputLines { get; } = [];
@@ -535,9 +975,16 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ObservableCollection<DiagnosticFindingDto> LocalMachineFindings { get; } = [];
     public ObservableCollection<PalworldSettingDto> PalworldSettings { get; } = [];
     public ObservableCollection<PalworldSettingDto> FilteredPalworldSettings { get; } = [];
-    public ObservableCollection<PalworldSimpleSettingItem> SimplePalworldSettings { get; } = [];
+    // v0.7.38.0: was one flat SimplePalworldSettings collection; split into the three World
+    // Settings sub-sections (World / Player & Pal / Items & Work) so the page can render labeled
+    // groups instead of one long list.
+    public ObservableCollection<PalworldSimpleSettingItem> SimpleWorldRateSettings { get; } = [];
+    public ObservableCollection<PalworldSimpleSettingItem> SimplePlayerPalRateSettings { get; } = [];
+    public ObservableCollection<PalworldSimpleSettingItem> SimpleItemsWorkRateSettings { get; } = [];
+    public ObservableCollection<PalworldSimpleToggleItem> SimpleToggleSettings { get; } = [];
+    public ObservableCollection<PalworldSettingDto> SimpleNetworkSettings { get; } = [];
     public ObservableCollection<string> PalworldConfigCategories { get; } = ["All Categories"];
-    public IReadOnlyList<string> PalworldConfigPresets { get; } = ["Official / Vanilla", "Balanced QoL", "Relaxed QoL", "Custom"];
+    public IReadOnlyList<string> PalworldConfigPresets { get => _palworldConfigPresets; private set => SetField(ref _palworldConfigPresets, value); }
     public IReadOnlyList<string> PlayerViewFilters { get; } = ["All Players", "Online", "Known Saves", "Missing Saves"];
     public IReadOnlyList<string> PlayerAdminFilters { get; } = ["All Records", "Actionable Online", "Needs Review"];
     public IReadOnlyList<string> GuildStatusFilters { get; } = ["All Guilds", "Healthy", "Needs Review"];
@@ -588,6 +1035,17 @@ public sealed class MainWindowViewModel : ViewModelBase
         set { if (SetField(ref _selectedPlayerAdminFilter, value ?? "All Records")) ApplyPlayerFilters(); }
     }
 
+    // v0.7.18.0: requested directly -- a selectable way to declutter the Directory list when the
+    // same physical player shows up multiple times under the same display name (a rejoin under a
+    // different platform ID, a stale record from an old save, etc.). Purely a view-side filter --
+    // it hides rows, it never deletes or merges the underlying player records those extra PlayerIds
+    // still legitimately identify, so switching it off always brings every record straight back.
+    public bool HideDuplicatePlayerNames
+    {
+        get => _hideDuplicatePlayerNames;
+        set { if (SetField(ref _hideDuplicatePlayerNames, value)) ApplyPlayerFilters(); }
+    }
+
     public string PlayersPageState { get => _playersPageState; private set => SetField(ref _playersPageState, value); }
     public string PlayersPageDetail { get => _playersPageDetail; private set => SetField(ref _playersPageDetail, value); }
     public string PlayerVisibleCountText { get => _playerVisibleCountText; private set => SetField(ref _playerVisibleCountText, value); }
@@ -609,34 +1067,95 @@ public sealed class MainWindowViewModel : ViewModelBase
     public IReadOnlyList<string> CharacterDispositionOptions { get; } = ["Keep", "Archive", "Delete", "Reset (not yet available)"];
     public string MigrationDisposition { get => _migrationDisposition; set => SetField(ref _migrationDisposition, value); }
 
+    // Backed by whichever TabSession is ActiveTab rather than a private field, so every
+    // existing call site keeps compiling and behaving as before, now scoped to the active tab
+    // instead of the whole app -- see SetActiveTabField/RaiseActiveTabPropertiesChanged.
     public ConnectionProfile? SelectedProfile
     {
-        get => _selectedProfile;
+        get => ActiveTab?.Profile;
         set
         {
-            if (!SetField(ref _selectedProfile, value) || value is null)
+            if (!SetActiveTabField(t => t.Profile, (t, v) => t.Profile = v, value))
                 return;
+
+            // Raised for both the null and non-null cases -- BeginNewProfile() sets this to null,
+            // and IsCreatingNewProfile (which gates the relocated "In-Game Server Defaults" card)
+            // depends on exactly that transition, not just a real profile being selected.
+            RaisePropertyChanged(nameof(IsLocalProfile));
+            RaisePropertyChanged(nameof(IsCreatingNewProfile));
+            RaisePropertyChanged(nameof(IsChoosingConnectionKind));
+            RaisePropertyChanged(nameof(IsWizardStep1));
+            RaisePropertyChanged(nameof(IsWizardStep2));
+            RaisePropertyChanged(nameof(IsWizardStep3));
+            if (value is null) return;
 
             ProfileName = value.Name;
             ServerUrl = value.BaseAddress.ToString().TrimEnd('/');
             CertificateSha256 = value.ServerCertificateSha256 ?? string.Empty;
-            BearerToken = string.Empty;
+            TargetServerId = value.ServerId ?? string.Empty;
+            // v0.7.71.0: previously always blanked, requiring a fresh paste on every reconnect (the
+            // ConnectionProfile model itself never persisted tokens -- see its own docstring). Now
+            // tries CredentialStore first, which is a no-op returning null on non-Windows builds or
+            // when nothing was ever saved for this profile Id, in which case this still falls back
+            // to empty exactly as before.
+            BearerToken = _credentialStore.TryLoad(value.Id) ?? string.Empty;
             ManagementApiConnected = false;
             ConnectionState = "Not connected";
+            // v0.7.79.0: this profile just became the active tab's own profile (startup's first
+            // tab, ConnectExistingProfileTab, or the "Set Up New Server" wizard finishing) --
+            // ActiveTab's own setter only applies a theme when the tab ALREADY has a Profile at the
+            // moment it becomes active, which isn't true for any of those three cases (this is
+            // exactly the call that gives the tab its first Profile), so this is the other of the
+            // two places a per-tab theme switch needs to fire.
+            ThemeApplier.Apply(value.AccentTheme, value.ThemeVariant);
+            RefreshTabAccentVisuals();
+            RaisePropertyChanged(nameof(SelectedAccentTheme));
+            RaisePropertyChanged(nameof(IsLightMode));
+            RaisePropertyChanged(nameof(IsHomePageArtDark));
+            RaisePropertyChanged(nameof(IsHomePageArtLight));
+            RaisePropertyChanged(nameof(IsWorldPageArtDark));
+            RaisePropertyChanged(nameof(IsWorldPageArtLight));
             WorkspaceState = IsLocalProfile
                 ? "Local profile: browse and open actions use this computer."
                 : "Remote profile: paths belong to the managed server; local browse/open actions are disabled.";
-            RaisePropertyChanged(nameof(IsLocalProfile));
             RaiseWorkspaceSummaryProperties();
             (DeleteProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (BootstrapLocalCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         }
     }
 
-    public string ProfileName { get => _profileName; set => SetField(ref _profileName, value); }
-    public string ServerUrl { get => _serverUrl; set => SetField(ref _serverUrl, value); }
-    public string BearerToken { get => _bearerToken; set => SetField(ref _bearerToken, value); }
-    public string CertificateSha256 { get => _certificateSha256; set => SetField(ref _certificateSha256, value); }
+    public string ProfileName
+    {
+        get => ActiveTab?.ProfileName ?? string.Empty;
+        set => SetActiveTabField(t => t.ProfileName, (t, v) => t.ProfileName = v, value);
+    }
+    public string ServerUrl
+    {
+        get => ActiveTab?.ServerUrl ?? string.Empty;
+        set => SetActiveTabField(t => t.ServerUrl, (t, v) => t.ServerUrl = v, value);
+    }
+    public string BearerToken
+    {
+        get => ActiveTab?.BearerToken ?? string.Empty;
+        set => SetActiveTabField(t => t.BearerToken, (t, v) => t.BearerToken = v, value);
+    }
+    // v0.7.64.0: reveal/hide toggle for the Bearer token field(s) -- requested live after a pasted
+    // token came out masked with no way to visually verify it before hitting Connect. Deliberately a
+    // plain ViewModel-level flag rather than per-tab state: the Settings editor and the new-server
+    // wizard's Bearer token fields are never visible at the same time, so one shared flag is enough
+    // and avoids adding a field to TabSession for something that isn't really per-connection state.
+    private bool _showBearerToken;
+    public bool ShowBearerToken { get => _showBearerToken; set => SetField(ref _showBearerToken, value); }
+    public string CertificateSha256
+    {
+        get => ActiveTab?.CertificateSha256 ?? string.Empty;
+        set => SetActiveTabField(t => t.CertificateSha256, (t, v) => t.CertificateSha256 = v, value);
+    }
+    public string TargetServerId
+    {
+        get => ActiveTab?.TargetServerId ?? string.Empty;
+        set => SetActiveTabField(t => t.TargetServerId, (t, v) => t.TargetServerId = v, value);
+    }
     public string DiscoveryStateText { get => _discoveryStateText; private set => SetField(ref _discoveryStateText, value); }
     public DiscoveredMystTiqService? SelectedDiscoveredService
     {
@@ -685,7 +1204,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             RaisePropertyChanged(nameof(IsHealthGlowRed));
             RaisePropertyChanged(nameof(IsHealthGlowAmber));
             RaisePropertyChanged(nameof(IsHealthGlowNeutral));
-            RaisePropertyChanged(nameof(HealthStateColor));
+            RaisePropertyChanged(nameof(HealthStateColorKey));
         }
     }
     public string DashboardHealthDetail { get => _dashboardHealthDetail; private set => SetField(ref _dashboardHealthDetail, value); }
@@ -694,8 +1213,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool IsHealthGlowGreen => !IsServerTransitioning && !IsHealthGlowRed && DashboardHealthText == "READY";
     public bool IsHealthGlowNeutral => !IsHealthGlowAmber && !IsHealthGlowRed && !IsHealthGlowGreen;
     // Text color follows the same state the card's glow follows, so the label never reads
-    // green on a red card (or vice versa) -- matches whichever glow is currently active.
-    public string HealthStateColor => IsHealthGlowRed ? "#FF8A93" : IsHealthGlowAmber ? "#FFD467" : IsHealthGlowGreen ? "#65D6A0" : "#9FB4C8";
+    // green on a red card (or vice versa) -- matches whichever glow is currently active. A semantic
+    // KEY, not a hex literal -- resolved to the live theme brush by SemanticStatusColorConverter so
+    // it follows accent-theme/Light-Dark switches (v0.7.63.0 theme-system bugfix; every setter that
+    // raises this must also re-raise it after ThemeApplier.Apply, since the key itself doesn't
+    // change on a theme switch but the brush it resolves to does -- see SelectedAccentTheme/IsLightMode).
+    public string HealthStateColorKey => IsHealthGlowRed ? "Red" : IsHealthGlowAmber ? "Amber" : IsHealthGlowGreen ? "Green" : "Muted";
     public string DashboardWorldPulseText { get => _dashboardWorldPulseText; private set => SetField(ref _dashboardWorldPulseText, value); }
     public string DashboardWorldNicknameText { get => _dashboardWorldNicknameText; private set => SetField(ref _dashboardWorldNicknameText, value); }
     public string DashboardWorldClockText { get => _dashboardWorldClockText; private set => SetField(ref _dashboardWorldClockText, value); }
@@ -725,20 +1248,48 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
     public string HistoryCpuSummary { get => _historyCpuSummary; private set => SetField(ref _historyCpuSummary, value); }
     public string HistoryMemorySummary { get => _historyMemorySummary; private set => SetField(ref _historyMemorySummary, value); }
+    public string HistoryFpsSummary { get => _historyFpsSummary; private set => SetField(ref _historyFpsSummary, value); }
     public string HistorySampleSummary { get => _historySampleSummary; private set => SetField(ref _historySampleSummary, value); }
     public string HistoryStatusText { get => _historyStatusText; private set => SetField(ref _historyStatusText, value); }
 
     public bool ManagementApiConnected
     {
-        get => _managementApiConnected;
+        get => ActiveTab?.ManagementApiConnected ?? false;
         private set
         {
-            if (!SetField(ref _managementApiConnected, value)) return;
-            (CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            if (!SetActiveTabField(t => t.ManagementApiConnected, (t, v) => t.ManagementApiConnected = v, value)) return;
+            RaiseManagementApiConnectedDependents();
         }
+    }
+    private void RaiseManagementApiConnectedDependents()
+    {
+        (CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (RefreshAllInstancesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (TerminateSelectedInstanceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+    }
+    // Set from the real status poll's ServerStatusDto.Ready (see ApplyStatus), not
+    // parsed from ServerState's display text -- Start greys out while already running, Stop/
+    // Restart grey out while already stopped, instead of staying clickable regardless of the
+    // server's actual lifecycle phase.
+    public bool ServerIsRunning
+    {
+        get => ActiveTab?.ServerIsRunning ?? false;
+        private set
+        {
+            if (!SetActiveTabField(t => t.ServerIsRunning, (t, v) => t.ServerIsRunning = v, value)) return;
+            RaiseServerIsRunningDependents();
+        }
+    }
+    private void RaiseServerIsRunningDependents()
+    {
+        (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
     }
     public string LifecycleStatusText { get => _lifecycleStatusText; private set => SetField(ref _lifecycleStatusText, value); }
     public string ActivityState { get => _activityState; private set => SetField(ref _activityState, value); }
@@ -784,6 +1335,38 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string AlertCenterState { get => _alertCenterState; private set => SetField(ref _alertCenterState, value); }
     public AlertRuleSetDto AlertRules { get => _alertRules; set => SetField(ref _alertRules, value ?? new()); }
     public DiskSpacePredictionDto? DiskSpacePrediction { get => _diskSpacePrediction; private set => SetField(ref _diskSpacePrediction, value); }
+
+    public string DiscordBotState { get => _discordBotState; private set => SetField(ref _discordBotState, value); }
+    public DiscordBotConfigurationDto DiscordBotConfig { get => _discordBotConfig; set => SetField(ref _discordBotConfig, value ?? new()); }
+    public bool DiscordBotTokenConfigured { get => _discordBotTokenConfigured; private set { if (SetField(ref _discordBotTokenConfigured, value)) RaisePropertyChanged(nameof(DiscordBotTokenWatermark)); } }
+    public string DiscordBotTokenWatermark => DiscordBotTokenConfigured ? "Token configured -- leave blank to keep it" : "Paste bot token from the Discord Developer Portal";
+    public string DiscordBotConnectionState { get => _discordBotConnectionState; private set => SetField(ref _discordBotConnectionState, value); }
+    public ObservableCollection<DiscordRoleMappingDto> DiscordRoleMappings { get; } = [];
+    public string NewRoleMappingDiscordRoleId { get => _newRoleMappingDiscordRoleId; set => SetField(ref _newRoleMappingDiscordRoleId, value ?? string.Empty); }
+    public string NewRoleMappingRole { get => _newRoleMappingRole; set => SetField(ref _newRoleMappingRole, value ?? "Viewer"); }
+    public DiscordRoleMappingDto? SelectedRoleMapping { get => _selectedRoleMapping; set => SetField(ref _selectedRoleMapping, value); }
+
+    // v0.7.10.0: whitelist config is read/replaced as a whole, mirroring the Discord Bot config
+    // pattern immediately above (add/remove entries locally, one explicit Save persists the list).
+    public string WhitelistState { get => _whitelistState; private set => SetField(ref _whitelistState, value); }
+    public WhitelistConfigDto WhitelistConfig { get => _whitelistConfig; set => SetField(ref _whitelistConfig, value ?? new()); }
+    public ObservableCollection<WhitelistEntryDto> WhitelistEntries { get; } = [];
+    public string NewWhitelistPlayerId { get => _newWhitelistPlayerId; set => SetField(ref _newWhitelistPlayerId, value ?? string.Empty); }
+    public string NewWhitelistLabel { get => _newWhitelistLabel; set => SetField(ref _newWhitelistLabel, value ?? string.Empty); }
+    public WhitelistEntryDto? SelectedWhitelistEntry { get => _selectedWhitelistEntry; set => SetField(ref _selectedWhitelistEntry, value); }
+
+    // v0.7.15.0: temporary ban -- bans the currently selected player (same selection/online gating
+    // as Kick/Ban above) for a chosen duration, then the headless service auto-unbans once it
+    // elapses. This card only ever displays server-reported state (GetTemporaryBansAsync); there is
+    // no local add/remove list to edit before saving, unlike Whitelist.
+    public string TemporaryBanState { get => _temporaryBanState; private set => SetField(ref _temporaryBanState, value); }
+    public ObservableCollection<TemporaryBanEntryDto> TemporaryBans { get; } = [];
+    public double NewTemporaryBanDurationHours { get => _newTemporaryBanDurationHours; set => SetField(ref _newTemporaryBanDurationHours, value <= 0 ? 1 : value); }
+
+    public string AntiCheatState { get => _antiCheatState; private set => SetField(ref _antiCheatState, value); }
+    public AntiCheatRuleSetDto AntiCheatRules { get => _antiCheatRules; set => SetField(ref _antiCheatRules, value ?? new()); }
+    public ObservableCollection<AntiCheatFindingDto> AntiCheatFindings { get; } = [];
+    public IReadOnlyList<string> AntiCheatResponses { get; } = ["Flag", "Kick", "Ban"];
     public string FleetState { get => _fleetState; private set => SetField(ref _fleetState, value); }
     public string CloneNewProfileId { get => _cloneNewProfileId; set { if (SetField(ref _cloneNewProfileId, value ?? string.Empty)) (CloneWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string CloneNewProfileName { get => _cloneNewProfileName; set => SetField(ref _cloneNewProfileName, value ?? string.Empty); }
@@ -791,6 +1374,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ActivityFileText { get => _activityFileText; private set => SetField(ref _activityFileText, value); }
     public string ActivityDetail { get => _activityDetail; private set => SetField(ref _activityDetail, value); }
     public string PlayerAdminStatusText { get => _playerAdminStatusText; private set => SetField(ref _playerAdminStatusText, value); }
+    public string BanListText { get => _banListText; private set => SetField(ref _banListText, value); }
     public string ModerationProviderStatusText { get => _moderationProviderStatusText; private set => SetField(ref _moderationProviderStatusText, value); }
     public string PlayerRegistrySummaryText { get => _playerRegistrySummaryText; private set => SetField(ref _playerRegistrySummaryText, value); }
     public string PlayerActionMessage { get => _playerActionMessage; set => SetField(ref _playerActionMessage, value); }
@@ -798,23 +1382,28 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public string ConnectionState
     {
-        get => _connectionState;
+        get => ActiveTab?.ConnectionState ?? "Not connected";
         private set
         {
-            if (!SetField(ref _connectionState, value)) return;
-            (CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            RaisePropertyChanged(nameof(IsServerGlowGreen));
-            RaisePropertyChanged(nameof(IsServerGlowRed));
-            RaisePropertyChanged(nameof(IsServerGlowAmber));
-            RaisePropertyChanged(nameof(IsHealthGlowGreen));
-            RaisePropertyChanged(nameof(IsHealthGlowRed));
-            RaisePropertyChanged(nameof(IsHealthGlowAmber));
-            RaisePropertyChanged(nameof(IsHealthGlowNeutral));
-            RaisePropertyChanged(nameof(HealthStateColor));
+            if (!SetActiveTabField(t => t.ConnectionState, (t, v) => t.ConnectionState = v, value)) return;
+            RaiseConnectionStateDependents();
         }
+    }
+    private void RaiseConnectionStateDependents()
+    {
+        (CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        RaisePropertyChanged(nameof(IsServerGlowGreen));
+        RaisePropertyChanged(nameof(IsServerGlowRed));
+        RaisePropertyChanged(nameof(IsServerGlowAmber));
+        RaisePropertyChanged(nameof(IsHealthGlowGreen));
+        RaisePropertyChanged(nameof(IsHealthGlowRed));
+        RaisePropertyChanged(nameof(IsHealthGlowAmber));
+        RaisePropertyChanged(nameof(IsHealthGlowNeutral));
+        RaisePropertyChanged(nameof(HealthStateColorKey));
     }
     public bool IsServerTransitioning => ConnectionState is "Starting…" or "Stopping…" or "Restarting…";
     public string ServerState
@@ -838,13 +1427,145 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ServiceState { get => _serviceState; private set => SetField(ref _serviceState, value); }
     public string Detail { get => _detail; private set => SetField(ref _detail, value); }
     public string NativePidText { get => _nativePidText; private set => SetField(ref _nativePidText, value); }
+
+    // v0.7.28.0: ServerStatusDto.Processes already flowed end-to-end from the headless host's
+    // FindManagedServerProcesses (server-side) through ServerLifecycleSnapshot -- nothing on the
+    // Desktop side ever read it before this. Populated in ApplyStatus.
+    public ObservableCollection<ServerProcessDto> ManagedProcesses { get; } = [];
+    public bool HasManagedProcesses => ManagedProcesses.Count > 0;
+
+    // v0.7.44.0: machine-wide Palworld instance list (Doctor page), independent of the
+    // per-profile ManagedProcesses list above -- this can include instances belonging to a
+    // different install/profile entirely. Populated by RefreshAllInstancesAsync.
+    public ObservableCollection<ServerInstanceDto> AllInstances { get; } = [];
+    public bool HasAllInstances => AllInstances.Count > 0;
+    public string InstanceTerminationResultText
+    {
+        get => _instanceTerminationResultText;
+        private set { if (SetField(ref _instanceTerminationResultText, value)) RaisePropertyChanged(nameof(HasInstanceTerminationResult)); }
+    }
+    public bool HasInstanceTerminationResult => !string.IsNullOrWhiteSpace(InstanceTerminationResultText);
+    public ServerInstanceDto? SelectedInstance
+    {
+        get => _selectedInstance;
+        set
+        {
+            if (SetField(ref _selectedInstance, value))
+            {
+                RaisePropertyChanged(nameof(HasSelectedInstance));
+                RaisePropertyChanged(nameof(IsSelectedInstanceManaged));
+                InstanceTerminationResultText = string.Empty;
+                (TerminateSelectedInstanceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            }
+        }
+    }
+    public bool HasSelectedInstance => SelectedInstance is not null;
+    // A raw kill is only ever offered for an instance NOT confirmed as this profile's own managed
+    // process -- see ServerInstanceInfo's ManagedByThisProfile doc comment for why that flag is
+    // deliberately conservative. The managed case reuses ForceStopServerCommand instead (safe,
+    // crash-recovery-aware stop through this profile's own Lifecycle service).
+    public bool IsSelectedInstanceManaged => SelectedInstance?.ManagedByThisProfile ?? false;
     public string ListenerText { get => _listenerText; private set => SetField(ref _listenerText, value); }
     public string LastObservedText { get => _lastObservedText; private set => SetField(ref _lastObservedText, value); }
     public string LastTransitionText { get => _lastTransitionText; private set => SetField(ref _lastTransitionText, value); }
     public string UptimeText { get => _uptimeText; private set => SetField(ref _uptimeText, value); }
     public string PlayersState { get => _playersState; private set => SetField(ref _playersState, value); }
     public string OnlinePlayerCountText { get => _onlinePlayerCountText; private set => SetField(ref _onlinePlayerCountText, value); }
+    public Bitmap? MapBackgroundBitmap { get => _mapBackgroundBitmap; private set => SetField(ref _mapBackgroundBitmap, value); }
+    public string MapBackgroundStatusText { get => _mapBackgroundStatusText; private set => SetField(ref _mapBackgroundStatusText, value); }
+    public ICommand ClearMapBackgroundCommand { get; }
+    // v0.7.20.0: bundled presets (Palpagos/World Tree), listed for the picker in MainWindow.axaml.
+    public IReadOnlyList<MapPreset> MapPresets => MapPresetService.Presets;
+    public ICommand SetMapPresetCommand { get; }
+
+    // v0.7.21.0: real-position calibration only exists (and is only verified against) the
+    // Palpagos preset -- derived purely from which real file path is currently loaded, rather than
+    // a separately-tracked "active preset" field that could drift out of sync with it.
+    public bool IsPalpagosMapActive => _mapPresets.TryGetPresetForPath(_mapBackgroundPath)?.Key == "palpagos";
+
+    // Explicit opt-in, off by default -- see PalworldMapCoordinates' own header comment for what
+    // is and isn't verified about this conversion. A wrong-but-plausible-looking calibration is
+    // worse than the existing, already-correct relative-spread view, so this never silently
+    // replaces it.
+    public bool UseCalibratedWorldPositions
+    {
+        get => _useCalibratedWorldPositions;
+        set { if (SetField(ref _useCalibratedWorldPositions, value)) RebuildPlayerMapPoints(_lastPlayersForMap); }
+    }
+
+    // v0.6.16.0: the map background image is a Desktop-local preference (which machine's chosen
+    // image to show, if any), never a server-side setting -- see LocalMapPreferencesStore. Never
+    // leaves the view in a broken-image state: a missing/deleted/unreadable file just falls back
+    // to the plain coordinate grid the map canvas already draws underneath.
+    public void SetMapBackgroundImagePath(string path)
+    {
+        try
+        {
+            MapBackgroundBitmap = new Bitmap(path);
+            _mapPreferences.SaveBackgroundImagePath(path);
+            MapBackgroundStatusText = $"Background: {Path.GetFileName(path)}";
+            _mapBackgroundPath = path;
+            RaisePropertyChanged(nameof(IsPalpagosMapActive));
+            RebuildPlayerMapPoints(_lastPlayersForMap);
+        }
+        catch (Exception ex)
+        {
+            MapBackgroundStatusText = $"Unable to load that image: {ex.Message}";
+        }
+    }
+
+    private void ClearMapBackground()
+    {
+        MapBackgroundBitmap = null;
+        _mapPreferences.SaveBackgroundImagePath(null);
+        MapBackgroundStatusText = "Background: plain coordinate grid.";
+        _mapBackgroundPath = null;
+        RaisePropertyChanged(nameof(IsPalpagosMapActive));
+        RebuildPlayerMapPoints(_lastPlayersForMap);
+    }
+
+    // v0.7.20.0: extracts the bundled preset (once, cached on disk) and hands the resulting real
+    // file path to the exact same SetMapBackgroundImagePath path a browsed file already uses --
+    // no parallel loading/persistence logic for presets.
+    private void SetMapPreset(MapPreset? preset)
+    {
+        if (preset is null) return;
+        try
+        {
+            var path = _mapPresets.GetOrExtractPresetPath(preset);
+            SetMapBackgroundImagePath(path);
+        }
+        catch (Exception ex)
+        {
+            MapBackgroundStatusText = $"Unable to load the {preset.DisplayName} preset: {ex.Message}";
+        }
+    }
+
+    private void LoadMapBackgroundPreference()
+    {
+        var path = _mapPreferences.LoadBackgroundImagePath();
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            MapBackgroundStatusText = "Background: plain coordinate grid.";
+            return;
+        }
+        try
+        {
+            MapBackgroundBitmap = new Bitmap(path);
+            MapBackgroundStatusText = $"Background: {Path.GetFileName(path)}";
+            _mapBackgroundPath = path;
+        }
+        catch
+        {
+            MapBackgroundStatusText = "Background: plain coordinate grid (the saved image could not be loaded).";
+        }
+    }
     public string CpuText { get => _cpuText; private set => SetField(ref _cpuText, value); }
+    // v0.7.9.0: real in-game simulation FPS/frame time from Palworld's own REST /metrics endpoint --
+    // independent of the host-level CpuText above, and "—" whenever the Palworld REST API itself
+    // (not just the managed process) is unavailable, not tied to the managed-process Available flag.
+    public string ServerFpsText { get => _serverFpsText; private set => SetField(ref _serverFpsText, value); }
+    public string ServerFrameTimeText { get => _serverFrameTimeText; private set => SetField(ref _serverFrameTimeText, value); }
     public string MemoryText { get => _memoryText; private set => SetField(ref _memoryText, value); }
     public string ThreadCountText { get => _threadCountText; private set => SetField(ref _threadCountText, value); }
     public string MonitoringDetail { get => _monitoringDetail; private set => SetField(ref _monitoringDetail, value); }
@@ -897,6 +1618,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string DiagnosticsReportDetail { get => _diagnosticsReportDetail; private set => SetField(ref _diagnosticsReportDetail, value); }
     public string DistributionState { get => _distributionState; private set => SetField(ref _distributionState, value); }
     public string DistributionDetail { get => _distributionDetail; private set => SetField(ref _distributionDetail, value); }
+
+    // v0.7.45.0: Update Center Overhaul -- split by Group to match the two labeled sections
+    // (Core Server / Save & Runtime Dependencies) the v0.2.16.4 reference used.
+    public ObservableCollection<ComponentVersionDto> CoreServerComponents { get; } = [];
+    public ObservableCollection<ComponentVersionDto> SaveRuntimeDependencyComponents { get; } = [];
+    public bool HasComponentVersions => CoreServerComponents.Count > 0 || SaveRuntimeDependencyComponents.Count > 0;
+    public string ComponentVersionsCheckedAtText { get => _componentVersionsCheckedAtText; private set => SetField(ref _componentVersionsCheckedAtText, value); }
     public string SteamCmdState { get => _steamCmdState; private set => SetField(ref _steamCmdState, value); }
     public string ServerInstallState { get => _serverInstallState; private set => SetField(ref _serverInstallState, value); }
     public string DistributionPlatform { get => _distributionPlatform; private set => SetField(ref _distributionPlatform, value); }
@@ -958,6 +1686,33 @@ public sealed class MainWindowViewModel : ViewModelBase
             GuildOperationStatusText = "Select a guild, choose an operation, and enter the target player's ID.";
         }
     }
+    public PalInstanceDto? SelectedExplorerPal
+    {
+        get => _selectedExplorerPal;
+        set
+        {
+            if (!SetField(ref _selectedExplorerPal, value)) return;
+            (PreviewPalEditCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            PalEditPreviewToken = string.Empty;
+            PalEditConfirmed = false;
+            if (value is not null)
+            {
+                PalEditNickName = value.NickName;
+                PalEditLevel = value.Level;
+                PalEditRank = value.Rank;
+                PalEditTalentHp = value.TalentHp;
+                PalEditTalentShot = value.TalentShot;
+                PalEditTalentDefense = value.TalentDefense;
+                PalEditGender = value.Gender is "Male" or "Female" ? value.Gender : "Male";
+                PalEditIsRarePal = value.IsRarePal;
+                PalEditStatusText = $"Editing {value.DisplayName} (owned by {value.OwnerDisplay}). Adjust fields, then Preview.";
+            }
+            else
+            {
+                PalEditStatusText = "Refresh Pals, select one, and adjust its fields below.";
+            }
+        }
+    }
     public BaseExplorerItemDto? SelectedExplorerBase
     {
         get => _selectedExplorerBase;
@@ -1015,6 +1770,27 @@ public sealed class MainWindowViewModel : ViewModelBase
         "Remove Broken Member" => "remove-broken-member",
         _ => "claim"
     };
+    public ObservableCollection<PalInstanceDto> ExplorerPals { get; } = [];
+    public IReadOnlyList<string> PalGenderOptions { get; } = ["Male", "Female"];
+    public string PalEditNickName { get => _palEditNickName; set => SetField(ref _palEditNickName, value ?? string.Empty); }
+    public int PalEditLevel { get => _palEditLevel; set => SetField(ref _palEditLevel, value); }
+    public int PalEditRank { get => _palEditRank; set => SetField(ref _palEditRank, value); }
+    public int PalEditTalentHp { get => _palEditTalentHp; set => SetField(ref _palEditTalentHp, value); }
+    public int PalEditTalentShot { get => _palEditTalentShot; set => SetField(ref _palEditTalentShot, value); }
+    public int PalEditTalentDefense { get => _palEditTalentDefense; set => SetField(ref _palEditTalentDefense, value); }
+    public string PalEditGender { get => _palEditGender; set => SetField(ref _palEditGender, value ?? "Male"); }
+    public bool PalEditIsRarePal { get => _palEditIsRarePal; set => SetField(ref _palEditIsRarePal, value); }
+    public string PalEditPreviewToken
+    {
+        get => _palEditPreviewToken;
+        private set { if (SetField(ref _palEditPreviewToken, value)) (ApplyPalEditCommand as AsyncCommand)?.RaiseCanExecuteChanged(); }
+    }
+    public bool PalEditConfirmed
+    {
+        get => _palEditConfirmed;
+        set { if (SetField(ref _palEditConfirmed, value)) (ApplyPalEditCommand as AsyncCommand)?.RaiseCanExecuteChanged(); }
+    }
+    public string PalEditStatusText { get => _palEditStatusText; private set => SetField(ref _palEditStatusText, value); }
     public string BaseTransferTargetGuildId
     {
         get => _baseTransferTargetGuildId;
@@ -1057,10 +1833,117 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string Ue4ssWarning { get => _ue4ssWarning; private set => SetField(ref _ue4ssWarning, value); }
     public string Ue4ssInstalledVersion { get => _ue4ssInstalledVersion; private set => SetField(ref _ue4ssInstalledVersion, value); }
     public IReadOnlyList<string> Ue4ssForkOptions { get; } = ["Palworld Fork", "Official Upstream"];
-    public string SelectedUe4ssFork { get => _selectedUe4ssFork; set => SetField(ref _selectedUe4ssFork, value ?? "Palworld Fork"); }
-    public ModItemDto? SelectedMod { get => _selectedMod; set { if (SetField(ref _selectedMod, value)) { (DeleteSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged(); (RollbackSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } } }
-    public IReadOnlyList<string> ModInstallTypes { get; } = ["PAK", "UE4SS"];
-    public string ModInstallType { get => _modInstallType; set => SetField(ref _modInstallType, value ?? "PAK"); }
+    public string SelectedUe4ssFork
+    {
+        get => _selectedUe4ssFork;
+        set
+        {
+            if (SetField(ref _selectedUe4ssFork, value ?? "Palworld Fork"))
+            {
+                RaisePropertyChanged(nameof(Ue4ssVisibleReleases));
+                RaisePropertyChanged(nameof(HasUe4ssReleases));
+            }
+        }
+    }
+
+    // v0.7.48.0: UE4SS Release Catalog -- real data for the "Release source" picker, replacing the
+    // former client-side-only stub. Two source collections (one per GitHub repo), with a single
+    // computed property the XAML binds to that switches based on SelectedUe4ssFork.
+    public ObservableCollection<Ue4ssReleaseDto> Ue4ssPalworldForkReleases { get; } = [];
+    public ObservableCollection<Ue4ssReleaseDto> Ue4ssOfficialUpstreamReleases { get; } = [];
+    public IReadOnlyList<Ue4ssReleaseDto> Ue4ssVisibleReleases =>
+        SelectedUe4ssFork == "Official Upstream" ? Ue4ssOfficialUpstreamReleases : Ue4ssPalworldForkReleases;
+    public bool HasUe4ssReleases => Ue4ssVisibleReleases.Count > 0;
+    public string Ue4ssReleaseCatalogStatusText { get => _ue4ssReleaseCatalogStatusText; private set => SetField(ref _ue4ssReleaseCatalogStatusText, value); }
+
+    // v0.7.49.0: UE4SS Install/Rollback -- same Preview-then-Apply shape as backup retention cleanup
+    // (BackupRetentionToken above): selecting a release or changing it invalidates any outstanding
+    // preview token, so Apply can never fire against a preview that no longer matches the selection.
+    public Ue4ssReleaseDto? SelectedUe4ssRelease
+    {
+        get => _selectedUe4ssRelease;
+        set
+        {
+            if (SetField(ref _selectedUe4ssRelease, value))
+            {
+                var hadToken = !string.IsNullOrWhiteSpace(Ue4ssInstallToken);
+                InvalidateUe4ssInstallPreview();
+                if (hadToken) Ue4ssInstallState = "Selection changed. Preview Install again before confirming.";
+                (PreviewUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            }
+        }
+    }
+    public string Ue4ssInstallToken { get => _ue4ssInstallToken; private set { if (SetField(ref _ue4ssInstallToken, value)) (ApplyUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
+    public string Ue4ssInstallState { get => _ue4ssInstallState; private set => SetField(ref _ue4ssInstallState, value); }
+    public bool Ue4ssRollbackAvailable { get => _ue4ssRollbackAvailable; private set { if (SetField(ref _ue4ssRollbackAvailable, value)) (RollbackUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
+    public ModItemDto? SelectedMod
+    {
+        get => _selectedMod;
+        set
+        {
+            if (SetField(ref _selectedMod, value))
+            {
+                RaisePropertyChanged(nameof(HasSelectedMod));
+                // v0.7.41.0: an update check result is only valid for the MOD it was run against;
+                // switching selection must not leave a stale "update available" claim on screen.
+                SelectedModUpdateText = string.Empty;
+                _selectedModUpdateWorkshopId = null;
+                (DeleteSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+                (RollbackSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+                (CheckSelectedModUpdateCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+                (UpdateSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+                // v0.7.55.0: a fetched description is only valid for the MOD it was fetched for.
+                SelectedModDescription = null;
+                SelectedModDescriptionSourceInput = string.Empty;
+                (FetchSelectedModDescriptionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+                (SetSelectedModDescriptionSourceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            }
+        }
+    }
+    // v0.7.40.0: MOD Library's new per-selection details panel (item 40) gates its whole content
+    // on a selection existing, showing a placeholder otherwise.
+    public bool HasSelectedMod => SelectedMod is not null;
+    private string _selectedModUpdateText = string.Empty;
+    private string? _selectedModUpdateWorkshopId;
+    // v0.7.41.0: MOD update detection (item 52) result text for the currently selected MOD.
+    public string SelectedModUpdateText { get => _selectedModUpdateText; private set => SetField(ref _selectedModUpdateText, value); }
+    private ModDescriptionResultDto? _selectedModDescription;
+    // v0.7.55.0: website-sourced MOD descriptions (item 40's deferred half). Null until the user
+    // explicitly clicks Fetch/Refresh for the current selection -- never populated automatically.
+    public ModDescriptionResultDto? SelectedModDescription
+    {
+        get => _selectedModDescription;
+        private set
+        {
+            if (SetField(ref _selectedModDescription, value))
+            {
+                RaisePropertyChanged(nameof(HasSelectedModDescription));
+                RaisePropertyChanged(nameof(HasModDescriptionResult));
+                RaisePropertyChanged(nameof(ShowNoModDescriptionMatchMessage));
+            }
+        }
+    }
+    public bool HasSelectedModDescription => SelectedModDescription is { Available: true };
+    public bool HasModDescriptionResult => SelectedModDescription is not null;
+    // v0.7.55.0 polish: distinct from HasModDescriptionResult (true for both a match and a miss) --
+    // this is only true after an actual fetch came back with no match, so the "set a Source URL"
+    // guidance doesn't show preemptively before Fetch has ever been clicked for this selection.
+    public bool ShowNoModDescriptionMatchMessage => HasModDescriptionResult && !HasSelectedModDescription;
+
+    // v0.7.59.0: Safe-Start MOD Diagnostic. Polled independently of IsBusy -- the diagnostic itself
+    // runs server-side over many minutes (a start/stop cycle per candidate MOD), so holding IsBusy
+    // for its whole duration would disable unrelated UI the entire time. Only the initial Begin/
+    // Cancel POST calls go through IsBusy; the poll loop runs on its own DispatcherTimer.
+    private SafeStartStatusDto? _modSafeStartStatus;
+    public SafeStartStatusDto? ModSafeStartStatus
+    {
+        get => _modSafeStartStatus;
+        private set { if (SetField(ref _modSafeStartStatus, value)) RaisePropertyChanged(nameof(HasModSafeStartStatus)); }
+    }
+    public bool HasModSafeStartStatus => ModSafeStartStatus is not null;
+    private DispatcherTimer? _modSafeStartPollTimer;
+    private string _selectedModDescriptionSourceInput = string.Empty;
+    public string SelectedModDescriptionSourceInput { get => _selectedModDescriptionSourceInput; set => SetField(ref _selectedModDescriptionSourceInput, value ?? string.Empty); }
     public string ModInstallPackage { get => _modInstallPackage; set => SetField(ref _modInstallPackage, value ?? string.Empty); }
     public WorkshopItemDto? SelectedWorkshopItem { get => _selectedWorkshopItem; set { if (SetField(ref _selectedWorkshopItem, value)) (ImportSelectedWorkshopModCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string WorkshopScanState { get => _workshopScanState; private set => SetField(ref _workshopScanState, value); }
@@ -1076,15 +1959,55 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public bool IsBusy
     {
-        get => _isBusy;
+        get => ActiveTab?.IsBusy ?? false;
         private set
         {
-            if (!SetField(ref _isBusy, value))
+            if (!SetActiveTabField(t => t.IsBusy, (t, v) => t.IsBusy = v, value))
                 return;
 
-            StatusBarText = value ? "Working…" : (ConnectionState == "Connected" ? $"Connected — {ServerState}" : ConnectionState);
+            RaiseIsBusyDependents(value);
+        }
+    }
+    // v0.7.22.0: requested directly -- the footer's IsBusy indicator previously said only
+    // "Working…" no matter which of the many possible operations was actually running. Threaded
+    // through the highest-value operations first (server lifecycle, backup create/restore, world
+    // transaction apply) rather than attempting blanket coverage of every IsBusy = true site --
+    // an operation that doesn't set this falls back to the same generic "Working…" as before, a
+    // disclosed gap rather than a regression.
+    public string? BusyReason { get => _busyReason; set => SetField(ref _busyReason, value); }
+    // v0.7.43.0: findings-completeness fix (item 6). Elapsed time and which server the busy
+    // operation belongs to, both genuinely missing before -- the reason text alone gave no sense
+    // of how long an operation had been running, and BusyReason itself is a flat field (not
+    // per-tab), so a stale reason from a different tab could otherwise linger visually after
+    // switching tabs mid-operation. Real sub-step/percent-complete progress remains a disclosed
+    // gap (most operations here are all-or-nothing REST calls, not streamed progress -- would
+    // need backend changes too, per the original finding's own note).
+    public string BusyElapsedText { get => _busyElapsedText; private set => SetField(ref _busyElapsedText, value); }
+
+    private void RaiseIsBusyDependents(bool value)
+    {
+            if (value)
+            {
+                _busyStartedAt = DateTimeOffset.UtcNow;
+                _busyServerName = ActiveTab?.ProfileName;
+                BusyElapsedText = "0s";
+                _busyElapsedTimer.Start();
+            }
+            else
+            {
+                _busyElapsedTimer.Stop();
+                _busyStartedAt = null;
+                _busyServerName = null;
+                BusyElapsedText = string.Empty;
+            }
+
+            var reasonWithServer = value
+                ? (BusyReason ?? "Working…") + (string.IsNullOrWhiteSpace(_busyServerName) ? string.Empty : $" ({_busyServerName})")
+                : string.Empty;
+            StatusBarText = value ? reasonWithServer : (ConnectionState == "Connected" ? $"Connected — {ServerState}" : ConnectionState);
 
             (ConnectCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (DetectLocalServiceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (DiscoverServicesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RefreshMonitoringCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RefreshPlayersCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -1097,11 +2020,16 @@ public sealed class MainWindowViewModel : ViewModelBase
             (DismissNotificationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RefreshEnvironmentCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (VerifyEnvironmentCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (InstallMissingEnvironmentCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (CheckEnvironmentUpdatesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (CreateDefaultServerSettingsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (KickSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (BanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (UnbanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (TeleportPlayerToMeCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (TeleportToPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (SaveWorldNowCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (RefreshBanListCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (RefreshTemporaryBansCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (CreateTemporaryBanCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (WhisperSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (PromoteSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -1122,16 +2050,21 @@ public sealed class MainWindowViewModel : ViewModelBase
             (EnableAllModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (DisableAllModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RepairModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (PreviewUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (ApplyUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (RollbackUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (ValidateActiveWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (ApplyWorldTransactionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (LoadConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (SaveConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (LoadPalworldConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (SavePalworldConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        }
+            (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (InstallMissingEnvironmentCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (RefreshAllInstancesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (TerminateSelectedInstanceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
     }
 
     public NavigationPage SelectedPage
@@ -1141,6 +2074,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             if (!SetField(ref _selectedPage, value))
                 return;
+
+            // v0.7.74.0: kept in sync with whichever tab is active so ActiveTab's setter can
+            // restore it on the way back -- see TabSession.LastPage's own comment. Written here
+            // (the single setter every navigation already funnels through) rather than at each
+            // call site, so no future navigation call site can forget it.
+            if (ActiveTab is not null) ActiveTab.LastPage = value;
 
             RaisePropertyChanged(nameof(PageTitle));
             RaisePropertyChanged(nameof(PageSubtitle));
@@ -1225,14 +2164,27 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool IsWorldGroupSelected => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds;
     public bool IsModsGroupSelected => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.Ue4ss;
     public bool IsToolsGroupSelected => SelectedPage is NavigationPage.UpdateCenter or NavigationPage.Doctor or NavigationPage.CrashAnalyzer or NavigationPage.SaveTools or NavigationPage.DiagnosticsCenter;
-    public bool IsSystemGroupSelected => SelectedPage is NavigationPage.Settings or NavigationPage.Notifications or NavigationPage.ActivityAudit or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter;
+    public bool IsSystemGroupSelected => SelectedPage is NavigationPage.Settings or NavigationPage.Notifications or NavigationPage.ActivityAudit or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter or NavigationPage.Fleet;
     public bool IsV5HomeCategory => SelectedPage == NavigationPage.Dashboard;
     public bool IsV5ServerCategory => SelectedPage is NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Console or NavigationPage.Workspace;
     public bool IsV5WorldCategory => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds;
     public bool IsV5BackupsCategory => SelectedPage == NavigationPage.Backups;
     public bool IsV5ModsCategory => IsModsGroupSelected;
     public bool IsV5ToolsCategory => IsToolsGroupSelected;
-    public bool IsV5SystemCategory => SelectedPage is NavigationPage.Settings or NavigationPage.ActivityAudit or NavigationPage.Notifications or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter;
+    public bool IsV5SystemCategory => SelectedPage is NavigationPage.Settings or NavigationPage.ActivityAudit or NavigationPage.Notifications or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter or NavigationPage.Fleet;
+
+    // v0.7.54.0 Per-Page Title Background Artwork (item 8) -- real illustrated artwork behind the
+    // page header, per category tab, matching Dark/Light. Only Home and World have art so far (a
+    // free anonymous AI-image-generation session hit its daily guest limit after these two);
+    // Server/Backups/Mods/Tools/System are deliberately left without art for now rather than
+    // guessing at placeholder gradients -- the original finding explicitly wanted real
+    // illustration, not a tint, so an incomplete-but-real set was chosen over a complete-but-fake
+    // one. Each combination is its own bool (rather than a single computed image-path property)
+    // matching this codebase's existing convention for per-state Classes/IsVisible bindings.
+    public bool IsHomePageArtDark => IsV5HomeCategory && !IsLightMode;
+    public bool IsHomePageArtLight => IsV5HomeCategory && IsLightMode;
+    public bool IsWorldPageArtDark => IsV5WorldCategory && !IsLightMode;
+    public bool IsWorldPageArtLight => IsV5WorldCategory && IsLightMode;
 
     public ICommand ConnectCommand { get; }
     public ICommand DiscoverServicesCommand { get; }
@@ -1261,6 +2213,16 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand RevokePrincipalCommand { get; }
     public ICommand RefreshAlertCenterCommand { get; }
     public ICommand SaveAlertRulesCommand { get; }
+    public ICommand RefreshDiscordBotConfigCommand { get; }
+    public ICommand SaveDiscordBotConfigCommand { get; }
+    public ICommand AddDiscordRoleMappingCommand { get; }
+    public ICommand RemoveDiscordRoleMappingCommand { get; }
+    public ICommand RefreshWhitelistCommand { get; }
+    public ICommand SaveWhitelistCommand { get; }
+    public ICommand AddWhitelistEntryCommand { get; }
+    public ICommand RemoveWhitelistEntryCommand { get; }
+    public ICommand RefreshAntiCheatCommand { get; }
+    public ICommand SaveAntiCheatRulesCommand { get; }
     public ICommand RefreshFleetCommand { get; }
     public ICommand CloneWorldCommand { get; }
     public ICommand BackupAllCommand { get; }
@@ -1278,6 +2240,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand AddPlayerWarningCommand { get; }
     public ICommand KickSelectedPlayerCommand { get; }
     public ICommand BanSelectedPlayerCommand { get; }
+    public ICommand UnbanSelectedPlayerCommand { get; }
+    public ICommand TeleportPlayerToMeCommand { get; }
+    public ICommand TeleportToPlayerCommand { get; }
+    public ICommand SaveWorldNowCommand { get; }
+    public ICommand RefreshBanListCommand { get; }
     public ICommand WhisperSelectedPlayerCommand { get; }
     public ICommand PromoteSelectedPlayerCommand { get; }
     public ICommand GiveItemSelectedPlayerCommand { get; }
@@ -1292,12 +2259,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand OpenBackupRootCommand { get; }
     public ICommand LoadConfigurationCommand { get; }
     public ICommand SaveConfigurationCommand { get; }
-    public ICommand LoadPalworldConfigurationCommand { get; }
     public ICommand SavePalworldConfigurationCommand { get; }
     public ICommand ShowSimpleConfigCommand { get; }
     public ICommand ShowAdvancedConfigCommand { get; }
-    public ICommand ApplyConfigPresetCommand { get; }
     public ICommand ResetConfigChangesCommand { get; }
+    public ICommand SaveCurrentAsPresetCommand { get; }
     public ICommand GenerateServerNameCommand { get; }
     public ICommand GenerateSetupServerNameCommand { get; }
     public ICommand RunDoctorCommand { get; }
@@ -1305,8 +2271,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand FixDiagnosticCommand { get; }
     public ICommand RefreshEnvironmentCommand { get; }
     public ICommand VerifyEnvironmentCommand { get; }
-    public ICommand InstallMissingEnvironmentCommand { get; }
-    public ICommand CheckEnvironmentUpdatesCommand { get; }
     public ICommand CreateDefaultServerSettingsCommand { get; }
     public ICommand EnvironmentActionCommand { get; }
     public ICommand RefreshDistributionCommand { get; }
@@ -1320,6 +2284,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand OpenSelectedGuildLeaderCommand { get; }
     public ICommand PreviewGuildOwnershipCommand { get; }
     public ICommand ApplyGuildOwnershipCommand { get; }
+    public ICommand RefreshPalsCommand { get; }
+    public ICommand PreviewPalEditCommand { get; }
+    public ICommand ApplyPalEditCommand { get; }
     public ICommand PreviewBaseTransferCommand { get; }
     public ICommand ApplyBaseTransferCommand { get; }
     public ICommand PreviewBaseRecoveryCommand { get; }
@@ -1335,14 +2302,60 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand RepairModsCommand { get; }
     public ICommand ScanWorkshopModsCommand { get; }
     public ICommand ImportSelectedWorkshopModCommand { get; }
+    public ICommand CheckSelectedModUpdateCommand { get; }
+    public ICommand PreviewUe4ssInstallCommand { get; }
+    public ICommand ApplyUe4ssInstallCommand { get; }
+    public ICommand RollbackUe4ssInstallCommand { get; }
+    public ICommand UpdateSelectedModCommand { get; }
+    public ICommand FetchSelectedModDescriptionCommand { get; }
+    public ICommand SetSelectedModDescriptionSourceCommand { get; }
+    public ICommand BeginModSafeStartCommand { get; }
+    public ICommand CancelModSafeStartCommand { get; }
     public ICommand ExportDoctorCommand { get; }
     public ICommand StartCommand { get; }
     public ICommand StopCommand { get; }
     public ICommand RestartCommand { get; }
+    // v0.7.28.0: ForceStopServerAsync (MystTiqApiClient) already existed and was already reachable
+    // from ShutdownForExitAsync(force: true) -- this is the first time it's exposed as a
+    // user-facing command rather than only firing internally on app exit.
+    public ICommand ForceStopServerCommand { get; }
+    public ICommand InstallMissingEnvironmentCommand { get; }
+    public ICommand RefreshAllInstancesCommand { get; }
+    public ICommand TerminateSelectedInstanceCommand { get; }
+    public ICommand SetAccentThemeCommand { get; }
     public ICommand SaveProfileCommand { get; }
-    public ICommand NewProfileCommand { get; }
+    public ICommand SetUpNewServerTabCommand { get; }
+    public ICommand ConnectLocalServerTabCommand { get; }
+    public ICommand ConnectRemoteServerTabCommand { get; }
+    public ICommand CloneServerFlowCommand { get; }
+    public ICommand ConnectExistingProfileTabCommand { get; }
+    public ICommand CloseTabCommand { get; }
+    public ICommand CloseActiveTabCommand { get; }
     public ICommand DeleteProfileCommand { get; }
+    public ICommand ForgetSavedTokenCommand { get; }
     public ICommand NavigateCommand { get; }
+    public ICommand ToggleWorldMapCommand { get; }
+    public ICommand TogglePalEditorCommand { get; }
+    public ICommand ToggleWanDiagnosticsCommand { get; }
+    public ICommand ToggleLocalDiagnosticsCommand { get; }
+    public ICommand ToggleDiscordBotCommand { get; }
+    public ICommand ToggleAntiCheatCommand { get; }
+    public ICommand ToggleBanListCommand { get; }
+    public ICommand ToggleWhitelistCommand { get; }
+    public ICommand ToggleTemporaryBansCommand { get; }
+    public ICommand RefreshTemporaryBansCommand { get; }
+    public ICommand CreateTemporaryBanCommand { get; }
+    public ICommand CancelTemporaryBanCommand { get; }
+
+    public bool IsWorldMapExpanded { get => _isWorldMapExpanded; private set => SetField(ref _isWorldMapExpanded, value); }
+    public bool IsPalEditorExpanded { get => _isPalEditorExpanded; private set => SetField(ref _isPalEditorExpanded, value); }
+    public bool IsWanDiagnosticsExpanded { get => _isWanDiagnosticsExpanded; private set => SetField(ref _isWanDiagnosticsExpanded, value); }
+    public bool IsLocalDiagnosticsExpanded { get => _isLocalDiagnosticsExpanded; private set => SetField(ref _isLocalDiagnosticsExpanded, value); }
+    public bool IsDiscordBotExpanded { get => _isDiscordBotExpanded; private set => SetField(ref _isDiscordBotExpanded, value); }
+    public bool IsAntiCheatExpanded { get => _isAntiCheatExpanded; private set => SetField(ref _isAntiCheatExpanded, value); }
+    public bool IsBanListExpanded { get => _isBanListExpanded; private set => SetField(ref _isBanListExpanded, value); }
+    public bool IsWhitelistExpanded { get => _isWhitelistExpanded; private set => SetField(ref _isWhitelistExpanded, value); }
+    public bool IsTemporaryBansExpanded { get => _isTemporaryBansExpanded; private set => SetField(ref _isTemporaryBansExpanded, value); }
 
     public string CrashAnalyzerState { get => _crashAnalyzerState; private set => SetField(ref _crashAnalyzerState, value); }
     public string SaveToolsState { get => _saveToolsState; private set => SetField(ref _saveToolsState, value); }
@@ -1358,9 +2371,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             if (!SetField(ref _palworldConfigLoaded, value)) return;
             (SavePalworldConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (ApplyConfigPresetCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (ResetConfigChangesCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (GenerateServerNameCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (SaveCurrentAsPresetCommand as RelayCommand)?.RaiseCanExecuteChanged();
             RaisePropertyChanged(nameof(WorkspaceHealthText));
         }
     }
@@ -1369,6 +2382,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool IsConfigAdvancedView => !_isConfigSimpleView;
     public PalworldSettingDto? ServerNameSetting => PalworldSettings.FirstOrDefault(x => x.Name.Equals("ServerName", StringComparison.OrdinalIgnoreCase));
     public PalworldSettingDto? ServerDescriptionSetting => PalworldSettings.FirstOrDefault(x => x.Name.Equals("ServerDescription", StringComparison.OrdinalIgnoreCase));
+    public PalworldSettingDto? AdminPasswordSetting => PalworldSettings.FirstOrDefault(x => x.Name.Equals("AdminPassword", StringComparison.OrdinalIgnoreCase));
+    public PalworldSettingDto? ServerPasswordSetting => PalworldSettings.FirstOrDefault(x => x.Name.Equals("ServerPassword", StringComparison.OrdinalIgnoreCase));
+    public string NewConfigPresetName
+    {
+        get => _newConfigPresetName;
+        set { if (SetField(ref _newConfigPresetName, value ?? string.Empty)) (SaveCurrentAsPresetCommand as RelayCommand)?.RaiseCanExecuteChanged(); }
+    }
     public string ConfigSearchText
     {
         get => _configSearchText;
@@ -1382,7 +2402,15 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string SelectedConfigPreset
     {
         get => _selectedConfigPreset;
-        set { if (SetField(ref _selectedConfigPreset, value ?? "Custom")) (ApplyConfigPresetCommand as RelayCommand)?.RaiseCanExecuteChanged(); }
+        set
+        {
+            if (!SetField(ref _selectedConfigPreset, value ?? "Custom")) return;
+            // "Custom" means "current values don't match any known preset" -- there's nothing to
+            // apply for it. DetectAndSyncConfigPreset() bypasses this setter entirely (direct field
+            // assignment) specifically so that reverse-detected selection never re-triggers this.
+            if (PalworldConfigLoaded && !IsBusy && !string.Equals(_selectedConfigPreset, "Custom", StringComparison.Ordinal))
+                ApplySelectedConfigurationPreset();
+        }
     }
     public string PalworldConfigDirtyText { get => _palworldConfigDirtyText; private set => SetField(ref _palworldConfigDirtyText, value); }
     public string PalworldConfigValidationText { get => _palworldConfigValidationText; private set => SetField(ref _palworldConfigValidationText, value); }
@@ -1401,8 +2429,48 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string SetupAdminPassword { get => _setupAdminPassword; set => SetField(ref _setupAdminPassword, value ?? string.Empty); }
     public string SetupServerPassword { get => _setupServerPassword; set => SetField(ref _setupServerPassword, value ?? string.Empty); }
     public string SetupMaximumPlayers { get => _setupMaximumPlayers; set => SetField(ref _setupMaximumPlayers, value ?? string.Empty); }
-    public string SetupGamePort { get => _setupGamePort; set => SetField(ref _setupGamePort, value ?? string.Empty); }
-    public string SetupRestPort { get => _setupRestPort; set => SetField(ref _setupRestPort, value ?? string.Empty); }
+    public string SetupGamePort
+    {
+        get => _setupGamePort;
+        set { if (SetField(ref _setupGamePort, value ?? string.Empty)) CheckSetupPortAsync(_setupGamePort, "UDP", v => SetupGamePortWarningText = v); }
+    }
+    public string SetupRestPort
+    {
+        get => _setupRestPort;
+        set { if (SetField(ref _setupRestPort, value ?? string.Empty)) CheckSetupPortAsync(_setupRestPort, "TCP", v => SetupRestPortWarningText = v); }
+    }
+    public string SetupGamePortWarningText
+    {
+        get => _setupGamePortWarningText;
+        private set { if (SetField(ref _setupGamePortWarningText, value)) RaisePropertyChanged(nameof(HasSetupGamePortWarning)); }
+    }
+    public string SetupRestPortWarningText
+    {
+        get => _setupRestPortWarningText;
+        private set { if (SetField(ref _setupRestPortWarningText, value)) RaisePropertyChanged(nameof(HasSetupRestPortWarning)); }
+    }
+    public bool HasSetupGamePortWarning => SetupGamePortWarningText.Length > 0;
+    public bool HasSetupRestPortWarning => SetupRestPortWarningText.Length > 0;
+
+    // v0.7.2.0: not a hard block (a stale/zombie listener shouldn't be able to prevent recovery) --
+    // a live, best-effort warning shown while the user is still typing a candidate port, so a
+    // conflict is visible before they click Create rather than discovered only after the fact.
+    private async void CheckSetupPortAsync(string portText, string protocol, Action<string> setWarning)
+    {
+        setWarning(string.Empty);
+        if (SelectedProfile is null || !int.TryParse(portText, out var port) || port is < 1 or > 65535)
+            return;
+        try
+        {
+            var profile = BuildProfileFromEditor(SelectedProfile.Id);
+            var result = await _api.CheckPortAsync(profile, port, protocol, BearerToken);
+            if (result.InUse)
+                setWarning(result.ProcessName is null
+                    ? $"Port {port} ({protocol}) already appears to be in use."
+                    : $"Port {port} ({protocol}) is already in use by {result.ProcessName} (PID {result.OwningProcessId?.ToString() ?? "unknown"}).");
+        }
+        catch { /* best-effort warning only -- a failed check must not block editing the form */ }
+    }
     public bool SetupCreateConfirmed
     {
         get => _setupCreateConfirmed;
@@ -1419,6 +2487,21 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string BackupArchiveCountText => BackupItems.Count.ToString();
     public string BackupVerifiedCountText => BackupItems.Count(x => x.VerificationText.Contains("Verified", StringComparison.OrdinalIgnoreCase)).ToString();
     public string BackupPendingCountText => BackupItems.Count(x => !x.VerificationText.Contains("Verified", StringComparison.OrdinalIgnoreCase)).ToString();
+
+    // v0.7.30.0 bug fix: BackupItems used to be populated at three separate call sites, each with
+    // its own Clear()+foreach(Add) -- but only one of the three also raised change notifications for
+    // the three computed properties above, so the summary cards silently stayed at 0 no matter how
+    // many backups actually existed, even though the list itself (which observes BackupItems'
+    // CollectionChanged directly) rendered correctly. All three call sites now go through this one
+    // helper so the notification can't be forgotten a fourth time.
+    private void PopulateBackupItems(IEnumerable<BackupItemDto> items)
+    {
+        BackupItems.Clear();
+        foreach (var item in items) BackupItems.Add(item);
+        RaisePropertyChanged(nameof(BackupArchiveCountText));
+        RaisePropertyChanged(nameof(BackupVerifiedCountText));
+        RaisePropertyChanged(nameof(BackupPendingCountText));
+    }
 
     public string WorkspaceDeploymentMode => !IsLocalProfile ? "REMOTE" : AppContext.BaseDirectory.Contains("artifacts", StringComparison.OrdinalIgnoreCase) ? "PORTABLE / DEVELOPMENT" : "INSTALLED";
     public string WorkspaceHealthText => ConfigLoaded ? "CONFIGURATION LOADED" : "NOT VALIDATED";
@@ -1716,6 +2799,8 @@ public sealed class MainWindowViewModel : ViewModelBase
                 break;
             case NavigationPage.AlertCenter:
                 await RefreshAlertCenterAsync();
+                await RefreshDiscordBotConfigAsync();
+                await RefreshAntiCheatAsync();
                 break;
             case NavigationPage.Fleet:
                 await RefreshFleetAsync();
@@ -1771,7 +2856,24 @@ public sealed class MainWindowViewModel : ViewModelBase
 
             _profileStore.Save(Profiles);
             SelectedProfile = profile;
-            Detail = $"Connection profile '{profile.Name}' saved. Bearer token was not persisted.";
+
+            // v0.7.6.0: any OTHER open tab already pointed at this same profile Id previously kept
+            // its own stale copy (old name/URL/cert pin) forever -- a rename or address change here
+            // silently would not reach it. Only the profile reference/display fields are refreshed;
+            // an already-connected background tab's live BearerToken/ConnectionState are left alone
+            // rather than force-disconnecting it just because its profile was edited elsewhere.
+            foreach (var tab in Tabs)
+            {
+                if (ReferenceEquals(tab, ActiveTab) || tab.Profile?.Id != profile.Id) continue;
+                tab.Profile = profile;
+                tab.ProfileName = profile.Name;
+                tab.ServerUrl = profile.BaseAddress.ToString().TrimEnd('/');
+                tab.CertificateSha256 = profile.ServerCertificateSha256 ?? string.Empty;
+                tab.TargetServerId = profile.ServerId ?? string.Empty;
+            }
+
+            SaveTabSession();
+            Detail = $"Connection profile '{profile.Name}' saved.";
         }
         catch (Exception ex)
         {
@@ -1786,12 +2888,688 @@ public sealed class MainWindowViewModel : ViewModelBase
         ServerUrl = "http://127.0.0.1:8213";
         BearerToken = string.Empty;
         CertificateSha256 = string.Empty;
+        TargetServerId = string.Empty;
         ManagementApiConnected = false;
         ConnectionState = "Not connected";
-        Detail = "Enter the MystTiq management address and security details, then save the new server profile.";
+        Detail = "Choose whether this server runs on this machine or elsewhere.";
+        ConnectionKind = string.Empty;
+        NewServerWizardStep = 0;
         RaisePropertyChanged(nameof(IsLocalProfile));
         (DeleteProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        Navigate(nameof(NavigationPage.Settings));
+    }
+
+    // v0.7.13.0: Step 0 -- picking Local or Remote pre-fills the draft ServerUrl appropriately and
+    // advances straight to Connection Details (step 1), which then shows the matching sub-view.
+    private void ChooseLocalConnection()
+    {
+        ConnectionKind = "Local";
+        if (string.IsNullOrWhiteSpace(ServerUrl) || ServerUrl == "http://127.0.0.1:8213")
+            ServerUrl = "http://127.0.0.1:8213";
+        AdvanceWizardStep();
+    }
+    private void ChooseRemoteConnection()
+    {
+        ConnectionKind = "Remote";
+        if (ServerUrl == "http://127.0.0.1:8213")
+            ServerUrl = string.Empty;
+        AdvanceWizardStep();
+    }
+
+    // v0.7.13.0: the Local branch's "just find it for me" action. Unlike BootstrapLocalCommand
+    // (which requires an already-saved SelectedProfile == LocalDefault), this works during profile
+    // creation -- SelectedProfile is still null at this point -- by writing straight into the draft
+    // ServerUrl/Detail fields and then attempting a normal connect, exactly the way BootstrapLocalAsync
+    // does for the one already-saved local profile.
+    private async Task DetectLocalServiceAsync()
+    {
+        IsBusy = true;
+        Detail = "Looking for a MystTiq service on this machine…";
+        try
+        {
+            var snapshot = await _localDiscovery.DiscoverAsync();
+            var result = await _localBootstrapper.EnsureAvailableAsync(snapshot);
+            ServerUrl = result.Endpoint;
+            ConnectionState = result.Available ? "Local backend ready" : "Local backend unavailable";
+            Detail = result.Detail;
+            if (result.Available) await RefreshAsync(silent: true);
+        }
+        catch (Exception ex) { ConnectionState = "Local detection failed"; Detail = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.3.0: Next/Back only ever move between 0 and 3 -- IsChoosingConnectionKind/IsWizardStep1/
+    // 2/3 already gate the whole flow behind IsCreatingNewProfile, so once a profile is saved (or
+    // the wizard is closed by switching to an existing profile) these become no-ops rather than
+    // needing their own guard.
+    private void AdvanceWizardStep()
+    {
+        if (NewServerWizardStep < 3) NewServerWizardStep++;
+    }
+    private void GoBackWizardStep()
+    {
+        if (NewServerWizardStep <= 1)
+        {
+            // Stepping back off Connection Details returns to the Local/Remote choice rather than
+            // going below step 0 -- re-choosing clears ConnectionKind so the sub-view doesn't show a
+            // stale branch (e.g. Local's fields) if the user picks Remote instead this time.
+            NewServerWizardStep = 0;
+            ConnectionKind = string.Empty;
+            return;
+        }
+        NewServerWizardStep--;
+    }
+
+    // Opens a new tab and puts it in the same "creating a new connection" state BeginNewProfile()
+    // has always put the (single, shared) connection in -- now scoped to whichever tab was just
+    // opened instead of replacing the app's one-and-only connection.
+    private void OpenNewServerTab()
+    {
+        ActiveTab = CreateTab();
+        BeginNewProfile();
+    }
+
+    // v0.7.52.0 "+" Flow Restructure (item 53): the wizard's step 0 Local/Remote choice already
+    // existed, just one step deep -- these two open a new tab and jump straight past it, reusing
+    // ChooseLocalConnection/ChooseRemoteConnection unchanged rather than duplicating their state
+    // transitions. "Set Up New Server" (OpenNewServerTab, above) is left as-is, still landing on the
+    // step-0 choice cards -- kept as the generic/exploratory entry point since MystTiq's wizard
+    // doesn't actually distinguish "install a fresh local server" from "connect to an already-running
+    // one" as different code paths (both just resolve to the same Local sub-view); only the framing
+    // text below differs, disclosed in the architecture doc rather than inventing a backend
+    // distinction that doesn't exist.
+    private void OpenConnectLocalServerTab()
+    {
+        ActiveTab = CreateTab();
+        BeginNewProfile();
+        ChooseLocalConnection();
+        Detail = "Connecting to an already-running local server.";
+    }
+
+    private void OpenConnectRemoteServerTab()
+    {
+        ActiveTab = CreateTab();
+        BeginNewProfile();
+        ChooseRemoteConnection();
+        Detail = "Connecting to a remote MystTiq server.";
+    }
+
+    // "Clone a Server" needs an already-connected LOCAL source tab (CloneWorldCommand's own
+    // CanExecute already requires ManagementApiConnected, and BootstrapLocalCommand/IsLocalProfile
+    // confirm cloning is a local-only concern) -- there is nothing to clone FROM otherwise. Surfaces
+    // only when at least one open tab qualifies; the flyout builder (MainWindow.axaml.cs) hides this
+    // entry entirely rather than showing it disabled when none do, matching how the existing
+    // "Connect to {profile}" entries are only added when a qualifying profile exists.
+    public bool HasCloneableLocalTab => Tabs.Any(t => t.ManagementApiConnected && t.Profile?.Id == ConnectionProfile.LocalDefault.Id);
+
+    private void OpenCloneServerFlow()
+    {
+        var source = Tabs.FirstOrDefault(t => t.ManagementApiConnected && t.Profile?.Id == ConnectionProfile.LocalDefault.Id);
+        if (source is null) return;
+        ActiveTab = source;
+        NavigateCommand.Execute("Fleet");
+    }
+
+    // The "+" button's "Connect to Existing Server" entries call this. The duplicate-connection
+    // guard lives here, at the single place a tab can be opened, rather than scattered across
+    // the codebase: a profile already open in another tab is filtered out of that list before this
+    // is ever invoked (see MainWindow.axaml.cs's flyout builder), and this is a second, defensive
+    // check against the same race.
+    private void ConnectExistingProfileTab(ConnectionProfile? profile)
+    {
+        if (profile is null || Tabs.Any(t => t.Profile?.Id == profile.Id))
+            return;
+
+        ActiveTab = CreateTab();
+        SelectedProfile = profile;
+        SaveTabSession();
+        Dispatcher.UIThread.Post(async () => await RefreshAsync(silent: false));
+    }
+
+    // v0.7.72.0: which profiles are currently open as tabs, so they can reopen automatically next
+    // launch (see TabSessionStore and RestoreTabSessionAsync). Called at every point a tab's set of
+    // real (non-null-Profile) entries changes: opening a saved profile, closing a tab, and finishing
+    // SaveProfileCommand (which covers both the Settings-page edit path and the "Set Up New Server"
+    // wizard's last step, either of which can give the active tab a real Profile for the first time).
+    private void SaveTabSession() =>
+        _tabSessionStore.Save(Tabs.Select(t => t.Profile?.Id).Where(id => !string.IsNullOrWhiteSpace(id))!);
+
+    private void CloseTab(TabSession? tab)
+    {
+        if (tab is null || Tabs.Count <= 1)
+            return;
+
+        tab.Timer?.Stop();
+        tab.Timer = null;
+        var wasActive = ReferenceEquals(tab, ActiveTab);
+        Tabs.Remove(tab);
+        if (wasActive)
+            ActiveTab = Tabs.FirstOrDefault();
+        (CloseTabCommand as RelayCommand<TabSession>)?.RaiseCanExecuteChanged();
+        (CloseActiveTabCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        RecomputeDuplicateInstallWarnings();
+        SaveTabSession();
+    }
+
+    // v0.7.31.0: identity is the install location, not host:port -- two tabs can legitimately share
+    // a port (different remote hosts), and a ConnectionProfile alone can't tell two installs apart
+    // before connecting. Recomputed from scratch on every call (not incrementally) so a resolved
+    // duplicate (a tab closed, or a later poll found the roots actually differ) clears correctly
+    // without needing to track which specific pair caused the warning.
+    private void RecomputeDuplicateInstallWarnings()
+    {
+        var rootsInUse = Tabs
+            .Where(t => !string.IsNullOrWhiteSpace(t.ServerRoot))
+            .GroupBy(t => t.ServerRoot, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var tab in Tabs)
+        {
+            tab.DuplicateInstallWarning = !string.IsNullOrWhiteSpace(tab.ServerRoot) && rootsInUse.Contains(tab.ServerRoot)
+                ? $"Another open tab is already connected to this same install ({tab.ServerRoot}) — you may be looking at the same server twice."
+                : string.Empty;
+        }
+    }
+
+    private TabSession CreateTab()
+    {
+        var tab = new TabSession();
+        Tabs.Add(tab);
+        WireTabTimer(tab);
+        (CloseTabCommand as RelayCommand<TabSession>)?.RaiseCanExecuteChanged();
+        (CloseActiveTabCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        return tab;
+    }
+
+    // v0.7.16.0: called from MainWindow's code-behind whenever the tab strip's own host panel
+    // resizes (window resize, or the fixed-width columns either side of it changing). Previously
+    // the tab ListBox had a hardcoded MaxWidth="720" regardless of how much window width was
+    // actually available, and tabs past whatever fit were silently clipped with no way to reach
+    // them -- no scrolling, no indicator, nothing.
+    public void UpdateTabStripWidth(double width)
+    {
+        if (width <= 0 || Math.Abs(width - _tabStripWidth) < 1) return;
+        _tabStripWidth = width;
+        RecomputeTabLayout();
+    }
+
+    private void RecomputeTabLayout()
+    {
+        const double perTabWidth = 204; // Border MinWidth 200 + Margin 2+2
+        const double addButtonWidth = 52; // Width 44 + Margin 4+4
+        const double overflowButtonWidth = 40; // Width 36 + Margin 2+2
+
+        var available = Math.Max(0, _tabStripWidth - addButtonWidth);
+        var maxVisible = Tabs.Count == 0 ? 0 : (int)Math.Floor(available / perTabWidth);
+        if (maxVisible >= Tabs.Count)
+        {
+            SyncTabCollections(Tabs, []);
+            return;
+        }
+
+        // Doesn't fit without the overflow button itself claiming some of that space too.
+        maxVisible = Math.Max(1, (int)Math.Floor((available - overflowButtonWidth) / perTabWidth));
+        var visible = Tabs.Take(maxVisible).ToList();
+        var overflow = Tabs.Skip(maxVisible).ToList();
+
+        // The active tab must never be the one that gets hidden -- if it landed in the overflow
+        // slice, swap it with the last "naturally visible" tab instead of pushing the visible count
+        // past what the measured width can actually hold.
+        if (ActiveTab is not null && overflow.Contains(ActiveTab) && visible.Count > 0)
+        {
+            var bumped = visible[^1];
+            visible[^1] = ActiveTab;
+            var overflowIndex = overflow.IndexOf(ActiveTab);
+            overflow[overflowIndex] = bumped;
+        }
+
+        SyncTabCollections(visible, overflow);
+    }
+
+    private void SyncTabCollections(IReadOnlyList<TabSession> visible, IReadOnlyList<TabSession> overflow)
+    {
+        if (!VisibleTabs.SequenceEqual(visible))
+        {
+            VisibleTabs.Clear();
+            foreach (var tab in visible) VisibleTabs.Add(tab);
+        }
+        if (!OverflowTabs.SequenceEqual(overflow))
+        {
+            OverflowTabs.Clear();
+            foreach (var tab in overflow) OverflowTabs.Add(tab);
+        }
+        HasOverflowTabs = OverflowTabs.Count > 0;
+    }
+
+    public void UpdateRibbonWidth(double width)
+    {
+        if (width <= 0 || Math.Abs(width - _ribbonWidth) < 1) return;
+        _ribbonWidth = width;
+        RecomputeRibbonLayout();
+    }
+
+    // Called once at startup and whenever the active page changes (RaisePageVisibility). Today this
+    // always returns the same two page-agnostic groups (Server Control/Quick Actions), matching
+    // current behavior exactly -- later versions extend this to append page-specific groups based on
+    // SelectedPage as their own buttons get relocated into the ribbon.
+    private void RebuildRibbonGroups()
+    {
+        _allRibbonGroups = BuildRibbonGroupsForActivePage();
+        RecomputeRibbonLayout();
+    }
+
+    private List<RibbonGroupViewModel> BuildRibbonGroupsForActivePage()
+    {
+        var groups = new List<RibbonGroupViewModel>
+        {
+            new("Server Control",
+            [
+                new("↻", "Refresh", "Refresh", ConnectCommand, null, RibbonIconColor.Amber),
+                new("▶", "Start", "Start server", StartCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("⟳", "Restart", "Restart server", RestartCommand, null, RibbonIconColor.Blue),
+                new("■", "Stop", "Stop server", StopCommand, null, RibbonIconColor.Red, IsDangerButton: true),
+            ]),
+            new("Quick Actions",
+            [
+                new("⇩", "Backup", "Create backup", CreateBackupCommand, null, RibbonIconColor.Amber),
+                new("▰", "Console", "Open Console", NavigateCommand, "Console", RibbonIconColor.Cyan),
+                new("✚", "Doctor", "Open Doctor", NavigateCommand, "Doctor", RibbonIconColor.Green),
+            ]),
+        };
+
+        // v0.7.26.0: first per-page ribbon groups -- each relocates buttons that used to live
+        // in-page (see the release's architecture doc for the full before/after per page).
+        if (IsServerSetupPage)
+        {
+            groups.Add(new("Environment",
+            [
+                new("✓", "Verify Files", "Verify environment files", VerifyEnvironmentCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                // v0.7.28.0: InstallMissingEnvironmentAsync already existed, previously only
+                // reachable indirectly through a per-row action dispatch -- first standalone command.
+                new("⬇", "Install Missing", "Install missing environment components", InstallMissingEnvironmentCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
+        else if (IsServerPage)
+        {
+            groups.Add(new("Configuration",
+            [
+                new("⇧", "Import", "Import configuration", null, null, RibbonIconColor.Amber, NativeDialogAction: "ImportConfig"),
+                new("⇩", "Export", "Export configuration", null, null, RibbonIconColor.Cyan, NativeDialogAction: "ExportConfig"),
+                new("✓", "Save", "Save configuration changes", SavePalworldConfigurationCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("↺", "Reset", "Reset unsaved configuration changes", ResetConfigChangesCommand, null, RibbonIconColor.Blue),
+            ]));
+        }
+        else if (IsConsolePage)
+        {
+            groups.Add(new("Console",
+            [
+                new("↻", "Refresh", "Refresh console view", RefreshConsoleViewCommand, null, RibbonIconColor.Amber),
+                new("Ⅱ", "Pause", "Pause or resume console view", PauseConsoleCommand, null, RibbonIconColor.Blue),
+                new("✕", "Clear", "Clear console view", ClearConsoleViewCommand, null, RibbonIconColor.Red),
+                new("⇩", "Export", "Export console view", null, null, RibbonIconColor.Cyan, NativeDialogAction: "ExportConsole"),
+            ]));
+        }
+        else if (IsWorkspacePage)
+        {
+            groups.Add(new("Workspace",
+            [
+                new("↻", "Refresh", "Refresh workspace paths", LoadConfigurationCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
+        else if (IsBackupsPage)
+        {
+            groups.Add(new("Backups",
+            [
+                new("⇩", "Create", "Create backup", CreateBackupCommand, null, RibbonIconColor.Amber, IsSuccessButton: true),
+                new("✓", "Verify All", "Verify all backups", VerifyAllBackupsCommand, null, RibbonIconColor.Green),
+                new("↻", "Refresh", "Refresh backups", RefreshBackupsCommand, null, RibbonIconColor.Blue),
+                new("📁", "Open Root", "Open backup root", OpenBackupRootCommand, null, RibbonIconColor.Cyan),
+            ]));
+        }
+        // v0.7.27.0: MOD Dashboard and MOD Library already shared one in-page toolbar via
+        // IsModInventoryPage before this relocation -- kept that same combined gating here rather
+        // than splitting it, so both pages keep reaching Refresh/Verify & Scan exactly as before.
+        else if (IsModInventoryPage)
+        {
+            groups.Add(new("MODs",
+            [
+                new("↻", "Refresh MODs", "Refresh MODs", RefreshModsCommand, null, RibbonIconColor.Amber),
+                new("✓", "Verify & Scan", "Verify and scan MODs", VerifyModsCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+            ]));
+        }
+        else if (IsUe4ssPage)
+        {
+            groups.Add(new("UE4SS",
+            [
+                new("↻", "Refresh Runtime", "Refresh UE4SS runtime", RefreshModsCommand, null, RibbonIconColor.Amber),
+                new("👁", "Preview Install", "Preview installing the selected UE4SS release", PreviewUe4ssInstallCommand, null, RibbonIconColor.Blue),
+                new("⬇", "Confirm Install", "Install the previewed UE4SS release", ApplyUe4ssInstallCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("↩", "Rollback", "Undo the last UE4SS install", RollbackUe4ssInstallCommand, null, RibbonIconColor.Red, IsDangerButton: true),
+            ]));
+        }
+        else if (IsDoctorPage)
+        {
+            groups.Add(new("Doctor",
+            [
+                new("⚕", "Run Doctor", "Run doctor and refresh", RunDoctorCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("⇩", "Export Report", "Export diagnostic report", ExportDoctorCommand, null, RibbonIconColor.Cyan),
+                // v0.7.28.0: reuses the same ForceStopServerCommand as the "Danger" group below --
+                // functionally identical (force-terminate the managed process tree), just reachable
+                // here too since this is the page showing exactly which processes it would kill.
+                new("⛔", "Kill Processes", "Force-kill managed server processes", ForceStopServerCommand, null, RibbonIconColor.Red, IsDangerButton: true),
+                // v0.7.44.0: machine-wide scan -- distinct from "Kill Processes" above, which only
+                // ever targets this profile's own managed process tree via ForceStopServerCommand.
+                new("🔎", "Detect Instances", "Scan for every Palworld process on this machine", RefreshAllInstancesCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
+        // v0.7.42.0: cross-page consistency sweep, applying the same ribbon-relocation pattern
+        // established in v0.7.26.0-v0.7.28.0 to every remaining page that still had page-header
+        // action buttons in-page. Sub-feature-local actions embedded in a labeled workflow card
+        // (Fleet's Backup All/Doctor All/Update All, World Transactions' confirm-gated Repair
+        // Center apply, Alert Center's per-collapsible-section Discord Bot/Anti-Cheat refreshes)
+        // stay where they are, matching how Backups' Retention Cleanup apply button was kept
+        // in-page rather than relocated -- only page-level primary actions move.
+        else if (IsWorldExplorerPage)
+        {
+            groups.Add(new("World",
+            [
+                new("↻", "Refresh World", "Refresh world explorer", RefreshWorldExplorerCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
+        else if (IsWorldTransactionsPage)
+        {
+            groups.Add(new("World Transactions",
+            [
+                new("✓", "Validate", "Validate active world", ValidateActiveWorldCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("⇩", "Export Report", "Export world validation report", null, null, RibbonIconColor.Cyan, NativeDialogAction: "ExportWorldValidation"),
+                new("↻", "Refresh Ops", "Refresh operation platform", RefreshOperationsCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
+        else if (IsGuildsPage || IsBasesPage)
+        {
+            groups.Add(new("Guilds",
+            [
+                new("↻", "Refresh Evidence", "Refresh guild and base evidence", RefreshPlayerGuildExplorerCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
+        else if (IsPlayersPage)
+        {
+            groups.Add(new("Players",
+            [
+                new("↻", "Discover Saves", "Discover player saves", RefreshPlayersCommand, null, RibbonIconColor.Amber),
+                new("⇩", "Export CSV", "Export players CSV", null, null, RibbonIconColor.Cyan, NativeDialogAction: "ExportPlayersCsv"),
+            ]));
+        }
+        else if (IsDiagnosticsPage)
+        {
+            groups.Add(new("Diagnostics",
+            [
+                new("⚡", "Run Diagnostics", "Run network diagnostics", RunNetworkDiagnosticsCommand, null, RibbonIconColor.Amber, IsSuccessButton: true),
+                new("🛡", "Repair Firewall", "Add or repair firewall rule", RepairFirewallCommand, null, RibbonIconColor.Blue),
+                new("⟳", "Restart Server", "Restart server", RestartFromDiagnosticsCommand, null, RibbonIconColor.Red, IsDangerButton: true),
+            ]));
+        }
+        else if (IsSaveToolsPage)
+        {
+            groups.Add(new("Save Tools",
+            [
+                new("↻", "Refresh", "Refresh save tools", RefreshSaveToolsCommand, null, RibbonIconColor.Amber),
+                new("✓", "Self-Tests", "Run save tools self-tests", RunSaveToolsSelfTestCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+            ]));
+        }
+        else if (IsNotificationsPage)
+        {
+            groups.Add(new("Notifications",
+            [
+                new("↻", "Refresh", "Refresh notifications", RefreshNotificationsCommand, null, RibbonIconColor.Amber),
+                new("✓", "Self-Test", "Notification self-test", NotificationSelfTestCommand, null, RibbonIconColor.Green),
+                new("👁", "Mark All Read", "Mark all notifications read", MarkAllNotificationsReadCommand, null, RibbonIconColor.Blue),
+                new("⇩", "Export", "Export visible notifications", null, null, RibbonIconColor.Cyan, NativeDialogAction: "ExportNotifications"),
+            ]));
+        }
+        else if (IsAutomationPage)
+        {
+            groups.Add(new("Automation",
+            [
+                new("↻", "Refresh", "Refresh automation", RefreshAutomationCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
+        else if (IsAlertCenterPage)
+        {
+            groups.Add(new("Alerts",
+            [
+                new("↻", "Refresh", "Refresh alert center", RefreshAlertCenterCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
+        else if (IsSecurityPage)
+        {
+            groups.Add(new("Security",
+            [
+                new("↻", "Refresh", "Refresh security", RefreshSecurityCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
+        else if (IsFleetPage)
+        {
+            groups.Add(new("Fleet",
+            [
+                new("↻", "Refresh", "Refresh fleet", RefreshFleetCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
+        else if (IsCrashAnalyzerPage)
+        {
+            groups.Add(new("Crash Analyzer",
+            [
+                new("↻", "Refresh History", "Refresh crash history", RefreshCrashHistoryCommand, null, RibbonIconColor.Amber),
+                new("🔍", "Run Analysis", "Analyze crashes", AnalyzeCrashesCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+            ]));
+        }
+        else if (IsUpdateCenterPage)
+        {
+            groups.Add(new("Update Center",
+            [
+                new("↻", "Refresh", "Refresh distribution status", RefreshDistributionCommand, null, RibbonIconColor.Amber),
+                new("📋", "Preview Plan", "Preview SteamCMD update plan", PreviewDistributionPlanCommand, null, RibbonIconColor.Blue),
+            ]));
+        }
+
+        // v0.7.28.0: reachable from every page (not gated by SelectedPage), positioned last so it
+        // renders at the right edge of whatever else is visible -- ForceStopServerAsync already
+        // existed and was already reachable from ShutdownForExitAsync(force: true) on app exit; this
+        // is its first user-facing exposure.
+        groups.Add(new("Danger",
+        [
+            new("⛔", "Force Stop", "Force stop server", ForceStopServerCommand, null, RibbonIconColor.Red, IsDangerButton: true),
+        ]));
+
+        return groups;
+    }
+
+    // Groups don't share one fixed width like tabs do (RecomputeTabLayout's perTabWidth constant),
+    // since button count/labels vary per group -- so this walks groups in order accumulating an
+    // estimated width instead of a simple integer division.
+    private void RecomputeRibbonLayout()
+    {
+        const double overflowButtonWidth = 40;
+
+        if (_allRibbonGroups.Count == 0)
+        {
+            SyncRibbonCollections([], []);
+            return;
+        }
+
+        var totalWidth = _allRibbonGroups.Sum(EstimateRibbonGroupWidth);
+        if (totalWidth <= _ribbonWidth)
+        {
+            SyncRibbonCollections(_allRibbonGroups, []);
+            return;
+        }
+
+        var available = Math.Max(0, _ribbonWidth - overflowButtonWidth);
+        var visible = new List<RibbonGroupViewModel>();
+        var used = 0.0;
+        foreach (var group in _allRibbonGroups)
+        {
+            var groupWidth = EstimateRibbonGroupWidth(group);
+            if (used + groupWidth > available) break;
+            used += groupWidth;
+            visible.Add(group);
+        }
+        // An empty ribbon would be worse than one slightly-clipped group -- always keep at least the
+        // first one visible, even if it alone exceeds the measured available width.
+        if (visible.Count == 0) visible.Add(_allRibbonGroups[0]);
+
+        SyncRibbonCollections(visible, _allRibbonGroups.Skip(visible.Count).ToList());
+    }
+
+    // Border.ribbonGroup: Padding="6" (12px) + Margin="0,0,5,0" (5px) = 17px of group chrome.
+    // Button.ribbon: MinWidth="68"; the buttons' own StackPanel: Spacing="5" between each.
+    private static double EstimateRibbonGroupWidth(RibbonGroupViewModel group) =>
+        17 + group.Actions.Count * 68 + Math.Max(0, group.Actions.Count - 1) * 5;
+
+    private void SyncRibbonCollections(IReadOnlyList<RibbonGroupViewModel> visible, IReadOnlyList<RibbonGroupViewModel> overflow)
+    {
+        if (!VisibleRibbonGroups.SequenceEqual(visible))
+        {
+            VisibleRibbonGroups.Clear();
+            foreach (var group in visible) VisibleRibbonGroups.Add(group);
+        }
+        if (!OverflowRibbonGroups.SequenceEqual(overflow))
+        {
+            OverflowRibbonGroups.Clear();
+            foreach (var group in overflow) OverflowRibbonGroups.Add(group);
+        }
+        HasOverflowRibbonGroups = OverflowRibbonGroups.Count > 0;
+    }
+
+    // One DispatcherTimer per open tab (replacing the single app-wide timer that existed before
+    // true multi-tab support), so every open connection keeps polling independently of which tab
+    // is focused. The active tab's tick runs the exact same full-refresh body the old shared timer
+    // always ran (still correct, since it now operates through ActiveTab-delegated properties); a
+    // background tab's tick runs a lightweight, tab-scoped health poll instead -- enough to keep
+    // its bearer token alive and its own status dot accurate, without fanning the full page-data
+    // refresh (Console, World Explorer, Player Registry, Configuration, etc.) out across every
+    // open tab at once. That full-per-tab duplication is explicitly out of scope -- see the
+    // architecture notes for why.
+    private void WireTabTimer(TabSession tab)
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        timer.Tick += async (_, _) =>
+        {
+            if (!AutoRefreshEnabled)
+                return;
+
+            if (!ReferenceEquals(tab, ActiveTab))
+            {
+                await RefreshTabLightweightAsync(tab);
+                return;
+            }
+
+            await RefreshActiveTabDataAsync();
+        };
+        tab.Timer = timer;
+        timer.Start();
+    }
+
+    // v0.7.6.0: shared by the active tab's own timer tick above and by ActiveTab's setter (an
+    // immediate, out-of-cycle refresh right after switching tabs) so a newly focused tab's player
+    // list/dashboard data arrives within one round trip instead of waiting up to 5 seconds for the
+    // next tick -- previously switching tabs displayed the PREVIOUS tab's data until that happened.
+    private async Task RefreshActiveTabDataAsync()
+    {
+        if (IsBusy)
+            return;
+
+        if (SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id && ConnectionState != "Connected")
+        {
+            await RefreshLocalInstallationAsync();
+            return;
+        }
+
+        if (ConnectionState != "Connected")
+            return;
+
+        await RefreshStatusPollingAsync();
+        _refreshTick++;
+    }
+
+    // Background-tab poll: operates directly on the tab's own stored fields, never through the
+    // ActiveTab-delegated SelectedProfile/BearerToken/etc. properties -- those reflect whichever
+    // tab is currently focused, and writing through them from a background tab's timer would
+    // silently corrupt the focused tab's displayed connection state with a different tab's data.
+    private async Task RefreshTabLightweightAsync(TabSession tab)
+    {
+        if (tab.Profile is null)
+            return;
+
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromTab(tab); }
+        catch { return; }
+
+        // v0.7.23.0: mirrors RefreshAsync's own health-check exception classification (~line 3016)
+        // instead of a bare catch that discarded the real reason -- a version mismatch or a missing
+        // bearer token previously collapsed into the exact same "Connection failed" as a genuinely
+        // unreachable server, on a background tab an operator might not switch to for a while.
+        try
+        {
+            var health = await _api.GetHealthAsync(profile, tab.BearerToken);
+            if (!string.Equals(health.Component, "mysttiq-headless", StringComparison.OrdinalIgnoreCase) || health.ApiVersion < 1)
+                throw new InvalidOperationException($"The endpoint answered health checks but is not a compatible MystTiq management API (component={health.Component}, apiVersion={health.ApiVersion}).");
+            if (health.Authentication && string.IsNullOrWhiteSpace(tab.BearerToken))
+                throw new UnauthorizedAccessException("This MystTiq management API requires a bearer token.");
+
+            tab.ManagementApiConnected = true;
+            tab.ConnectionState = "Connected";
+        }
+        catch (InvalidOperationException)
+        {
+            tab.ManagementApiConnected = false;
+            tab.ConnectionState = "Incompatible API version";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            tab.ManagementApiConnected = false;
+            tab.ConnectionState = "Needs bearer token";
+        }
+        catch
+        {
+            tab.ManagementApiConnected = false;
+            tab.ConnectionState = "Connection failed";
+        }
+    }
+
+    // BuildProfileFromEditor's counterpart for a tab that isn't ActiveTab -- same validation, same
+    // shape, sourced from that TabSession's own fields instead of the shared editor properties.
+    private ConnectionProfile BuildProfileFromTab(TabSession tab)
+    {
+        if (string.IsNullOrWhiteSpace(tab.ProfileName))
+            throw new InvalidOperationException("Profile name is required.");
+
+        if (!Uri.TryCreate(tab.ServerUrl.Trim(), UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            throw new InvalidOperationException("Enter an absolute http:// or https:// MystTiq management URL.");
+
+        var pin = MystTiqApiClient.NormalizeFingerprint(tab.CertificateSha256);
+        var existingId = tab.Profile?.Id;
+        var accentColorKey = ResolveAccentColorKey(existingId, tab.Profile);
+
+        return new ConnectionProfile(existingId ?? Guid.NewGuid().ToString("N"), tab.ProfileName.Trim(), uri, pin, accentColorKey);
+    }
+
+    // v0.7.11.0: called from MainWindow's close-tab confirmation flow when the user chooses
+    // "Stop & Close" for a tab that isn't necessarily ActiveTab (Fleet allows several servers
+    // running at once) -- deliberately built the same way RefreshTabLightweightAsync operates on a
+    // background tab's own fields directly, never through the ActiveTab-delegated properties,
+    // since those would silently target whichever tab is currently focused instead of the one
+    // actually being closed.
+    public async Task StopTabServerAsync(TabSession tab)
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromTab(tab); }
+        catch { return; }
+
+        try { await _api.StopServerAsync(profile, tab.BearerToken, CancellationToken.None); }
+        catch { /* best-effort -- the confirmation dialog already told the user what this would do */ }
     }
 
     private void DeleteSelectedProfile()
@@ -1800,10 +3578,32 @@ public sealed class MainWindowViewModel : ViewModelBase
         if (selected is null || selected.Id == ConnectionProfile.LocalDefault.Id)
             return;
 
+        // v0.7.6.0: deleting a profile another open tab is actively using left that tab operating
+        // against a profile no longer tracked anywhere (not in the picker, not in Profiles), with no
+        // warning at the point of deletion -- mirrors ConnectExistingProfileTab's own duplicate-tab
+        // guard rather than only checking at the point a NEW tab is opened.
+        if (Tabs.Any(t => !ReferenceEquals(t, ActiveTab) && t.Profile?.Id == selected.Id))
+        {
+            Detail = $"Cannot delete '{selected.Name}' -- it is open in another tab. Close that tab first.";
+            return;
+        }
+
         Profiles.Remove(selected);
         _profileStore.Save(Profiles);
+        _credentialStore.Delete(selected.Id);
         SelectedProfile = Profiles.FirstOrDefault(p => p.Id == ConnectionProfile.LocalDefault.Id) ?? Profiles.FirstOrDefault();
         Detail = $"Connection profile '{selected.Name}' deleted.";
+    }
+
+    // v0.7.71.0: clears a saved encrypted token for the currently-selected profile without
+    // deleting the profile itself -- for a rotated/revoked token, or simply not wanting it
+    // remembered. Only clears the ON-DISK entry; BearerToken in the editor is left as-is so the
+    // field doesn't go blank mid-edit (the user can still Connect with what's typed there).
+    private void ForgetSavedToken()
+    {
+        if (SelectedProfile is not { } selected) return;
+        _credentialStore.Delete(selected.Id);
+        Detail = $"Saved token forgotten for '{selected.Name}'. It will need to be entered again next time.";
     }
 
     private async Task InitializeLocalDashboardAsync()
@@ -1828,6 +3628,26 @@ public sealed class MainWindowViewModel : ViewModelBase
             }
             if (ConnectionState != "Connected")
                 await DiscoverServicesAsync();
+        }
+    }
+
+    // v0.7.72.0: reopens whichever OTHER profiles were still open as tabs the last time the app
+    // exited (see TabSessionStore/SaveTabSession) -- previously every launch started back at just
+    // the single default local tab, no matter how many tabs (e.g. a remote server) were open before.
+    // Runs after InitializeLocalDashboardAsync so tab 1 (the default local profile) is already
+    // settled; each remembered extra profile reconnects the same way the "+" menu's "Connect to
+    // {profile.Name}" entries do (ConnectExistingProfileTab), including its own duplicate-tab guard.
+    private async Task RestoreTabSessionAsync()
+    {
+        var rememberedIds = _tabSessionStore.Load();
+        if (rememberedIds.Count == 0) return;
+
+        foreach (var profileId in rememberedIds)
+        {
+            var profile = Profiles.FirstOrDefault(p => p.Id == profileId);
+            if (profile is null) continue; // profile was deleted since the session was saved
+            ConnectExistingProfileTab(profile);
+            await Task.Delay(50); // stagger connects instead of firing every RefreshAsync at once
         }
     }
 
@@ -1940,14 +3760,20 @@ public sealed class MainWindowViewModel : ViewModelBase
             ServerInstallState = distribution.ServerExecutableExists ? "Installed" : "Missing";
             DistributionState = distribution.ServerExecutableExists ? "Ready" : "Setup required";
             DistributionDetail = distribution.Detail;
+
+            // v0.7.31.0: install-location identity, not host:port -- see TabSession.ServerRoot.
+            if (ActiveTab is not null && !string.IsNullOrWhiteSpace(distribution.ServerRoot))
+            {
+                ActiveTab.ServerRoot = distribution.ServerRoot;
+                RecomputeDuplicateInstallWarnings();
+            }
         }
         catch (Exception ex) { DistributionDetail = $"Distribution: {ex.Message}"; }
 
         try
         {
             var backups = await _api.GetBackupsAsync(profile, BearerToken);
-            BackupItems.Clear();
-            foreach (var item in backups.Items) BackupItems.Add(item);
+            PopulateBackupItems(backups.Items);
             SelectedBackup = BackupItems.FirstOrDefault();
             BackupState = $"{backups.Count} backup(s)";
             BackupTotalSizeText = $"{backups.TotalSizeBytes / 1024d / 1024d:F2} MB";
@@ -2011,13 +3837,22 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private async Task RefreshStatusPollingAsync()
     {
+        // v0.7.6.0: OnlinePlayers/ServerState/logs/etc. are not themselves tab-scoped, so a response
+        // for a tab the user has since switched away from must never be allowed to land on top of
+        // the newly active tab's data -- captured before the request, checked after it returns.
+        var requestTab = ActiveTab;
         ConnectionProfile profile;
         try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
         catch (Exception ex) { StatusBarText = ex.Message; return; }
 
         try
         {
-            var snapshot = await _api.GetStatusPollingAsync(profile, 120, BearerToken);
+            // v0.7.33.0: log count raised to the server's real 500-line cap (was 120) -- this is
+            // the recurring per-tab timer tick that normally feeds the Dashboard's log card, so
+            // leaving it at 120 here would have undone the fuller view moments after any explicit
+            // refresh or lifecycle operation supplied it.
+            var snapshot = await _api.GetStatusPollingAsync(profile, 500, BearerToken);
+            if (!ReferenceEquals(requestTab, ActiveTab)) return;
             ApplyStatus(snapshot.Status);
             ApplyServiceStatus(snapshot.Service);
             ApplyPlayers(snapshot.Players);
@@ -2031,6 +3866,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            if (!ReferenceEquals(requestTab, ActiveTab)) return;
             StatusBarText = $"Status unavailable — {ex.Message}";
             StatusBarObservedText = $"Failed {DateTimeOffset.Now:HH:mm:ss}";
         }
@@ -2040,6 +3876,10 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private async Task RefreshAsync(bool silent)
     {
+        // v0.7.6.0: see the matching guard in RefreshStatusPollingAsync -- a response for a tab the
+        // user has since switched away from must never overwrite the newly active tab's data.
+        var requestTab = ActiveTab;
+
         if (SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id)
             await RefreshLocalInstallationAsync();
 
@@ -2071,8 +3911,11 @@ public sealed class MainWindowViewModel : ViewModelBase
                 throw new UnauthorizedAccessException("This MystTiq management API requires a bearer token. The desktop-owned local sidecar should not require remote credentials.");
 
             // Initial connection uses the same aggregate endpoint as periodic status polling. This
-            // prevents connection establishment from fanning out into independent status/service calls.
-            var poll = await _api.GetStatusPollingAsync(profile, 120, BearerToken);
+            // prevents connection establishment from fanning out into independent status/service
+            // calls. v0.7.33.0: log count raised to 500 (was 120), matching the other log-bearing
+            // call sites, so a freshly opened tab's log view isn't starved from the first paint.
+            var poll = await _api.GetStatusPollingAsync(profile, 500, BearerToken);
+            if (!ReferenceEquals(requestTab, ActiveTab)) return;
             ApplyStatus(poll.Status);
             ApplyServiceStatus(poll.Service);
             ApplyPlayers(poll.Players);
@@ -2083,6 +3926,26 @@ public sealed class MainWindowViewModel : ViewModelBase
             ConnectionState = "Connected";
             LocalApiStatus = SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id ? "Connected" : LocalApiStatus;
             Detail = $"Connected to MystTiq {health.Version} ({health.Platform}) at {profile.BaseAddress}.";
+
+            // v0.7.71.0: remember a successfully-used token (encrypted, see CredentialStore) so the
+            // next connect to this same profile doesn't need it re-pasted. Only saves on a proven
+            // successful connect, never a token that was merely typed -- an invalid paste never
+            // reaches this line. No-op on non-Windows builds.
+            if (!string.IsNullOrWhiteSpace(BearerToken))
+                _credentialStore.Save(profile.Id, BearerToken);
+
+            // v0.7.64.0: reported live -- connecting to an already-running remote server still
+            // routed through wizard Step 2 ("In-Game Server Defaults (new server only)", its own
+            // title says so), forcing an extra click through server-creation UI that's irrelevant
+            // to a server that's plainly already configured and running. ServerIsRunning at this
+            // point reflects the poll this same method just applied a few lines up, so it's a
+            // reliable signal, not a stale/optimistic guess. Only short-circuits the wizard, never
+            // touches real settings -- CreateDefaultServerSettingsCommand (Step 2's own action) was
+            // already a no-op against an existing PalWorldSettings.ini before this change; skipping
+            // the step outright is strictly less surprising than showing it disabled.
+            if (IsCreatingNewProfile && NewServerWizardStep == 1 && ServerIsRunning)
+                NewServerWizardStep = 3;
+
             await RefreshHistoricalMetricsAsync(force: true);
 
             if (!silent)
@@ -2143,6 +4006,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
         catch (Exception ex) { PlayersPageDetail = ex.Message; return; }
 
+        // v0.7.8.0: same guard as RefreshAsync/RefreshStatusPollingAsync -- a response for a tab the
+        // user has since switched away from must not overwrite the newly active tab's player list.
+        var requestTab = ActiveTab;
         var selectedId = SelectedPlayerRecord?.PlayerId;
         IsBusy = true;
         PlayersPageState = "Discovering live and saved players…";
@@ -2153,6 +4019,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             var pollTask = _api.GetStatusPollingAsync(profile, 120, BearerToken);
             var explorerTask = _api.GetPlayerGuildExplorerAsync(profile, BearerToken);
             await Task.WhenAll(pollTask, explorerTask);
+            if (!ReferenceEquals(requestTab, ActiveTab)) return;
 
             var poll = await pollTask;
             ApplyStatus(poll.Status);
@@ -2219,9 +4086,30 @@ public sealed class MainWindowViewModel : ViewModelBase
             return true;
         }).ToArray();
 
+        var duplicatesHidden = 0;
+        if (HideDuplicatePlayerNames)
+        {
+            var beforeCount = filtered.Length;
+            // One row per distinct PlayerName (case-insensitive; blank names are left ungrouped --
+            // multiple genuinely-nameless records shouldn't collapse into one). Preference order for
+            // which PlayerId "wins" a name: currently online, then has a save at all, then most
+            // recently written -- the record an operator is actually looking for, not an arbitrary one.
+            filtered = filtered
+                .GroupBy(p => string.IsNullOrWhiteSpace(p.PlayerName) ? $"\0{p.PlayerId}" : p.PlayerName, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g
+                    .OrderByDescending(p => p.Online)
+                    .ThenByDescending(p => p.SaveExists)
+                    .ThenByDescending(p => p.SaveLastWriteUtc ?? DateTimeOffset.MinValue)
+                    .First())
+                .ToArray();
+            duplicatesHidden = beforeCount - filtered.Length;
+        }
+
         FilteredPlayerRecords.Clear();
         foreach (var player in filtered) FilteredPlayerRecords.Add(player);
-        PlayerVisibleCountText = $"{filtered.Length} visible / {PlayerRecords.Count} known";
+        PlayerVisibleCountText = duplicatesHidden > 0
+            ? $"{filtered.Length} visible / {PlayerRecords.Count} known ({duplicatesHidden} duplicate name(s) hidden)"
+            : $"{filtered.Length} visible / {PlayerRecords.Count} known";
 
         if (!string.IsNullOrWhiteSpace(selectedId))
             SelectedPlayerRecord = filtered.FirstOrDefault(x => string.Equals(x.PlayerId, selectedId, StringComparison.OrdinalIgnoreCase));
@@ -2377,6 +4265,10 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         (KickSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (BanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (CreateTemporaryBanCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (UnbanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (TeleportPlayerToMeCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (TeleportToPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (WhisperSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (PromoteSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -2390,7 +4282,13 @@ public sealed class MainWindowViewModel : ViewModelBase
         try
         {
             var playersTask = _api.GetPlayersAsync(profile, BearerToken);
-            var logsTask = _api.GetLogTailAsync(profile, 120, BearerToken);
+            // v0.7.33.0: was 120 -- well under GetLogTail's own 500-line server cap, so merging
+            // 2-4 sources (MystTiq stdout, Pal.log, AdminCommands logs) left as few as ~40 lines
+            // per source, starving exactly the kind of full UE4SS/MOD LOAD startup diagnostics a
+            // modded server writes. Requesting the server's actual max fixes both this shared core
+            // (feeds the Dashboard's mini log card) and the Console page's own fuller view, which
+            // filters from this same LogLines collection.
+            var logsTask = _api.GetLogTailAsync(profile, 500, BearerToken);
             var metricsTask = _api.GetMetricsAsync(profile, BearerToken);
 
             await Task.WhenAll(playersTask, logsTask, metricsTask);
@@ -2418,7 +4316,70 @@ public sealed class MainWindowViewModel : ViewModelBase
             : "REST unavailable";
 
         MonitoringDetail = snapshot.Detail;
+        RebuildPlayerMapPoints(snapshot.Players);
     }
+
+    // v0.6.16.0: auto-fit the currently-online players with real, parseable location_x/location_y
+    // into a fixed canvas, rather than hardcoding Palworld's absolute world-coordinate range (not
+    // reliably documented, and would make the view fragile). A player with a missing/unparseable
+    // coordinate (offline snapshot gaps, or a REST response that omitted the field) is excluded
+    // from the map entirely rather than plotted at a wrong default position.
+    //
+    // v0.7.0.2: looked into replacing this with Palworld's actual fixed world bounds (a community
+    // wiki documents a DataX/DataY -> MapX/MapY conversion). Not shipped -- the fetched formula
+    // didn't reconcile with the wiki's own worked example (off by several orders of magnitude,
+    // meaning a scale/division step was lost converting the page's math markup to text), and a
+    // coordinate transform that can't be verified numerically correct is worse than the existing,
+    // already-correct auto-fit behavior. Revisit if a reliable source for the exact formula turns up.
+    //
+    // v0.7.21.0: revisited with a numerically-verified formula this time (PalworldMapCoordinates --
+    // reproduces its source project's own published worked example exactly). Still not the default:
+    // the formula is verified, but the Palpagos image's own origin-corner/Y-orientation isn't
+    // independently confirmed, so this only activates when the user explicitly opts in via
+    // UseCalibratedWorldPositions AND the active background is specifically the Palpagos preset --
+    // every other case (World Tree, a browsed image, no background) keeps this exact auto-fit path.
+    private const double MapCanvasSize = 480;
+    private const double MapPadding = 24;
+
+    private void RebuildPlayerMapPoints(IReadOnlyList<PlayerSnapshotDto> players)
+    {
+        _lastPlayersForMap = players;
+        PlayerMapPoints.Clear();
+        var located = players
+            .Select(p => (Player: p, X: TryParseCoordinate(p.LocationX), Y: TryParseCoordinate(p.LocationY)))
+            .Where(t => t.X.HasValue && t.Y.HasValue)
+            .Select(t => (t.Player, X: t.X!.Value, Y: t.Y!.Value))
+            .ToList();
+        if (located.Count == 0) return;
+
+        if (UseCalibratedWorldPositions && IsPalpagosMapActive)
+        {
+            foreach (var (player, x, y) in located)
+            {
+                var (canvasX, canvasY) = PalworldMapCoordinates.ToCanvasPosition(x, y, MapCanvasSize);
+                PlayerMapPoints.Add(new PlayerMapPointDto(player.DisplayName, canvasX, canvasY));
+            }
+            return;
+        }
+
+        var minX = located.Min(t => t.X); var maxX = located.Max(t => t.X);
+        var minY = located.Min(t => t.Y); var maxY = located.Max(t => t.Y);
+        var spanX = Math.Max(maxX - minX, 1d);
+        var spanY = Math.Max(maxY - minY, 1d);
+        var usable = MapCanvasSize - MapPadding * 2;
+
+        foreach (var (player, x, y) in located)
+        {
+            var canvasX = MapPadding + (x - minX) / spanX * usable;
+            // World Y increases northward in Palworld's coordinate system; canvas Y increases
+            // downward, so this is inverted to keep "up" on the map meaning "north" in-world.
+            var canvasY = MapPadding + (1 - (y - minY) / spanY) * usable;
+            PlayerMapPoints.Add(new PlayerMapPointDto(player.DisplayName, canvasX, canvasY));
+        }
+    }
+
+    private static double? TryParseCoordinate(string value) =>
+        double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
 
     private void ApplyLogs(LogTailSnapshotDto snapshot)
     {
@@ -2452,7 +4413,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         if (ConsolePaused) return;
         FilteredLogLines.Clear();
-        foreach (var line in LogLines)
+        // v0.7.46.0: LogLines stays in its original chronological (oldest-first) order --
+        // DashboardActivityLines still wants that -- but the Console page's own live view reads
+        // newest-first, matching the request to show the most recent activity at the top. Export
+        // Console reads from FilteredLogLines too, so an exported file matches what was on screen.
+        foreach (var line in LogLines.Reverse())
         {
             if (HideRoutineRest && IsRoutineRestLine(line)) continue;
             if (!ConsoleSeverityMatches(line, ConsoleSeverityFilter)) continue;
@@ -2595,6 +4560,12 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void ApplyMetrics(RuntimeMetricsSnapshotDto snapshot)
     {
+        // v0.7.9.0: server FPS/frame time come from the Palworld REST API directly, independent of
+        // whether the managed PalServer process was found by lifecycle discovery -- set from both
+        // branches below, not just the "process found" one.
+        ServerFpsText = snapshot.ServerFps.HasValue ? $"{snapshot.ServerFps.Value:F0}" : "—";
+        ServerFrameTimeText = snapshot.ServerFrameTimeMs.HasValue ? $"{snapshot.ServerFrameTimeMs.Value:F1} ms" : "—";
+
         if (!snapshot.Available)
         {
             CpuText = "—";
@@ -2639,7 +4610,9 @@ public sealed class MainWindowViewModel : ViewModelBase
             {
                 ObservedAt = snapshot.ObservedAt,
                 CpuPercent = Math.Clamp(snapshot.CpuPercent.Value, 0, 100),
-                MemoryMb = Math.Max(0, memoryMb)
+                MemoryMb = Math.Max(0, memoryMb),
+                ServerFps = snapshot.ServerFps,
+                ServerFrameTimeMs = snapshot.ServerFrameTimeMs
             });
         }
         while (ResourceHistory.Count > 1200) ResourceHistory.RemoveAt(0);
@@ -2672,7 +4645,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             ResourceHistory.Clear();
             foreach (var sample in snapshot.Samples) ResourceHistory.Add(sample);
             _lastHistoryRefresh = DateTimeOffset.UtcNow;
-            UpdateHistorySummaries(snapshot.CpuTrend, snapshot.MemoryTrend);
+            UpdateHistorySummaries(snapshot.CpuTrend, snapshot.MemoryTrend, snapshot.AverageFps, snapshot.PeakFps);
             HistoryStatusText = ResourceHistory.Count == 0 ? "Collecting" : $"Updated {snapshot.ObservedAt.ToLocalTime():HH:mm:ss}";
         }
         catch (Exception ex)
@@ -2681,12 +4654,13 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void UpdateHistorySummaries(string? cpuTrend = null, string? memoryTrend = null)
+    private void UpdateHistorySummaries(string? cpuTrend = null, string? memoryTrend = null, double? averageFps = null, double? peakFps = null)
     {
         if (ResourceHistory.Count == 0)
         {
             HistoryCpuSummary = "CPU history collecting…";
             HistoryMemorySummary = "Memory history collecting…";
+            HistoryFpsSummary = "FPS history collecting…";
             HistorySampleSummary = "0 samples";
             return;
         }
@@ -2697,6 +4671,13 @@ public sealed class MainWindowViewModel : ViewModelBase
         var peakMemory = ResourceHistory.Max(x => x.MemoryMb);
         HistoryCpuSummary = $"{cpuTrend ?? Trend(ResourceHistory.Select(x => x.CpuPercent))} Avg {averageCpu:F1}% · Peak {peakCpu:F1}%";
         HistoryMemorySummary = $"{memoryTrend ?? Trend(ResourceHistory.Select(x => x.MemoryMb))} Avg {FormatMemory(averageMemory)} · Peak {FormatMemory(peakMemory)}";
+        // v0.7.15.0: real in-game FPS history -- "Not recorded" (not "0 FPS") whenever the Palworld
+        // REST API was disabled for the entire selected range, matching ServerFps's null-means-
+        // unavailable convention everywhere else this data appears.
+        var fpsSamples = ResourceHistory.Where(x => x.ServerFps.HasValue).Select(x => x.ServerFps!.Value).ToArray();
+        HistoryFpsSummary = fpsSamples.Length == 0
+            ? "FPS: not recorded (REST API disabled for this range)"
+            : $"FPS Avg {(averageFps ?? fpsSamples.Average()):F1} · Peak {(peakFps ?? fpsSamples.Max()):F1}";
         HistorySampleSummary = $"{ResourceHistory.Count} sample(s) in selected range";
     }
 
@@ -2982,6 +4963,140 @@ public sealed class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
+    private async Task RefreshDiscordBotConfigAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var view = await _api.GetDiscordBotConfigAsync(SelectedProfile, BearerToken);
+            DiscordBotConfig = new DiscordBotConfigurationDto
+            {
+                Enabled = view.Enabled,
+                GuildId = view.GuildId,
+                OwnerDiscordUserId = view.OwnerDiscordUserId,
+                RoleMappings = view.RoleMappings
+            };
+            DiscordBotTokenConfigured = view.TokenConfigured;
+            DiscordBotConnectionState = view.ConnectionState;
+            DiscordRoleMappings.Clear();
+            foreach (var mapping in view.RoleMappings) DiscordRoleMappings.Add(mapping);
+            DiscordBotState = $"Discord bot configuration loaded. Connection: {view.ConnectionState}.";
+        }
+        catch (Exception ex) { DiscordBotState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task SaveDiscordBotConfigAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            DiscordBotConfig.RoleMappings = [.. DiscordRoleMappings];
+            var view = await _api.SaveDiscordBotConfigAsync(SelectedProfile, DiscordBotConfig, BearerToken);
+            DiscordBotTokenConfigured = view.TokenConfigured;
+            DiscordBotConnectionState = view.ConnectionState;
+            DiscordBotConfig.BotToken = null;
+            DiscordBotState = "Discord bot configuration saved.";
+        }
+        catch (Exception ex) { DiscordBotState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private void AddDiscordRoleMapping()
+    {
+        if (string.IsNullOrWhiteSpace(NewRoleMappingDiscordRoleId)) return;
+        DiscordRoleMappings.Add(new DiscordRoleMappingDto { DiscordRoleId = NewRoleMappingDiscordRoleId.Trim(), Role = NewRoleMappingRole });
+        NewRoleMappingDiscordRoleId = string.Empty;
+    }
+
+    private void RemoveDiscordRoleMapping()
+    {
+        if (SelectedRoleMapping is null) return;
+        DiscordRoleMappings.Remove(SelectedRoleMapping);
+        SelectedRoleMapping = null;
+    }
+
+    private async Task RefreshWhitelistAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var config = await _api.GetWhitelistAsync(SelectedProfile, BearerToken);
+            WhitelistConfig = config;
+            WhitelistEntries.Clear();
+            foreach (var entry in config.Entries) WhitelistEntries.Add(entry);
+            WhitelistState = config.Enabled
+                ? $"Whitelist enabled -- {config.Entries.Count} player(s) allowed; anyone else is auto-kicked."
+                : $"Whitelist disabled -- {config.Entries.Count} player(s) saved but not enforced.";
+        }
+        catch (Exception ex) { WhitelistState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task SaveWhitelistAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            WhitelistConfig.Entries = [.. WhitelistEntries];
+            var saved = await _api.SaveWhitelistAsync(SelectedProfile, WhitelistConfig, BearerToken);
+            WhitelistConfig = saved;
+            WhitelistEntries.Clear();
+            foreach (var entry in saved.Entries) WhitelistEntries.Add(entry);
+            WhitelistState = "Whitelist saved.";
+        }
+        catch (Exception ex) { WhitelistState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private void AddWhitelistEntry()
+    {
+        if (string.IsNullOrWhiteSpace(NewWhitelistPlayerId)) return;
+        WhitelistEntries.Add(new WhitelistEntryDto { PlayerId = NewWhitelistPlayerId.Trim(), Label = NewWhitelistLabel.Trim() });
+        NewWhitelistPlayerId = string.Empty;
+        NewWhitelistLabel = string.Empty;
+    }
+
+    private void RemoveSelectedWhitelistEntry()
+    {
+        if (SelectedWhitelistEntry is null) return;
+        WhitelistEntries.Remove(SelectedWhitelistEntry);
+        SelectedWhitelistEntry = null;
+    }
+
+    private async Task RefreshAntiCheatAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            AntiCheatRules = await _api.GetAntiCheatRulesAsync(SelectedProfile, BearerToken);
+            var findings = await _api.GetAntiCheatFindingsAsync(SelectedProfile, BearerToken);
+            AntiCheatFindings.Clear();
+            foreach (var finding in findings) AntiCheatFindings.Add(finding);
+            AntiCheatState = $"Anti-cheat rules loaded. {findings.Count} recent finding(s).";
+        }
+        catch (Exception ex) { AntiCheatState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task SaveAntiCheatRulesAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            AntiCheatRules = await _api.SaveAntiCheatRulesAsync(SelectedProfile, AntiCheatRules, BearerToken);
+            AntiCheatState = "Anti-cheat rules saved.";
+        }
+        catch (Exception ex) { AntiCheatState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
     private async Task RefreshFleetAsync()
     {
         if (SelectedProfile is null) return;
@@ -3093,16 +5208,19 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ExportCrashAnalysis() => JsonSerializer.Serialize(new { state = CrashAnalyzerState, findings = CrashFindings, isolationPlan = CrashIsolationPlan, history = CrashHistory }, new JsonSerializerOptions { WriteIndented = true });
     public string ExportSaveToolsDiagnostics() => JsonSerializer.Serialize(new { state = SaveToolsState, paths = SaveToolsPaths, tests = SaveToolsTests, files = SaveFiles }, new JsonSerializerOptions { WriteIndented = true });
 
-    private async Task RunSelectedPlayerAdminActionAsync(string action)
+    // v0.7.8.0: requireOnline defaults to true (kick/ban's original behavior) but is false for
+    // unban -- a banned player is, by definition, never online, so gating it the same way as
+    // kick/ban would make the action permanently unusable.
+    private async Task RunSelectedPlayerAdminActionAsync(string action, bool requireOnline = true)
     {
         if (SelectedPlayerRecord is null)
         {
             PlayerAdminStatusText = "Select a player first.";
             return;
         }
-        if (!SelectedPlayerRecord.Online)
+        if (requireOnline && !SelectedPlayerRecord.Online)
         {
-            PlayerAdminStatusText = "Kick and ban require a currently online player.";
+            PlayerAdminStatusText = "This action requires a currently online player.";
             return;
         }
         var playerId = SelectedPlayerRecord.PlayerId;
@@ -3122,9 +5240,144 @@ public sealed class MainWindowViewModel : ViewModelBase
             var result = await _api.RunPlayerAdminActionAsync(profile, playerId, action, PlayerActionMessage, PlayerActionItem, BearerToken);
             PlayerAdminStatusText = result.Message;
             await RefreshActivityAsync();
-            if (action is "kick" or "ban") await RefreshPlayersPageAsync();
+            if (action is "kick" or "ban" or "unban") await RefreshPlayersPageAsync();
         }
         catch (Exception ex) { PlayerAdminStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.8.0: toMe=true summons the selected online player to the admin's own in-game character
+    // (RCON TeleportToMe); toMe=false moves the admin's character to the player instead (RCON
+    // TeleportToPlayer). Both require the admin to actually have a character present in the world
+    // -- this is a headless dedicated server, so there is no guarantee of that, and Palworld's RCON
+    // gives no distinct error for "no admin character" versus "player not found"; the raw RCON
+    // response text is surfaced as-is so the operator can tell the two apart themselves.
+    private async Task RunTeleportAsync(bool toMe)
+    {
+        if (SelectedPlayerRecord is null) { PlayerAdminStatusText = "Select a player first."; return; }
+        if (!SelectedPlayerRecord.Online) { PlayerAdminStatusText = "Teleport requires a currently online player."; return; }
+        var playerId = SelectedPlayerRecord.PlayerId;
+        if (string.IsNullOrWhiteSpace(playerId)) { PlayerAdminStatusText = "The selected player does not have a usable server-side identity."; return; }
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return; }
+
+        IsBusy = true;
+        PlayerAdminStatusText = toMe ? $"Summoning {SelectedPlayerRecord.PlayerName} to you…" : $"Teleporting to {SelectedPlayerRecord.PlayerName}…";
+        try
+        {
+            var result = toMe
+                ? await _api.TeleportToMeAsync(profile, playerId, BearerToken)
+                : await _api.TeleportToPlayerAsync(profile, playerId, BearerToken);
+            PlayerAdminStatusText = result.Message;
+        }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task SaveWorldNowAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { PlayersPageDetail = ex.Message; return; }
+
+        IsBusy = true;
+        PlayersPageDetail = "Saving world…";
+        try
+        {
+            var result = await _api.SaveWorldNowAsync(profile, BearerToken);
+            PlayersPageDetail = result.Message;
+        }
+        catch (Exception ex) { PlayersPageDetail = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RefreshBanListAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { BanListText = ex.Message; return; }
+
+        IsBusy = true;
+        BanListText = "Loading ban list…";
+        try
+        {
+            var result = await _api.GetBanListAsync(profile, BearerToken);
+            BanListText = string.IsNullOrWhiteSpace(result.Response) ? "(empty -- no banned players, or the server returned no text)" : result.Response;
+        }
+        catch (Exception ex) { BanListText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RefreshTemporaryBansAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { TemporaryBanState = ex.Message; return; }
+
+        IsBusy = true;
+        try
+        {
+            var config = await _api.GetTemporaryBansAsync(profile, BearerToken);
+            TemporaryBans.Clear();
+            foreach (var entry in config.Entries) TemporaryBans.Add(entry);
+            TemporaryBanState = TemporaryBans.Count == 0
+                ? "No active temporary bans."
+                : $"{TemporaryBans.Count} active temporary ban(s).";
+        }
+        catch (Exception ex) { TemporaryBanState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.15.0: bans the currently selected online player (same selection this Kick/Ban card
+    // already uses) for NewTemporaryBanDurationHours, reusing the reason text from
+    // PlayerActionMessage. The headless service applies the ban immediately via the existing
+    // ban path and auto-unbans once the duration elapses (HeadlessTemporaryBanService.EnforceAsync,
+    // polled the same way HeadlessWhitelistService already is).
+    private async Task CreateTemporaryBanForSelectedPlayerAsync()
+    {
+        if (SelectedPlayerRecord is null) { PlayerAdminStatusText = "Select a player first."; return; }
+        if (!SelectedPlayerRecord.Online) { PlayerAdminStatusText = "Temporary ban requires a currently online player."; return; }
+        var playerId = SelectedPlayerRecord.PlayerId;
+        if (string.IsNullOrWhiteSpace(playerId)) { PlayerAdminStatusText = "The selected player does not have a usable server-side identity."; return; }
+
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return; }
+
+        IsBusy = true;
+        PlayerAdminStatusText = $"Applying a {NewTemporaryBanDurationHours:F1}-hour temporary ban to {SelectedPlayerRecord.PlayerName}…";
+        try
+        {
+            var result = await _api.CreateTemporaryBanAsync(profile, playerId, SelectedPlayerRecord.PlayerName, PlayerActionMessage, NewTemporaryBanDurationHours, BearerToken);
+            PlayerAdminStatusText = result.Message;
+            await RefreshActivityAsync();
+            await RefreshPlayersPageAsync();
+            if (IsTemporaryBansExpanded) await RefreshTemporaryBansAsync();
+        }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.15.0: early-lifts one active temporary ban from the list card below, via the same
+    // unban action the standalone Unban button uses -- the headless service clears its own tracked
+    // expiry for this player as soon as that unban succeeds (HeadlessTemporaryBanService.ForgetIfPresent),
+    // so its poll sweep won't attempt a second, redundant unban later.
+    private async Task CancelTemporaryBanAsync(string? playerId)
+    {
+        if (string.IsNullOrWhiteSpace(playerId)) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { TemporaryBanState = ex.Message; return; }
+
+        IsBusy = true;
+        try
+        {
+            var result = await _api.RunPlayerAdminActionAsync(profile, playerId, "unban", "Temporary ban cancelled by administrator.", null, BearerToken);
+            TemporaryBanState = result.Message;
+            await RefreshTemporaryBansAsync();
+        }
+        catch (Exception ex) { TemporaryBanState = ex.Message; }
         finally { IsBusy = false; }
     }
 
@@ -3150,9 +5403,64 @@ public sealed class MainWindowViewModel : ViewModelBase
             DiagnosticFindings.Clear();
             foreach (var finding in LatestDiagnosticsReport.Findings) DiagnosticFindings.Add(finding);
             DoctorStatus = LatestDiagnosticsReport.OverallHealthText;
-            DoctorSummary = $"{LatestDiagnosticsReport.Passed} passed · {LatestDiagnosticsReport.Warnings} warning(s) · {LatestDiagnosticsReport.Failures} failure(s)";
+            // v0.7.30.0 bug fix: was just the raw pass/warn/fail counts, which left "UNKNOWN" (the
+            // legitimate result when 17/17 pass but the server simply isn't running -- see
+            // OverallHealthText) completely unexplained. The backend already computes exactly this
+            // explanation (OverallHealthDetail, e.g. "Server is not running; no health issues
+            // detected."); it was just never read on the Desktop side.
+            DoctorSummary = $"{LatestDiagnosticsReport.Passed} passed · {LatestDiagnosticsReport.Warnings} warning(s) · {LatestDiagnosticsReport.Failures} failure(s)"
+                + (string.IsNullOrWhiteSpace(LatestDiagnosticsReport.OverallHealthDetail) ? "" : $" — {LatestDiagnosticsReport.OverallHealthDetail}");
         }
         catch (Exception ex) { DoctorStatus = "Unavailable"; DoctorSummary = ex.Message; }
+        finally { IsBusy = false; }
+        // v0.7.44.0: Run Doctor is the natural moment to also refresh the machine-wide instance
+        // list -- same page, same "what's actually running" concern. Best-effort: a failure here
+        // must not blank out the diagnostics report that already succeeded above.
+        await RefreshAllInstancesAsync();
+    }
+
+    // v0.7.44.0: Palworld Instance Detection & Termination Tool. Lists every Palworld process on
+    // the machine (not just this profile's own managed one) via the new /server/instances route,
+    // which wraps IServerLifecycleService.FindAllInstancesAsync -- itself just the existing raw
+    // FindProcessesByName primitive, unfiltered by ServerRoot, tagged per-entry with whether it
+    // matches this profile's own configured install path.
+    private async Task RefreshAllInstancesAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch { return; }
+        try
+        {
+            var instances = await _api.GetAllInstancesAsync(profile, BearerToken);
+            AllInstances.Clear();
+            foreach (var instance in instances) AllInstances.Add(instance);
+            RaisePropertyChanged(nameof(HasAllInstances));
+            if (SelectedInstance is { } current && instances.All(i => i.ProcessId != current.ProcessId))
+                SelectedInstance = null;
+        }
+        catch { /* best-effort -- the Doctor page already surfaces connection problems elsewhere */ }
+    }
+
+    // Deliberately only reachable for an instance NOT confirmed as this profile's own managed
+    // process (see SelectedInstance/IsSelectedInstanceManaged) -- this is a raw kill by PID with
+    // no crash-recovery coordination of any kind. If the target actually belongs to a different
+    // local MystTiq session's own tracked ServerRoot, that session's own crash-recovery will see
+    // an unrequested stop and may auto-restart it; this tool cannot know that in advance and the
+    // MOD DETAILS-style details panel discloses exactly this risk before the button is reachable.
+    private async Task TerminateSelectedInstanceAsync()
+    {
+        if (SelectedInstance is not { ManagedByThisProfile: false } target) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { InstanceTerminationResultText = ex.Message; return; }
+        IsBusy = true; BusyReason = $"Terminating PID {target.ProcessId}…";
+        try
+        {
+            var result = await _api.TerminateInstanceAsync(profile, target.ProcessId, BearerToken);
+            InstanceTerminationResultText = result.Message ?? string.Empty;
+            await RefreshAllInstancesAsync();
+        }
+        catch (Exception ex) { InstanceTerminationResultText = ex.Message; }
         finally { IsBusy = false; }
     }
 
@@ -3220,9 +5528,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             var selectedFileName = SelectedBackup?.FileName;
             var inventory = await _api.GetBackupsAsync(profile, BearerToken);
-            BackupItems.Clear();
-            foreach (var item in inventory.Items)
-                BackupItems.Add(item);
+            PopulateBackupItems(inventory.Items);
 
             SelectedBackup = BackupItems.FirstOrDefault(x => x.FileName == selectedFileName) ?? BackupItems.FirstOrDefault();
             BackupState = $"{inventory.Count} backup(s)";
@@ -3244,6 +5550,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
         catch (Exception ex) { BackupDetail = ex.Message; return; }
 
+        BusyReason = "Creating backup…";
         IsBusy = true;
         BackupState = "Creating…";
         try
@@ -3253,7 +5560,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             await RefreshBackupsCoreAsync(profile);
         }
         catch (Exception ex) { BackupDetail = ex.Message; }
-        finally { IsBusy = false; }
+        finally { IsBusy = false; BusyReason = null; }
     }
 
     private async Task DeleteBackupAsync()
@@ -3285,6 +5592,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { BackupDetail = ex.Message; return; }
 
         var fileName = SelectedBackup.FileName;
+        BusyReason = "Restoring backup…";
         IsBusy = true;
         BackupState = "Restoring…";
         try
@@ -3294,7 +5602,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             await RefreshBackupsCoreAsync(profile);
         }
         catch (Exception ex) { BackupDetail = ex.Message; }
-        finally { IsBusy = false; }
+        finally { IsBusy = false; BusyReason = null; }
     }
 
     private async Task VerifySelectedBackupAsync()
@@ -3405,22 +5713,35 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         var selectedFileName = SelectedBackup?.FileName;
         var inventory = await _api.GetBackupsAsync(profile, BearerToken);
-        BackupItems.Clear();
-        foreach (var item in inventory.Items)
-            BackupItems.Add(item);
+        PopulateBackupItems(inventory.Items);
         SelectedBackup = BackupItems.FirstOrDefault(x => x.FileName == selectedFileName) ?? BackupItems.FirstOrDefault();
         BackupState = $"{inventory.Count} backup(s)";
         BackupTotalSizeText = $"{inventory.TotalSizeBytes / 1024d / 1024d:F2} MB";
         BackupRootPath = inventory.RootPath;
-        RaisePropertyChanged(nameof(BackupArchiveCountText));
-        RaisePropertyChanged(nameof(BackupVerifiedCountText));
-        RaisePropertyChanged(nameof(BackupPendingCountText));
     }
 
     private static readonly HashSet<string> SimpleConfigurationNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "ServerName", "ServerDescription", "ServerPassword", "AdminPassword", "PublicPort", "ServerPlayerMaxNum",
         "RESTAPIEnabled", "RESTAPIPort", "RCONEnabled", "RCONPort",
+        "DayTimeSpeedRate", "NightTimeSpeedRate", "ExpRate", "PalCaptureRate", "PalSpawnNumRate",
+        "PlayerDamageRateAttack", "PlayerDamageRateDefense", "PlayerStomachDecreaceRate", "PlayerStaminaDecreaceRate",
+        "PlayerAutoHPRegeneRate", "PalStomachDecreaceRate", "PalStaminaDecreaceRate", "PalAutoHPRegeneRate",
+        "CollectionDropRate", "CollectionObjectRespawnSpeedRate", "WorkSpeedRate", "MonsterFarmActionSpeedRate",
+        "ItemWeightRate", "ItemCorruptionMultiplier", "EquipmentDurabilityDamageRate", "BaseCampWorkerMaxNum",
+        "BaseCampMaxNumInGuild", "BuildObjectDeteriorationDamageRate", "SupplyDropSpan"
+    };
+
+    // v0.7.29.0 bug fix: the gameplay-rate-only subset of SimpleConfigurationNames above -- deliberately
+    // excludes identity (ServerName/ServerDescription/ServerPassword/AdminPassword) and
+    // network/operational fields (PublicPort/ServerPlayerMaxNum/RESTAPIEnabled/RESTAPIPort/
+    // RCONEnabled/RCONPort). SimpleConfigurationNames itself stays untouched -- it's correctly used
+    // elsewhere to decide what the Simple Settings *view* shows, a different concern from what a QoL
+    // preset should actually mutate. ApplySelectedConfigurationPreset's "Official" branch used to
+    // reset every SimpleConfigurationNames entry, which silently wiped the server's name/description/
+    // passwords back to their defaults any time "Official / Vanilla" was selected.
+    private static readonly HashSet<string> GameplayRateConfigurationNames = new(StringComparer.OrdinalIgnoreCase)
+    {
         "DayTimeSpeedRate", "NightTimeSpeedRate", "ExpRate", "PalCaptureRate", "PalSpawnNumRate",
         "PlayerDamageRateAttack", "PlayerDamageRateDefense", "PlayerStomachDecreaceRate", "PlayerStaminaDecreaceRate",
         "PlayerAutoHPRegeneRate", "PalStomachDecreaceRate", "PalStaminaDecreaceRate", "PalAutoHPRegeneRate",
@@ -3448,40 +5769,135 @@ public sealed class MainWindowViewModel : ViewModelBase
         SelectedConfigCategory = PalworldConfigCategories.Contains(selected) ? selected : "All Categories";
     }
 
+    private static bool MatchesConfigFilter(PalworldSettingDto setting, string search, string category) =>
+        (string.Equals(category, "All Categories", StringComparison.OrdinalIgnoreCase) || string.Equals(setting.Category, category, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(search) || setting.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || setting.DisplayName.Contains(search, StringComparison.OrdinalIgnoreCase) || setting.Category.Contains(search, StringComparison.OrdinalIgnoreCase));
+
     private void ApplyPalworldConfigurationFilter()
     {
         var search = ConfigSearchText.Trim();
         var category = SelectedConfigCategory;
         var items = PalworldSettings.Where(setting =>
             (!_isConfigSimpleView || SimpleConfigurationNames.Contains(setting.Name)) &&
-            (string.Equals(category, "All Categories", StringComparison.OrdinalIgnoreCase) || string.Equals(setting.Category, category, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrWhiteSpace(search) || setting.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || setting.DisplayName.Contains(search, StringComparison.OrdinalIgnoreCase) || setting.Category.Contains(search, StringComparison.OrdinalIgnoreCase)));
+            MatchesConfigFilter(setting, search, category));
         FilteredPalworldSettings.Clear();
         foreach (var item in items) FilteredPalworldSettings.Add(item);
+        // Simple view previously ignored search/category entirely (a separate, unfiltered
+        // collection) -- rebuilding it here keeps both views' filtering behavior identical.
+        RebuildSimplePalworldSettings(search, category);
     }
 
-    private void RebuildSimplePalworldSettings()
+    // Data-driven off the same SimpleConfigurationNames curated set that used to only
+    // gate a filter with no real UI effect -- one entry per name, control shape chosen by the
+    // setting's actual type, replacing the previous 8-item hardcoded slider array. Identity/
+    // credential fields (ServerName/ServerDescription/AdminPassword/ServerPassword) are excluded
+    // here -- they're bound directly in the Server Identity section of the page, not part of any
+    // of these three collections.
+    // v0.7.38.0: Group added so the formerly-flat GAMEPLAY RATES list can render as labeled
+    // sub-sections under the renamed WORLD SETTINGS heading, matching the v0.2.16.4 reference's
+    // grouping (its own listed examples -- "World": Death Penalty/Longer Days/Shorter
+    // Nights/More Item Drops/Faster Resource Respawn/Supply Drop Interval; "Player & Pal":
+    // Player/Pal Health Regeneration -- named only a few by example, not the full list; every
+    // curated rate below has been assigned to whichever of the three groups it actually belongs
+    // to semantically: World (environment/spawn/decay pacing), Player & Pal (survival/combat body
+    // stats), Items & Work (economy/base productivity/equipment).
+    private static readonly (string Name, string Title, string Description, double Min, double Max, double Step, string Unit, string Group)[] SimpleRateDefinitions =
+    [
+        ("DayTimeSpeedRate", "Daytime Speed", "Controls how quickly daylight passes.", 0.1, 5, 0.05, "x", "World"),
+        ("NightTimeSpeedRate", "Nighttime Speed", "Controls how quickly nighttime passes.", 0.1, 5, 0.05, "x", "World"),
+        ("ExpRate", "Experience Rate", "Controls experience earned by players and Pals.", 0.1, 20, 0.1, "x", "World"),
+        ("PalCaptureRate", "Pal Capture Rate", "Controls how easily Pals are captured.", 0.1, 5, 0.05, "x", "World"),
+        ("PalSpawnNumRate", "Pal Spawn Rate", "Controls how many Pals spawn in the world.", 0.1, 5, 0.05, "x", "World"),
+        ("SupplyDropSpan", "Supply Drop Interval", "Sets the time between supply drops.", 1, 360, 1, "min", "World"),
+        ("BuildObjectDeteriorationDamageRate", "Base Decay Rate", "Controls how quickly base structures deteriorate.", 0, 5, 0.05, "x", "World"),
+        ("PlayerDamageRateAttack", "Player Attack Damage", "Controls damage dealt by players.", 0.1, 10, 0.1, "x", "Player & Pal"),
+        ("PlayerDamageRateDefense", "Player Damage Taken", "Controls damage received by players.", 0.1, 10, 0.1, "x", "Player & Pal"),
+        ("PlayerStomachDecreaceRate", "Player Hunger Drain", "Controls how quickly player hunger depletes.", 0.1, 5, 0.05, "x", "Player & Pal"),
+        ("PlayerStaminaDecreaceRate", "Player Stamina Drain", "Controls how quickly player stamina depletes.", 0.1, 5, 0.05, "x", "Player & Pal"),
+        ("PlayerAutoHPRegeneRate", "Player Health Regeneration", "Increases automatic player health recovery.", 0.1, 10, 0.1, "x", "Player & Pal"),
+        ("PalStomachDecreaceRate", "Pal Hunger Drain", "Controls how quickly Pal hunger depletes.", 0.1, 5, 0.05, "x", "Player & Pal"),
+        ("PalStaminaDecreaceRate", "Pal Stamina Drain", "Controls how quickly Pal stamina depletes.", 0.1, 5, 0.05, "x", "Player & Pal"),
+        ("PalAutoHPRegeneRate", "Pal Health Regeneration", "Increases automatic Pal health recovery.", 0.1, 10, 0.1, "x", "Player & Pal"),
+        ("CollectionDropRate", "More Item Drops", "Increases resources dropped from collection objects.", 0.1, 10, 0.1, "x", "Items & Work"),
+        ("CollectionObjectRespawnSpeedRate", "Resource Respawn", "Controls how quickly collection objects return.", 0.1, 10, 0.1, "x", "Items & Work"),
+        ("WorkSpeedRate", "Work Speed", "Controls how quickly base tasks are completed.", 0.1, 10, 0.1, "x", "Items & Work"),
+        ("MonsterFarmActionSpeedRate", "Ranch Action Speed", "Controls how quickly ranch-type Pals produce.", 0.1, 20, 0.5, "x", "Items & Work"),
+        ("ItemWeightRate", "Item Weight", "Controls carried-item weight.", 0.1, 10, 0.1, "x", "Items & Work"),
+        ("ItemCorruptionMultiplier", "Item Corruption Rate", "Controls how quickly items degrade.", 0.1, 10, 0.1, "x", "Items & Work"),
+        ("EquipmentDurabilityDamageRate", "Equipment Durability Loss", "Controls how quickly equipment durability drops.", 0.1, 5, 0.05, "x", "Items & Work")
+    ];
+    private static readonly (string Name, string Title, string Description)[] SimpleToggleDefinitions =
+    [
+        ("RESTAPIEnabled", "REST API Enabled", "Enables Palworld's own REST API, which MystTiq's player/world polling relies on."),
+        ("RCONEnabled", "RCON Enabled", "Enables Source RCON, which server broadcast/commands rely on.")
+    ];
+    private static readonly (string Name, string Title)[] SimpleNetworkDefinitions =
+    [
+        ("PublicPort", "Game Port"), ("ServerPlayerMaxNum", "Max Players"),
+        ("RESTAPIPort", "REST API Port"), ("RCONPort", "RCON Port"),
+        ("BaseCampWorkerMaxNum", "Base Workers (per base)"), ("BaseCampMaxNumInGuild", "Bases per Guild")
+    ];
+
+    // v0.7.1.0: makes visible what RebuildSimplePalworldSettings always silently skipped -- a
+    // curated setting whose name has no match in the live PalWorldSettings.ini at all (an older
+    // Palworld server build, typically) previously just vanished from Simple view with no
+    // indication. Computed independent of search/category filtering: existence in the live INI,
+    // not whether it currently matches the filter, is what "missing" means here.
+    public string SimpleSettingsGapText { get; private set; } = string.Empty;
+    public bool HasSimpleSettingsGap => SimpleSettingsGapText.Length > 0;
+
+    private void RebuildSimplePalworldSettings(string? search = null, string? category = null)
     {
-        SimplePalworldSettings.Clear();
-        var definitions = new (string Name, string Title, string Description, double Min, double Max, double Step, string Unit)[]
-        {
-            ("DayTimeSpeedRate", "Daytime Speed", "Controls how quickly daylight passes.", 0.1, 5, 0.05, "x"),
-            ("NightTimeSpeedRate", "Nighttime Speed", "Controls how quickly nighttime passes.", 0.1, 5, 0.05, "x"),
-            ("CollectionDropRate", "More Item Drops", "Increases resources dropped from collection objects.", 0.1, 10, 0.1, "x"),
-            ("CollectionObjectRespawnSpeedRate", "Resource Respawn", "Controls how quickly collection objects return.", 0.1, 10, 0.1, "x"),
-            ("SupplyDropSpan", "Supply Drop Interval", "Sets the time between supply drops.", 1, 360, 1, "min"),
-            ("PlayerAutoHPRegeneRate", "Player Health Regeneration", "Increases automatic player health recovery.", 0.1, 10, 0.1, "x"),
-            ("PalAutoHPRegeneRate", "Pal Health Regeneration", "Increases automatic Pal health recovery.", 0.1, 10, 0.1, "x"),
-            ("ExpRate", "Experience Rate", "Controls experience earned by players and Pals.", 0.1, 20, 0.1, "x")
-        };
-        foreach (var definition in definitions)
+        search ??= ConfigSearchText.Trim();
+        category ??= SelectedConfigCategory;
+
+        var curatedNames = SimpleRateDefinitions.Select(d => d.Name)
+            .Concat(SimpleToggleDefinitions.Select(d => d.Name))
+            .Concat(SimpleNetworkDefinitions.Select(d => d.Name));
+        var missing = curatedNames
+            .Where(name => !PalworldSettings.Any(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+        SimpleSettingsGapText = missing.Count == 0
+            ? string.Empty
+            : $"{missing.Count} of {SimpleRateDefinitions.Length + SimpleToggleDefinitions.Length + SimpleNetworkDefinitions.Length} curated settings aren't in this server's PalWorldSettings.ini (older server build?): {string.Join(", ", missing)}";
+        RaisePropertyChanged(nameof(SimpleSettingsGapText));
+        RaisePropertyChanged(nameof(HasSimpleSettingsGap));
+
+        SimpleWorldRateSettings.Clear();
+        SimplePlayerPalRateSettings.Clear();
+        SimpleItemsWorkRateSettings.Clear();
+        foreach (var definition in SimpleRateDefinitions)
         {
             var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase));
-            if (setting is not null)
-                SimplePalworldSettings.Add(new PalworldSimpleSettingItem(setting, definition.Title, definition.Description, definition.Min, definition.Max, definition.Step, definition.Unit));
+            if (setting is null || !MatchesConfigFilter(setting, search, category)) continue;
+            var item = new PalworldSimpleSettingItem(setting, definition.Title, definition.Description, definition.Min, definition.Max, definition.Step, definition.Unit, definition.Group);
+            var target = definition.Group switch
+            {
+                "Player & Pal" => SimplePlayerPalRateSettings,
+                "Items & Work" => SimpleItemsWorkRateSettings,
+                _ => SimpleWorldRateSettings,
+            };
+            target.Add(item);
         }
+        SimpleToggleSettings.Clear();
+        foreach (var definition in SimpleToggleDefinitions)
+        {
+            var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase));
+            if (setting is not null && MatchesConfigFilter(setting, search, category))
+                SimpleToggleSettings.Add(new PalworldSimpleToggleItem(setting, definition.Title, definition.Description));
+        }
+        SimpleNetworkSettings.Clear();
+        foreach (var definition in SimpleNetworkDefinitions)
+        {
+            var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase));
+            if (setting is not null && MatchesConfigFilter(setting, search, category))
+                SimpleNetworkSettings.Add(setting);
+        }
+
         RaisePropertyChanged(nameof(ServerNameSetting));
         RaisePropertyChanged(nameof(ServerDescriptionSetting));
+        RaisePropertyChanged(nameof(AdminPasswordSetting));
+        RaisePropertyChanged(nameof(ServerPasswordSetting));
     }
 
     private void PalworldSetting_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -3500,7 +5916,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         PalworldConfigHasValidationErrors = errors.Count > 0;
         PalworldConfigValidationText = errors.Count == 0 ? "Configuration values pass client-side validation." : string.Join(" • ", errors.Take(4));
         (SavePalworldConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (ApplyConfigPresetCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (ResetConfigChangesCommand as RelayCommand)?.RaiseCanExecuteChanged();
         DetectAndSyncConfigPreset();
     }
@@ -3526,7 +5941,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             _selectedConfigPreset = matched;
             RaisePropertyChanged(nameof(SelectedConfigPreset));
-            (ApplyConfigPresetCommand as RelayCommand)?.RaiseCanExecuteChanged();
         }
     }
 
@@ -3599,13 +6013,22 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         if (!PalworldConfigLoaded) return;
         var presetKey = SelectedConfigPreset;
-        var targets = GetQolPreset(presetKey);
         if (presetKey.StartsWith("Official", StringComparison.OrdinalIgnoreCase))
         {
-            foreach (var setting in PalworldSettings.Where(x => SimpleConfigurationNames.Contains(x.Name))) setting.Value = setting.DefaultValue;
+            // v0.7.29.0 bug fix: was SimpleConfigurationNames, which also covers identity
+            // (ServerName/ServerDescription/ServerPassword/AdminPassword) -- resetting those
+            // whenever "Official / Vanilla" was selected silently wiped the server's name and
+            // passwords. Only gameplay rates should reset here, matching the Balanced/Relaxed
+            // branch below, which never touched identity or network settings either.
+            foreach (var setting in PalworldSettings.Where(x => GameplayRateConfigurationNames.Contains(x.Name))) setting.Value = setting.DefaultValue;
         }
         else
         {
+            // Built-in presets (Balanced/Relaxed) come from GetQolPreset's hardcoded maps; anything
+            // else is a user-saved custom preset (the "MystTiq" preset included -- it's not a
+            // special case, just the first name someone saved) read from local disk.
+            var builtIn = GetQolPreset(presetKey);
+            var targets = builtIn.Count > 0 ? builtIn : _configPresetStore.LoadPreset(presetKey);
             foreach (var pair in targets)
             {
                 var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(pair.Key, StringComparison.OrdinalIgnoreCase));
@@ -3614,6 +6037,28 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
         PalworldConfigState = $"{presetKey} preset loaded locally. Review highlighted changes, then Save Changes.";
         RefreshPalworldConfigurationState();
+    }
+
+    private void RebuildConfigPresetList()
+    {
+        var custom = _configPresetStore.LoadPresetNames();
+        PalworldConfigPresets = new List<string> { "Official / Vanilla", "Balanced QoL", "Relaxed QoL" }.Concat(custom).Append("Custom").ToArray();
+    }
+
+    private void SaveCurrentAsPreset()
+    {
+        var name = NewConfigPresetName.Trim();
+        if (string.IsNullOrWhiteSpace(name) || !PalworldConfigLoaded) return;
+        var snapshot = PalworldSettings.ToDictionary(x => x.Name, x => x.Value, StringComparer.OrdinalIgnoreCase);
+        _configPresetStore.SavePreset(name, snapshot);
+        RebuildConfigPresetList();
+        // Direct field assignment, bypassing the public setter -- same bypass
+        // DetectAndSyncConfigPreset() already uses. The values just saved already match what's
+        // loaded; re-applying through the setter would be a harmless but pointless no-op.
+        _selectedConfigPreset = name;
+        RaisePropertyChanged(nameof(SelectedConfigPreset));
+        NewConfigPresetName = string.Empty;
+        PalworldConfigState = $"Saved the current settings locally as preset \"{name}\".";
     }
 
     private static IReadOnlyDictionary<string, string> GetQolPreset(string preset)
@@ -3871,21 +6316,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         SetupRecentActivity = $"Recent activity: Verify environment · {DateTime.Now:t}.";
     }
 
-    private async Task CheckEnvironmentUpdatesAsync()
-    {
-        SetupOperationState = "CHECKING";
-        SetupOperationTitle = "Checking server distribution";
-        SetupOperationDetail = "Refreshing environment readiness and the current SteamCMD update plan.";
-        SetupOperationProgress = 20;
-        await RefreshEnvironmentAsync();
-        SetupOperationProgress = 55;
-        await PreviewDistributionPlanAsync();
-        SetupOperationProgress = 100;
-        SetupOperationState = "COMPLETE";
-        SetupOperationTitle = "Update readiness checked";
-        SetupRecentActivity = $"Recent activity: Check for updates · {DateTime.Now:t}.";
-    }
-
     private async Task CreateDefaultServerSettingsAsync()
     {
         if (!SetupCreateConfirmed)
@@ -4048,6 +6478,33 @@ public sealed class MainWindowViewModel : ViewModelBase
             DistributionDetail = ex.Message;
         }
         finally { IsBusy = false; }
+        // v0.7.45.0: same page, same "is everything up to date" concern -- Refresh now also
+        // pulls the full component-by-component version table. Best-effort: a failure here must
+        // not blank out the distribution status that already succeeded above.
+        await RefreshComponentVersionsAsync();
+    }
+
+    private async Task RefreshComponentVersionsAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch { return; }
+        try
+        {
+            var snapshot = await _api.GetComponentVersionsAsync(profile, BearerToken);
+            CoreServerComponents.Clear();
+            SaveRuntimeDependencyComponents.Clear();
+            foreach (var component in snapshot.Components)
+            {
+                if (string.Equals(component.Group, "Core Server", StringComparison.OrdinalIgnoreCase))
+                    CoreServerComponents.Add(component);
+                else
+                    SaveRuntimeDependencyComponents.Add(component);
+            }
+            RaisePropertyChanged(nameof(HasComponentVersions));
+            ComponentVersionsCheckedAtText = FormatTime(snapshot.ObservedAt);
+        }
+        catch { /* best-effort -- the existing DistributionState/Detail already surface connection problems */ }
     }
 
     private async Task PreviewDistributionPlanAsync()
@@ -4172,6 +6629,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private async Task ApplyWorldTransactionAsync()
     {
         if (SelectedProfile is null || string.IsNullOrWhiteSpace(WorldPreviewToken)) return;
+        BusyReason = "Applying world transaction…";
         IsBusy = true;
         try
         {
@@ -4186,7 +6644,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             await RefreshOperationsAsync();
         }
         catch (Exception ex) { WorldTransactionState = ex.Message; }
-        finally { IsBusy = false; }
+        finally { IsBusy = false; BusyReason = null; }
     }
 
     private async Task PreviewGuildOwnershipAsync()
@@ -4221,6 +6679,62 @@ public sealed class MainWindowViewModel : ViewModelBase
             await RefreshOperationsAsync();
         }
         catch (Exception ex) { GuildOperationStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.6.15.0 "Save-Data Edit Engine Foundation" -- the first real Pal-level editing UI, on the
+    // same Preview/Apply pattern as Guild/Base Ownership above. The edit form is pre-populated from
+    // the selected Pal's current values (see SelectedExplorerPal's setter) and always sends every
+    // field on preview; the server's own diff (in the returned findings) is what actually tells the
+    // user what would change, so nothing needs to be diffed client-side.
+    private async Task RefreshPalsAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        PalEditStatusText = "Loading Pals…";
+        try
+        {
+            var pals = await _api.GetPalsAsync(SelectedProfile, null, BearerToken);
+            ExplorerPals.Clear();
+            foreach (var pal in pals) ExplorerPals.Add(pal);
+            PalEditStatusText = $"{pals.Count} Pal(s) loaded. Select one to edit.";
+        }
+        catch (Exception ex) { PalEditStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task PreviewPalEditAsync()
+    {
+        if (SelectedProfile is null || SelectedExplorerPal is null) return;
+        IsBusy = true;
+        PalEditStatusText = "Previewing…";
+        try
+        {
+            var changes = new PalEditFieldChangesDto(PalEditNickName, PalEditLevel, PalEditRank, PalEditTalentHp, PalEditTalentShot, PalEditTalentDefense, PalEditGender, PalEditIsRarePal);
+            var preview = await _api.PreviewPalEditAsync(SelectedProfile, SelectedExplorerPal.InstanceId, changes, BearerToken);
+            PalEditPreviewToken = preview.CanApply ? preview.PreviewToken : string.Empty;
+            PalEditConfirmed = false;
+            PalEditStatusText = string.Join(" ", preview.Findings) +
+                (preview.CanApply ? $" Preview expires {preview.ExpiresUtc.ToLocalTime():t}." : string.Empty);
+        }
+        catch (Exception ex) { PalEditPreviewToken = string.Empty; PalEditStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task ApplyPalEditAsync()
+    {
+        if (SelectedProfile is null || string.IsNullOrWhiteSpace(PalEditPreviewToken)) return;
+        IsBusy = true;
+        try
+        {
+            var result = await _api.ApplyPalEditAsync(SelectedProfile, PalEditPreviewToken, PalEditConfirmed, BearerToken);
+            PalEditStatusText = result.Message + (string.IsNullOrWhiteSpace(result.SafetyBackup) ? string.Empty : $" Safety backup: {result.SafetyBackup}");
+            PalEditPreviewToken = string.Empty;
+            PalEditConfirmed = false;
+            if (result.Success) await RefreshPalsAsync();
+            await RefreshOperationsAsync();
+        }
+        catch (Exception ex) { PalEditStatusText = ex.Message; }
         finally { IsBusy = false; }
     }
 
@@ -4510,7 +7024,105 @@ public sealed class MainWindowViewModel : ViewModelBase
         try { ApplyModInventory(await _api.GetModsAsync(profile, BearerToken)); }
         catch (Exception ex) { ModState = "Unavailable"; ModSummary = ex.Message; }
         finally { IsBusy = false; }
+        // v0.7.48.0: "Refresh Runtime" (this command's own ribbon label on the UE4SS page) is the
+        // natural place to also pull the release catalog -- same page, same "what's available for
+        // this runtime" concern. Gated to the UE4SS page specifically since this same command also
+        // serves MOD Dashboard/Library's plain "Refresh MODs", which has no reason to hit GitHub.
+        if (IsUe4ssPage) await RefreshUe4ssReleaseCatalogAsync();
     }
+
+    private async Task RefreshUe4ssReleaseCatalogAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch { return; }
+        Ue4ssReleaseCatalogStatusText = "Checking GitHub for release data…";
+        try
+        {
+            var catalog = await _api.GetUe4ssReleaseCatalogAsync(profile, BearerToken);
+            Ue4ssPalworldForkReleases.Clear();
+            foreach (var release in catalog.PalworldForkReleases) Ue4ssPalworldForkReleases.Add(release);
+            Ue4ssOfficialUpstreamReleases.Clear();
+            foreach (var release in catalog.OfficialUpstreamReleases) Ue4ssOfficialUpstreamReleases.Add(release);
+            RaisePropertyChanged(nameof(Ue4ssVisibleReleases));
+            RaisePropertyChanged(nameof(HasUe4ssReleases));
+            Ue4ssReleaseCatalogStatusText = $"Checked {FormatTime(catalog.ObservedAt)}.";
+            var status = await _api.GetUe4ssInstallStatusAsync(profile, BearerToken);
+            Ue4ssRollbackAvailable = status.RollbackAvailable;
+        }
+        catch (Exception ex) { Ue4ssReleaseCatalogStatusText = $"Could not reach GitHub: {ex.Message}"; }
+    }
+
+    // v0.7.49.0: UE4SS Install/Rollback -- same Preview-then-Apply shape as backup retention
+    // cleanup (PreviewBackupRetentionAsync/ApplyBackupRetentionAsync above): Preview resolves the
+    // selected release against the live catalog server-side (the client never sends a raw download
+    // URL) and returns a short-lived token; Apply only proceeds against that exact token.
+    private async Task PreviewUe4ssInstallAsync()
+    {
+        if (SelectedUe4ssRelease is null) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { Ue4ssInstallState = ex.Message; return; }
+        IsBusy = true;
+        try
+        {
+            var preview = await _api.PreviewUe4ssInstallAsync(profile, SelectedUe4ssRelease.Source, SelectedUe4ssRelease.TagName, BearerToken);
+            if (preview is null)
+            {
+                InvalidateUe4ssInstallPreview();
+                Ue4ssInstallState = "This release no longer has a clear primary download asset -- open the release page and install it manually instead.";
+                return;
+            }
+            Ue4ssInstallToken = preview.Token;
+            Ue4ssInstallState = $"{preview.Summary} Current layout: {preview.CurrentLayout}. Preview expires {preview.ExpiresAt.ToLocalTime():HH:mm:ss}.";
+        }
+        catch (Exception ex) { InvalidateUe4ssInstallPreview(); Ue4ssInstallState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task ApplyUe4ssInstallAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Ue4ssInstallToken)) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { Ue4ssInstallState = ex.Message; return; }
+        var token = Ue4ssInstallToken;
+        IsBusy = true;
+        try
+        {
+            var result = await _api.ApplyUe4ssInstallAsync(profile, token, BearerToken);
+            Ue4ssInstallState = result.Message;
+            InvalidateUe4ssInstallPreview();
+            if (result.Success)
+            {
+                Ue4ssRollbackAvailable = true;
+                await RefreshModsAsync();
+            }
+        }
+        catch (Exception ex) { InvalidateUe4ssInstallPreview(); Ue4ssInstallState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RollbackUe4ssInstallAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { Ue4ssInstallState = ex.Message; return; }
+        IsBusy = true;
+        try
+        {
+            var result = await _api.RollbackUe4ssInstallAsync(profile, BearerToken);
+            Ue4ssInstallState = result.Message;
+            if (result.Success) await RefreshModsAsync();
+        }
+        catch (Exception ex) { Ue4ssInstallState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // Only clears the token -- callers that need to explain *why* (selection changed vs. a
+    // finished install/rollback result) set Ue4ssInstallState themselves, since this is also called
+    // after a real result message has already been set and must never clobber it.
+    private void InvalidateUe4ssInstallPreview() => Ue4ssInstallToken = string.Empty;
 
     private async Task VerifyModsAsync()
     {
@@ -4559,7 +7171,11 @@ public sealed class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { ModSummary = ex.Message; return; }
         var package = string.IsNullOrWhiteSpace(ModInstallPackage) ? Path.GetFileNameWithoutExtension(suggestedPackage) : ModInstallPackage.Trim();
         IsBusy = true; ModState = "Installing…";
-        try { var result = await _api.InstallModZipAsync(profile, ModInstallType, package, archive, BearerToken); ModSummary = result.Message; ApplyModInventory(await _api.GetModsAsync(profile, BearerToken)); }
+        // v0.7.39.0: the headless service now detects PAK vs. UE4SS from the archive's own
+        // contents (HeadlessModManagementService.InstallZipAsync), no longer trusting this value
+        // for the actual install -- it stays a plain "PAK" hint purely for CaptureSnapshot's
+        // pre-existing-package-of-this-type lookup, unchanged from today's prior default.
+        try { var result = await _api.InstallModZipAsync(profile, "PAK", package, archive, BearerToken); ModSummary = result.Message; ApplyModInventory(await _api.GetModsAsync(profile, BearerToken)); }
         catch (Exception ex) { ModState = "Install failed"; ModSummary = ex.Message; }
         finally { IsBusy = false; }
     }
@@ -4619,6 +7235,163 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex) { WorkshopScanState = ex.Message; }
         finally { IsBusy = false; }
+    }
+
+    // v0.7.41.0: MOD update detection (item 52). Check calls the headless service's real,
+    // locally-verifiable comparison (installed files vs. Steam's local Workshop content cache for
+    // a matching item, no network calls, no fabricated "latest version" claim) and remembers the
+    // matched WorkshopId so Update can reuse the existing Workshop-import route unchanged.
+    private async Task CheckSelectedModUpdateAsync()
+    {
+        if (SelectedMod is not { } mod) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { SelectedModUpdateText = ex.Message; return; }
+        IsBusy = true;
+        SelectedModUpdateText = "Checking for an update…";
+        try
+        {
+            var result = await _api.CheckModUpdateAsync(profile, mod.Type, mod.Package, BearerToken);
+            SelectedModUpdateText = result.Detail;
+            _selectedModUpdateWorkshopId = result.UpdateAvailable ? result.WorkshopId : null;
+            (UpdateSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        }
+        catch (Exception ex) { SelectedModUpdateText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task UpdateSelectedModAsync()
+    {
+        if (_selectedModUpdateWorkshopId is not { } workshopId || SelectedMod is not { } mod) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { SelectedModUpdateText = ex.Message; return; }
+        IsBusy = true;
+        try
+        {
+            var result = await _api.ImportWorkshopModAsync(profile, workshopId, BearerToken);
+            var inventory = await _api.GetModsAsync(profile, BearerToken);
+            ApplyModInventory(inventory);
+            // Reselecting runs through SelectedMod's setter, which clears SelectedModUpdateText as
+            // stale for the new selection -- set the result message after, not before, reselecting.
+            SelectedMod = ModItems.FirstOrDefault(x => string.Equals(x.Package, mod.Package, StringComparison.OrdinalIgnoreCase)) ?? SelectedMod;
+            SelectedModUpdateText = result.Message;
+        }
+        catch (Exception ex) { SelectedModUpdateText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.55.0: website-sourced MOD descriptions (item 40's deferred half). Only ever runs from an
+    // explicit user click (Fetch/Refresh) -- never automatically on selection change, so switching
+    // through the MOD list never triggers a network call on its own. A description already showing
+    // for this selection means the click is a Refresh, so it forces a re-fetch past the cache.
+    private async Task FetchSelectedModDescriptionAsync()
+    {
+        if (SelectedMod is not { } mod) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { SelectedModDescription = new ModDescriptionResultDto { Available = false, Detail = ex.Message }; return; }
+        IsBusy = true;
+        try
+        {
+            var forceRefresh = SelectedModDescription is not null;
+            SelectedModDescription = await _api.GetModDescriptionAsync(profile, mod.Type, mod.Package, forceRefresh, BearerToken);
+        }
+        catch (Exception ex) { SelectedModDescription = new ModDescriptionResultDto { Available = false, Detail = ex.Message }; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task SetSelectedModDescriptionSourceAsync()
+    {
+        if (SelectedMod is not { } mod) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { SelectedModDescription = new ModDescriptionResultDto { Available = false, Detail = ex.Message }; return; }
+        IsBusy = true;
+        try
+        {
+            var result = await _api.SetModDescriptionSourceAsync(profile, mod.Type, mod.Package, SelectedModDescriptionSourceInput, BearerToken);
+            SelectedModDescription = result.Success
+                ? await _api.GetModDescriptionAsync(profile, mod.Type, mod.Package, true, BearerToken)
+                : new ModDescriptionResultDto { Available = false, Detail = result.Message };
+        }
+        catch (Exception ex) { SelectedModDescription = new ModDescriptionResultDto { Available = false, Detail = ex.Message }; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.59.0: Safe-Start MOD Diagnostic. IsBusy only wraps the initial Begin POST -- the
+    // diagnostic itself runs server-side over many minutes, so a dedicated poll loop (not IsBusy)
+    // tracks it independently, matching the "don't hold IsBusy for a genuinely long background
+    // operation" discipline this ViewModel already applies to UE4SS install preview/apply.
+    private async Task BeginModSafeStartAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { ModSafeStartStatus = new SafeStartStatusDto { Completed = true, FinalMessage = ex.Message }; return; }
+        IsBusy = true;
+        try
+        {
+            var result = await _api.BeginModSafeStartAsync(profile, BearerToken);
+            if (!result.Success)
+            {
+                ModSafeStartStatus = new SafeStartStatusDto { Completed = true, FinalMessage = result.Message };
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            ModSafeStartStatus = new SafeStartStatusDto { Completed = true, FinalMessage = ex.Message };
+            return;
+        }
+        finally { IsBusy = false; }
+        StartModSafeStartPolling();
+    }
+
+    private void StartModSafeStartPolling()
+    {
+        _modSafeStartPollTimer?.Stop();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        timer.Tick += async (_, _) => await PollModSafeStartStatusAsync();
+        _modSafeStartPollTimer = timer;
+        timer.Start();
+        _ = PollModSafeStartStatusAsync();
+    }
+
+    private async Task PollModSafeStartStatusAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch { return; }
+        try
+        {
+            var status = await _api.GetModSafeStartStatusAsync(profile, BearerToken);
+            ModSafeStartStatus = status;
+            (BeginModSafeStartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (CancelModSafeStartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            if (status is null || status.Completed)
+            {
+                _modSafeStartPollTimer?.Stop();
+                _modSafeStartPollTimer = null;
+                if (status is { Completed: true })
+                {
+                    // The diagnostic may have disabled MODs along the way -- refresh the inventory
+                    // so the Installed MODs list reflects the real, current enabled/disabled state.
+                    var inventory = await _api.GetModsAsync(profile, BearerToken);
+                    ApplyModInventory(inventory);
+                }
+            }
+        }
+        catch { /* Transient poll failure -- the timer tries again on its own next tick. */ }
+    }
+
+    private async Task CancelModSafeStartAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch { return; }
+        try { await _api.CancelModSafeStartAsync(profile, BearerToken); }
+        catch { /* Best effort -- the next poll tick will reflect whatever the server actually did. */ }
+        await PollModSafeStartStatusAsync();
     }
 
     private async Task RunModMutationAsync(Func<ConnectionProfile, Task<ModMutationResultDto>> operation, string failureState)
@@ -4715,6 +7488,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     private async Task RestartServerAsync() =>
         await RunLifecycleAsync("Restarting…", _api.RestartServerAsync);
 
+    private async Task ForceStopServerAsync() =>
+        await RunLifecycleAsync("Force stopping…", _api.ForceStopServerAsync);
+
     public async Task ShutdownForExitAsync(bool force)
     {
         if (!ManagementApiConnected) return;
@@ -4749,10 +7525,22 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        BusyReason = activity;
         IsBusy = true;
         ConnectionState = activity;
         LifecycleStatusText = $"{activity.TrimEnd('…')} PalServer through the MystTiq management service.";
         Detail = LifecycleStatusText;
+
+        // v0.6.14.0: the passive auto-refresh timer skips its tick entirely while IsBusy (set just
+        // above), and this is the only other place ApplyLogs was called -- once, after the whole
+        // operation finished. A real Start/Stop can take anywhere from several seconds to the
+        // configured startup/stop timeout, so the Console page showed nothing new for that entire
+        // window, exactly during the moment its live narrative matters most. Runs a lightweight,
+        // console-only tail poll concurrently with the main operation (not the full status poll --
+        // that stays IsBusy-gated to avoid overlapping lifecycle-adjacent calls), stopped the moment
+        // the operation completes.
+        using var consoleTailCts = new CancellationTokenSource();
+        var consoleTailLoop = PollConsoleWhileBusyAsync(profile, consoleTailCts.Token);
 
         try
         {
@@ -4765,8 +7553,11 @@ public sealed class MainWindowViewModel : ViewModelBase
             ManagementApiConnected = true;
             ConnectionState = result.Success ? "Connected" : "Operation failed";
 
-            // Always reacquire one coherent authoritative sample after a mutation.
-            var poll = await _api.GetStatusPollingAsync(profile, 120, BearerToken);
+            // Always reacquire one coherent authoritative sample after a mutation. v0.7.33.0: log
+            // count raised to the server's real 500-line cap (was 120) -- this is the console
+            // snapshot right after Start/Stop/Restart complete, exactly where a modded server's
+            // full UE4SS/MOD LOAD startup output needs to actually be visible.
+            var poll = await _api.GetStatusPollingAsync(profile, 500, BearerToken);
             ApplyStatus(poll.Status);
             ApplyServiceStatus(poll.Service);
             ApplyPlayers(poll.Players);
@@ -4781,12 +7572,40 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
         finally
         {
+            consoleTailCts.Cancel();
+            try { await consoleTailLoop; } catch (OperationCanceledException) { }
             IsBusy = false;
+            BusyReason = null;
+        }
+    }
+
+    private async Task PollConsoleWhileBusyAsync(ConnectionProfile profile, CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            try { await Task.Delay(TimeSpan.FromSeconds(2), token); }
+            catch (OperationCanceledException) { return; }
+
+            // v0.7.33.0: raised to the server's real 500-line cap (was 120) -- this loop is the
+            // live view during the entire Start/Stop/Restart window, the exact moment a modded
+            // server's full startup output needs to be visible, not just the final snapshot after.
+            try { ApplyLogs(await _api.GetLogTailAsync(profile, 500, BearerToken)); }
+            catch { /* best-effort; the final authoritative poll after the operation completes will catch up */ }
         }
     }
 
     private void ApplyStatus(ServerStatusDto status)
     {
+        // Same "is the server running" definition already proven server-side for gating a
+        // mutating action while running (HeadlessPalEditService.ApplyAsync's precondition) --
+        // NativeProcessId alone catches "process launched but not yet Ready" (mid-startup), so
+        // Start doesn't stay clickable during that window.
+        ServerIsRunning = status.NativeProcessId.HasValue || status.Ready;
+
+        ManagedProcesses.Clear();
+        foreach (var process in status.Processes) ManagedProcesses.Add(process);
+        RaisePropertyChanged(nameof(HasManagedProcesses));
+
         ServerState = status.Ready
             ? "Running / Ready"
             : status.CrashDetected
@@ -4806,10 +7625,15 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Detail = status.Detail ?? "MystTiq returned server status.";
         DashboardHealthText = status.Ready ? "READY" : status.CrashDetected ? "ATTENTION" : "STOPPED";
+        // v0.7.29.0 bug fix: these two used to always show a generic hardcoded string whenever the
+        // server wasn't Ready, discarding status.Detail entirely -- so even after GetStatusAsync
+        // started distinguishing "genuinely not running" from "running at an unexpected path" (see
+        // WindowsServerLifecycleService), the Dashboard's SERVER/OVERALL HEALTH cards never showed
+        // the difference. Now they surface the backend's actual explanation.
         DashboardHealthDetail = status.Ready
             ? $"PalServer healthy · {ListenerText}"
-            : status.CrashDetected ? "Crash evidence detected; open Doctor." : "Stopped intentionally or awaiting start.";
-        DashboardSessionText = status.Ready ? $"Session {UptimeText}" : "No active PalServer session";
+            : status.CrashDetected ? "Crash evidence detected; open Doctor." : (status.Detail ?? "Stopped intentionally or awaiting start.");
+        DashboardSessionText = status.Ready ? $"Session {UptimeText}" : (status.Detail ?? "No active PalServer session");
     }
 
     private void ApplyServiceStatus(ServiceStatusDto status)
@@ -4870,16 +7694,40 @@ public sealed class MainWindowViewModel : ViewModelBase
             throw new InvalidOperationException("Enter an absolute http:// or https:// MystTiq management URL.");
 
         var pin = MystTiqApiClient.NormalizeFingerprint(CertificateSha256);
+        var accentColorKey = ResolveAccentColorKey(existingId, ActiveTab?.Profile);
+        var serverId = string.IsNullOrWhiteSpace(TargetServerId) ? null : TargetServerId.Trim();
+
+        // v0.7.63.0: catches the exact mistake reported live -- two profiles pointed at the same
+        // host (same BaseAddress) that also resolve to the same actual server (same ServerId, or
+        // both blank -- a blank ServerId always means "this host's default server" regardless of
+        // which profile leaves it blank, so two blank entries collide too). Without this, nothing
+        // stopped saving a profile that silently duplicates an already-open connection under a
+        // different name; the two tabs would show and control the identical PalServer instance
+        // with no indication they were the same thing. Compares by normalized origin (scheme+host+
+        // port) rather than the raw Uri, since ".../" vs "..." would otherwise dodge the check.
+        var normalizedOrigin = uri.GetLeftPart(UriPartial.Authority);
+        var collision = Profiles.FirstOrDefault(p =>
+            p.Id != (existingId ?? string.Empty) &&
+            string.Equals(p.BaseAddress.GetLeftPart(UriPartial.Authority), normalizedOrigin, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(p.ServerId ?? string.Empty, serverId ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+        if (collision is not null)
+            throw new InvalidOperationException(
+                $"'{collision.Name}' already connects to this exact server ({normalizedOrigin}" +
+                (string.IsNullOrWhiteSpace(serverId) ? string.Empty : $", server \"{serverId}\"") +
+                $"). Give this profile a different Target server ID, or edit '{collision.Name}' instead of creating a duplicate.");
 
         return new ConnectionProfile(
             existingId ?? Guid.NewGuid().ToString("N"),
             ProfileName.Trim(),
             uri,
-            pin);
+            pin,
+            accentColorKey,
+            serverId);
     }
 
     private void RaisePageVisibility()
     {
+        RebuildRibbonGroups();
         RaisePropertyChanged(nameof(ShowGlobalPageHeader));
         RaisePropertyChanged(nameof(IsDashboardPage));
         RaisePropertyChanged(nameof(IsServerPage));
@@ -4926,6 +7774,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(IsV5ModsCategory));
         RaisePropertyChanged(nameof(IsV5ToolsCategory));
         RaisePropertyChanged(nameof(IsV5SystemCategory));
+        RaisePropertyChanged(nameof(IsHomePageArtDark));
+        RaisePropertyChanged(nameof(IsHomePageArtLight));
+        RaisePropertyChanged(nameof(IsWorldPageArtDark));
+        RaisePropertyChanged(nameof(IsWorldPageArtLight));
     }
 }
 
@@ -4949,10 +7801,15 @@ internal sealed class RelayCommand : ICommand
 internal sealed class RelayCommand<T> : ICommand
 {
     private readonly Action<T?> _execute;
+    private readonly Func<T?, bool>? _canExecute;
 
-    public RelayCommand(Action<T?> execute) => _execute = execute;
+    public RelayCommand(Action<T?> execute, Func<T?, bool>? canExecute = null)
+    {
+        _execute = execute;
+        _canExecute = canExecute;
+    }
 
-    public bool CanExecute(object? parameter) => true;
+    public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter is T typed ? typed : default) ?? true;
 
     public void Execute(object? parameter)
     {
@@ -4962,11 +7819,8 @@ internal sealed class RelayCommand<T> : ICommand
             _execute(default);
     }
 
-    event EventHandler? ICommand.CanExecuteChanged
-    {
-        add { }
-        remove { }
-    }
+    public event EventHandler? CanExecuteChanged;
+    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }
 
 internal sealed class AsyncCommand : ICommand

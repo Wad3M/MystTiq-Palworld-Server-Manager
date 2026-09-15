@@ -13,6 +13,8 @@ public sealed class PlayerSnapshotDto
     [JsonPropertyName("platform")] public string Platform { get; init; } = string.Empty;
     [JsonPropertyName("level")] public string Level { get; init; } = string.Empty;
     [JsonPropertyName("buildingCount")] public string BuildingCount { get; init; } = string.Empty;
+    [JsonPropertyName("locationX")] public string LocationX { get; init; } = string.Empty;
+    [JsonPropertyName("locationY")] public string LocationY { get; init; } = string.Empty;
 
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? UserId : Name;
     public string IdentityText =>
@@ -48,6 +50,11 @@ public sealed class RuntimeMetricsSnapshotDto
     [JsonPropertyName("threadCount")] public int ThreadCount { get; init; }
     [JsonPropertyName("observedAt")] public DateTimeOffset ObservedAt { get; init; }
     [JsonPropertyName("detail")] public string Detail { get; init; } = string.Empty;
+    // v0.7.9.0: real in-game simulation performance from Palworld's own REST /metrics endpoint --
+    // null when the Palworld REST API is disabled/misconfigured/unreachable, not when the value is
+    // genuinely zero.
+    [JsonPropertyName("serverFps")] public double? ServerFps { get; init; }
+    [JsonPropertyName("serverFrameTimeMs")] public double? ServerFrameTimeMs { get; init; }
 }
 
 public sealed record MetricHistoryPoint(
@@ -72,6 +79,10 @@ public sealed class HistoricalMetricPointDto
     [JsonPropertyName("backupCount")] public int BackupCount { get; init; }
     [JsonPropertyName("worldSizeBytes")] public long WorldSizeBytes { get; init; }
     [JsonPropertyName("uptimeMinutes")] public double UptimeMinutes { get; init; }
+    // v0.7.15.0: null when this sample's poll had no real Palworld REST metrics data (e.g. the
+    // REST API was disabled at the time) -- distinct from a real, plottable 0 FPS.
+    [JsonPropertyName("serverFps")] public double? ServerFps { get; init; }
+    [JsonPropertyName("serverFrameTimeMs")] public double? ServerFrameTimeMs { get; init; }
 }
 
 public sealed class HistoricalMetricsSnapshotDto
@@ -87,4 +98,6 @@ public sealed class HistoricalMetricsSnapshotDto
     [JsonPropertyName("memoryTrend")] public string MemoryTrend { get; init; } = "→";
     [JsonPropertyName("observedAt")] public DateTimeOffset ObservedAt { get; init; }
     [JsonPropertyName("detail")] public string Detail { get; init; } = string.Empty;
+    [JsonPropertyName("averageFps")] public double? AverageFps { get; init; }
+    [JsonPropertyName("peakFps")] public double? PeakFps { get; init; }
 }

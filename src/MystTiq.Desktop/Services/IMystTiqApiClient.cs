@@ -41,6 +41,18 @@ public interface IMystTiqApiClient
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
 
+    // v0.7.44.0: machine-wide Palworld instance detection/termination -- see ServerInstanceDto.
+    Task<IReadOnlyList<ServerInstanceDto>> GetAllInstancesAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<InstanceTerminationResultDto> TerminateInstanceAsync(
+        ConnectionProfile profile,
+        int processId,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
     Task<PlayersSnapshotDto> GetPlayersAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
@@ -81,6 +93,11 @@ public interface IMystTiqApiClient
     Task<NotificationChannelConfigurationDto> SaveNotificationChannelsAsync(ConnectionProfile profile, NotificationChannelConfigurationDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<NotificationTemplateDto>> GetNotificationTemplatesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<NotificationTemplateDto>> SaveNotificationTemplatesAsync(ConnectionProfile profile, List<NotificationTemplateDto> request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<DiscordBotConfigurationViewDto> GetDiscordBotConfigAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<DiscordBotConfigurationViewDto> SaveDiscordBotConfigAsync(ConnectionProfile profile, DiscordBotConfigurationDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<AntiCheatRuleSetDto> GetAntiCheatRulesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<AntiCheatRuleSetDto> SaveAntiCheatRulesAsync(ConnectionProfile profile, AntiCheatRuleSetDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AntiCheatFindingDto>> GetAntiCheatFindingsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<AutomationRuleDto>> GetAutomationRulesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<AutomationRuleDto> CreateAutomationRuleAsync(ConnectionProfile profile, AutomationRuleRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
@@ -131,6 +148,21 @@ public interface IMystTiqApiClient
         string? item = null,
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
+
+    // v0.7.8.0: RCON-powered admin tools. Each wraps the same RconCommandResultDto shape
+    // /rcon/command already returns, since the server side is a thin PalworldRconService.ExecuteAsync
+    // wrapper for all four -- no new response contract needed.
+    Task<RconCommandResultDto> GetBanListAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<RconCommandResultDto> TeleportToMeAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<RconCommandResultDto> TeleportToPlayerAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<RconCommandResultDto> SaveWorldNowAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+
+    // v0.7.10.0: whitelist config is read/replaced as a whole, matching the existing Discord Bot
+    // config GET+PUT convention.
+    Task<WhitelistConfigDto> GetWhitelistAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<WhitelistConfigDto> SaveWhitelistAsync(ConnectionProfile profile, WhitelistConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<TemporaryBanConfigDto> GetTemporaryBansAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PlayerAdminActionResultDto> CreateTemporaryBanAsync(ConnectionProfile profile, string playerId, string playerName, string reason, double durationHours, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProviderDescriptorDto>> GetPlayerModerationProvidersAsync(
         ConnectionProfile profile,
@@ -227,6 +259,42 @@ public interface IMystTiqApiClient
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
 
+    // v0.7.45.0: Update Center Overhaul -- real installed/latest version tracking per component.
+    Task<ComponentVersionSnapshotDto> GetComponentVersionsAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    // v0.7.48.0: UE4SS Release Catalog -- real release data for the UE4SS page's "Release source" picker.
+    Task<Ue4ssReleaseCatalogDto> GetUe4ssReleaseCatalogAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    // v0.7.49.0: UE4SS Install/Rollback.
+    Task<Ue4ssInstallStatusDto> GetUe4ssInstallStatusAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<Ue4ssInstallPreviewDto?> PreviewUe4ssInstallAsync(
+        ConnectionProfile profile,
+        string source,
+        string tagName,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<Ue4ssInstallResultDto> ApplyUe4ssInstallAsync(
+        ConnectionProfile profile,
+        string token,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<Ue4ssInstallResultDto> RollbackUe4ssInstallAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
     Task<WorldExplorerSnapshotDto> GetWorldExplorerAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
@@ -244,6 +312,9 @@ public interface IMystTiqApiClient
 
     Task<GuildOwnershipPreviewDto> PreviewGuildOwnershipAsync(ConnectionProfile profile, string operationType, string guildId, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<GuildOwnershipResultDto> ApplyGuildOwnershipAsync(ConnectionProfile profile, string previewToken, bool confirmed, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PalInstanceDto>> GetPalsAsync(ConnectionProfile profile, string? ownerPlayerId = null, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PalEditPreviewDto> PreviewPalEditAsync(ConnectionProfile profile, string instanceId, PalEditFieldChangesDto changes, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PalEditResultDto> ApplyPalEditAsync(ConnectionProfile profile, string previewToken, bool confirmed, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     Task<BaseOwnershipPreviewDto> PreviewBaseOwnershipTransferAsync(ConnectionProfile profile, string baseId, string targetGuildId, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<BaseOwnershipResultDto> ApplyBaseOwnershipTransferAsync(ConnectionProfile profile, string previewToken, bool confirmed, string? bearerToken = null, CancellationToken cancellationToken = default);
@@ -263,6 +334,8 @@ public interface IMystTiqApiClient
         ConnectionProfile profile, string playerId, string message, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     Task<NetworkDiagnosticReportDto> GetNetworkDiagnosticsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+
+    Task<PortCheckResultDto> CheckPortAsync(ConnectionProfile profile, int port, string protocol, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<NetworkRecoveryResultDto> RestartFromNetworkDiagnosticsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<FirewallRepairResultDto> RepairNetworkFirewallAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<WanReachabilityReportDto> GetWanReachabilityAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
@@ -278,4 +351,10 @@ public interface IMystTiqApiClient
     Task<ModMutationResultDto> RepairModsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<WorkshopScanResultDto> ScanWorkshopModsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> ImportWorkshopModAsync(ConnectionProfile profile, string workshopId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ModUpdateCheckResultDto> CheckModUpdateAsync(ConnectionProfile profile, string type, string package, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ModDescriptionResultDto> GetModDescriptionAsync(ConnectionProfile profile, string type, string package, bool refresh, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ModMutationResultDto> SetModDescriptionSourceAsync(ConnectionProfile profile, string type, string package, string sourceUrl, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ModMutationResultDto> BeginModSafeStartAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<SafeStartStatusDto?> GetModSafeStartStatusAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ModMutationResultDto> CancelModSafeStartAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
 }

@@ -21,6 +21,10 @@ public sealed class EnvironmentChecklistItemDto
     [JsonPropertyName("unavailableReason")] public string? UnavailableReason { get; init; }
     public string ActionDisplay => ActionSupported ? Action : "BACKEND REQUIRED";
     public string ActionToolTip => ActionSupported ? Details : (UnavailableReason ?? "A safe headless/API implementation is required before this action can be enabled.");
+    // v0.7.35.0: button color system (item 32). VERIFY/RESCAN are non-mutating checks (cyan
+    // inspectAction); MANAGE/INSTALL/CREATE/ENABLE change something (violet targetAction).
+    public bool IsInspectAction => Action is "VERIFY" or "RESCAN";
+    public bool IsTargetAction => ActionSupported && !IsInspectAction;
     public bool IsReady => Status.Equals("READY", StringComparison.OrdinalIgnoreCase);
     public bool IsDisabled => Status.Equals("DISABLED", StringComparison.OrdinalIgnoreCase) || Status.Equals("OPTIONAL", StringComparison.OrdinalIgnoreCase);
     public bool IsMissing => !IsReady && !IsDisabled;

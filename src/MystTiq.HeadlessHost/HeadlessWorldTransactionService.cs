@@ -178,30 +178,43 @@ public sealed class HeadlessWorldTransactionService
         catch (Exception ex)
         {
             var rolledBack = false;
+            string? rollbackFailureDetail = null;
             try
             {
                 if (rollback is not null && Directory.Exists(rollback))
                 {
                     if (staging is not null && Directory.Exists(staging)) Directory.Delete(staging, true);
-                    var active = explorer.Explore().ActiveWorldPath;
-                    if (!string.IsNullOrWhiteSpace(active) && Directory.Exists(active)) Directory.Delete(active, true);
+                    // v0.7.7.0: previously deleted explorer.Explore().ActiveWorldPath here instead
+                    // of the actual, already-known destination (originalPath, below) -- if the
+                    // swapped-in content was corrupted enough that ValidateWorldDirectory's own
+                    // post-swap check (Level.sav exists and is non-empty) still passed but the
+                    // explorer's own, separate "is this a real world" check did not, ActiveWorldPath
+                    // came back empty, the corrupted directory at originalPath was never deleted,
+                    // and the Directory.Move below then threw (.NET requires the destination not
+                    // exist) -- silently swallowed by the catch beneath this block, leaving the
+                    // corrupted content live and the good copy stranded in the rollback folder.
+                    // Deleting originalPath directly removes that indirection entirely.
                     var originalPath = rollback[..rollback.IndexOf(".transaction-rollback-", StringComparison.Ordinal)];
+                    if (Directory.Exists(originalPath)) Directory.Delete(originalPath, true);
                     Directory.Move(rollback, originalPath);
                     rollback = null;
                     rolledBack = true;
                 }
             }
-            catch { rolledBack = false; }
+            catch (Exception rollbackEx) { rolledBack = false; rollbackFailureDetail = rollbackEx.Message; }
+            var failureMessage = rollbackFailureDetail is null
+                ? ex.Message
+                : $"{ex.Message} Additionally, automatic rollback failed: {rollbackFailureDetail}";
             if (journal is not null)
             {
                 journal.RolledBack = rolledBack;
-                Advance(journal, rolledBack ? "RolledBack" : "Failed", ex.Message);
+                Advance(journal, rolledBack ? "RolledBack" : "Failed", failureMessage);
                 activity.Record("Warning", "World Transaction", "Recovery transaction failed",
                     $"id={journal.TransactionId}; rolledBack={rolledBack}; error={ex.GetType().Name}");
             }
-            if (operation is not null) coordinator.Fail(operation.Id, ex.Message, rolledBack);
+            if (operation is not null) coordinator.Fail(operation.Id, failureMessage, rolledBack);
             return new(false, journal?.TransactionId, rolledBack ? "RolledBack" : "Failed",
-                journal?.SafetyBackup, rolledBack, journal?.JournalPath, ex.Message);
+                journal?.SafetyBackup, rolledBack, journal?.JournalPath, failureMessage);
         }
         finally
         {

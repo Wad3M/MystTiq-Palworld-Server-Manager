@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- v0.7.12.0: a standalone, throwaway C# harness for business logic that genuinely needs a real
+       object graph (not just a regex-on-source check) but doesn't need a full Palworld server, RCON,
+       or HTTP round-trip to exercise: HeadlessWhitelistService.EnforceAsync is the first case.
+       Deliberately NOT added to PalworldServerManager.slnx or Build.ps1's normal build/validate
+       pipeline; it's invoked directly via `dotnet run` from this version's own Logic gate script,
+       matching this
+       project's existing script-as-test philosophy rather than introducing xunit/nunit. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\MystTiq.Core\MystTiq.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\MystTiq.HeadlessHost\MystTiq.HeadlessHost.csproj" />
+  </ItemGroup>
+
+</Project>

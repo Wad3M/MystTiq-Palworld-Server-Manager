@@ -70,3 +70,53 @@ public sealed class WorkshopScanResultDto
     [JsonPropertyName("detail")] public string Detail { get; init; } = string.Empty;
     [JsonPropertyName("items")] public IReadOnlyList<WorkshopItemDto> Items { get; init; } = [];
 }
+// v0.7.41.0: MOD update detection (item 52). HasKnownSource false means no local Steam Workshop
+// item matches this package at all -- nothing to compare against, distinct from a known source
+// that's simply not newer.
+public sealed class ModUpdateCheckResultDto
+{
+    [JsonPropertyName("hasKnownSource")] public bool HasKnownSource { get; init; }
+    [JsonPropertyName("updateAvailable")] public bool UpdateAvailable { get; init; }
+    [JsonPropertyName("workshopId")] public string? WorkshopId { get; init; }
+    [JsonPropertyName("detail")] public string Detail { get; init; } = string.Empty;
+}
+// v0.7.55.0: website-sourced MOD descriptions (item 40's deferred half). Source is a display
+// label only ("Steam Workshop", "GitHub Repository", "Manual Link", "None") -- the UI shows it
+// as-is, it never branches on the value.
+public sealed class ModDescriptionResultDto
+{
+    [JsonPropertyName("available")] public bool Available { get; init; }
+    [JsonPropertyName("source")] public string Source { get; init; } = "None";
+    [JsonPropertyName("title")] public string? Title { get; init; }
+    [JsonPropertyName("description")] public string? Description { get; init; }
+    [JsonPropertyName("sourceUrl")] public string? SourceUrl { get; init; }
+    [JsonPropertyName("fetchedAtUtc")] public DateTime? FetchedAtUtc { get; init; }
+    [JsonPropertyName("detail")] public string Detail { get; init; } = string.Empty;
+}
+public sealed record ModDescriptionSourceRequestDto(string SourceUrl);
+// v0.7.59.0: Safe-Start MOD Diagnostic. Mirrors HeadlessHost's SafeStartStatus/SafeStartModResult
+// field-for-field -- this is a polled status snapshot, not a mutation result, so it has no
+// Success/Message shape like ModMutationResultDto.
+public sealed class SafeStartModResultDto
+{
+    [JsonPropertyName("package")] public string Package { get; init; } = string.Empty;
+    [JsonPropertyName("ok")] public bool Ok { get; init; }
+    [JsonPropertyName("detail")] public string Detail { get; init; } = string.Empty;
+}
+public sealed class SafeStartStatusDto
+{
+    [JsonPropertyName("isRunning")] public bool IsRunning { get; init; }
+    [JsonPropertyName("completed")] public bool Completed { get; init; }
+    [JsonPropertyName("cancelled")] public bool Cancelled { get; init; }
+    [JsonPropertyName("notModRelated")] public bool NotModRelated { get; init; }
+    [JsonPropertyName("success")] public bool Success { get; init; }
+    [JsonPropertyName("phase")] public string Phase { get; init; } = string.Empty;
+    [JsonPropertyName("currentPackage")] public string? CurrentPackage { get; init; }
+    [JsonPropertyName("totalCandidates")] public int TotalCandidates { get; init; }
+    [JsonPropertyName("testedCount")] public int TestedCount { get; init; }
+    [JsonPropertyName("results")] public IReadOnlyList<SafeStartModResultDto> Results { get; init; } = [];
+    [JsonPropertyName("finalMessage")] public string FinalMessage { get; init; } = string.Empty;
+    [JsonPropertyName("startedAtUtc")] public DateTime StartedAtUtc { get; init; }
+    public string ProgressText => TotalCandidates > 0 ? $"{TestedCount} / {TotalCandidates} tested" : string.Empty;
+    public bool CompletedUnsuccessfully => Completed && !Success;
+}

@@ -36,51 +36,173 @@
     <SolidColorBrush x:Key="RedBrush" Color="{DynamicResource Red}"/>
     <SolidColorBrush x:Key="MutedBrush" Color="{DynamicResource Muted}"/>
     <SolidColorBrush x:Key="TextBrush" Color="{DynamicResource Text}"/>
+    <SolidColorBrush x:Key="Bg0ScrimBrush" Color="{DynamicResource Bg0Scrim}"/>
+
+    <!-- v0.7.0.0 theming: every Color below is a gradient-stop resource that ThemeApplier.cs
+         overwrites at runtime for the selected accent theme/variant (see Services/ThemeCatalog.cs).
+         The literal value declared here is always the Default-theme/Dark-variant baseline, so the
+         app's current look is unchanged until the user actually picks a different theme. -->
+    <Color x:Key="ButtonGradientStop0">#27455E</Color>
+    <Color x:Key="ButtonGradientStop1">#183248</Color>
+    <Color x:Key="ButtonGradientStop2">#102537</Color>
+    <Color x:Key="ButtonGradientHoverStop0">#356886</Color>
+    <Color x:Key="ButtonGradientHoverStop1">#22516E</Color>
+    <Color x:Key="ButtonGradientHoverStop2">#173C56</Color>
+    <Color x:Key="ButtonGradientPressedStop0">#173A50</Color>
+    <Color x:Key="ButtonGradientPressedStop1">#102D42</Color>
+    <Color x:Key="ButtonGradientPressedStop2">#0A2032</Color>
+    <Color x:Key="SuccessGradientStop0">#3FCB8C</Color>
+    <Color x:Key="SuccessGradientStop1">#23A96F</Color>
+    <Color x:Key="SuccessGradientStop2">#14724A</Color>
+    <Color x:Key="SuccessGradientHoverStop0">#5EE0AA</Color>
+    <Color x:Key="SuccessGradientHoverStop1">#34C482</Color>
+    <Color x:Key="SuccessGradientHoverStop2">#1C8F5C</Color>
+    <Color x:Key="SuccessGradientPressedStop0">#14724A</Color>
+    <Color x:Key="SuccessGradientPressedStop1">#0F5C3C</Color>
+    <Color x:Key="SuccessGradientPressedStop2">#0B4630</Color>
+    <Color x:Key="WarningGradientStop0">#FFCB5C</Color>
+    <Color x:Key="WarningGradientStop1">#F0B02E</Color>
+    <Color x:Key="WarningGradientStop2">#B87A10</Color>
+    <Color x:Key="WarningGradientHoverStop0">#FFDE8A</Color>
+    <Color x:Key="WarningGradientHoverStop1">#FFC454</Color>
+    <Color x:Key="WarningGradientHoverStop2">#D4941C</Color>
+    <Color x:Key="WarningGradientPressedStop0">#B87A10</Color>
+    <Color x:Key="WarningGradientPressedStop1">#96630D</Color>
+    <Color x:Key="WarningGradientPressedStop2">#744C09</Color>
+    <Color x:Key="DangerGradientStop0">#F06469</Color>
+    <Color x:Key="DangerGradientStop1">#A92E43</Color>
+    <!-- v0.7.35.0: two new semantic button hues, neither reusing Primary/Success/Danger/Warning's
+         gradients, for the app-wide button color system (item 32). InspectGradient (cyan) covers
+         non-mutating "look at/confirm" actions (Browse, Verify, Generate; Save Changes is still
+         required after Generate). TargetGradient (violet) covers "act on a specific thing" actions
+         (Open/reveal-in-explorer, Manage). -->
+    <Color x:Key="InspectGradientStop0">#4FE0F0</Color>
+    <Color x:Key="InspectGradientStop1">#2AAECC</Color>
+    <Color x:Key="InspectGradientStop2">#1A7488</Color>
+    <Color x:Key="InspectGradientHoverStop0">#8CF3FF</Color>
+    <Color x:Key="InspectGradientHoverStop1">#4FD0E6</Color>
+    <Color x:Key="InspectGradientHoverStop2">#2C93A8</Color>
+    <Color x:Key="InspectGradientPressedStop0">#1A7488</Color>
+    <Color x:Key="InspectGradientPressedStop1">#155C6C</Color>
+    <Color x:Key="InspectGradientPressedStop2">#0F4650</Color>
+    <Color x:Key="TargetGradientStop0">#C48CFF</Color>
+    <Color x:Key="TargetGradientStop1">#9857E0</Color>
+    <Color x:Key="TargetGradientStop2">#653C9E</Color>
+    <Color x:Key="TargetGradientHoverStop0">#DAB4FF</Color>
+    <Color x:Key="TargetGradientHoverStop1">#B87BFF</Color>
+    <Color x:Key="TargetGradientHoverStop2">#7C4FC0</Color>
+    <Color x:Key="TargetGradientPressedStop0">#653C9E</Color>
+    <Color x:Key="TargetGradientPressedStop1">#4E2E7C</Color>
+    <Color x:Key="TargetGradientPressedStop2">#38225C</Color>
+    <Color x:Key="PrimaryGradientStop0">#20A9FF</Color>
+    <Color x:Key="PrimaryGradientStop1">#2584E8</Color>
+    <Color x:Key="PrimaryGradientStop2">#5C4DE4</Color>
+    <Color x:Key="CommandSurfaceGradientStop0">#F3173048</Color>
+    <Color x:Key="CommandSurfaceGradientStop1">#F111263B</Color>
+    <Color x:Key="CommandSurfaceGradientStop2">#F00B1B2D</Color>
+    <Color x:Key="CommandSurfaceGradientStop3">#F006121F</Color>
+    <Color x:Key="NavSurfaceGradientStop0">#F1122536</Color>
+    <Color x:Key="NavSurfaceGradientStop1">#F00A1826</Color>
+    <Color x:Key="NavSurfaceGradientStop2">#F0071320</Color>
+    <Color x:Key="StatusSurfaceGradientStop0">#F1112639</Color>
+    <Color x:Key="StatusSurfaceGradientStop1">#F0091725</Color>
+    <Color x:Key="StatusSurfaceGradientStop2">#F00C1A2A</Color>
+    <Color x:Key="CardGradientStop0">#F51C3B55</Color>
+    <Color x:Key="CardGradientStop1">#F2163048</Color>
+    <Color x:Key="CardGradientStop2">#F00D2032</Color>
+    <Color x:Key="CardGradientStop3">#F0081422</Color>
+    <Color x:Key="ServerTabGradientStop0">#F0071523</Color>
+    <Color x:Key="ServerTabGradientStop1">#E90D2236</Color>
+    <Color x:Key="ServerTabGradientStop2">#E712304A</Color>
+    <Color x:Key="CategoryActiveGradientStop0">#CCA8C0E8</Color>
+    <Color x:Key="CategoryActiveGradientStop1">#C088D0FC</Color>
+    <Color x:Key="CategoryActiveGradientStop2">#8A3F94E0</Color>
+    <Color x:Key="CategoryActiveGradientStop3">#521E5A9E</Color>
+    <Color x:Key="CategoryActiveGradientStop4">#260E2648</Color>
+    <Color x:Key="ServerTabActiveGradientStop0">#F0061321</Color>
+    <Color x:Key="ServerTabActiveGradientStop1">#F0092035</Color>
+    <Color x:Key="ServerTabActiveGradientStop2">#F00D3655</Color>
+    <Color x:Key="ServerTabActiveGradientStop3">#F0105D86</Color>
+    <Color x:Key="InputFieldBg">#0B1A29</Color>
+    <Color x:Key="ScrollTrackBg">#081522</Color>
+    <Color x:Key="ListRowAltBg">#0C1826</Color>
+    <Color x:Key="ListRowHoverBg">#1B3247</Color>
+    <Color x:Key="ListRowSelectedBg">#24425C</Color>
 
     <LinearGradientBrush x:Key="ButtonGradient" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#27455E"/>
-      <GradientStop Offset="0.48" Color="#183248"/>
-      <GradientStop Offset="1" Color="#102537"/>
+      <GradientStop Offset="0" Color="{DynamicResource ButtonGradientStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource ButtonGradientStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource ButtonGradientStop2}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="ButtonGradientHover" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#356886"/>
-      <GradientStop Offset="0.48" Color="#22516E"/>
-      <GradientStop Offset="1" Color="#173C56"/>
+      <GradientStop Offset="0" Color="{DynamicResource ButtonGradientHoverStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource ButtonGradientHoverStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource ButtonGradientHoverStop2}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="ButtonGradientPressed" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#173A50"/>
-      <GradientStop Offset="0.48" Color="#102D42"/>
-      <GradientStop Offset="1" Color="#0A2032"/>
+      <GradientStop Offset="0" Color="{DynamicResource ButtonGradientPressedStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource ButtonGradientPressedStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource ButtonGradientPressedStop2}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="SuccessGradient" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#3FCB8C"/>
-      <GradientStop Offset="0.48" Color="#23A96F"/>
-      <GradientStop Offset="1" Color="#14724A"/>
+      <GradientStop Offset="0" Color="{DynamicResource SuccessGradientStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource SuccessGradientStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource SuccessGradientStop2}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="SuccessGradientHover" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#5EE0AA"/>
-      <GradientStop Offset="0.48" Color="#34C482"/>
-      <GradientStop Offset="1" Color="#1C8F5C"/>
+      <GradientStop Offset="0" Color="{DynamicResource SuccessGradientHoverStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource SuccessGradientHoverStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource SuccessGradientHoverStop2}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="SuccessGradientPressed" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#14724A"/>
-      <GradientStop Offset="0.48" Color="#0F5C3C"/>
-      <GradientStop Offset="1" Color="#0B4630"/>
+      <GradientStop Offset="0" Color="{DynamicResource SuccessGradientPressedStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource SuccessGradientPressedStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource SuccessGradientPressedStop2}"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="InspectGradient" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="{DynamicResource InspectGradientStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource InspectGradientStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource InspectGradientStop2}"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="InspectGradientHover" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="{DynamicResource InspectGradientHoverStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource InspectGradientHoverStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource InspectGradientHoverStop2}"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="InspectGradientPressed" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="{DynamicResource InspectGradientPressedStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource InspectGradientPressedStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource InspectGradientPressedStop2}"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="TargetGradient" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="{DynamicResource TargetGradientStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource TargetGradientStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource TargetGradientStop2}"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="TargetGradientHover" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="{DynamicResource TargetGradientHoverStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource TargetGradientHoverStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource TargetGradientHoverStop2}"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="TargetGradientPressed" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Offset="0" Color="{DynamicResource TargetGradientPressedStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource TargetGradientPressedStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource TargetGradientPressedStop2}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="WarningGradient" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#FFCB5C"/>
-      <GradientStop Offset="0.48" Color="#F0B02E"/>
-      <GradientStop Offset="1" Color="#B87A10"/>
+      <GradientStop Offset="0" Color="{DynamicResource WarningGradientStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource WarningGradientStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource WarningGradientStop2}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="WarningGradientHover" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#FFDE8A"/>
-      <GradientStop Offset="0.48" Color="#FFC454"/>
-      <GradientStop Offset="1" Color="#D4941C"/>
+      <GradientStop Offset="0" Color="{DynamicResource WarningGradientHoverStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource WarningGradientHoverStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource WarningGradientHoverStop2}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="WarningGradientPressed" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#B87A10"/>
-      <GradientStop Offset="0.48" Color="#96630D"/>
-      <GradientStop Offset="1" Color="#744C09"/>
+      <GradientStop Offset="0" Color="{DynamicResource WarningGradientPressedStop0}"/>
+      <GradientStop Offset="0.48" Color="{DynamicResource WarningGradientPressedStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource WarningGradientPressedStop2}"/>
     </LinearGradientBrush>
     <!-- Directional option sheen from the approved mockup: a bright glass lip over a
          translucent blue face, with enough lower-edge depth to avoid a flat fill. -->
@@ -92,9 +214,9 @@
       <GradientStop Offset="1" Color="#ED081A2C"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Offset="0" Color="#20A9FF"/>
-      <GradientStop Offset="0.55" Color="#2584E8"/>
-      <GradientStop Offset="1" Color="#5C4DE4"/>
+      <GradientStop Offset="0" Color="{DynamicResource PrimaryGradientStop0}"/>
+      <GradientStop Offset="0.55" Color="{DynamicResource PrimaryGradientStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource PrimaryGradientStop2}"/>
     </LinearGradientBrush>
     <!-- Resting-state glass treatment for primary buttons: a bright translucent lip over a
          softly-tinted blue face, matching the glass look the hover states already use. -->
@@ -138,20 +260,20 @@
 
     <!-- v0.5.0.8 surface lighting: brighter upper-left edge, deeper lower-right face. -->
     <LinearGradientBrush x:Key="CommandSurfaceGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Offset="0" Color="#F3173048"/>
-      <GradientStop Offset="0.36" Color="#F111263B"/>
-      <GradientStop Offset="0.72" Color="#F00B1B2D"/>
-      <GradientStop Offset="1" Color="#F006121F"/>
+      <GradientStop Offset="0" Color="{DynamicResource CommandSurfaceGradientStop0}"/>
+      <GradientStop Offset="0.36" Color="{DynamicResource CommandSurfaceGradientStop1}"/>
+      <GradientStop Offset="0.72" Color="{DynamicResource CommandSurfaceGradientStop2}"/>
+      <GradientStop Offset="1" Color="{DynamicResource CommandSurfaceGradientStop3}"/>
     </LinearGradientBrush>
     <!-- Selected-state glass. A near-white specular lip at the top-left is what actually reads as
          "glass" against a same-hue backdrop: pure alpha-blended blue over a blue navbar just looks
          like a richer blue, not translucent, so the highlight has to carry its own contrast. -->
     <LinearGradientBrush x:Key="CategoryActiveGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Offset="0" Color="#CCA8C0E8"/>
-      <GradientStop Offset="0.38" Color="#C088D0FC"/>
-      <GradientStop Offset="0.66" Color="#8A3F94E0"/>
-      <GradientStop Offset="0.88" Color="#521E5A9E"/>
-      <GradientStop Offset="1" Color="#260E2648"/>
+      <GradientStop Offset="0" Color="{DynamicResource CategoryActiveGradientStop0}"/>
+      <GradientStop Offset="0.38" Color="{DynamicResource CategoryActiveGradientStop1}"/>
+      <GradientStop Offset="0.66" Color="{DynamicResource CategoryActiveGradientStop2}"/>
+      <GradientStop Offset="0.88" Color="{DynamicResource CategoryActiveGradientStop3}"/>
+      <GradientStop Offset="1" Color="{DynamicResource CategoryActiveGradientStop4}"/>
     </LinearGradientBrush>
     <!-- Darkened to match the connection-profile tab strip's near-black selected look, instead
          of fading up to a light lavender/white top edge. -->
@@ -205,9 +327,9 @@
       <GradientStop Offset="1" Color="#CA17191E"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="NavSurfaceGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Offset="0" Color="#F1122536"/>
-      <GradientStop Offset="0.55" Color="#F00A1826"/>
-      <GradientStop Offset="1" Color="#F0071320"/>
+      <GradientStop Offset="0" Color="{DynamicResource NavSurfaceGradientStop0}"/>
+      <GradientStop Offset="0.55" Color="{DynamicResource NavSurfaceGradientStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource NavSurfaceGradientStop2}"/>
     </LinearGradientBrush>
     <!-- Glass treatment for the sidebar surface. The panel is tall and narrow, so a corner-to-corner
          diagonal squeezes the highlight into a sliver; a top-to-bottom gradient with a genuinely
@@ -221,15 +343,15 @@
       <GradientStop Offset="1" Color="#4A0A1826"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="StatusSurfaceGradient" StartPoint="0%,0%" EndPoint="1,0">
-      <GradientStop Offset="0" Color="#F1112639"/>
-      <GradientStop Offset="0.55" Color="#F0091725"/>
-      <GradientStop Offset="1" Color="#F00C1A2A"/>
+      <GradientStop Offset="0" Color="{DynamicResource StatusSurfaceGradientStop0}"/>
+      <GradientStop Offset="0.55" Color="{DynamicResource StatusSurfaceGradientStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource StatusSurfaceGradientStop2}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="CardGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Offset="0" Color="#F51C3B55"/>
-      <GradientStop Offset="0.16" Color="#F2163048"/>
-      <GradientStop Offset="0.58" Color="#F00D2032"/>
-      <GradientStop Offset="1" Color="#F0081422"/>
+      <GradientStop Offset="0" Color="{DynamicResource CardGradientStop0}"/>
+      <GradientStop Offset="0.16" Color="{DynamicResource CardGradientStop1}"/>
+      <GradientStop Offset="0.58" Color="{DynamicResource CardGradientStop2}"/>
+      <GradientStop Offset="1" Color="{DynamicResource CardGradientStop3}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="CardGreenGradient" StartPoint="0%,0%" EndPoint="100%,100%">
       <GradientStop Offset="0" Color="#F0183B3D"/>
@@ -272,9 +394,9 @@
       <GradientStop Offset="1" Color="#F0261640"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="ServerTabGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Offset="0" Color="#F0071523"/>
-      <GradientStop Offset="0.58" Color="#E90D2236"/>
-      <GradientStop Offset="1" Color="#E712304A"/>
+      <GradientStop Offset="0" Color="{DynamicResource ServerTabGradientStop0}"/>
+      <GradientStop Offset="0.58" Color="{DynamicResource ServerTabGradientStop1}"/>
+      <GradientStop Offset="1" Color="{DynamicResource ServerTabGradientStop2}"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="ServerTabHoverGradient" StartPoint="0%,0%" EndPoint="100%,100%">
       <GradientStop Offset="0" Color="#F0091C2D"/>
@@ -282,10 +404,10 @@
       <GradientStop Offset="1" Color="#E91B5F8B"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="ServerTabActiveGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Offset="0" Color="#F0061321"/>
-      <GradientStop Offset="0.55" Color="#F0092035"/>
-      <GradientStop Offset="0.86" Color="#F00D3655"/>
-      <GradientStop Offset="1" Color="#F0105D86"/>
+      <GradientStop Offset="0" Color="{DynamicResource ServerTabActiveGradientStop0}"/>
+      <GradientStop Offset="0.55" Color="{DynamicResource ServerTabActiveGradientStop1}"/>
+      <GradientStop Offset="0.86" Color="{DynamicResource ServerTabActiveGradientStop2}"/>
+      <GradientStop Offset="1" Color="{DynamicResource ServerTabActiveGradientStop3}"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="BlueGraphFill" StartPoint="0%,0%" EndPoint="0%,100%">
@@ -346,8 +468,8 @@
       <GradientStop Offset="1" Color="#E83A2718"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="DangerGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Offset="0" Color="#F06469"/>
-      <GradientStop Offset="1" Color="#A92E43"/>
+      <GradientStop Offset="0" Color="{DynamicResource DangerGradientStop0}"/>
+      <GradientStop Offset="1" Color="{DynamicResource DangerGradientStop1}"/>
     </LinearGradientBrush>
   </Styles.Resources>
 
@@ -386,10 +508,20 @@
     <Setter Property="VerticalAlignment" Value="Center"/>
     <Setter Property="TextAlignment" Value="Center"/>
   </Style>
+  <!-- v0.7.25.0: ribbon icon colors used to be set inline per-button (Foreground="{DynamicResource
+       AmberBrush}" etc.) directly in MainWindow.axaml. Now that ribbon buttons are data-bound
+       (RibbonActionViewModel.IconColor), the color still has to route through DynamicResource,
+       not a resolved-at-construction brush, so it keeps following live theme changes exactly like
+       every other themed color in the app. These selectors are the binding target for that. -->
+  <Style Selector="TextBlock.flatIcon.amber"><Setter Property="Foreground" Value="{DynamicResource AmberBrush}"/></Style>
+  <Style Selector="TextBlock.flatIcon.green"><Setter Property="Foreground" Value="{DynamicResource GreenBrush}"/></Style>
+  <Style Selector="TextBlock.flatIcon.blue"><Setter Property="Foreground" Value="{DynamicResource BlueBrush}"/></Style>
+  <Style Selector="TextBlock.flatIcon.red"><Setter Property="Foreground" Value="{DynamicResource RedBrush}"/></Style>
+  <Style Selector="TextBlock.flatIcon.cyan"><Setter Property="Foreground" Value="{DynamicResource CyanBrush}"/></Style>
 
   <Style Selector="Button">
-    <Setter Property="MinHeight" Value="34"/>
-    <Setter Property="Padding" Value="12,6"/>
+    <Setter Property="MinHeight" Value="31"/>
+    <Setter Property="Padding" Value="12,5"/>
     <Setter Property="CornerRadius" Value="6"/>
     <Setter Property="HorizontalContentAlignment" Value="Center"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -401,7 +533,7 @@
   </Style>
   <Style Selector="Button:pointerover">
     <Setter Property="Background" Value="{DynamicResource ButtonGradientHover}"/>
-    <Setter Property="BorderBrush" Value="#72D0FF"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
   </Style>
   <Style Selector="Button:pointerover Border.iconTile">
     <Setter Property="BoxShadow" Value="0 0 15 1 #6649BFFF"/>
@@ -417,15 +549,40 @@
   <Style Selector="Button:disabled">
     <Setter Property="Opacity" Value="0.38"/>
   </Style>
+  <!-- v0.7.63.0: moved from App.axaml's now-removed legacy style block, which hardcoded #75C8FF
+       regardless of theme; keyboard-focus outline now follows the active accent theme instead. -->
+  <Style Selector="Button:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+    <Setter Property="BorderThickness" Value="2"/>
+  </Style>
+  <!-- v0.7.5.0 no-scroll pass: a header-styled toggle for collapsible secondary sections
+       (deep-dive tools shown collapsed by default so a page's primary content is reachable
+       without scrolling past them). Looks like plain text, not a button, until hovered. -->
+  <Style Selector="Button.sectionToggle">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="MinHeight" Value="0"/>
+    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    <Setter Property="Cursor" Value="Hand"/>
+  </Style>
+  <Style Selector="Button.sectionToggle:pointerover">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Opacity" Value="0.8"/>
+  </Style>
+  <Style Selector="Button.sectionToggle:pressed">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Opacity" Value="0.7"/>
+  </Style>
   <Style Selector="Button.primary">
     <Setter Property="Background" Value="{DynamicResource PrimaryGlassGradient}"/>
     <Setter Property="BorderBrush" Value="#7DD9FF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#35B9FF" Opacity="0.32"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="{DynamicResource Blue}" Opacity="0.32"/></Setter>
   </Style>
   <Style Selector="Button.primary:pointerover">
     <Setter Property="Background" Value="{DynamicResource PrimaryGlassHoverGradient}"/>
     <Setter Property="BorderBrush" Value="#C4F1FF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="#35B9FF" Opacity="0.62"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="{DynamicResource Blue}" Opacity="0.62"/></Setter>
   </Style>
   <Style Selector="Button.danger">
     <Setter Property="Background" Value="{DynamicResource DangerGradient}"/>
@@ -443,7 +600,7 @@
   <Style Selector="Button.success:pointerover">
     <Setter Property="Background" Value="{DynamicResource SuccessGradientHover}"/>
     <Setter Property="BorderBrush" Value="#9AF0C8"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="#63DF7B" Opacity="0.5"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="{DynamicResource Green}" Opacity="0.5"/></Setter>
   </Style>
   <Style Selector="Button.success:pressed">
     <Setter Property="Background" Value="{DynamicResource SuccessGradientPressed}"/>
@@ -457,11 +614,45 @@
   <Style Selector="Button.warning:pointerover">
     <Setter Property="Background" Value="{DynamicResource WarningGradientHover}"/>
     <Setter Property="BorderBrush" Value="#FFEBB0"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="#F4B83F" Opacity="0.5"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="{DynamicResource Amber}" Opacity="0.5"/></Setter>
   </Style>
   <Style Selector="Button.warning:pressed">
     <Setter Property="Background" Value="{DynamicResource WarningGradientPressed}"/>
     <Setter Property="BorderBrush" Value="#C4841A"/>
+  </Style>
+  <!-- v0.7.35.0 button color system (item 32): inspectAction (cyan) for non-mutating "look at /
+       confirm" actions, e.g. Workspace's Browse buttons, Server Setup's VERIFY/RESCAN row actions,
+       Configuration's Generate. targetAction (violet) for "act on a specific thing" actions, e.g.
+       Workspace's Open-in-explorer buttons, Server Setup's MANAGE/INSTALL/CREATE/ENABLE row
+       actions. Neither reuses Primary/Success/Danger/Warning, so these read as their own thing
+       rather than looking like a Save/Start button. -->
+  <Style Selector="Button.inspectAction">
+    <Setter Property="Background" Value="{DynamicResource InspectGradient}"/>
+    <Setter Property="BorderBrush" Value="#6FE8F5"/>
+    <Setter Property="Foreground" Value="#EAFEFF"/>
+  </Style>
+  <Style Selector="Button.inspectAction:pointerover">
+    <Setter Property="Background" Value="{DynamicResource InspectGradientHover}"/>
+    <Setter Property="BorderBrush" Value="#B0F7FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="{DynamicResource Cyan}" Opacity="0.5"/></Setter>
+  </Style>
+  <Style Selector="Button.inspectAction:pressed">
+    <Setter Property="Background" Value="{DynamicResource InspectGradientPressed}"/>
+    <Setter Property="BorderBrush" Value="#1A7488"/>
+  </Style>
+  <Style Selector="Button.targetAction">
+    <Setter Property="Background" Value="{DynamicResource TargetGradient}"/>
+    <Setter Property="BorderBrush" Value="#D4B3FF"/>
+    <Setter Property="Foreground" Value="#F5ECFF"/>
+  </Style>
+  <Style Selector="Button.targetAction:pointerover">
+    <Setter Property="Background" Value="{DynamicResource TargetGradientHover}"/>
+    <Setter Property="BorderBrush" Value="#E9D6FF"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="{DynamicResource Violet}" Opacity="0.5"/></Setter>
+  </Style>
+  <Style Selector="Button.targetAction:pressed">
+    <Setter Property="Background" Value="{DynamicResource TargetGradientPressed}"/>
+    <Setter Property="BorderBrush" Value="#653C9E"/>
   </Style>
   <Style Selector="Button.ghost">
     <Setter Property="Background" Value="Transparent"/>
@@ -472,16 +663,16 @@
     <Setter Property="BorderBrush" Value="#466987"/>
   </Style>
   <Style Selector="Button.ribbon">
-    <Setter Property="MinWidth" Value="68"/>
-    <Setter Property="Height" Value="70"/>
-    <Setter Property="Padding" Value="8,5"/>
+    <Setter Property="MinWidth" Value="64"/>
+    <Setter Property="Height" Value="64"/>
+    <Setter Property="Padding" Value="6,4"/>
     <Setter Property="Background" Value="{DynamicResource ButtonGradient}"/>
     <Setter Property="BorderBrush" Value="#385B73"/>
   </Style>
   <Style Selector="Button.ribbon:pointerover">
     <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
-    <Setter Property="BorderBrush" Value="#91E4FF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="13" Color="#35B9FF" Opacity="0.5"/></Setter>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="13" Color="{DynamicResource Blue}" Opacity="0.5"/></Setter>
   </Style>
   <Style Selector="Button.ribbon:pointerover Border.iconTile">
     <Setter Property="BoxShadow" Value="0 0 18 2 #7749BFFF"/>
@@ -493,12 +684,12 @@
   <Style Selector="Button.ribbon.primary">
     <Setter Property="Background" Value="{DynamicResource PrimaryGlassGradient}"/>
     <Setter Property="BorderBrush" Value="#7DD9FF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#35B9FF" Opacity="0.32"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="{DynamicResource Blue}" Opacity="0.32"/></Setter>
   </Style>
   <Style Selector="Button.ribbon.primary:pointerover">
     <Setter Property="Background" Value="{DynamicResource PrimaryGlassHoverGradient}"/>
     <Setter Property="BorderBrush" Value="#C4F1FF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="18" Color="#35B9FF" Opacity="0.72"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="18" Color="{DynamicResource Blue}" Opacity="0.72"/></Setter>
   </Style>
   <!-- Same fix for ribbon+danger (Stop): without this, the ribbon flat fill silently wins over
        the danger background too. Uses the softer translucent DangerGlassGradient (not the fully-
@@ -507,12 +698,12 @@
   <Style Selector="Button.ribbon.danger">
     <Setter Property="Background" Value="{DynamicResource DangerGlassGradient}"/>
     <Setter Property="BorderBrush" Value="#E39399"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#FF646D" Opacity="0.22"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="{DynamicResource Red}" Opacity="0.22"/></Setter>
   </Style>
   <Style Selector="Button.ribbon.danger:pointerover">
     <Setter Property="Background" Value="{DynamicResource DangerGlassHoverGradient}"/>
     <Setter Property="BorderBrush" Value="#FFC0C4"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="#FF646D" Opacity="0.45"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="{DynamicResource Red}" Opacity="0.45"/></Setter>
   </Style>
   <!-- Start uses this (Classes="ribbon success") instead of ribbon.primary, so it reads as a
        distinct, lightly-green-highlighted action: the same translucent glass weight as Stop's
@@ -521,12 +712,12 @@
   <Style Selector="Button.ribbon.success">
     <Setter Property="Background" Value="{DynamicResource SuccessGlassGradient}"/>
     <Setter Property="BorderBrush" Value="#8FE0B0"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#63DF7B" Opacity="0.22"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="{DynamicResource Green}" Opacity="0.22"/></Setter>
   </Style>
   <Style Selector="Button.ribbon.success:pointerover">
     <Setter Property="Background" Value="{DynamicResource SuccessGlassHoverGradient}"/>
     <Setter Property="BorderBrush" Value="#C4F1D9"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="#63DF7B" Opacity="0.45"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="{DynamicResource Green}" Opacity="0.45"/></Setter>
   </Style>
 
   <Style Selector="Button.ribbon StackPanel">
@@ -537,6 +728,26 @@
     <Setter Property="HorizontalAlignment" Value="Center"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
   </Style>
+
+  <!-- v0.7.14.0: App.axaml's Button:focus-visible ring (BorderBrush #75C8FF) has equal selector
+       specificity to Button.ghost/.ribbon's own always-on BorderBrush setters above, so whichever
+       is declared later in document order wins the tie: these classes, loaded via StyleInclude
+       after App.axaml's inline styles, always won and silently swallowed the focus ring. Tabbing to
+       any ghost/ribbon button (window chrome, tab-close, ribbon actions) showed no visible focus
+       indicator at all. Re-asserting the same ring color here at :focus-visible restores it. -->
+  <Style Selector="Button.ghost:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+  </Style>
+  <Style Selector="Button.ribbon:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+  </Style>
+  <Style Selector="Button.ribbonCompact:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+  </Style>
+  <Style Selector="Button.ribbonMedium:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+  </Style>
+
   <Style Selector="Border.iconTile">
     <Setter Property="Width" Value="34"/>
     <Setter Property="Height" Value="34"/>
@@ -554,17 +765,54 @@
     <Setter Property="VerticalAlignment" Value="Center"/>
     <Setter Property="ClipToBounds" Value="True"/>
   </Style>
+  <!-- v0.7.4.0 "card flare": a passive per-nav-category accent (soft border tint + low-intensity
+       glow), applied broadly across each category's cards so a page visually identifies which
+       section of the app it belongs to at a glance. Declared BEFORE the status-driven glowGreen/
+       glowRed/etc. selectors below on purpose: those carry real meaning (something is actually
+       healthy/failing/warning) and must win the cascade on the rare element that ends up
+       carrying both an accent class and a status-glow class, since both are 2-class selectors of
+       otherwise-equal specificity and Avalonia resolves such ties by declaration order. Much
+       lower-alpha than the status glows (~0x30 vs ~0x5A) since this is decorative, not a signal. -->
+  <Style Selector="Border.card.accentHome, Border.statuscard.accentHome">
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource BlueAccentGlowShadowLow}"/>
+  </Style>
+  <Style Selector="Border.card.accentServer, Border.statuscard.accentServer">
+    <Setter Property="BorderBrush" Value="{DynamicResource CyanAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource CyanAccentGlowShadowLow}"/>
+  </Style>
+  <Style Selector="Border.card.accentWorld, Border.statuscard.accentWorld">
+    <Setter Property="BorderBrush" Value="{DynamicResource VioletAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource VioletAccentGlowShadowLow}"/>
+  </Style>
+  <Style Selector="Border.card.accentBackups, Border.statuscard.accentBackups">
+    <Setter Property="BorderBrush" Value="{DynamicResource AmberAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource AmberAccentGlowShadowLow}"/>
+  </Style>
+  <Style Selector="Border.card.accentMods, Border.statuscard.accentMods">
+    <Setter Property="BorderBrush" Value="{DynamicResource MagentaAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource MagentaAccentGlowShadowLow}"/>
+  </Style>
+  <Style Selector="Border.card.accentTools, Border.statuscard.accentTools">
+    <Setter Property="BorderBrush" Value="{DynamicResource OrangeAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource OrangeAccentGlowShadowLow}"/>
+  </Style>
+  <Style Selector="Border.card.accentSystem, Border.statuscard.accentSystem">
+    <Setter Property="BorderBrush" Value="{DynamicResource GreenAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource GreenAccentGlowShadowLow}"/>
+  </Style>
+
   <Style Selector="Border.card.glowGreen">
     <Setter Property="Background" Value="{DynamicResource CardGreenGradient}"/>
-    <Setter Property="BoxShadow" Value="0 0 26 2 #5A3ADF64, 0 10 28 0 #60000000"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource GreenAccentGlowShadowHigh}"/>
   </Style>
   <Style Selector="Border.card.glowCyan">
     <Setter Property="Background" Value="{DynamicResource CardCyanGradient}"/>
-    <Setter Property="BoxShadow" Value="0 0 26 2 #5A35D5E8, 0 10 28 0 #60000000"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource CyanAccentGlowShadowHigh}"/>
   </Style>
   <Style Selector="Border.card.glowViolet">
     <Setter Property="Background" Value="{DynamicResource CardVioletGradient}"/>
-    <Setter Property="BoxShadow" Value="0 0 26 2 #5AA96DFF, 0 10 28 0 #60000000"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource VioletAccentGlowShadowHigh}"/>
   </Style>
   <Style Selector="Button.ribbonCompact">
     <Setter Property="Height" Value="38"/>
@@ -573,8 +821,8 @@
   </Style>
   <Style Selector="Button.ribbonCompact:pointerover">
     <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
-    <Setter Property="BorderBrush" Value="#91E4FF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#35B9FF" Opacity="0.46"/></Setter>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="{DynamicResource Blue}" Opacity="0.46"/></Setter>
   </Style>
   <Style Selector="Button.ribbonMedium">
     <Setter Property="Height" Value="40"/>
@@ -584,8 +832,8 @@
   </Style>
   <Style Selector="Button.ribbonMedium:pointerover">
     <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
-    <Setter Property="BorderBrush" Value="#91E4FF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="11" Color="#35B9FF" Opacity="0.46"/></Setter>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="11" Color="{DynamicResource Blue}" Opacity="0.46"/></Setter>
   </Style>
   <Style Selector="ToggleButton.categoryTab">
     <Setter Property="Height" Value="36"/>
@@ -595,7 +843,11 @@
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="BorderBrush" Value="Transparent"/>
     <Setter Property="BorderThickness" Value="0,2,0,2"/>
-    <Setter Property="Foreground" Value="#F4F8FC"/>
+    <!-- v0.7.80.0 bugfix: reported live; #F4F8FC is byte-identical to Structural["Text"]["Dark"]
+         (TextBrush's own Dark value), so this was clearly meant to reference it, not hardcode a
+         copy. Hardcoded, the category tab labels stayed near-white in Light mode too, unreadable
+         against Light's now-correctly-light chrome. -->
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     <Setter Property="VerticalContentAlignment" Value="Stretch"/>
   </Style>
@@ -606,32 +858,56 @@
     <Setter Property="VerticalAlignment" Value="Stretch"/>
   </Style>
   <Style Selector="ToggleButton.categoryTab:pointerover">
-    <Setter Property="BorderBrush" Value="#91E4FF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="11" Color="#35B9FF" Opacity="0.46"/></Setter>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="11" Color="{DynamicResource Blue}" Opacity="0.46"/></Setter>
   </Style>
+  <!-- v0.7.34.0: was reversed; checked used the bright CategoryActiveGradient and pointerover
+       used the darker GlassOptionHoverGradient, contradicting the "Category selection is dark
+       glass" comment below and how every other selected/hover glass surface in this app reads
+       (hover is the bright glass sheen, selection settles into the darker glass look). Swapped. -->
   <Style Selector="ToggleButton.categoryTab:pointerover Border.categoryTabGlow">
-    <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
+    <Setter Property="Background" Value="{DynamicResource CategoryActiveGradient}"/>
   </Style>
   <Style Selector="ToggleButton.categoryTab:checked">
-    <Setter Property="BorderBrush" Value="#5AD4FF"/>
-    <Setter Property="Foreground" Value="#FFFFFF"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
   </Style>
+  <!-- v0.7.80.0 bugfix: reported live as a "weird broken outline" on the selected category tab in
+       Light mode; this glow was a fixed hex color independent of both theme and which category's
+       own border color (Cyan/Violet/Amber/Magenta/Orange/Green) surrounds it, so a mismatched
+       purple-blue glow behind e.g. a green-bordered "System" tab read as broken rather than a
+       cohesive highlight, worse once GlassOptionHoverGradient's own Background correctly lightens
+       in Light mode and this fixed dark-tuned glow doesn't follow. BlueAccentGlowShadowHigh is
+       already Dark/Light + accent-theme aware; doesn't yet match each category's own border hue,
+       a further per-category pass would need its own BoxShadow resource per category color. -->
   <Style Selector="ToggleButton.categoryTab:checked Border.categoryTabGlow">
-    <Setter Property="Background" Value="{DynamicResource CategoryActiveGradient}"/>
-    <Setter Property="BoxShadow" Value="0 0 18 1 #7A52C4FF"/>
+    <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource BlueAccentGlowShadowHigh}"/>
   </Style>
-  <!-- Category selection is dark glass; semantic color lives on the overline, underline and glow. -->
-  <Style Selector="ToggleButton.categoryTab.server:checked"><Setter Property="BorderBrush" Value="#52C4FF"/></Style>
-  <Style Selector="ToggleButton.categoryTab.world:checked"><Setter Property="BorderBrush" Value="#B87BFF"/></Style>
-  <Style Selector="ToggleButton.categoryTab.backups:checked"><Setter Property="BorderBrush" Value="#F4B83F"/></Style>
-  <Style Selector="ToggleButton.categoryTab.mods:checked"><Setter Property="BorderBrush" Value="#E676FF"/></Style>
-  <Style Selector="ToggleButton.categoryTab.tools:checked"><Setter Property="BorderBrush" Value="#FF9558"/></Style>
-  <Style Selector="ToggleButton.categoryTab.system:checked"><Setter Property="BorderBrush" Value="#72C8E8"/></Style>
-  <Style Selector="ToggleButton.categoryTab.mods:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="0 0 18 1 #72E676FF"/></Style>
-  <Style Selector="ToggleButton.categoryTab.backups:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="0 0 18 1 #72F4B83F"/></Style>
-  <Style Selector="ToggleButton.categoryTab.world:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="0 0 18 1 #72A96DFF"/></Style>
-  <Style Selector="ToggleButton.categoryTab.tools:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="0 0 18 1 #72FF9558"/></Style>
-  <Style Selector="ToggleButton.categoryTab.system:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="0 0 18 1 #7272C8E8"/></Style>
+  <!-- v0.7.14.0: same missing-focus-ring gap as Button.ghost/.ribbon above; ToggleButton derives
+       from Button, so App.axaml's Button:focus-visible rule does technically match, but this
+       class's own BorderBrush (Transparent by default, a checked color otherwise) is declared later
+       and always won the tie. Tabbing through the 7 category tabs showed no focus indicator. -->
+  <Style Selector="ToggleButton.categoryTab:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+  </Style>
+  <!-- Category selection is dark glass; semantic color lives on the overline, underline and glow.
+       v0.7.55.0: server/system both used to be one-off near-cyan hex values with no home in the
+       catalog at all (#52C4FF, #72C8E8) rather than reusing Cyan/Green like every sibling category
+       here reuses its own page-accent color; switched to the same Cyan/Green derived resources
+       accentServer/accentSystem already use elsewhere, so this row is internally consistent with
+       the rest of the per-page accent system instead of carrying its own separate two-off palette. -->
+  <Style Selector="ToggleButton.categoryTab.server:checked"><Setter Property="BorderBrush" Value="{DynamicResource Cyan}"/></Style>
+  <Style Selector="ToggleButton.categoryTab.world:checked"><Setter Property="BorderBrush" Value="{DynamicResource Violet}"/></Style>
+  <Style Selector="ToggleButton.categoryTab.backups:checked"><Setter Property="BorderBrush" Value="{DynamicResource Amber}"/></Style>
+  <Style Selector="ToggleButton.categoryTab.mods:checked"><Setter Property="BorderBrush" Value="{DynamicResource Magenta}"/></Style>
+  <Style Selector="ToggleButton.categoryTab.tools:checked"><Setter Property="BorderBrush" Value="{DynamicResource Orange}"/></Style>
+  <Style Selector="ToggleButton.categoryTab.system:checked"><Setter Property="BorderBrush" Value="{DynamicResource Green}"/></Style>
+  <Style Selector="ToggleButton.categoryTab.mods:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="{DynamicResource MagentaAccentGlowShadowHigh}"/></Style>
+  <Style Selector="ToggleButton.categoryTab.backups:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="{DynamicResource AmberAccentGlowShadowHigh}"/></Style>
+  <Style Selector="ToggleButton.categoryTab.world:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="{DynamicResource VioletAccentGlowShadowHigh}"/></Style>
+  <Style Selector="ToggleButton.categoryTab.tools:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="{DynamicResource OrangeAccentGlowShadowHigh}"/></Style>
+  <Style Selector="ToggleButton.categoryTab.system:checked Border.categoryTabGlow"><Setter Property="BoxShadow" Value="{DynamicResource GreenAccentGlowShadowHigh}"/></Style>
 
   <Style Selector="Border.worldTabHeader">
     <Setter Property="Background" Value="#B8162638"/>
@@ -645,31 +921,39 @@
   <Style Selector="TextBlock.worldTabLabel">
     <Setter Property="FontSize" Value="9"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
-    <Setter Property="Foreground" Value="#8299AF"/>
+    <!-- v0.7.80.0 bugfix: same family as the other fixes in this pass; close to MutedBrush's own
+         Dark value, hardcoded instead of referenced. -->
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
     <Setter Property="Margin" Value="4,0,8,0"/>
   </Style>
+  <!-- v0.7.82.0 bugfix: reported live ("dark parts... haven't changed enough"); this whole
+       control (World page's own sub-tab strip) still had fully hardcoded Background/BorderBrush/
+       Foreground, untouched by any earlier pass since those only covered app-wide chrome
+       (nav/category tabs/ribbon), not this page-local control. Same token substitutions as the
+       ribbonGroup fix; :checked keeps its original violet identity via the already-theme-aware
+       VioletAccentBorderBrush/VioletAccentHighlightBrush pair instead of fixed hex. -->
   <Style Selector="ToggleButton.worldTab">
     <Setter Property="Height" Value="28"/>
     <Setter Property="MinWidth" Value="64"/>
     <Setter Property="Padding" Value="10,3"/>
     <Setter Property="CornerRadius" Value="5"/>
-    <Setter Property="Background" Value="#C0182A3C"/>
-    <Setter Property="BorderBrush" Value="#39536B"/>
+    <Setter Property="Background" Value="{DynamicResource CardStrongBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSoftBrush}"/>
     <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="Foreground" Value="#CEDCE8"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
     <Setter Property="FontSize" Value="10"/>
   </Style>
   <Style Selector="ToggleButton.worldTab:pointerover">
     <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
-    <Setter Property="BorderBrush" Value="#A8E9FF"/>
-    <Setter Property="Foreground" Value="#FFFFFF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#35B9FF" Opacity="0.48"/></Setter>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="{DynamicResource Blue}" Opacity="0.48"/></Setter>
   </Style>
   <Style Selector="ToggleButton.worldTab:checked">
-    <Setter Property="Background" Value="#E12A3155"/>
-    <Setter Property="BorderBrush" Value="#B87BFF"/>
-    <Setter Property="Foreground" Value="#FFFFFF"/>
+    <Setter Property="Background" Value="{DynamicResource VioletAccentBorderBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource VioletAccentHighlightBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
   </Style>
   <Style Selector="ToggleButton.worldTab.primary">
     <Setter Property="MinWidth" Value="92"/>
@@ -680,20 +964,27 @@
   <Style Selector="ToggleButton.worldTab.nested">
     <Setter Property="Height" Value="26"/>
     <Setter Property="MinWidth" Value="60"/>
-    <Setter Property="Foreground" Value="#B9CBD9"/>
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
   </Style>
 
   <Style Selector="ToggleButton.nav">
     <Setter Property="HorizontalAlignment" Value="Stretch"/>
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-    <Setter Property="Height" Value="58"/>
+    <!-- v0.7.43.0: was 58, sized for the original 20x20 (later 28x28) nav icon; the 56x56 icon
+         (nav icons doubled again, 28 to 56) needs real room, 72 leaves an even ~8px margin
+         above and below the icon once Border.navSurface's 2px BorderThickness is subtracted. -->
+    <Setter Property="Height" Value="72"/>
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="BorderBrush" Value="Transparent"/>
     <Setter Property="BorderThickness" Value="0"/>
     <Setter Property="CornerRadius" Value="6"/>
     <Setter Property="Padding" Value="0"/>
-    <Setter Property="Foreground" Value="#F4F8FC"/>
+    <!-- v0.7.80.0 bugfix: same as Button.categoryTab above; #F4F8FC is byte-identical to
+         TextBrush's own Dark value, hardcoded here instead of referenced. This is the entire left
+         nav pane's default text color, so it was the single highest-impact instance of this bug:
+         every nav item label went near-invisible in Light mode. -->
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
     <!-- FluentTheme's ToggleButton template paints its own checked/pointerover background
          directly on an internal template part; a plain Background setter on the control
          cannot override that state-specific template paint. Replacing the template with a
@@ -708,8 +999,11 @@
       </ControlTemplate>
     </Setter>
   </Style>
+  <!-- v0.7.80.0 bugfix: pure white, same problem as the base ToggleButton.nav style above; the
+       selected nav item's own background (NavSelectedGlassGradient) already lightens correctly in
+       Light mode, so white text on it was doubly unreadable there. -->
   <Style Selector="ToggleButton.nav:checked">
-    <Setter Property="Foreground" Value="#FFFFFF"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
   </Style>
   <Style Selector="Border.navSurface">
     <Setter Property="CornerRadius" Value="6"/>
@@ -726,7 +1020,7 @@
   </Style>
   <Style Selector="ToggleButton.nav:pointerover Border.navSurface">
     <Setter Property="Background" Value="{DynamicResource NavHoverGlassGradient}"/>
-    <Setter Property="BorderBrush" Value="#91E4FF"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
     <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="#49BFFF" Opacity="0.4"/></Setter>
   </Style>
   <Style Selector="ToggleButton.nav:pointerover Border.navSurface TextBlock">
@@ -738,7 +1032,7 @@
   <Style Selector="ToggleButton.nav:checked Border.navSurface">
     <Setter Property="Background" Value="{DynamicResource NavSelectedGlassGradient}"/>
     <Setter Property="BorderBrush" Value="#62D8FF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="2" BlurRadius="10" Color="#35D5E8" Opacity="0.55"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="2" BlurRadius="10" Color="{DynamicResource Cyan}" Opacity="0.55"/></Setter>
   </Style>
   <Style Selector="ToggleButton.nav:checked:pointerover Border.navSurface">
     <Setter Property="Background" Value="{DynamicResource NavSelectedHoverGlassGradient}"/>
@@ -760,8 +1054,8 @@
   </Style>
   <Style Selector="Button.nav:pointerover">
     <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
-    <Setter Property="BorderBrush" Value="#91E4FF"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="11" Color="#35B9FF" Opacity="0.46"/></Setter>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="11" Color="{DynamicResource Blue}" Opacity="0.46"/></Setter>
   </Style>
 
   <Style Selector="ToggleButton.serverTab">
@@ -787,7 +1081,7 @@
   </Style>
   <Style Selector="ToggleButton.serverTab:pointerover Border.serverTabSurface">
     <Setter Property="Background" Value="{DynamicResource ServerTabHoverGradient}"/>
-    <Setter Property="BorderBrush" Value="#72D0FF"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
     <Setter Property="BoxShadow" Value="0 0 18 1 #6049BFFF"/>
   </Style>
   <Style Selector="ToggleButton.serverTab:checked Border.serverTabSurface">
@@ -813,16 +1107,19 @@
     <Setter Property="ClipToBounds" Value="False"/>
     <Setter Property="BoxShadow" Value="0 0 18 1 #5A61CFFF"/>
   </Style>
+  <!-- v0.7.80.0 bugfix: same hardcoded-near-white-text problem as the nav pane/category tabs;
+       the "MYSTTIQ" wordmark sits on StatusSurfaceGradient (the title bar), which is already
+       Dark/Light-aware, so the text needs to be too. -->
   <Style Selector="TextBlock.brandText">
     <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
-    <Setter Property="Foreground" Value="#EAF5FF"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
   </Style>
   <Style Selector="TextBlock.brandVersion">
     <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Text, Inter"/>
     <Setter Property="FontSize" Value="10"/>
     <Setter Property="LetterSpacing" Value="0.45"/>
-    <Setter Property="Foreground" Value="#AFC7DA"/>
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
   </Style>
   <Style Selector="Border.dashboardGlass">
     <Setter Property="Background" Value="{DynamicResource DashboardGlassGradient}"/>
@@ -836,62 +1133,68 @@
   <Style Selector="Border.ribbonGroup.contextBlue">
     <Setter Property="Margin" Value="12,0,4,0"/>
     <Setter Property="Background" Value="{DynamicResource ContextBlueGradient}"/>
-    <Setter Property="BorderBrush" Value="#4DAFE8"/>
-    <Setter Property="BoxShadow" Value="0 0 15 0 #3F2EA8FF"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource BlueAccentGlowShadowLow}"/>
   </Style>
   <Style Selector="Border.ribbonGroup.contextViolet">
     <Setter Property="Margin" Value="12,0,4,0"/>
     <Setter Property="Background" Value="{DynamicResource ContextVioletGradient}"/>
-    <Setter Property="BorderBrush" Value="#8D63C9"/>
-    <Setter Property="BoxShadow" Value="0 0 15 0 #3FA96DFF"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource VioletAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource VioletAccentGlowShadowLow}"/>
   </Style>
   <Style Selector="Border.ribbonGroup.contextAmber">
     <Setter Property="Margin" Value="12,0,4,0"/>
     <Setter Property="Background" Value="{DynamicResource BackupContextGradient}"/>
-    <Setter Property="BorderBrush" Value="#D19A3D"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource AmberAccentBorderBrush}"/>
     <Setter Property="BorderThickness" Value="1,2,1,1"/>
-    <Setter Property="BoxShadow" Value="0 0 22 1 #55F4B83F, 0 8 18 0 #52000000"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource AmberAccentGlowShadowHigh}"/>
   </Style>
   <Style Selector="Border.ribbonGroup.contextMagenta">
     <Setter Property="Margin" Value="12,0,4,0"/>
     <Setter Property="Background" Value="{DynamicResource ContextMagentaGradient}"/>
-    <Setter Property="BorderBrush" Value="#D26AED"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource MagentaAccentBorderBrush}"/>
     <Setter Property="BorderThickness" Value="1,2,1,1"/>
-    <Setter Property="BoxShadow" Value="0 0 22 1 #58E676FF, 0 8 18 0 #52000000"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource MagentaAccentGlowShadowHigh}"/>
   </Style>
   <Style Selector="Border.ribbonGroup.contextOrange">
     <Setter Property="Margin" Value="12,0,4,0"/>
     <Setter Property="Background" Value="{DynamicResource ContextOrangeGradient}"/>
-    <Setter Property="BorderBrush" Value="#B06B3E"/>
-    <Setter Property="BoxShadow" Value="0 0 15 0 #3FFF9558"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource OrangeAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource OrangeAccentGlowShadowLow}"/>
   </Style>
 
+  <!-- v0.7.82.0 bugfix: reported live; these three Backups-page ribbon buttons had fully
+       hardcoded dark Background/BorderBrush pairs, untouched by any earlier pass since they
+       override the base Button.ribbon style with their own class-specific selectors. Swapped to
+       the same already-theme-aware Context{Name}Gradient/CardGreenGradient + {Name}
+       AccentBorderBrush resources used elsewhere for this exact "colored ribbon action" pattern
+       (e.g. the InstallMissing button just above uses ContextOrangeGradient identically). -->
   <Style Selector="Button.ribbon.backupCreate">
-    <Setter Property="BorderBrush" Value="#C99935"/>
-    <Setter Property="Background" Value="#46351C16"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource AmberAccentBorderBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource ContextAmberGradient}"/>
   </Style>
   <Style Selector="Button.ribbon.backupCreate:pointerover">
-    <Setter Property="Background" Value="#75552D18"/>
-    <Setter Property="BorderBrush" Value="#FFD15B"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="15" Color="#F4B83F" Opacity="0.58"/></Setter>
+    <Setter Property="Background" Value="{DynamicResource AmberAccentBorderBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource AmberAccentHighlightBrush}"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="15" Color="{DynamicResource Amber}" Opacity="0.58"/></Setter>
   </Style>
   <Style Selector="Button.ribbon.backupVerify">
-    <Setter Property="BorderBrush" Value="#4E9E68"/>
-    <Setter Property="Background" Value="#2F193824"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource GreenAccentBorderBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource CardGreenGradient}"/>
   </Style>
   <Style Selector="Button.ribbon.backupVerify:pointerover">
-    <Setter Property="Background" Value="#55224D30"/>
-    <Setter Property="BorderBrush" Value="#75E995"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="15" Color="#63DF7B" Opacity="0.56"/></Setter>
+    <Setter Property="Background" Value="{DynamicResource GreenAccentBorderBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource GreenAccentHighlightBrush}"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="15" Color="{DynamicResource Green}" Opacity="0.56"/></Setter>
   </Style>
   <Style Selector="Button.ribbon.backupRetention">
-    <Setter Property="BorderBrush" Value="#A86C39"/>
-    <Setter Property="Background" Value="#3B2B211C"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource OrangeAccentBorderBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource ContextOrangeGradient}"/>
   </Style>
   <Style Selector="Button.ribbon.backupRetention:pointerover">
-    <Setter Property="Background" Value="#65452D1D"/>
-    <Setter Property="BorderBrush" Value="#FF9E5F"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="15" Color="#FF9558" Opacity="0.58"/></Setter>
+    <Setter Property="Background" Value="{DynamicResource OrangeAccentBorderBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource OrangeAccentHighlightBrush}"/>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="15" Color="{DynamicResource Orange}" Opacity="0.58"/></Setter>
   </Style>
 
   <Style Selector="Border.card">
@@ -899,9 +1202,26 @@
     <Setter Property="BorderBrush" Value="#426784"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="CornerRadius" Value="6"/>
-    <Setter Property="Padding" Value="14"/>
+    <Setter Property="Padding" Value="11"/>
     <Setter Property="ClipToBounds" Value="True"/>
     <Setter Property="BoxShadow" Value="-3 -3 11 0 #2548BFFF, 0 0 12 0 #2435BFFF, 0 10 26 0 #5A000000"/>
+  </Style>
+  <!-- v0.7.63.0 theme-system bugfix: App.axaml's legacy Border.statuscard style (hardcoded
+       #0E2133/#1E5279) has equal specificity to this one and is declared first, so this later
+       declaration wins the cascade the same way Border.card above already does; but until now
+       nothing here actually declared a bare (non-accent) Border.statuscard, so the legacy hardcoded
+       version was the only one that ever applied, and never re-themed. Every accentXxx/glowXxx
+       variant below already overrides this for its own compound selector; this is only the base
+       look shown when neither is set (e.g. the sidebar's mini server-status card, the duplicate-
+       install warning banner). Reuses CardStrongBrush/BorderSoftBrush rather than CardGradient/
+       #426784, a plain flat tint distinguishable from Border.card's own gradient look, closer to
+       what the legacy hardcoded values visually were. -->
+  <Style Selector="Border.statuscard">
+    <Setter Property="Background" Value="{DynamicResource CardStrongBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSoftBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="ClipToBounds" Value="True"/>
   </Style>
   <!-- Status-driven card glows: declared after Border.card so they win the Background/BoxShadow
        cascade for equal-specificity single-class selectors (Avalonia resolves ties by declaration
@@ -909,33 +1229,33 @@
        .statuscard elements (e.g. the Dashboard's SERVER card). Toggled via Classes.glowX bindings. -->
   <Style Selector="Border.glowGreen">
     <Setter Property="Background" Value="{DynamicResource CardGreenGradient}"/>
-    <Setter Property="BorderBrush" Value="#4CAF6E"/>
-    <Setter Property="BoxShadow" Value="0 0 22 2 #5A3ADF64, 0 8 22 0 #55000000"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource GreenAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource GreenAccentGlowShadowHigh}"/>
   </Style>
   <Style Selector="Border.glowRed">
     <Setter Property="Background" Value="{DynamicResource CardRedGradient}"/>
-    <Setter Property="BorderBrush" Value="#E0626A"/>
-    <Setter Property="BoxShadow" Value="0 0 22 2 #5AFF646D, 0 8 22 0 #55000000"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource RedAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource RedAccentGlowShadowHigh}"/>
   </Style>
   <Style Selector="Border.glowAmber">
     <Setter Property="Background" Value="{DynamicResource CardAmberGradient}"/>
-    <Setter Property="BorderBrush" Value="#E0A83E"/>
-    <Setter Property="BoxShadow" Value="0 0 22 2 #5AF4B83F, 0 8 22 0 #55000000"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource AmberAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource AmberAccentGlowShadowHigh}"/>
   </Style>
   <Style Selector="Border.glowPurple">
     <Setter Property="Background" Value="{DynamicResource CardPurpleGradient}"/>
-    <Setter Property="BorderBrush" Value="#8E62B8"/>
-    <Setter Property="BoxShadow" Value="0 0 22 2 #5AA96DFF, 0 8 22 0 #55000000"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource PurpleAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource PurpleAccentGlowShadowHigh}"/>
   </Style>
   <Style Selector="Border.glowDarkGreen">
     <Setter Property="Background" Value="{DynamicResource CardDarkGreenGradient}"/>
-    <Setter Property="BorderBrush" Value="#3E9860"/>
-    <Setter Property="BoxShadow" Value="0 0 22 2 #5A2E9E5C, 0 8 22 0 #55000000"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource DarkGreenAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource DarkGreenAccentGlowShadowHigh}"/>
   </Style>
   <Style Selector="Border.glowNeutral">
     <Setter Property="Background" Value="{DynamicResource CardNeutralGradient}"/>
-    <Setter Property="BorderBrush" Value="#5A7FA0"/>
-    <Setter Property="BoxShadow" Value="0 0 16 1 #3552749A, 0 8 22 0 #55000000"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource NeutralAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource NeutralAccentGlowShadowLow}"/>
   </Style>
   <Style Selector="Border.card TextBlock">
     <Setter Property="TextWrapping" Value="Wrap"/>
@@ -960,18 +1280,18 @@
   </Style>
   <Style Selector="Border.card.backupProtection">
     <Setter Property="Background" Value="{DynamicResource BackupProtectionGradient}"/>
-    <Setter Property="BorderBrush" Value="#AA8350"/>
-    <Setter Property="BoxShadow" Value="0 0 16 0 #35F4B83F, 0 10 24 0 #59000000"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource AmberAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource AmberAccentGlowShadowLow}"/>
   </Style>
   <Style Selector="Border.card.backupStorage">
     <Setter Property="Background" Value="{DynamicResource BackupStorageGradient}"/>
-    <Setter Property="BorderBrush" Value="#4A83A8"/>
-    <Setter Property="BoxShadow" Value="0 0 14 0 #3035BFFF, 0 10 24 0 #59000000"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource BlueAccentGlowShadowLow}"/>
   </Style>
   <Style Selector="Border.card.backupRetention">
     <Setter Property="Background" Value="{DynamicResource BackupRetentionGradient}"/>
-    <Setter Property="BorderBrush" Value="#A96E3C"/>
-    <Setter Property="BoxShadow" Value="0 0 15 0 #3CFF9558, 0 10 24 0 #59000000"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource OrangeAccentBorderBrush}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource OrangeAccentGlowShadowLow}"/>
   </Style>
   <Style Selector="Border.statusBadge">
     <Setter Property="CornerRadius" Value="6"/>
@@ -981,21 +1301,21 @@
     <Setter Property="ClipToBounds" Value="True"/>
   </Style>
   <Style Selector="Border.statusBadge.verified">
-    <Setter Property="Background" Value="#241B4A2B"/>
-    <Setter Property="BorderBrush" Value="#4C9B64"/>
+    <Setter Property="Background" Value="{DynamicResource CardStrongBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource GreenAccentBorderBrush}"/>
     <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="BoxShadow" Value="0 0 10 0 #2F63DF7B"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource GreenAccentGlowShadowLow}"/>
   </Style>
   <Style Selector="Border.statusBadge.enabled, Border.statusBadge.healthy">
-    <Setter Property="Background" Value="#241B4A2B"/><Setter Property="BorderBrush" Value="#4C9B64"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BoxShadow" Value="0 0 9 0 #2863DF7B"/>
+    <Setter Property="Background" Value="{DynamicResource CardStrongBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource GreenAccentBorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BoxShadow" Value="{DynamicResource GreenAccentGlowShadowLow}"/>
   </Style>
   <Style Selector="Border.statusBadge.update">
-    <Setter Property="Background" Value="#2E4A3518"/><Setter Property="BorderBrush" Value="#B27C31"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BoxShadow" Value="0 0 9 0 #35F4B83F"/>
+    <Setter Property="Background" Value="{DynamicResource CardStrongBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource AmberAccentBorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BoxShadow" Value="{DynamicResource AmberAccentGlowShadowLow}"/>
   </Style>
-  <Style Selector="Border.card.modPlatform"><Setter Property="BorderBrush" Value="#8753AE"/><Setter Property="BoxShadow" Value="-3 -3 12 0 #2CE676FF, 0 10 24 0 #59000000"/></Style>
-  <Style Selector="Border.card.modRuntime"><Setter Property="BorderBrush" Value="#4D8C5F"/><Setter Property="BoxShadow" Value="-3 -3 12 0 #2863DF7B, 0 10 24 0 #59000000"/></Style>
-  <Style Selector="Border.card.modUpdates"><Setter Property="Background" Value="{DynamicResource BackupRetentionGradient}"/><Setter Property="BorderBrush" Value="#C27C38"/><Setter Property="BoxShadow" Value="-3 -3 14 0 #45FF9558, 0 10 24 0 #59000000"/></Style>
-  <Style Selector="Border.card.modDetails"><Setter Property="BorderBrush" Value="#8957A8"/><Setter Property="BoxShadow" Value="-3 -3 13 0 #31E676FF, 0 10 24 0 #59000000"/></Style>
+  <Style Selector="Border.card.modPlatform"><Setter Property="BorderBrush" Value="{DynamicResource MagentaAccentBorderBrush}"/><Setter Property="BoxShadow" Value="{DynamicResource MagentaAccentGlowShadowLow}"/></Style>
+  <Style Selector="Border.card.modRuntime"><Setter Property="BorderBrush" Value="{DynamicResource GreenAccentBorderBrush}"/><Setter Property="BoxShadow" Value="{DynamicResource GreenAccentGlowShadowLow}"/></Style>
+  <Style Selector="Border.card.modUpdates"><Setter Property="Background" Value="{DynamicResource BackupRetentionGradient}"/><Setter Property="BorderBrush" Value="{DynamicResource OrangeAccentBorderBrush}"/><Setter Property="BoxShadow" Value="{DynamicResource OrangeAccentGlowShadowLow}"/></Style>
+  <Style Selector="Border.card.modDetails"><Setter Property="BorderBrush" Value="{DynamicResource MagentaAccentBorderBrush}"/><Setter Property="BoxShadow" Value="{DynamicResource MagentaAccentGlowShadowLow}"/></Style>
   <Style Selector="Border.selectionActions"><Setter Property="Padding" Value="12"/><Setter Property="CornerRadius" Value="6"/><Setter Property="Background" Value="#312C1C42"/><Setter Property="BorderBrush" Value="#785194"/><Setter Property="BorderThickness" Value="1"/></Style>
   <Style Selector="Border.modRow"><Setter Property="Background" Value="#100A1724"/><Setter Property="BorderBrush" Value="#193A5268"/><Setter Property="BorderThickness" Value="0,0,0,1"/></Style>
   <Style Selector="Border.modRow:pointerover"><Setter Property="Background" Value="#3A35234A"/><Setter Property="BorderBrush" Value="#9767B2"/></Style>
@@ -1003,7 +1323,7 @@
   <Style Selector="Button.disableAction"><Setter Property="Background" Value="#E3141A22"/><Setter Property="BorderBrush" Value="#5D3D46"/><Setter Property="Foreground" Value="#C9B9BF"/></Style>
   <Style Selector="Button.disableAction:pointerover"><Setter Property="Background" Value="#6B44231D"/><Setter Property="BorderBrush" Value="#FF8058"/><Setter Property="Foreground" Value="#FFD4C6"/><Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="#FF704D" Opacity="0.48"/></Setter></Style>
   <Style Selector="Button.updateAction"><Setter Property="Background" Value="#59412318"/><Setter Property="BorderBrush" Value="#C78135"/><Setter Property="Foreground" Value="#FFD277"/></Style>
-  <Style Selector="Button.updateAction:pointerover"><Setter Property="Background" Value="#79552D18"/><Setter Property="BorderBrush" Value="#FFB65A"/><Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="#FF9558" Opacity="0.5"/></Setter></Style>
+  <Style Selector="Button.updateAction:pointerover"><Setter Property="Background" Value="#79552D18"/><Setter Property="BorderBrush" Value="#FFB65A"/><Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="{DynamicResource Orange}" Opacity="0.5"/></Setter></Style>
   <Style Selector="Border.card.prototypeMetric"><Setter Property="BoxShadow" Value="-3 -3 12 0 #2548BFFF, 0 9 22 0 #56000000"/></Style>
   <Style Selector="Border.card.prototypeMetric.accent"><Setter Property="BorderBrush" Value="#4B9DC4"/><Setter Property="BoxShadow" Value="-3 -3 13 0 #3B35D5E8, 0 9 22 0 #56000000"/></Style>
   <Style Selector="Border.card.prototypeTable"><Setter Property="BorderBrush" Value="#426E8B"/></Style>
@@ -1012,21 +1332,24 @@
   <Style Selector="Border.statusBadge.prototypeState"><Setter Property="Background" Value="#241B4A2B"/><Setter Property="BorderBrush" Value="#437E58"/><Setter Property="BorderThickness" Value="1"/></Style>
   <Style Selector="Border.card.prototypeDetails"><Setter Property="BorderBrush" Value="#4A83A8"/><Setter Property="BoxShadow" Value="-3 -3 13 0 #2E35D5E8, 0 10 24 0 #59000000"/></Style>
   <Style Selector="Border.card.prototypeActions"><Setter Property="BorderBrush" Value="#9A633B"/><Setter Property="Background" Value="{DynamicResource ContextOrangeGradient}"/><Setter Property="BoxShadow" Value="-3 -3 12 0 #31FF9558, 0 10 24 0 #59000000"/></Style>
+  <!-- v0.7.56.0: Central Theme System Completion, Remaining Decorative Gradients. Routed through
+       ThemeApplier-computed resources (DataRow*) instead of hardcoded hex, so this list row style
+       now re-themes with the rest of the app. -->
   <Style Selector="Border.dataRow">
-    <Setter Property="Background" Value="#120B1825"/>
-    <Setter Property="BorderBrush" Value="#193A5268"/>
+    <Setter Property="Background" Value="{DynamicResource DataRowBg}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource DataRowBorderBrush}"/>
     <Setter Property="BorderThickness" Value="0,0,0,1"/>
     <Setter Property="Padding" Value="0"/>
   </Style>
   <Style Selector="Border.dataRow:pointerover">
-    <Setter Property="Background" Value="#38263F50"/>
-    <Setter Property="BorderBrush" Value="#4F81A3"/>
+    <Setter Property="Background" Value="{DynamicResource DataRowHoverBg}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource DataRowHoverBorderBrush}"/>
   </Style>
   <Style Selector="Border.dataRow.selected">
-    <Setter Property="Background" Value="#423C321C"/>
-    <Setter Property="BorderBrush" Value="#B88236"/>
+    <Setter Property="Background" Value="{DynamicResource DataRowSelectedBg}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource DataRowSelectedBorderBrush}"/>
     <Setter Property="BorderThickness" Value="2,0,0,1"/>
-    <Setter Property="BoxShadow" Value="0 0 12 0 #2CF4B83F"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource DataRowSelectedGlowShadow}"/>
   </Style>
   <Style Selector="Button.cardAction">
     <Setter Property="MinHeight" Value="28"/>
@@ -1055,14 +1378,20 @@
   <Style Selector="Button.cardAction.restore:pointerover">
     <Setter Property="Background" Value="{DynamicResource RestoreGradientHover}"/>
     <Setter Property="BorderBrush" Value="#FFC864"/>
-    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="13" Color="#F4B83F" Opacity="0.55"/></Setter>
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="13" Color="{DynamicResource Amber}" Opacity="0.55"/></Setter>
   </Style>
+  <!-- v0.7.80.0 bugfix: reported live; both Background and BorderBrush were hardcoded hex, unlike
+       every other Border style in this file, so the ribbon's own button-group panels (Server
+       Control, Quick Actions, Danger) stayed dark navy in Light mode regardless of everything
+       around them re-theming correctly. CardStrongBrush/BorderSoftBrush are already Dark/Light-aware
+       Structural tokens; CardStrongBrush's own Dark value (#F0122539) is close to the literal this
+       replaces, so Dark mode's look is effectively unchanged. -->
   <Style Selector="Border.ribbonGroup">
-    <Setter Property="Background" Value="#C4142739"/>
-    <Setter Property="BorderBrush" Value="#365B76"/>
+    <Setter Property="Background" Value="{DynamicResource CardStrongBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSoftBrush}"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="CornerRadius" Value="6"/>
-    <Setter Property="Padding" Value="6"/>
+    <Setter Property="Padding" Value="5"/>
     <Setter Property="Margin" Value="0,0,5,0"/>
     <Setter Property="ClipToBounds" Value="True"/>
     <Setter Property="BoxShadow" Value="0 5 14 0 #40000000"/>
@@ -1077,12 +1406,12 @@
   <Style Selector="ScrollBar:vertical">
     <Setter Property="Width" Value="8"/>
     <Setter Property="MinWidth" Value="8"/>
-    <Setter Property="Background" Value="#081522"/>
+    <Setter Property="Background" Value="{DynamicResource ScrollTrackBg}"/>
   </Style>
   <Style Selector="ScrollBar:horizontal">
     <Setter Property="Height" Value="8"/>
     <Setter Property="MinHeight" Value="8"/>
-    <Setter Property="Background" Value="#081522"/>
+    <Setter Property="Background" Value="{DynamicResource ScrollTrackBg}"/>
   </Style>
 
   <Style Selector="ProgressBar">
@@ -1093,18 +1422,18 @@
   </Style>
 
   <Style Selector="TextBox">
-    <Setter Property="MinHeight" Value="34"/>
+    <Setter Property="MinHeight" Value="31"/>
     <Setter Property="Padding" Value="9,4"/>
     <Setter Property="CornerRadius" Value="6"/>
-    <Setter Property="Background" Value="#0B1A29"/>
-    <Setter Property="BorderBrush" Value="#365C78"/>
+    <Setter Property="Background" Value="{DynamicResource InputFieldBg}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
   </Style>
   <Style Selector="ComboBox">
-    <Setter Property="MinHeight" Value="34"/>
+    <Setter Property="MinHeight" Value="31"/>
     <Setter Property="Padding" Value="9,4"/>
     <Setter Property="CornerRadius" Value="6"/>
-    <Setter Property="Background" Value="#0B1A29"/>
-    <Setter Property="BorderBrush" Value="#365C78"/>
+    <Setter Property="Background" Value="{DynamicResource InputFieldBg}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
   </Style>
   <Style Selector="CheckBox">
     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -1123,12 +1452,12 @@
     <Setter Property="CornerRadius" Value="0"/>
   </Style>
   <Style Selector="ListBoxItem:nth-child(2n)">
-    <Setter Property="Background" Value="#0C1826"/>
+    <Setter Property="Background" Value="{DynamicResource ListRowAltBg}"/>
   </Style>
   <Style Selector="ListBoxItem:pointerover">
-    <Setter Property="Background" Value="#1B3247"/>
+    <Setter Property="Background" Value="{DynamicResource ListRowHoverBg}"/>
   </Style>
   <Style Selector="ListBoxItem:selected">
-    <Setter Property="Background" Value="#24425C"/>
+    <Setter Property="Background" Value="{DynamicResource ListRowSelectedBg}"/>
   </Style>
 </Styles>

@@ -1,0 +1,18 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MystTiq.Desktop.Views.ConfirmCloseTabDialog"
+        Title="Close Tab"
+        Width="440" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource CardGradient}"
+        Icon="/Assets/PalworldServerManager.ico">
+  <StackPanel Margin="22" Spacing="16">
+    <TextBlock Text="Server is running" FontSize="16" FontWeight="SemiBold"/>
+    <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+      <Button Content="Cancel" Click="Cancel_OnClick"/>
+      <Button Content="Leave Running" Click="LeaveRunning_OnClick"/>
+      <Button Classes="danger" Content="Stop &amp; Close" Click="StopAndClose_OnClick"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

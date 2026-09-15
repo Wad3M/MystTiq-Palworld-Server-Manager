@@ -17,14 +17,14 @@ Useful Windows-specific improvements discovered during Linux development are rec
 
 | Classification | Improvement | Target | Status |
 |---|---|---|---|
-| SHARED | Headless-first core that does not require a GUI for server-management correctness | v0.3 | In progress |
-| SHARED | Explicit platform/distro/path/distribution/session contracts | v0.3 | In progress |
-| SHARED | Structured command/status output suitable for automation and remote clients | v0.3 | Started |
-| WINDOWS-BACKPORT | Windows service/headless host using the shared core | v0.4 | Planned |
-| WINDOWS-BACKPORT | Low-resource minimized WPF mode with slower/paused UI-only polling and rendering | v0.4 | Planned |
-| WINDOWS-BACKPORT | UI reconnects to a persistent background/headless core rather than owning server-management state | v0.4 | Planned |
-| WINDOWS-BACKPORT | Service-style watchdog/recovery behavior inspired by Linux/systemd supervision | v0.4 | Discovery backlog |
-| WINDOWS-BACKPORT | Improved structured log rotation/retention if Linux implementation proves useful | v0.4 | Discovery backlog |
+| SHARED | Headless-first core that does not require a GUI for server-management correctness | v0.3 | Shipped |
+| SHARED | Explicit platform/distro/path/distribution/session contracts | v0.3 | Shipped |
+| SHARED | Structured command/status output suitable for automation and remote clients | v0.3 | Shipped |
+| WINDOWS-BACKPORT | Windows service/headless host using the shared core | v0.4 | Shipped |
+| WINDOWS-BACKPORT | Low-resource minimized WPF mode with slower/paused UI-only polling and rendering | v0.4 | Shipped |
+| WINDOWS-BACKPORT | UI reconnects to a persistent background/headless core rather than owning server-management state | v0.4 | Shipped |
+| WINDOWS-BACKPORT | Service-style watchdog/recovery behavior inspired by Linux/systemd supervision | v0.4 | Shipped (`HeadlessFleetCrashRecoveryService`, v0.6.13.0 — see `docs/architecture/v0.6.13.0-fleet-wide-crash-recovery.md`) |
+| WINDOWS-BACKPORT | Improved structured log rotation/retention if Linux implementation proves useful | v0.4 | Discovery backlog — confirmed still genuinely open as of v0.7.24.0: `HeadlessConsoleLogWriter` appends to `MystTiq-PalServer-Console.log` indefinitely with no size cap, rotation, or retention on either platform (no platform-specific implementation exists to backport from) |
 
 ## Workflow
 

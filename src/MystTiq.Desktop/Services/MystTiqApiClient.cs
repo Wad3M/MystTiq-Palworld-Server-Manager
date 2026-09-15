@@ -71,6 +71,26 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         CancellationToken cancellationToken = default) =>
         RunLifecycleAsync(profile, bearerToken, "/api/v1/server/restart", cancellationToken);
 
+    public async Task<IReadOnlyList<ServerInstanceDto>> GetAllInstancesAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        return await client.GetFromJsonAsync<List<ServerInstanceDto>>("/api/v1/server/instances", cancellationToken) ?? [];
+    }
+
+    public async Task<InstanceTerminationResultDto> TerminateInstanceAsync(
+        ConnectionProfile profile,
+        int processId,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync($"/api/v1/server/instances/{processId}/terminate", content: null, cancellationToken);
+        return await ReadOperationAsync<InstanceTerminationResultDto>(response, cancellationToken);
+    }
+
     public async Task<PlayersSnapshotDto> GetPlayersAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
@@ -125,6 +145,16 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<List<NotificationTemplateDto>>("/api/v1/notifications/templates", cancellationToken) ?? []; }
     public async Task<IReadOnlyList<NotificationTemplateDto>> SaveNotificationTemplatesAsync(ConnectionProfile profile, List<NotificationTemplateDto> request, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/notifications/templates", request, cancellationToken); return await ReadOperationAsync<List<NotificationTemplateDto>>(response, cancellationToken); }
+    public async Task<DiscordBotConfigurationViewDto> GetDiscordBotConfigAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<DiscordBotConfigurationViewDto>("/api/v1/notifications/discord-bot", cancellationToken) ?? new(); }
+    public async Task<DiscordBotConfigurationViewDto> SaveDiscordBotConfigAsync(ConnectionProfile profile, DiscordBotConfigurationDto request, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/notifications/discord-bot", request, cancellationToken); return await ReadOperationAsync<DiscordBotConfigurationViewDto>(response, cancellationToken); }
+    public async Task<AntiCheatRuleSetDto> GetAntiCheatRulesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<AntiCheatRuleSetDto>("/api/v1/anticheat/rules", cancellationToken) ?? new(); }
+    public async Task<AntiCheatRuleSetDto> SaveAntiCheatRulesAsync(ConnectionProfile profile, AntiCheatRuleSetDto request, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/anticheat/rules", request, cancellationToken); return await ReadOperationAsync<AntiCheatRuleSetDto>(response, cancellationToken); }
+    public async Task<IReadOnlyList<AntiCheatFindingDto>> GetAntiCheatFindingsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<List<AntiCheatFindingDto>>("/api/v1/anticheat/findings", cancellationToken) ?? []; }
 
     public async Task<IReadOnlyList<AutomationRuleDto>> GetAutomationRulesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<List<AutomationRuleDto>>("/api/v1/automation/rules", cancellationToken) ?? []; }
@@ -212,6 +242,58 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         var result = await response.Content.ReadFromJsonAsync<RconCommandResultDto>(cancellationToken);
         if (result is not null) return result;
         throw new HttpRequestException($"RCON command failed with HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
+    }
+
+    public async Task<RconCommandResultDto> GetBanListAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.GetAsync("/api/v1/players/ban-list", cancellationToken);
+        var result = await response.Content.ReadFromJsonAsync<RconCommandResultDto>(cancellationToken);
+        if (result is not null) return result;
+        throw new HttpRequestException($"Ban list request failed with HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
+    }
+
+    public async Task<RconCommandResultDto> TeleportToMeAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync($"/api/v1/players/{Uri.EscapeDataString(playerId)}/teleport-to-me", null, cancellationToken);
+        var result = await response.Content.ReadFromJsonAsync<RconCommandResultDto>(cancellationToken);
+        if (result is not null) return result;
+        throw new HttpRequestException($"Teleport request failed with HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
+    }
+
+    public async Task<RconCommandResultDto> TeleportToPlayerAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync($"/api/v1/players/{Uri.EscapeDataString(playerId)}/teleport-to-player", null, cancellationToken);
+        var result = await response.Content.ReadFromJsonAsync<RconCommandResultDto>(cancellationToken);
+        if (result is not null) return result;
+        throw new HttpRequestException($"Teleport request failed with HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
+    }
+
+    public async Task<RconCommandResultDto> SaveWorldNowAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/world/save-now", null, cancellationToken);
+        var result = await response.Content.ReadFromJsonAsync<RconCommandResultDto>(cancellationToken);
+        if (result is not null) return result;
+        throw new HttpRequestException($"Save World Now failed with HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
+    }
+
+    public async Task<WhitelistConfigDto> GetWhitelistAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<WhitelistConfigDto>("/api/v1/players/whitelist", cancellationToken) ?? new(); }
+    public async Task<WhitelistConfigDto> SaveWhitelistAsync(ConnectionProfile profile, WhitelistConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/players/whitelist", request, cancellationToken); return await ReadOperationAsync<WhitelistConfigDto>(response, cancellationToken); }
+
+    public async Task<TemporaryBanConfigDto> GetTemporaryBansAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<TemporaryBanConfigDto>("/api/v1/players/temp-bans", cancellationToken) ?? new(); }
+
+    public async Task<PlayerAdminActionResultDto> CreateTemporaryBanAsync(ConnectionProfile profile, string playerId, string playerName, string reason, double durationHours, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        var payload = new { PlayerName = playerName, Reason = reason, DurationHours = durationHours };
+        using var response = await client.PostAsJsonAsync($"/api/v1/players/{Uri.EscapeDataString(playerId)}/temp-ban", payload, cancellationToken);
+        return await ReadOperationAsync<PlayerAdminActionResultDto>(response, cancellationToken);
     }
 
     public async Task<PlayerAdminActionResultDto> RunPlayerAdminActionAsync(
@@ -519,6 +601,70 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
             cancellationToken);
     }
 
+    public async Task<ComponentVersionSnapshotDto> GetComponentVersionsAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        return await client.GetFromJsonAsync<ComponentVersionSnapshotDto>("/api/v1/update-center/components", cancellationToken)
+            ?? new ComponentVersionSnapshotDto();
+    }
+
+    public async Task<Ue4ssReleaseCatalogDto> GetUe4ssReleaseCatalogAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        return await client.GetFromJsonAsync<Ue4ssReleaseCatalogDto>("/api/v1/ue4ss/releases", cancellationToken)
+            ?? new Ue4ssReleaseCatalogDto();
+    }
+
+    public async Task<Ue4ssInstallStatusDto> GetUe4ssInstallStatusAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        return await client.GetFromJsonAsync<Ue4ssInstallStatusDto>("/api/v1/ue4ss/install/status", cancellationToken)
+            ?? new Ue4ssInstallStatusDto();
+    }
+
+    public async Task<Ue4ssInstallPreviewDto?> PreviewUe4ssInstallAsync(
+        ConnectionProfile profile,
+        string source,
+        string tagName,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsJsonAsync("/api/v1/ue4ss/install/preview", new { source, tagName }, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+        return await ReadOperationAsync<Ue4ssInstallPreviewDto>(response, cancellationToken);
+    }
+
+    public async Task<Ue4ssInstallResultDto> ApplyUe4ssInstallAsync(
+        ConnectionProfile profile,
+        string token,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsJsonAsync("/api/v1/ue4ss/install/apply", new { token }, cancellationToken);
+        return await ReadOperationAsync<Ue4ssInstallResultDto>(response, cancellationToken);
+    }
+
+    public async Task<Ue4ssInstallResultDto> RollbackUe4ssInstallAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/ue4ss/install/rollback", null, cancellationToken);
+        return await ReadOperationAsync<Ue4ssInstallResultDto>(response, cancellationToken);
+    }
+
     public async Task<WorldExplorerSnapshotDto> GetWorldExplorerAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
@@ -583,6 +729,36 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         using var client = BuildClient(profile, bearerToken);
         using var response = await client.PostAsJsonAsync("/api/v1/guilds/ownership/apply", new { previewToken, confirmed }, cancellationToken);
         return await ReadOperationAsync<GuildOwnershipResultDto>(response, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PalInstanceDto>> GetPalsAsync(ConnectionProfile profile, string? ownerPlayerId = null, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        var query = string.IsNullOrWhiteSpace(ownerPlayerId) ? "" : $"?ownerPlayerId={Uri.EscapeDataString(ownerPlayerId)}";
+        return await client.GetFromJsonAsync<IReadOnlyList<PalInstanceDto>>($"/api/v1/pals{query}", cancellationToken) ?? [];
+    }
+
+    public async Task<PalEditPreviewDto> PreviewPalEditAsync(ConnectionProfile profile, string instanceId, PalEditFieldChangesDto changes, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        // Explicit lowercase-first wire shape, matching the same convention every other request
+        // body in this file uses (e.g. PreviewGuildOwnershipAsync's anonymous object) -- avoids
+        // depending on an assumed camelCase naming policy for a PascalCase record type.
+        var wireChanges = new
+        {
+            nickName = changes.NickName, level = changes.Level, rank = changes.Rank,
+            talentHp = changes.TalentHp, talentShot = changes.TalentShot, talentDefense = changes.TalentDefense,
+            gender = changes.Gender, isRarePal = changes.IsRarePal
+        };
+        using var response = await client.PostAsJsonAsync("/api/v1/pals/edit/preview", new { instanceId, changes = wireChanges }, cancellationToken);
+        return await ReadOperationAsync<PalEditPreviewDto>(response, cancellationToken);
+    }
+
+    public async Task<PalEditResultDto> ApplyPalEditAsync(ConnectionProfile profile, string previewToken, bool confirmed, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsJsonAsync("/api/v1/pals/edit/apply", new { previewToken, confirmed }, cancellationToken);
+        return await ReadOperationAsync<PalEditResultDto>(response, cancellationToken);
     }
 
     public async Task<BaseOwnershipPreviewDto> PreviewBaseOwnershipTransferAsync(ConnectionProfile profile, string baseId, string targetGuildId, string? bearerToken = null, CancellationToken cancellationToken = default)
@@ -651,6 +827,13 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         using var client = BuildClient(profile, bearerToken);
         return await client.GetFromJsonAsync<NetworkDiagnosticReportDto>("/api/v1/diagnostics/network", cancellationToken)
             ?? throw new InvalidOperationException("MystTiq returned an empty network diagnostic report.");
+    }
+
+    public async Task<PortCheckResultDto> CheckPortAsync(ConnectionProfile profile, int port, string protocol, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        return await client.GetFromJsonAsync<PortCheckResultDto>($"/api/v1/diagnostics/port-check?port={port}&protocol={Uri.EscapeDataString(protocol)}", cancellationToken)
+            ?? throw new InvalidOperationException("MystTiq returned an empty port-check result.");
     }
 
     public async Task<NetworkRecoveryResultDto> RestartFromNetworkDiagnosticsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
@@ -749,6 +932,51 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         return await ReadOperationAsync<ModMutationResultDto>(response, cancellationToken);
     }
 
+    public async Task<ModUpdateCheckResultDto> CheckModUpdateAsync(ConnectionProfile profile, string type, string package, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        return await client.GetFromJsonAsync<ModUpdateCheckResultDto>($"/api/v1/mods/{Uri.EscapeDataString(type)}/{Uri.EscapeDataString(package)}/check-update", cancellationToken)
+            ?? throw new InvalidOperationException("MystTiq returned an empty MOD update check result.");
+    }
+
+    public async Task<ModDescriptionResultDto> GetModDescriptionAsync(ConnectionProfile profile, string type, string package, bool refresh, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        var query = refresh ? "?refresh=true" : string.Empty;
+        return await client.GetFromJsonAsync<ModDescriptionResultDto>($"/api/v1/mods/{Uri.EscapeDataString(type)}/{Uri.EscapeDataString(package)}/description{query}", cancellationToken)
+            ?? throw new InvalidOperationException("MystTiq returned an empty MOD description result.");
+    }
+
+    public async Task<ModMutationResultDto> SetModDescriptionSourceAsync(ConnectionProfile profile, string type, string package, string sourceUrl, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsJsonAsync($"/api/v1/mods/{Uri.EscapeDataString(type)}/{Uri.EscapeDataString(package)}/description/source", new ModDescriptionSourceRequestDto(sourceUrl), cancellationToken);
+        return await ReadOperationAsync<ModMutationResultDto>(response, cancellationToken);
+    }
+
+    public async Task<ModMutationResultDto> BeginModSafeStartAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/mods/safe-start", null, cancellationToken);
+        return await ReadOperationAsync<ModMutationResultDto>(response, cancellationToken);
+    }
+
+    public async Task<SafeStartStatusDto?> GetModSafeStartStatusAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.GetAsync("/api/v1/mods/safe-start/status", cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<SafeStartStatusDto>(cancellationToken);
+    }
+
+    public async Task<ModMutationResultDto> CancelModSafeStartAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/mods/safe-start/cancel", null, cancellationToken);
+        return await ReadOperationAsync<ModMutationResultDto>(response, cancellationToken);
+    }
+
     private async Task<LifecycleOperationResultDto> RunLifecycleAsync(
         ConnectionProfile profile,
         string? bearerToken,
@@ -791,7 +1019,7 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         return client;
     }
 
-    private static HttpClientHandler BuildHandler(ConnectionProfile profile)
+    private static HttpMessageHandler BuildHandler(ConnectionProfile profile)
     {
         var handler = new HttpClientHandler();
         var expectedPin = NormalizeFingerprint(profile.ServerCertificateSha256);
@@ -809,7 +1037,48 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         }
 
         // Without a pin, normal OS certificate validation remains authoritative.
-        return handler;
+        return string.IsNullOrWhiteSpace(profile.ServerId)
+            ? handler
+            : new ServerScopedRoutingHandler(profile.ServerId) { InnerHandler = handler };
+    }
+
+    // v0.7.63.0: routes a multi-server fleet host's requests to one specific server profile.
+    // A fleet host (see LocalManagementApiHost's "Multi-Server Fleet" header comment) serves every
+    // per-server route twice: once unprefixed (hard-wired to its "default" profile only, for
+    // backward compatibility) and once under /api/v1/servers/{profileId}/... for every profile
+    // including "default". This client had never adopted the scoped form, so a non-default profile
+    // (e.g. a second local server) was simply unreachable from the GUI regardless of connection/tab
+    // setup. Rather than touching every individual call site above, this single handler rewrites
+    // the small, closed set of per-server /api/v1/ paths to their scoped form when profile.ServerId
+    // is set. The excluded prefixes below are the genuinely fleet-only routes registered directly
+    // on the host app (not per-profile) -- see LocalManagementApiHost.cs's `app.Map*` calls -- which
+    // have no scoped twin to rewrite to and must stay unprefixed regardless of ServerId.
+    private sealed class ServerScopedRoutingHandler(string serverId) : DelegatingHandler
+    {
+        private static readonly string[] FleetOnlyPrefixes =
+        [
+            "/api/v1/diagnostics/port-check",
+            "/api/v1/ue4ss/releases",
+            "/api/v1/service",
+            "/api/v1/security/",
+            "/api/v1/operations",
+            "/api/v1/servers",
+            "/api/v1/fleet/",
+        ];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var uri = request.RequestUri;
+            if (uri is not null && uri.AbsolutePath.StartsWith("/api/v1/", StringComparison.Ordinal) &&
+                !FleetOnlyPrefixes.Any(p => uri.AbsolutePath.StartsWith(p, StringComparison.Ordinal)))
+            {
+                var rewritten = "/api/v1/servers/" + Uri.EscapeDataString(serverId) + uri.AbsolutePath["/api/v1".Length..];
+                var builder = new UriBuilder(uri) { Path = rewritten };
+                request.RequestUri = builder.Uri;
+            }
+
+            return base.SendAsync(request, cancellationToken);
+        }
     }
 
     // v0.6.4.0: extracted so LocalDiagnosticsService's TLS-stage local-PC diagnostic check can

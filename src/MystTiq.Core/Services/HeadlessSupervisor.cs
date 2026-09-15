@@ -43,6 +43,16 @@ public sealed class HeadlessSupervisor
             Console.WriteLine($"Adopted existing PalServer PID {initial.NativeProcessId?.ToString() ?? "unknown"}.");
         }
 
+        return await RunCrashRecoveryLoopAsync(cancellationToken);
+    }
+
+    // v0.6.13.0: extracted so api-run (fleet-wide, every profile including non-default) can reuse
+    // the exact same crash-detect/backoff/window logic without RunAsync's "ensure started on
+    // launch" preamble above -- appropriate for service-run's unattended-boot semantics, wrong for
+    // api-run, where a profile nobody has started yet is not a crash. Behavior-identical to the
+    // pre-v0.6.13.0 RunAsync loop for every existing service-run caller.
+    public async Task<int> RunCrashRecoveryLoopAsync(CancellationToken cancellationToken)
+    {
         while (!cancellationToken.IsCancellationRequested)
         {
             await Task.Delay(options.PollInterval, cancellationToken);

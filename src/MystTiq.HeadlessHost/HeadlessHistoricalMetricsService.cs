@@ -55,7 +55,12 @@ public sealed class HeadlessHistoricalMetricsService
                 Math.Max(players.Players.Count, world.PlayerSaveCount),
                 Math.Max(0, backups.Count),
                 Math.Max(0, world.TotalSizeBytes),
-                uptimeMinutes));
+                uptimeMinutes,
+                // v0.7.15.0: kept nullable, unlike CpuPercent's 0-coalesce above -- the Palworld REST
+                // API being disabled (a common, valid configuration) must read as "no data" on the
+                // history chart, not as a real, plottable 0 FPS.
+                metrics.ServerFps,
+                metrics.ServerFrameTimeMs));
 
             var cutoff = now - Retention;
             samples.RemoveAll(sample => sample.ObservedAt < cutoff);
@@ -78,6 +83,7 @@ public sealed class HeadlessHistoricalMetricsService
                 selected.Add(samples[^1]);
 
             var display = Downsample(selected, maximumSamples);
+            var fpsSamples = selected.Where(x => x.ServerFps.HasValue).Select(x => x.ServerFps!.Value).ToArray();
             return new HeadlessHistoricalMetricsSnapshot(
                 display,
                 selected.Count == 0 ? 0 : selected.Average(x => x.CpuPercent),
@@ -91,7 +97,11 @@ public sealed class HeadlessHistoricalMetricsService
                 DateTimeOffset.UtcNow,
                 $"{selected.Count} sample(s) in the selected range.",
                 FindGaps(selected),
-                FindRestartMarkers(selected));
+                FindRestartMarkers(selected),
+                // v0.7.15.0: null (not 0) when no sample in range ever reported real FPS data --
+                // e.g. the Palworld REST API was disabled for the whole window.
+                fpsSamples.Length == 0 ? null : fpsSamples.Average(),
+                fpsSamples.Length == 0 ? null : fpsSamples.Max());
         }
     }
 
@@ -186,7 +196,9 @@ public sealed record HeadlessHistoricalMetricSample(
     int KnownPlayers,
     int BackupCount,
     long WorldSizeBytes,
-    double UptimeMinutes);
+    double UptimeMinutes,
+    double? ServerFps = null,
+    double? ServerFrameTimeMs = null);
 
 public sealed record HistoricalGapMarker(DateTimeOffset StartUtc, DateTimeOffset EndUtc);
 
@@ -203,4 +215,6 @@ public sealed record HeadlessHistoricalMetricsSnapshot(
     DateTimeOffset ObservedAt,
     string Detail,
     IReadOnlyList<HistoricalGapMarker> Gaps,
-    IReadOnlyList<DateTimeOffset> RestartMarkers);
+    IReadOnlyList<DateTimeOffset> RestartMarkers,
+    double? AverageFps = null,
+    double? PeakFps = null);

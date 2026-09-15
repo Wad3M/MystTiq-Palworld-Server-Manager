@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using MystTiq.Core.Models;
+using MystTiq.Core.Operations;
 
 namespace MystTiq.Core.Services;
 
@@ -12,16 +13,28 @@ public interface IWindowsServiceManager
     Task<bool> UninstallAsync(CancellationToken cancellationToken = default);
 }
 
+// v0.6.13.0: profile-aware so a non-default profile (e.g. a Clone World target) can have its own
+// genuinely independent, unattended, boot-time-supervised Windows Service. The default profile's
+// ServiceName/DisplayName are unchanged from every prior version -- critical so upgrading never
+// orphans or breaks an already-installed service. Suffixed name for a non-default profile, not a
+// separate installer mechanism: same sc.exe-based InstallAsync/UninstallAsync/GetStatusAsync, just
+// parameterized.
 [SupportedOSPlatform("windows")]
 public sealed class WindowsServiceManager : IWindowsServiceManager
 {
-    public const string ServiceName = "MystTiqPalworld";
-    public const string DisplayName = "MystTiq Palworld Server Manager";
+    private readonly ServerProfileId profileId;
 
-    public WindowsServiceManager()
+    public string ServiceName { get; }
+    public string DisplayName { get; }
+
+    public WindowsServiceManager(ServerProfileId profileId)
     {
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("Windows Service management requires Windows.");
+        this.profileId = profileId;
+        var isDefault = profileId.Value.Equals(HeadlessConfiguration.DefaultServerProfileId, StringComparison.OrdinalIgnoreCase);
+        ServiceName = isDefault ? "MystTiqPalworld" : $"MystTiqPalworld-{profileId.Value}";
+        DisplayName = isDefault ? "MystTiq Palworld Server Manager" : $"MystTiq Palworld Server Manager ({profileId.Value})";
     }
 
     public async Task<WindowsServiceStatus> GetStatusAsync(CancellationToken cancellationToken = default)
@@ -51,7 +64,12 @@ public sealed class WindowsServiceManager : IWindowsServiceManager
         if (existing.Installed)
             await RunScAsync(["stop", ServiceName], cancellationToken, allowFailure: true);
 
-        var binPath = $"\"{executablePath}\" service-run --config \"{configurationPath}\"";
+        // Byte-identical binPath for the default profile as every prior version produced --
+        // only a non-default profile's service gets --server-id appended.
+        var isDefault = profileId.Value.Equals(HeadlessConfiguration.DefaultServerProfileId, StringComparison.OrdinalIgnoreCase);
+        var binPath = isDefault
+            ? $"\"{executablePath}\" service-run --config \"{configurationPath}\""
+            : $"\"{executablePath}\" service-run --config \"{configurationPath}\" --server-id {profileId.Value}";
         if (!existing.Installed)
             await RunScAsync(["create", ServiceName, "binPath=", binPath, "start=", "auto", "DisplayName=", DisplayName], cancellationToken);
         else

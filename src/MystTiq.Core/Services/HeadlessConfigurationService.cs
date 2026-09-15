@@ -25,13 +25,33 @@ public sealed class HeadlessConfigurationService
         var json = File.ReadAllText(path);
         var schemaVersion = ReadSchemaVersion(json);
         if (schemaVersion == 1)
-            return MigrateV2(MigrateV1Json(json));
+            return EnsureUnattendedFlag(MigrateV2(MigrateV1Json(json)));
         if (schemaVersion == 2)
-            return MigrateV2(json);
+            return EnsureUnattendedFlag(MigrateV2(json));
 
         var configuration = JsonSerializer.Deserialize<HeadlessConfiguration>(json, JsonOptions);
-        return configuration ?? throw new InvalidDataException($"MystTiq configuration is empty or invalid JSON: {path}");
+        return configuration is null
+            ? throw new InvalidDataException($"MystTiq configuration is empty or invalid JSON: {path}")
+            : EnsureUnattendedFlag(configuration);
     }
+
+    // v0.7.61.0: -unattended is not a discretionary launch argument -- without it, PalServer can
+    // silently pop a native Win32 MessageBox on certain Unreal/Steamworks error conditions, and
+    // since a headless-launched process has no interactive desktop to show it on, that dialog
+    // blocks forever (confirmed live via a Process Explorer thread-stack capture: the blocked
+    // thread sat in USER32.dll!MessageBoxW). Every profile created before this fix is missing the
+    // flag and would hit this exact freeze the moment that condition occurs, with zero visible
+    // symptom, so it's backfilled here on every load rather than left as an opt-in the user would
+    // have no way to know to make.
+    private static HeadlessConfiguration EnsureUnattendedFlag(HeadlessConfiguration configuration) =>
+        configuration with
+        {
+            Servers = configuration.Servers
+                .Select(server => server.LaunchArguments.Any(a => a.Equals("-unattended", StringComparison.OrdinalIgnoreCase))
+                    ? server
+                    : server with { LaunchArguments = new[] { "-unattended" }.Concat(server.LaunchArguments).ToArray() })
+                .ToArray()
+        };
 
     public ConfigurationValidationResult Validate(HeadlessConfiguration configuration)
     {
@@ -147,7 +167,13 @@ public sealed class HeadlessConfigurationService
         return rollbackPath ?? string.Empty;
     }
 
-    public void WriteDefault(string? path = null, bool overwrite = false)
+    // v0.6.12.0: accepts an already-built configuration so config-write-default's CLI overrides
+    // (--server-root/--steamcmd/--backup-root/--runtime-root) can actually take effect. Previously
+    // this always serialized CreateDefaultForCurrentPlatform() unconditionally, silently ignoring
+    // those flags -- every other command applies them after loading, but config-write-default wrote
+    // before any override logic ran, so the written file always contained the hardcoded built-in
+    // path regardless of what was passed on the command line.
+    public void WriteDefault(string? path = null, bool overwrite = false, HeadlessConfiguration? configuration = null)
     {
         path ??= DefaultPath;
         if (File.Exists(path) && !overwrite)
@@ -156,7 +182,7 @@ public sealed class HeadlessConfigurationService
         var directory = Path.GetDirectoryName(path)
             ?? throw new InvalidOperationException("Configuration path has no parent directory.");
         Directory.CreateDirectory(directory);
-        File.WriteAllText(path, JsonSerializer.Serialize(HeadlessConfiguration.CreateDefaultForCurrentPlatform(), JsonOptions));
+        File.WriteAllText(path, JsonSerializer.Serialize(configuration ?? HeadlessConfiguration.CreateDefaultForCurrentPlatform(), JsonOptions));
     }
 
 

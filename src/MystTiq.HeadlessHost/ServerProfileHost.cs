@@ -53,6 +53,19 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required HeadlessAutomationService Automation { get; init; }
     public required HeadlessWorldCloneService WorldClone { get; init; }
     public required WanReachabilityService WanReachability { get; init; }
+    public required HeadlessFleetCrashRecoveryService CrashRecovery { get; init; }
+    public required HeadlessPalEditService PalEdit { get; init; }
+    public required HeadlessDiscordBotService DiscordBot { get; init; }
+    public required HeadlessAntiCheatService AntiCheat { get; init; }
+    public required HeadlessWhitelistService Whitelist { get; init; }
+    public required HeadlessTemporaryBanService TemporaryBans { get; init; }
+    public required HeadlessComponentUpdateService ComponentUpdates { get; init; }
+    public required HeadlessModSafeStartService ModSafeStart { get; init; }
 
-    public async ValueTask DisposeAsync() => await Automation.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        await Automation.DisposeAsync();
+        await CrashRecovery.DisposeAsync();
+        await DiscordBot.DisposeAsync();
+    }
 }

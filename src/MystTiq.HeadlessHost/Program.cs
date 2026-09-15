@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MystTiq.Core.Models;
+using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
 using MystTiq.HeadlessHost;
 
@@ -108,7 +109,28 @@ if (command.Equals("config-write-default", StringComparison.OrdinalIgnoreCase))
     try
     {
         var overwrite = args.Any(argument => argument.Equals("--overwrite", StringComparison.OrdinalIgnoreCase));
-        configurationService.WriteDefault(configurationPath, overwrite);
+
+        // v0.6.12.0: apply --server-root/--steamcmd/--backup-root/--runtime-root to the default
+        // profile before writing, matching how every other command honors these flags. Previously
+        // they were silently ignored here -- the written file always contained the hardcoded
+        // built-in default path no matter what was passed.
+        var builtInDefault = HeadlessConfiguration.CreateDefaultForCurrentPlatform();
+        var defaultProfile = builtInDefault.DefaultServer;
+        var overriddenProfile = defaultProfile with
+        {
+            ServerRoot = GetOption("--server-root") ?? defaultProfile.ServerRoot,
+            SteamCmdPath = GetOption("--steamcmd") ?? defaultProfile.SteamCmdPath,
+            BackupRoot = GetOption("--backup-root") ?? defaultProfile.BackupRoot,
+            RuntimeRoot = GetOption("--runtime-root") ?? defaultProfile.RuntimeRoot
+        };
+        var effectiveDefault = builtInDefault with
+        {
+            Servers = builtInDefault.Servers
+                .Select(s => s.Id.Equals(defaultProfile.Id, StringComparison.OrdinalIgnoreCase) ? overriddenProfile : s)
+                .ToArray()
+        };
+
+        configurationService.WriteDefault(configurationPath, overwrite, effectiveDefault);
         Console.WriteLine($"Default MystTiq configuration written: {configurationPath}");
         return 0;
     }
@@ -141,13 +163,25 @@ if (!configurationValidation.Valid)
 }
 
 // v0.6.2.0: --server-root/--steamcmd/--backup-root/--runtime-root are single-server CLI
-// conveniences (ad hoc testing, the desktop sidecar launch) -- they override only the "default"
+// conveniences (ad hoc testing, the desktop sidecar launch) -- they override only the resolved
 // server profile's entry in Servers. Direct single-server CLI verbs (status/start/stop/restart/
-// service-*) below operate against that same default profile, matching pre-v0.6.2.0 CLI behavior
-// exactly for a deployment that never adds a second profile. Multi-server CLI selection (a
-// --server-id flag for these direct verbs) is not part of this pass -- api-run/the Management API
-// is the fleet-aware surface; see the v0.6.2.0 implementation note for this deferral.
-var defaultServerProfile = headlessConfiguration.DefaultServer;
+// service-*) below operate against that one resolved profile, matching pre-v0.6.2.0 CLI behavior
+// exactly for a deployment that never adds a second profile.
+// v0.6.13.0: --server-id resolves which profile that is; omitting it keeps the exact pre-v0.6.13.0
+// behavior (resolves to DefaultServer). This is the one place every direct verb ultimately derives
+// its profile/paths from, so adding it here threads it through all of them at once.
+var requestedServerId = GetOption("--server-id");
+HeadlessServerProfileConfiguration? requestedServerProfile = null;
+if (!string.IsNullOrWhiteSpace(requestedServerId))
+{
+    requestedServerProfile = headlessConfiguration.Servers.FirstOrDefault(s => s.Id.Equals(requestedServerId, StringComparison.OrdinalIgnoreCase));
+    if (requestedServerProfile is null)
+    {
+        Console.Error.WriteLine($"No server profile with id \"{requestedServerId}\" is configured.");
+        return (int)HeadlessExitCode.InvalidArguments;
+    }
+}
+var defaultServerProfile = requestedServerProfile ?? headlessConfiguration.DefaultServer;
 var runtimeConfiguration = HeadlessConfigurationService.ToRuntimeConfiguration(defaultServerProfile) with
 {
     ServerRoot = GetOption("--server-root") ?? defaultServerProfile.ServerRoot,
@@ -176,12 +210,23 @@ var effectiveHeadlessConfiguration = headlessConfiguration with
         .Select(s => s.Id.Equals(defaultServerProfile.Id, StringComparison.OrdinalIgnoreCase) ? effectiveDefaultServerProfile : s)
         .ToArray()
 };
-var effectiveValidation = configurationService.Validate(effectiveHeadlessConfiguration);
-if (!effectiveValidation.Valid)
+// v0.7.17.0: api-remote-enable/api-remote-disable transition BindAddress/Authentication/Tls
+// together via HeadlessRemoteApiEnrollmentService, which validates the resulting configuration
+// itself -- they never read effectiveHeadlessConfiguration. Gating them on this pre-check compares
+// the CLI's new --bind-address against the OLD, not-yet-updated Authentication/Tls flags, so it
+// always rejected the documented api-token-create -> api-tls-create -> api-remote-enable flow
+// (found but not fixed in v0.7.13.0) before EnableRemoteApi ever ran.
+var skipsEffectiveValidation = command.Equals("api-remote-enable", StringComparison.OrdinalIgnoreCase)
+    || command.Equals("api-remote-disable", StringComparison.OrdinalIgnoreCase);
+if (!skipsEffectiveValidation)
 {
-    Console.Error.WriteLine("Effective configuration validation failed after command-line overrides:");
-    foreach (var error in effectiveValidation.Errors) Console.Error.WriteLine($"  - {error}");
-    return (int)HeadlessExitCode.InvalidArguments;
+    var effectiveValidation = configurationService.Validate(effectiveHeadlessConfiguration);
+    if (!effectiveValidation.Valid)
+    {
+        Console.Error.WriteLine("Effective configuration validation failed after command-line overrides:");
+        foreach (var error in effectiveValidation.Errors) Console.Error.WriteLine($"  - {error}");
+        return (int)HeadlessExitCode.InvalidArguments;
+    }
 }
 
 var platform = ServerPlatformProfile.ForCurrentPlatform();
@@ -329,13 +374,13 @@ switch (command.ToLowerInvariant())
 
         if (OperatingSystem.IsLinux())
         {
-            var serviceManager = new LinuxSystemdServiceManager(paths);
+            var serviceManager = new LinuxSystemdServiceManager(paths, new ServerProfileId(defaultServerProfile.Id));
             var serviceStatus = await serviceManager.GetStatusAsync(cancellation.Token);
             Add("systemd", serviceStatus.Installed && serviceStatus.Enabled && serviceStatus.State == LinuxServiceState.Active ? "PASS" : "FAIL",
                 $"installed={serviceStatus.Installed}; enabled={serviceStatus.Enabled}; state={serviceStatus.ActiveState}/{serviceStatus.SubState}",
                 serviceStatus.Installed && serviceStatus.Enabled && serviceStatus.State == LinuxServiceState.Active
                     ? "No action required."
-                    : "Run service-install --start-now and review journalctl -u mysttiq-palworld -b.");
+                    : $"Run service-install --start-now and review journalctl -u {serviceManager.UnitName} -b.");
 
             var sessionInspector = new LinuxServerSessionInspector(platform.GuardedPorts);
             var lifecycleService = new LinuxServerLifecycleService(platform, paths, sessionInspector);
@@ -536,7 +581,7 @@ switch (command.ToLowerInvariant())
         }
         else if (OperatingSystem.IsLinux())
         {
-            linuxServiceManager = new LinuxSystemdServiceManager(paths);
+            linuxServiceManager = new LinuxSystemdServiceManager(paths, new ServerProfileId(defaultServerProfile.Id));
             serviceStatusProvider = new LinuxManagementServiceStatusProvider(linuxServiceManager);
         }
         else
@@ -601,11 +646,13 @@ switch (command.ToLowerInvariant())
         {
             var sessionInspector = new WindowsServerSessionInspector(platform.GuardedPorts);
             var lifecycle = new WindowsServerLifecycleService(platform, paths, sessionInspector);
-            var serviceManager = new WindowsServiceManager();
+            var serviceManager = new WindowsServiceManager(new ServerProfileId(defaultServerProfile.Id));
 
             // v0.6.3.0: mirrors the Linux ServiceRunLifecycleFactory below exactly -- crash-recovery
-            // supervision (HeadlessSupervisor) stays scoped to the "default" profile only on both
-            // platforms; the embedded Management API host is fully fleet-aware via this factory.
+            // supervision (HeadlessSupervisor) stays scoped to one profile per service-run process
+            // on both platforms (the resolved defaultServerProfile -- "default" unless --server-id
+            // selected another one, v0.6.13.0); the embedded Management API host is fully
+            // fleet-aware via this factory regardless.
             [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #pragma warning disable CA1416 // The [SupportedOSPlatform("windows")] attribute above (and this whole branch's own OperatingSystem.IsWindows() guard) already make this Windows-only; the platform-compat analyzer just doesn't trace guard attributes through local functions.
             IServerLifecycleService WindowsServiceRunLifecycleFactory(HeadlessServerProfileConfiguration serverProfile, IServerPathProfile profilePaths)
@@ -688,7 +735,7 @@ switch (command.ToLowerInvariant())
             // PosixSignalRegistration/SIGTERM already does for Linux service-run below) instead of
             // SCM eventually force-killing an unresponsive process. Degrades harmlessly to a no-op
             // lifetime when not actually running under SCM (e.g. launched manually for testing).
-            var windowsServiceName = WindowsServiceManager.ServiceName;
+            var windowsServiceName = serviceManager.ServiceName;
             var scmHostBuilder = Host.CreateApplicationBuilder();
             scmHostBuilder.Services.AddWindowsService(o => o.ServiceName = windowsServiceName);
             using var scmHost = scmHostBuilder.Build();
@@ -735,13 +782,14 @@ switch (command.ToLowerInvariant())
         {
             var sessionInspector = new LinuxServerSessionInspector(platform.GuardedPorts);
             var lifecycle = new LinuxServerLifecycleService(platform, paths, sessionInspector);
-            var serviceManager = new LinuxSystemdServiceManager(paths);
+            var serviceManager = new LinuxSystemdServiceManager(paths, new ServerProfileId(defaultServerProfile.Id));
 
             // v0.6.2.0: the systemd auto-recovery supervisor loop (HeadlessSupervisor below) stays
-            // scoped to the "default" server profile only -- crash-recovery supervision for
-            // additional fleet profiles is not part of this pass (see the implementation note's
-            // deferred list). The embedded Management API host is fully fleet-aware regardless, via
-            // this factory, exactly like api-run's.
+            // scoped to one profile per service-run process (the resolved defaultServerProfile --
+            // "default" unless --server-id selected another one, v0.6.13.0; each additional fleet
+            // profile gets its own separately-installed unit via the same --server-id). The embedded
+            // Management API host is fully fleet-aware regardless, via this factory, exactly like
+            // api-run's.
             [System.Runtime.Versioning.SupportedOSPlatform("linux")]
             IServerLifecycleService ServiceRunLifecycleFactory(HeadlessServerProfileConfiguration serverProfile, IServerPathProfile profilePaths)
             {
@@ -995,6 +1043,7 @@ static void PrintHelp()
     Console.WriteLine("  --api-port <n>                   Management API port.");
     Console.WriteLine("  --dns-name <name>                Optional DNS SAN for generated TLS certificate.");
     Console.WriteLine("  --overwrite                      Allow config-write-default to replace an existing file.");
+    Console.WriteLine("  --server-id <id>                 Select a fleet server profile for status/start/stop/restart/service-* (default: the \"default\" profile).");
     Console.WriteLine("  --server-root <path>             Override PalServer root.");
     Console.WriteLine("  --steamcmd <path>                Override SteamCMD executable.");
     Console.WriteLine("  --backup-root <path>             Override backup root.");

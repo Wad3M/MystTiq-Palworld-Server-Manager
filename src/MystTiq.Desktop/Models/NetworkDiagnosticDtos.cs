@@ -21,3 +21,7 @@ public sealed record WanReachabilityReportDto(DateTimeOffset CheckedAt,string? P
  public string PublicIpPortText=>string.IsNullOrWhiteSpace(PublicIPv4)?"Unknown":$"{PublicIPv4}:{GamePort}";
 }
 public sealed record UpnpRepairResultDto(bool Success, bool Changed, string Message);
+
+// v0.7.2.0: a standalone "is this candidate port already bound" query used during new-server
+// setup, independent of any configured/running profile.
+public sealed record PortCheckResultDto(int Port, string Protocol, bool InUse, string? ProcessName, int? OwningProcessId);

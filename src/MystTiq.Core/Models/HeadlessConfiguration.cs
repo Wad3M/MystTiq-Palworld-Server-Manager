@@ -93,7 +93,7 @@ public sealed record HeadlessConfiguration(
                     @"C:\GameServers\Palworld\SteamCMD\steamcmd.exe",
                     @"C:\GameServers\Palworld\Server\Backups",
                     Path.Combine(root, "runtime"),
-                    ["-useperfthreads", "-NoAsyncLoadingThread", "-UseMultithreadForDS", "-stdout", "-FullStdOutLogOutput", "-logformat=text"],
+                    ["-unattended", "-useperfthreads", "-NoAsyncLoadingThread", "-UseMultithreadForDS", "-stdout", "-FullStdOutLogOutput", "-logformat=text"],
                     ServerRuntimeKind.WindowsNative)
             ],
             Path.Combine(root, "fleet"));
@@ -130,6 +130,7 @@ public sealed record HeadlessConfiguration(
                     RuntimeRoot: "/opt/mysttiq/runtime",
                     LaunchArguments:
                     [
+                        "-unattended",
                         "-useperfthreads",
                         "-NoAsyncLoadingThread",
                         "-UseMultithreadForDS",

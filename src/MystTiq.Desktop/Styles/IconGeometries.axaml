@@ -1,0 +1,13 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- v0.7.19.0: the 7 nav-destination StreamGeometry icons this file used to define (Dashboard/
+       Server/Players/Fleet/Security/Base/Backup) were removed here: every nav destination now
+       uses the full hand-authored PNG icon set instead (src/MystTiq.Desktop/Assets/Icons/), see
+       docs/architecture/v0.7.19.0-full-nav-icon-set.md. IconAddTab is unrelated to nav and stays. -->
+  <Styles.Resources>
+    <!-- Fill icon: plain plus sign, for the tab bar's "+" (open a new tab) button. v0.7.1.0
+         replaced the earlier capture-sphere-styled icon with an actual plus symbol, per feedback
+         that the request was specifically for a plus rather than a themed reinterpretation. -->
+    <StreamGeometry x:Key="IconAddTab">M10.5,5 L13.5,5 L13.5,10.5 L19,10.5 L19,13.5 L13.5,13.5 L13.5,19 L10.5,19 L10.5,13.5 L5,13.5 L5,10.5 L10.5,10.5 Z</StreamGeometry>
+  </Styles.Resources>
+</Styles>

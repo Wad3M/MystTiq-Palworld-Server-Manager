@@ -19,6 +19,11 @@ public interface IServerLifecycleService
         TimeSpan startupTimeout,
         TimeSpan gracefulTimeout,
         CancellationToken cancellationToken = default);
+
+    // v0.7.44.0: machine-wide instance detection/termination, independent of this profile's own
+    // managed-process tracking -- see ServerInstanceInfo for why ManagedByThisProfile is conservative.
+    Task<IReadOnlyList<ServerInstanceInfo>> FindAllInstancesAsync(CancellationToken cancellationToken = default);
+    Task<InstanceTerminationResult> TerminateUnmanagedInstanceAsync(int processId, CancellationToken cancellationToken = default);
 }
 
 [SupportedOSPlatform("linux")]
@@ -33,6 +38,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
     private readonly IProcessSignalService signals;
     private readonly ServerLifecycleStateStore stateStore;
     private readonly int expectedGamePort;
+    private readonly PalworldRconService rcon;
 
     public LinuxServerLifecycleService(
         ServerPlatformProfile platform,
@@ -51,6 +57,12 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         this.signals = signals ?? new LinuxProcessSignalService();
         this.stateStore = stateStore ?? new ServerLifecycleStateStore(paths.ManagerRuntimeRoot);
         this.expectedGamePort = expectedGamePort is > 0 and <= 65535 ? expectedGamePort : 8211;
+        // v0.7.68.0: mirrors WindowsServerLifecycleService -- see its own StopAsync comment for the
+        // full reasoning. SIGTERM isn't known-broken here the way CloseMainWindow is confirmed
+        // broken on Windows, but RCON's native Shutdown is still Palworld's own real graceful-exit
+        // path (world save, then clean exit) rather than an OS-level signal, so trying it first is
+        // a genuine reliability improvement, not just parity for its own sake.
+        this.rcon = new PalworldRconService(new PalworldSettingsConfigurationService(paths));
     }
 
     public Task<ServerLifecycleSnapshot> GetStatusAsync(CancellationToken cancellationToken = default)
@@ -163,6 +175,21 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                 snapshot,
                 false,
                 "PalServer is already running; duplicate start was blocked.");
+        }
+
+        // v0.7.60.0: Port Conflict Prevention -- mirrors WindowsServerLifecycleService's own fix.
+        // The check above only catches a duplicate start of THIS profile's own tracked process; it
+        // says nothing about another profile, an unmanaged process, or a not-yet-cleaned-up leftover
+        // already holding the same UDP port. Catching it here, before the process is even created,
+        // turns a silent hang into an immediate, clear, actionable error.
+        if (sessionInspector.GetGuardedListeningPorts().Contains(expectedGamePort))
+        {
+            var conflictSnapshot = await GetStatusAsync(cancellationToken);
+            return new ServerLifecycleOperationResult(
+                HeadlessExitCode.PortConflict,
+                conflictSnapshot,
+                false,
+                $"UDP port {expectedGamePort} is already in use by another process on this machine. Stop whatever's using it, or change this server's configured port, before starting -- launching anyway would leave PalServer running but unable to bind its game port, indistinguishable from a hang.");
         }
 
         Directory.CreateDirectory(paths.ManagerRuntimeRoot);
@@ -290,6 +317,16 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
             true,
             "Graceful SIGTERM shutdown requested."));
 
+        // v0.7.68.0: try RCON's native Shutdown first when configured/reachable -- purely additive,
+        // the SIGTERM below (and the SIGKILL escalation further down) still runs completely
+        // unchanged regardless of whether this succeeds, so it can only help, never regress.
+        var rconStatus = rcon.GetStatus();
+        if (rconStatus is { Enabled: true, PasswordConfigured: true })
+        {
+            try { await rcon.ExecuteAsync("Shutdown 1 MystTiq requested a graceful shutdown.", cancellationToken); }
+            catch { /* best-effort -- the SIGTERM/SIGKILL escalation below is still the safety net */ }
+        }
+
         foreach (var process in processes)
             signals.TryTerminate(process.ProcessId);
 
@@ -416,10 +453,76 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
             process.ProcessName.Contains("Linux-Shipping", StringComparison.OrdinalIgnoreCase))
         ?? processes.FirstOrDefault();
 
+    public Task<IReadOnlyList<ServerInstanceInfo>> FindAllInstancesAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var root = Path.GetFullPath(paths.ServerRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        IReadOnlyList<ServerInstanceInfo> instances = sessionInspector.FindProcessesByName(platform.ProcessNames)
+            .Select(process => new ServerInstanceInfo(
+                process.ProcessId,
+                process.ParentProcessId,
+                process.ProcessName,
+                process.ExecutablePath,
+                process.Responding,
+                ManagedByThisProfile: !string.IsNullOrWhiteSpace(process.ExecutablePath) &&
+                    IsUnderRoot(process.ExecutablePath, root)))
+            .OrderBy(instance => instance.ProcessId)
+            .ToArray();
+        return Task.FromResult(instances);
+    }
+
+    public Task<InstanceTerminationResult> TerminateUnmanagedInstanceAsync(int processId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        // Raw SIGKILL by PID -- deliberately does not touch this profile's own stateStore, since the
+        // target may belong to a different local MystTiq session's crash-recovery tracking entirely.
+        var killed = signals.TryKill(processId);
+        return Task.FromResult(killed
+            ? new InstanceTerminationResult(true, processId, $"Sent SIGKILL to PID {processId}.")
+            : new InstanceTerminationResult(false, processId, $"Could not signal PID {processId}; it may have already exited."));
+    }
+
+    private static bool IsUnderRoot(string executablePath, string root)
+    {
+        try { return Path.GetFullPath(executablePath).StartsWith(root, StringComparison.Ordinal); }
+        catch { return false; }
+    }
+
+    // v0.7.65.0: PalServer's raw stdout/stderr WAS being captured here all along -- via the shell
+    // redirect below, not missing entirely as first suspected while tracing v0.7.64.0's log-rotation
+    // fix -- but into ManagerRuntimeRoot/palserver-console.log, a location nothing on the read side
+    // (HeadlessMonitoringService.ResolveActiveLogPath, the Doctor/monitoring log-source list, the
+    // Live Console page) ever looked at. Those all only ever checked
+    // LogsRoot/MystTiq-PalServer-Console.log (the exact file WindowsServerLifecycleService captures
+    // into) or LogsRoot/Pal.log. Renamed/relocated to match, so Linux's real capture finally reaches
+    // the same consumers Windows' already does.
     private void LaunchDetached(IReadOnlyList<string> serverArguments)
     {
         var launchScript = Path.Combine(paths.ManagerRuntimeRoot, "launch-palserver.sh");
-        var consoleLog = Path.Combine(paths.ManagerRuntimeRoot, "palserver-console.log");
+        var logDirectory = paths.LogsRoot;
+        try { Directory.CreateDirectory(logDirectory); }
+        catch
+        {
+            logDirectory = Path.Combine(paths.ManagerRuntimeRoot, "logs");
+            try { Directory.CreateDirectory(logDirectory); } catch { /* best-effort, mirrors Windows */ }
+        }
+        var consoleLog = Path.Combine(logDirectory, "MystTiq-PalServer-Console.log");
+
+        // Rotation only works here, right before the detached process opens its own fresh file
+        // handle for the whole session -- setsid -f's shell redirect (`>>`) holds that handle open
+        // for as long as PalServer runs, so renaming the file out from under it mid-session (the way
+        // ConsoleLogRotation is used on Windows, where MystTiq's own C# process re-opens the file on
+        // every single line) would just make the shell keep appending to the now-renamed .1
+        // generation forever under its stale handle. Rotating once, here, at the one point a brand
+        // new file handle is about to be opened, is the only place on this detached-process
+        // architecture where rotation is both safe and effective.
+        try
+        {
+            ConsoleLogRotation.RotateIfNeeded(consoleLog);
+            File.AppendAllText(consoleLog, $"===== MystTiq PalServer detached console session starting {DateTimeOffset.Now:O} =====" + Environment.NewLine);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
 
         var commandArguments = new[] { paths.ServerExecutable }
             .Concat(serverArguments)

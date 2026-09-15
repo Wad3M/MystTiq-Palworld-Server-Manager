@@ -59,6 +59,11 @@ public sealed class ResourceHistoryChart : Control
         var gridPen = new Pen(new SolidColorBrush(Color.Parse("#183047")), 1);
         var cpuPen = new Pen(new SolidColorBrush(Color.Parse("#54B8FF")), 2);
         var memoryPen = new Pen(new SolidColorBrush(Color.Parse("#B58BFF")), 2);
+        // v0.7.15.0: real in-game FPS series (Palworld's own /v1/api/metrics, same data v0.7.9.0
+        // already showed live). Drawn only across consecutive samples that both actually have a
+        // value -- ServerFps is null (not 0) whenever the REST API was disabled for that sample, so
+        // a plain line-through-zero would misleadingly read as a real performance crash.
+        var fpsPen = new Pen(new SolidColorBrush(Color.Parse("#63DF7B")), 2);
         var background = new SolidColorBrush(Color.Parse("#08111A"));
         context.FillRectangle(background, new Rect(0, 0, width, height));
 
@@ -91,16 +96,38 @@ public sealed class ResourceHistoryChart : Control
             return new Point(Math.Clamp(x, plot.X, plot.Right), Math.Clamp(y, plot.Y, plot.Bottom));
         }
 
+        var fpsValues = samples.Where(x => x.ServerFps.HasValue).Select(x => x.ServerFps!.Value).ToArray();
+        var fpsMin = fpsValues.Length == 0 ? 0d : fpsValues.Min();
+        var fpsMax = fpsValues.Length == 0 ? 1d : fpsValues.Max();
+        if (Math.Abs(fpsMax - fpsMin) < 0.01)
+            fpsMax = fpsMin + 1;
+
+        Point? FpsPoint(int index)
+        {
+            if (!samples[index].ServerFps.HasValue) return null;
+            var x = samples.Length == 1 ? plot.X + plot.Width / 2d : plot.X + index * plot.Width / (samples.Length - 1d);
+            var ratio = (samples[index].ServerFps!.Value - fpsMin) / (fpsMax - fpsMin);
+            var y = plot.Bottom - ratio * plot.Height;
+            return new Point(Math.Clamp(x, plot.X, plot.Right), Math.Clamp(y, plot.Y, plot.Bottom));
+        }
+
         for (var i = 1; i < samples.Length; i++)
         {
             context.DrawLine(cpuPen, CpuPoint(i - 1), CpuPoint(i));
             context.DrawLine(memoryPen, MemoryPoint(i - 1), MemoryPoint(i));
+            var fpsFrom = FpsPoint(i - 1);
+            var fpsTo = FpsPoint(i);
+            if (fpsFrom.HasValue && fpsTo.HasValue)
+                context.DrawLine(fpsPen, fpsFrom.Value, fpsTo.Value);
         }
 
         if (samples.Length == 1)
         {
             context.DrawEllipse(cpuPen.Brush, null, CpuPoint(0), 2, 2);
             context.DrawEllipse(memoryPen.Brush, null, MemoryPoint(0), 2, 2);
+            var fpsOnly = FpsPoint(0);
+            if (fpsOnly.HasValue)
+                context.DrawEllipse(fpsPen.Brush, null, fpsOnly.Value, 2, 2);
         }
     }
 }

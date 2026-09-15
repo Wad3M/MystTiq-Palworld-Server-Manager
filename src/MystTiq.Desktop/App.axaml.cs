@@ -5,6 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using MystTiq.Desktop.Services;
 using MystTiq.Desktop.ViewModels;
+using MystTiq.Desktop.Views;
 
 namespace MystTiq.Desktop;
 
@@ -27,12 +28,17 @@ public sealed partial class App : Application
             desktopLifetime = desktop;
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+            var themeStore = new LocalThemePreferencesStore();
+            var (accentTheme, variant) = themeStore.Load();
+            ThemeApplier.Apply(accentTheme, variant);
+
             var api = new MystTiqApiClient();
             var profileStore = new JsonConnectionProfileStore();
+            var credentialStore = new CredentialStore();
             var localDiscovery = LocalInstallationDiscoveryService.ForCurrentPlatform();
             var serviceDiscovery = new MystTiqServiceDiscoveryService();
             localBootstrapper = new LocalManagementBootstrapper();
-            viewModel = new MainWindowViewModel(api, profileStore, localDiscovery, serviceDiscovery, localBootstrapper);
+            viewModel = new MainWindowViewModel(api, profileStore, localDiscovery, serviceDiscovery, localBootstrapper, themeStore, credentialStore);
             mainWindow = new MainWindow { DataContext = viewModel };
             desktop.MainWindow = mainWindow;
         }
@@ -45,6 +51,26 @@ public sealed partial class App : Application
         mainWindow.ShowInTaskbar = false;
         mainWindow.Hide();
     }
+
+    // v0.7.11.0: Avalonia's TrayIcon has no balloon/notification API of its own -- see
+    // TrayReminderToast's own comment for why this small self-positioned window stands in for one.
+    // Best-effort: a positioning/rendering failure here must never prevent the hide-to-tray itself.
+    public void ShowTrayStillRunningReminder(string message)
+    {
+        // v0.7.66.0 bugfix: pass mainWindow as the owner so TrayReminderToast can resolve its target
+        // screen from MainWindow's real, already-settled position instead of its own not-yet-placed
+        // one -- see TrayReminderToast's own comment for why that mattered on a real multi-monitor
+        // report. mainWindow is definitely hidden (not disposed) by this point: this reminder only
+        // ever fires right after HideMainWindowToTray's own mainWindow.Hide() call.
+        try { new TrayReminderToast(message, mainWindow).Show(); }
+        catch { /* the window is already safely hidden to tray regardless of this notice */ }
+    }
+
+    // v0.7.11.0: exposed for MainWindow's Closing handler -- when no server is running in any
+    // tab, pressing the window's own close button should behave exactly like "Exit GUI Only" on
+    // the tray menu (there's nothing running for the user to lose track of), not silently minimize
+    // to tray forever the way it previously always did regardless of server state.
+    public void ExitGuiOnlyIfNothingIsRunning() => RequestExplicitExit();
 
     private void ShowMainWindow()
     {

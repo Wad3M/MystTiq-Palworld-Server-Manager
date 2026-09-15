@@ -1,17 +1,36 @@
+using System.Net;
 using System.Net.Http.Json;
+using System.Net.Mail;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
 
-// A small, real slice of the roadmap's "notification routing matrix": Webhook is actually
-// implemented; Discord/Email are typed stubs that log "not implemented" rather than silently
-// dropping, future-proofing the schema without pretending they work.
+// A small, real slice of the roadmap's "notification routing matrix": Webhook, Discord (a plain
+// Discord webhook URL, v0.6.17.0), and Email (v0.7.70.0, plain SMTP submission) are all
+// implemented.
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum NotificationChannel { Desktop, Webhook, Discord, Email }
 
-public sealed record NotificationChannelConfig(NotificationChannel Channel, bool Enabled, string? TargetUrl);
+// v0.7.70.0: TargetUrl stays the Webhook/Discord field (both are plain HTTPS POST endpoints); the
+// Smtp*/Email* fields are Email-only, all optional with a safe default (blank/disabled unless
+// explicitly configured), consistent with every existing 3-arg NotificationChannelConfig
+// construction below still compiling unchanged. Plaintext SmtpPassword in channels.json matches
+// this codebase's own established local-secret convention (RCON's AdminPassword in
+// PalWorldSettings.ini, bearer tokens in plain files) -- protected by OS file permissions on the
+// server's own disk, not by application-level encryption, same threat model as those.
+public sealed record NotificationChannelConfig(
+    NotificationChannel Channel,
+    bool Enabled,
+    string? TargetUrl,
+    string? SmtpHost = null,
+    int SmtpPort = 587,
+    bool SmtpUseSsl = true,
+    string? SmtpUsername = null,
+    string? SmtpPassword = null,
+    string? EmailFrom = null,
+    string? EmailTo = null);
 
 public sealed class NotificationChannelConfiguration
 {
@@ -106,8 +125,10 @@ public sealed class HeadlessNotificationRoutingService
                         await DispatchWebhookAsync(channel, severity, title, message);
                         break;
                     case NotificationChannel.Discord:
+                        await DispatchDiscordAsync(channel, severity, title, message);
+                        break;
                     case NotificationChannel.Email:
-                        activity.Record("Warning", "Notifications", $"{channel.Channel} channel not implemented", $"Enabled but dispatch is not yet supported for this channel.");
+                        await DispatchEmailAsync(channel, severity, title, message);
                         break;
                 }
             }
@@ -132,6 +153,73 @@ public sealed class HeadlessNotificationRoutingService
             catch when (attempt == 0) { /* retry once */ }
         }
         activity.Record("Warning", "Notifications", "Webhook dispatch failed after retry", channel.TargetUrl);
+    }
+
+    // v0.6.17.0: a Discord webhook is a plain HTTPS POST endpoint (Channel Settings > Integrations
+    // > Webhooks) -- no bot, no token, no gateway connection needed for outbound-only notifications.
+    // That's the real HeadlessDiscordBotService (a whole separate, opt-in gateway connection) for
+    // two-way command handling; this is just the outbound leg, shaped like Discord's own embed API.
+    private async Task DispatchDiscordAsync(NotificationChannelConfig channel, string severity, string title, string message)
+    {
+        if (string.IsNullOrWhiteSpace(channel.TargetUrl)) return;
+        var color = severity switch
+        {
+            "Critical" or "Error" => 0xE74C3C,
+            "Warning" => 0xF39C12,
+            _ => 0x3498DB
+        };
+        var payload = new
+        {
+            embeds = new[]
+            {
+                new { title, description = message, color, timestamp = DateTimeOffset.UtcNow }
+            }
+        };
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            try
+            {
+                var response = await HttpClient.PostAsJsonAsync(channel.TargetUrl, payload);
+                if (response.IsSuccessStatusCode) return;
+            }
+            catch when (attempt == 0) { /* retry once */ }
+        }
+        activity.Record("Warning", "Notifications", "Discord dispatch failed after retry", channel.TargetUrl);
+    }
+
+    // v0.7.70.0: plain SMTP submission via the BCL's own SmtpClient rather than hand-rolling the
+    // protocol (unlike PalworldRconService, which had no choice -- there is no BCL Source RCON
+    // client). SmtpClient is officially "not recommended for new development" per Microsoft's own
+    // guidance (MailKit et al. are suggested instead), but it is not obsolete/removed, ships in
+    // .NET 10, and correctly handles STARTTLS/auth -- safer to reuse a battle-tested implementation
+    // here than to hand-roll TLS negotiation for a feature this session has no live mail server to
+    // validate against. Known limitation: SmtpClient only supports STARTTLS-style submission
+    // (typically port 587), not implicit-TLS-from-connect (port 465) -- disclosed, not silently
+    // unsupported.
+    private async Task DispatchEmailAsync(NotificationChannelConfig channel, string severity, string title, string message)
+    {
+        if (string.IsNullOrWhiteSpace(channel.SmtpHost) || string.IsNullOrWhiteSpace(channel.EmailFrom) || string.IsNullOrWhiteSpace(channel.EmailTo))
+        {
+            activity.Record("Warning", "Notifications", "Email dispatch skipped", "SmtpHost, EmailFrom and EmailTo must all be configured.");
+            return;
+        }
+
+        using var client = new SmtpClient(channel.SmtpHost, channel.SmtpPort) { EnableSsl = channel.SmtpUseSsl, Timeout = 10_000 };
+        if (!string.IsNullOrWhiteSpace(channel.SmtpUsername))
+            client.Credentials = new NetworkCredential(channel.SmtpUsername, channel.SmtpPassword ?? string.Empty);
+
+        using var mail = new MailMessage(channel.EmailFrom, channel.EmailTo)
+        {
+            Subject = $"[MystTiq {severity}] {title}",
+            Body = message
+        };
+
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            try { await client.SendMailAsync(mail); return; }
+            catch when (attempt == 0) { /* retry once */ }
+        }
+        activity.Record("Warning", "Notifications", "Email dispatch failed after retry", channel.SmtpHost);
     }
 
     private NotificationChannelConfiguration LoadChannels()

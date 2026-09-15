@@ -15,6 +15,12 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.*" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.*" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.*" />
+    <!-- v0.7.71.0: CredentialStore's Windows DPAPI-backed bearer token persistence. The API throws
+         PlatformNotSupportedException at runtime on non-Windows; CredentialStore itself guards
+         every call with OperatingSystem.IsWindows(), so this is safe to reference unconditionally
+         on the DesktopLinux build too (it just never calls in, matching that build's existing
+         no-persistence behavior). -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.*" />
   </ItemGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets/**" />

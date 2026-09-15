@@ -1,0 +1,10 @@
+# v0.7.60.0 Build and Test Plan
+
+1. Close artifact-hosted MystTiq desktop and sidecar processes with Clean.
+2. Run strict validation and the complete v0.7.60.0 logic suite (`scripts/Test-v0.7.60.0-Logic.ps1 -RunBuild`), including the frozen v0.7.59.0 checkpoint regression gate, the v0.5.1.5 runtime smoke suite, and the carried-forward v0.7.12.0/v0.7.15.0/v0.7.17.0 route/CLI smoke scripts and whitelist harness.
+3. Build shared, Windows/Linux headless, and Windows/Linux Avalonia targets.
+4. New surface this release: `HeadlessExitCode.PortConflict`, pre-start port checks in `WindowsServerLifecycleService`/`LinuxServerLifecycleService.StartAsync`, a new HTTP 409 mapping. `Ue4ssInstallManifest`, `WriteUe4ssInstallManifest`/`DeleteUe4ssInstallManifest`/`TryReadUe4ssInstallManifest`/`TryGetInstalledUe4ssReleaseTag` on `HeadlessModManagementService`, and a real comparison path in `HeadlessComponentUpdateService.CheckUe4ssAsync`. No Desktop/DTO changes, no route additions (both fixes ride existing routes/response shapes).
+5. This release cannot be visually verified in this environment. The port-conflict fix has not been exercised against a genuinely live port conflict (this machine's own PalServer still can't launch cleanly for the separate, unresolved reason under investigation in v0.7.57.0/v0.7.59.0) — the build/static gates confirm the code compiles and the guard clause is correctly wired, not that it behaves correctly against a real conflicting process. The UE4SS version-tracking fix was verified conceptually against this session's own real, live UE4SS install (Source=PalworldFork, TagName=2281fa31) but the live server doesn't have a manifest yet, since that install predates this fix reaching a built artifact — reinstalling through MystTiq once the new build is running will backfill it. Manual review recommended for both before treating this as fully verified.
+6. Create FullSource and Changed Files ZIPs and verify their entries and SHA-256 hashes.
+
+Any failure blocks promotion.

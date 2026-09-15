@@ -87,6 +87,27 @@ public sealed class HeadlessSaveCodecService
         return outputSavPath;
     }
 
+    // v0.6.12.0: closes a real, long-standing gap first disclosed in the v0.5.2.0 checkpoint and
+    // reconfirmed unfixed through v0.6.7.0 -- HeadlessPlayerGuildExplorerService/HeadlessWorldExplorerService
+    // read a static Level.sav.json sidecar that nothing ever regenerated after a guild/base/character
+    // mutation committed, so the explorer views could show stale data until something external
+    // re-decoded it. Every commit site already independently re-decodes the just-committed save as
+    // its own verification step -- this just persists that already-produced, already-verified JSON
+    // to the sidecar path the explorer services actually read, instead of throwing it away. Best-effort:
+    // the Level.sav mutation itself already committed and was independently verified before this runs,
+    // so a refresh failure here must never fail or roll back a successful, verified save mutation --
+    // it just leaves the explorer view exactly as stale as it was before this fix existed, not worse.
+    public static void RefreshExplorerSidecar(string levelSavePath, string verifiedDecodedJsonPath)
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(levelSavePath);
+            if (string.IsNullOrEmpty(directory)) return;
+            File.Copy(verifiedDecodedJsonPath, Path.Combine(directory, "Level.sav.json"), true);
+        }
+        catch { }
+    }
+
     private static async Task RunConverterAsync(HeadlessSaveConverterMatch converter, IReadOnlyList<string> converterArguments, CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

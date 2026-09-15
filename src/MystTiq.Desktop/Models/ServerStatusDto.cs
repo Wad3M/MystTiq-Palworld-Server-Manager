@@ -22,4 +22,9 @@ public sealed class ServerProcessDto
     [JsonPropertyName("processName")] public string? ProcessName { get; init; }
     [JsonPropertyName("executablePath")] public string? ExecutablePath { get; init; }
     [JsonPropertyName("responding")] public bool Responding { get; init; }
+
+    // v0.7.28.0: client-side display only, not part of the wire contract -- the Server Doctor
+    // page's process list binds directly to this instead of formatting per-row in XAML.
+    public string DisplayText =>
+        $"{ProcessName ?? "(unknown)"} (PID {ProcessId}){(Responding ? "" : " — not responding")}";
 }

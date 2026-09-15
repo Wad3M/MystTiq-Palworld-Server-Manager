@@ -200,6 +200,7 @@ public sealed class HeadlessCharacterMigrationService
                 throw new InvalidDataException("The active Level.sav failed final validation after replacement.");
 
             Advance(journal, "Committed", $"Verified save committed atomically to the active world. Result hash: {HashFile(op.LevelSavePath)}");
+            HeadlessSaveCodecService.RefreshExplorerSidecar(op.LevelSavePath, verifyJsonPath);
             activity.Record("Information", "Character Migration", $"Migrated {op.SourcePlayerName} -> {op.DestinationPlayerName}",
                 $"sourcePlayer={op.SourcePlayerId}; destinationPlayer={op.DestinationPlayerId}; guild={op.GuildId}; backup={safety.FileName}");
             coordinator.Complete(operation.Id, $"{op.SourcePlayerName}'s guild membership migrated to {op.DestinationPlayerName}.");

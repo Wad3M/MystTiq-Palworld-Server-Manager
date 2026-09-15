@@ -204,6 +204,7 @@ public sealed class HeadlessGuildOwnershipService
                 throw new InvalidDataException("The active Level.sav failed final validation after replacement.");
 
             Advance(journal, "Committed", $"Verified save committed atomically to the active world. Result hash: {HashFile(op.LevelSavePath)}");
+            HeadlessSaveCodecService.RefreshExplorerSidecar(op.LevelSavePath, verifyJsonPath);
             activity.Record("Information", "Guild Ownership", $"Applied {DisplayName(op.OperationType)}",
                 $"guild={op.GuildId}; player={op.PlayerId}; backup={safety.FileName}");
             coordinator.Complete(operation.Id, DescribeSuccess(op.OperationType, op.PlayerName, op.GuildId));

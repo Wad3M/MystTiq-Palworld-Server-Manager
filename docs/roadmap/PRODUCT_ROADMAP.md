@@ -143,7 +143,7 @@ Supported modes:
 - Windows desktop + local service
 - Windows/Linux desktop + secured remote service
 
-### v0.3.1.0 — Avalonia Desktop Foundation (Current Candidate)
+### v0.3.1.0 — Avalonia Desktop Foundation (Shipped)
 
 - create `MystTiq.Desktop`
 - Avalonia on .NET 10
@@ -570,7 +570,7 @@ Use the v0.2.16.4 GUI as the workflow and information-architecture reference whi
 - Use a glass-highlight hover while preserving card containment and centered metallic button content.
 - Retain all restored v0.4.18.2 behavior and its single aggregate status poll.
 
-### v0.5.1.1 — Home Navigation Refinement (Current Release Candidate)
+### v0.5.1.1 — Home Navigation Refinement (Shipped)
 
 - Create a Home section containing Dashboard and Notifications.
 - Keep System focused on Settings and Activity & Audit.

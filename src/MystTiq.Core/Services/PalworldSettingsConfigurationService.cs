@@ -208,14 +208,14 @@ public sealed class PalworldSettingsConfigurationService
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(request.ServerName)) errors.Add("Server Name is required.");
-        if (request.ServerName.Length > 128) errors.Add("Server Name must be 128 characters or fewer.");
-        if (request.ServerDescription.Length > 512) errors.Add("Description must be 512 characters or fewer.");
+        if ((request.ServerName?.Length ?? 0) > 128) errors.Add("Server Name must be 128 characters or fewer.");
+        if ((request.ServerDescription?.Length ?? 0) > 512) errors.Add("Description must be 512 characters or fewer.");
         if (request.MaximumPlayers is < 1 or > 128) errors.Add("Maximum Players must be between 1 and 128.");
         if (request.GamePort is < 1 or > 65535) errors.Add("Game Port must be between 1 and 65535.");
         if (request.RestPort is < 1 or > 65535) errors.Add("REST Port must be between 1 and 65535.");
         if (request.GamePort == request.RestPort) errors.Add("Game Port and REST Port must be different.");
         foreach (var value in new[] { request.ServerName, request.ServerDescription, request.AdminPassword, request.ServerPassword })
-            if (value.Contains('\r') || value.Contains('\n')) errors.Add("Setup text values cannot contain line breaks.");
+            if (value is not null && (value.Contains('\r') || value.Contains('\n'))) errors.Add("Setup text values cannot contain line breaks.");
         return errors;
     }
 

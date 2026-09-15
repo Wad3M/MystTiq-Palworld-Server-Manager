@@ -36,9 +36,16 @@ public sealed class HeadlessEnvironmentChecklistService
             File.Exists(paths.ServerExecutable) ? "Server executable detected." : "Dedicated server App ID 2394010 is not installed at the configured location.",
             File.Exists(paths.ServerExecutable) ? "VERIFY" : "INSTALL", true);
 
+        // v0.7.64.0: this row used to claim UE4SS install was "scheduled for the MOD/UE4SS
+        // restoration phase" and mark ActionSupported false whenever missing -- stale since
+        // v0.7.49.0 shipped a real HeadlessModManagementService.ApplyUe4ssInstallAsync, reachable
+        // from the MOD Dashboard/UE4SS page. This checklist row is a read-only status snapshot (it
+        // has no action-invocation path of its own, unlike Doctor's Fix Automatically), so
+        // ActionSupported now reflects that the capability genuinely exists elsewhere rather than
+        // implying none does; the note points there instead of describing a non-existent gap.
         var ue4ss = DetectUe4ss();
-        rows.Add(new EnvironmentChecklistItem("UE4SS Runtime", ue4ss.Status, paths.RuntimeBinaryRoot, ue4ss.Detail, ue4ss.Status == "MISSING" ? "INSTALL" : "MANAGE", ue4ss.Status != "MISSING",
-            ue4ss.Status == "MISSING" ? "BACKEND REQUIRED: UE4SS installation is scheduled for the MOD/UE4SS restoration phase." : null));
+        rows.Add(new EnvironmentChecklistItem("UE4SS Runtime", ue4ss.Status, paths.RuntimeBinaryRoot, ue4ss.Detail, ue4ss.Status == "MISSING" ? "INSTALL" : "MANAGE", true,
+            ue4ss.Status == "MISSING" ? "Use the MOD Dashboard/UE4SS page's Install to set this up." : null));
 
         var saveTools = FindFirstExisting(
             Path.Combine(paths.ServerRoot, "Tools", "palworld-save-tools", "convert.py"),
@@ -76,10 +83,18 @@ public sealed class HeadlessEnvironmentChecklistService
         rows.Add(new EnvironmentChecklistItem("RCON", rconReady ? "READY" : "DISABLED", ini,
             rconReady ? "Enabled in the active configuration." : "Optional remote administration is disabled.", rconReady ? "VERIFY" : "ENABLE", true));
 
+        // v0.7.64.0: the note used to claim backup-root creation "must be performed by a
+        // server-side storage operation" as if no such operation existed -- stale since v0.6.4.0
+        // shipped exactly that as Doctor's Fix Automatically (HeadlessDiagnosticsService, a real
+        // Directory.CreateDirectory(paths.BackupRoot) call). Unlike the UE4SS row above, this
+        // checklist's own CREATE action has no dedicated handler for "Backup Storage" -- it would
+        // fall through to the generic re-verify path and silently do nothing, so ActionSupported
+        // stays false here (the button really can't do it from this page) while the note points to
+        // where it actually can.
         Add(rows, "Backup Storage", Directory.Exists(paths.BackupRoot), paths.BackupRoot,
             Directory.Exists(paths.BackupRoot) ? "Backup folder is available." : "Create backup storage before relying on managed recovery.",
             Directory.Exists(paths.BackupRoot) ? "VERIFY" : "CREATE", Directory.Exists(paths.BackupRoot),
-            Directory.Exists(paths.BackupRoot) ? null : "BACKEND REQUIRED: backup-root creation/validation must be performed by a server-side storage operation." );
+            Directory.Exists(paths.BackupRoot) ? null : "Use Server Doctor's Fix Automatically to create it." );
 
         var ready = rows.Count(x => x.Status == "READY");
         return new EnvironmentChecklistSnapshot(ready, rows.Count, rows, DateTimeOffset.UtcNow);

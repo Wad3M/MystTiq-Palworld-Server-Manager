@@ -4,8 +4,9 @@ namespace MystTiq.Core.Providers;
 // (kick/ban/etc.) from a single hardcoded interface (vanilla REST). Real, working slice: one
 // capability (player moderation) with two real providers (REST, RCON) and health-based fallback --
 // scoped down from the roadmap's full 7-capability/6-provider-type list (presence, world data,
-// chat, whitelist, teleport, commands x REST/GameData/RCON/save/PalDefender/MOD), which stays an
-// explicit deferred list rather than being built decoratively across every named capability.
+// chat, whitelist, teleport, commands x REST/GameData/RCON/save/PalDefender/MOD). Of that original
+// deferred list, whitelist (v0.7.10.0, HeadlessWhitelistService) and teleport (v0.7.8.0, via RCON)
+// have since shipped -- presence/world-data/chat/generic-commands remain the still-deferred list.
 [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
 public enum ProviderHealth { Unknown, Healthy, Degraded, Unavailable, Misconfigured, Unsupported }
 

@@ -263,8 +263,30 @@ Original v0.5.21.0 through v0.5.26.0.
 
 11. v0.6.10.0 - Clone World & Extended Live Verification (shipped)
 12. v0.6.11.0 - Stale-Instance Fix, UI Polish & WAN Reachability Diagnostics (shipped)
+13. v0.6.12.0 - Gap Audit, Real Bug Fixes & Logic/Runtime Test Pass (shipped)
+14. v0.6.13.0 - Fleet-Wide Crash Recovery (shipped)
+15. v0.6.14.0 - Console Live-Refresh Fix (shipped)
 
-Next: v0.7.0.0 (Themes, skins, UI personalization and original Palworld-inspired MystTiq icon set — see `README.md`'s roadmap table; no detailed scope document exists yet for this milestone).
+A full project review across every prior checkpoint's "Known gaps" disclosures (v0.5.1.5 through v0.6.11.0) plus a live bug/logic test pass against real isolated data produced v0.6.12.0 — see `docs/architecture/v0.6.12.0-gap-audit-and-bug-fixes.md` for the full audit, what was fixed for real, and what remains open. v0.6.13.0 then closed the first of that audit's real architectural gaps — see `docs/architecture/v0.6.13.0-fleet-wide-crash-recovery.md`. v0.6.14.0 closed a direct user report queued during that pass — the Console page showing nothing during a server Start/Stop — tracing to two independent, compounding bugs, both fixed and live-verified; see `docs/architecture/v0.6.14.0-console-live-refresh-fix.md`. The two verification-scale gaps carried in every checkpoint since v0.6.3.0 (elevated Windows Service install/start/stop/uninstall live cycle; Linux deployment of the latest source) are **still not closed** — both still need resources this session doesn't have (Administrator elevation; hands-on access to a Linux box to deploy fresh source to, versus the existing session's read-only connection to an already-deployed one).
+
+**Real architectural gaps still identified, scoped but not yet built** (candidate future scope):
+- Per-page "current server" selector wiring — every Desktop page except Fleet still operates against a single implicit profile; threading `ServerProfileId` through the ~90 existing API-client call sites in `MainWindowViewModel` remains the large mechanical pass first disclosed as deferred in the v0.6.2.0 checkpoint.
+- Cross-profile automation rules — carried unchanged since v0.6.2.0.
+
+## Competitive survey → v0.6.15.0 and beyond
+
+A direct user request surveyed 21 other Palworld dedicated-server management tools on GitHub (general desktop/GUI managers, Docker/web-panel/hosting-automation tools, and CLI/Discord-bot/save-editor tools) and compared their real features against MystTiq's. Full findings, what was rejected and why, and the reasoning behind this sequence: `docs/architecture/v0.6.15-plus-competitive-survey.md`.
+
+The single strongest, most validated finding: three independent, actively-maintained tools with hundreds of stars each (PalworldSaveTools, Palworld Save Pal, Palworld Pal Editor) do real item/Pal-stat/inventory/base-storage save editing — the exact "surgical byte-level EditPlan engine" capability explicitly deferred since the v0.6.7.0 checkpoint for lack of a Pal/inventory struct decoder. Building that foundation also unblocks anti-cheat scanning, deferred for the same reason since v0.6.9.0.
+
+16. v0.6.15.0 - Save-Data Edit Engine Foundation (shipped) — extends the already-proven decode → mutate → encode → verify pipeline (`HeadlessSaveCodecService`, already powering Guild/Base Ownership repair) to individual Pal instances (Nickname/Level/Rank/IVs/Gender/Lucky). Player inventory editing remains a separate, larger follow-up. See `docs/architecture/v0.6.15.0-save-data-edit-engine-foundation.md` — includes a real ownership-resolution bug found and fixed during its own live verification.
+17. v0.6.16.0 - Live World Map (shipped) — visualizes player/Pal/base positions using data the save-edit engine and existing REST/RCON polling already expose.
+18. v0.6.17.0 - Two-Way Discord Bot Control (shipped) — extends the existing outbound-only Discord dispatch into real inbound command handling.
+19. v0.6.18.0 - Anti-Cheat & Save-Integrity Scanning (shipped) — level-gap/stat-anomaly detection, unblocked by v0.6.15.0's decode capability.
+
+Smaller, real findings not yet scheduled into a specific version (candidates for whichever of the above has room, or a later `v0.6.19.0`+): in-panel MOD marketplace installs, a public read-only server-status page, a self-updating Discord live-status card, TOTP two-factor admin authentication, and a resource-threshold (CPU/RAM) auto-restart trigger alongside the existing crash-detection and idle-auto-stop triggers. A full browser-based web dashboard was considered and deliberately not scheduled here — it's the single largest gap versus the Docker/web-panel category as a whole, but a major architectural shift deserving its own dedicated scoping pass, not a `v0.6.x.0` addition. Player inventory/base-storage editing (the second half of the v0.6.15.0 finding) also remains unscheduled, needing cross-file container-GUID resolution.
+
+Next: v0.6.16.0, then continuing through the sequence above, before v0.7.0.0 (Themes, skins, UI personalization and original Palworld-inspired MystTiq icon set — see `README.md`'s roadmap table; no detailed scope document exists yet for this milestone).
 
 # Programming Rules
 

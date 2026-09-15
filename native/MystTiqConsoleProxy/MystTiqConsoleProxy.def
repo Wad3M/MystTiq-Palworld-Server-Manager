@@ -1,0 +1,12 @@
+; MystTiqConsoleProxy exports, at the EXACT ordinals the real system dsound.dll uses (confirmed via
+; `dumpbin /exports C:\Windows\System32\dsound.dll`). PalServer-Win64-Shipping-Cmd.exe imports
+; DSOUND.dll by ordinal, not by name (confirmed via `dumpbin /imports` against the real binary), so
+; ordinal position here must match exactly or the loader resolves the wrong function.
+LIBRARY MystTiqConsoleProxy
+EXPORTS
+    DirectSoundCreate               @1
+    DirectSoundEnumerateW           @3
+    DirectSoundCaptureCreate        @6
+    DirectSoundCaptureEnumerateW    @8
+    DirectSoundCreate8              @11
+    DirectSoundCaptureCreate8       @12

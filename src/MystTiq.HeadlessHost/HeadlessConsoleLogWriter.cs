@@ -26,8 +26,12 @@ public sealed class HeadlessConsoleLogWriter
                 Directory.CreateDirectory(logDirectory);
             }
             var line = $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}] [{level.PadRight(8)}] [{category}] [{subcategory}] {message}";
+            var logPath = Path.Combine(logDirectory, "MystTiq-PalServer-Console.log");
             lock (gate)
-                File.AppendAllText(Path.Combine(logDirectory, "MystTiq-PalServer-Console.log"), line + Environment.NewLine);
+            {
+                ConsoleLogRotation.RotateIfNeeded(logPath);
+                File.AppendAllText(logPath, line + Environment.NewLine);
+            }
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }

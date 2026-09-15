@@ -27,6 +27,7 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
     private readonly HeadlessActivityLogService activity;
     private readonly HeadlessAlertCenterService? alertCenter;
     private readonly HeadlessMonitoringService monitoring;
+    private readonly HeadlessAntiCheatService? antiCheat;
 
     private readonly object gate = new();
     private readonly string rulesPath;
@@ -50,7 +51,8 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
         IOperationCoordinator coordinator,
         HeadlessActivityLogService activity,
         HeadlessAlertCenterService? alertCenter,
-        HeadlessMonitoringService monitoring)
+        HeadlessMonitoringService monitoring,
+        HeadlessAntiCheatService? antiCheat)
     {
         this.paths = paths;
         this.configuration = configuration;
@@ -64,6 +66,7 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
         this.activity = activity;
         this.alertCenter = alertCenter;
         this.monitoring = monitoring;
+        this.antiCheat = antiCheat;
 
         var stateRoot = Path.Combine(paths.ManagerRuntimeRoot, "automation");
         Directory.CreateDirectory(stateRoot);
@@ -112,6 +115,16 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
             {
                 try { await alertCenter.EvaluateThrottledAsync(token); }
                 catch (Exception ex) { activity.Record("Warning", "Alerts", "Alert evaluation failed", ex.Message); }
+            }
+            if (antiCheat is not null)
+            {
+                try
+                {
+                    var players = await monitoring.GetPlayersAsync(token);
+                    await antiCheat.EvaluateLivePlayersAsync(players, token);
+                    await antiCheat.EvaluateThrottledAsync(token);
+                }
+                catch (Exception ex) { activity.Record("Warning", "Anti-Cheat", "Anti-cheat evaluation failed", ex.Message); }
             }
         }
     }
@@ -397,8 +410,33 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
 
     public IReadOnlyList<AutomationRule> ListRules() { lock (gate) return rules.Values.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList(); }
 
+    // v0.7.64.0: CreateRule/UpdateRule previously accepted any int here without complaint -- e.g.
+    // IdleThresholdMinutes: -5 returned HTTP 200 and persisted the negative value verbatim, even
+    // though ComputeNextDue/the idle-tick path silently reinterpret it (Math.Max(1, ...), an
+    // Interval<=0 falling back to 1 hour) rather than honoring it. The caller-visible value then
+    // lies about what's actually enforced. Reject clearly-invalid input at the boundary instead of
+    // silently reinterpreting it later -- the same "validate at the boundary, trust it after" rule
+    // this codebase already follows elsewhere (e.g. port-range/bind-address checks in this same
+    // file). JitterSeconds/Interval/WarningCountdownSecondsBeforeAction already self-guard at the
+    // point of use and can't crash or misbehave on bad input, but a rule an admin believes uses a
+    // 30-second jitter or a 10-minute warning countdown should not silently mean something else.
+    // Public (not just private) so it's directly unit-testable without constructing the full
+    // 13-dependency service graph -- pure validation logic over two records, no I/O.
+    public static void ValidateTriggerAndAction(AutomationTrigger trigger, AutomationAction action)
+    {
+        if (trigger.JitterSeconds < 0)
+            throw new ArgumentException("JitterSeconds must be zero or a positive number of seconds.");
+        if (trigger.Kind == AutomationTriggerKind.Interval && trigger.Interval is { } interval && interval <= TimeSpan.Zero)
+            throw new ArgumentException("Interval must be a positive duration when the trigger kind is Interval.");
+        if (trigger.Kind == AutomationTriggerKind.IdleEmpty && trigger.IdleThresholdMinutes is { } idleMinutes && idleMinutes < 1)
+            throw new ArgumentException("IdleThresholdMinutes must be at least 1 when the trigger kind is IdleEmpty.");
+        if (action.WarningCountdownSecondsBeforeAction?.Any(seconds => seconds < 0) == true)
+            throw new ArgumentException("WarningCountdownSecondsBeforeAction entries must be zero or positive.");
+    }
+
     public AutomationRule CreateRule(string name, AutomationTrigger trigger, AutomationCondition condition, AutomationAction action)
     {
+        ValidateTriggerAndAction(trigger, action);
         var rule = new AutomationRule
         {
             Id = AutomationRuleId.New(),
@@ -416,6 +454,7 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
 
     public AutomationRule UpdateRule(AutomationRuleId id, string name, AutomationTrigger trigger, AutomationCondition condition, AutomationAction action)
     {
+        ValidateTriggerAndAction(trigger, action);
         lock (gate)
         {
             var rule = rules.TryGetValue(id, out var existing) ? existing : throw new KeyNotFoundException("Automation rule was not found.");

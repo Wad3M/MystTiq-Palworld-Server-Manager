@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MystTiq.Desktop.Views.TrayReminderToast"
+        SystemDecorations="None" ShowInTaskbar="False" Topmost="True"
+        CanResize="False" SizeToContent="WidthAndHeight"
+        WindowStartupLocation="Manual" Background="Transparent">
+  <Border Background="{DynamicResource CardGradient}" BorderBrush="#28445D" BorderThickness="1" CornerRadius="8" Padding="16,12" MaxWidth="320">
+    <StackPanel Spacing="4">
+      <TextBlock Text="MystTiq is still running" FontWeight="SemiBold" FontSize="13"/>
+      <TextBlock x:Name="MessageText" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+    </StackPanel>
+  </Border>
+</Window>
