@@ -228,7 +228,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     private ModItemDto? _selectedMod;
     private ServerInstanceDto? _selectedInstance;
     private string _instanceTerminationResultText = string.Empty;
-    private string _modInstallPackage = string.Empty;
     private WorkshopItemDto? _selectedWorkshopItem;
     private string _workshopScanState = "Refresh to scan local Steam Workshop content.";
     private string _networkHealth = "Not run";
@@ -325,9 +324,14 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _antiCheatState = "Open Alert Center to load anti-cheat rules.";
     private AntiCheatRuleSetDto _antiCheatRules = new();
     private string _fleetState = "Open Fleet to list configured server profiles.";
+    private double _serverSetupTableMaxHeight = 405;
     private string _cloneNewProfileId = string.Empty;
     private string _cloneNewProfileName = string.Empty;
     private string _cloneWorldStatusText = "Clones this connection's server (binaries + world) into a new profile. Requires the source server to be stopped.";
+    private bool _cloneWorldNeedsRestart;
+    private string? _cloneWorldNewProfileId;
+    private int _cloneWorldPortOffset = 100;
+    private bool _cloneWorldConfirmed;
     private string _crashAnalyzerState = "Run analysis to inspect bounded recent server-log evidence.";
     private string _saveToolsState = "Open Save Tools to inspect server-side dependencies and saves.";
     private string _saveToolsPaths = "Not inspected";
@@ -453,7 +457,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         RefreshAntiCheatCommand = new AsyncCommand(RefreshAntiCheatAsync, () => !IsBusy);
         SaveAntiCheatRulesCommand = new AsyncCommand(SaveAntiCheatRulesAsync, () => !IsBusy);
         RefreshFleetCommand = new AsyncCommand(RefreshFleetAsync, () => !IsBusy);
-        CloneWorldCommand = new AsyncCommand(CloneWorldAsync, () => !IsBusy && ManagementApiConnected && !string.IsNullOrWhiteSpace(CloneNewProfileId));
+        CloneWorldCommand = new AsyncCommand(CloneWorldAsync, () => !IsBusy && ManagementApiConnected && !string.IsNullOrWhiteSpace(CloneNewProfileId) && CloneWorldConfirmed);
+        RestartAfterCloneCommand = new AsyncCommand(RestartAfterCloneAsync, () => !IsBusy && CloneWorldNeedsRestart);
         BackupAllCommand = new AsyncCommand(BackupAllAsync, () => !IsBusy && ManagementApiConnected);
         DoctorAllCommand = new AsyncCommand(DoctorAllAsync, () => !IsBusy && ManagementApiConnected);
         UpdateAllCommand = new AsyncCommand(UpdateAllAsync, () => !IsBusy && ManagementApiConnected);
@@ -491,6 +496,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ValidateWorkspaceCommand = new RelayCommand(ValidateWorkspacePaths, () => ConfigLoaded);
         BootstrapLocalCommand = new AsyncCommand(BootstrapLocalAsync, () => !IsBusy && IsLocalProfile);
         SavePalworldConfigurationCommand = new AsyncCommand(SavePalworldConfigurationAsync, () => !IsBusy && PalworldConfigLoaded && PalworldConfigIsDirty && !PalworldConfigHasValidationErrors);
+        ApplyStarterPresetCommand = new AsyncCommand(ApplyStarterPresetAsync, () => !IsBusy);
         ShowSimpleConfigCommand = new RelayCommand(() => SetConfigurationView(true));
         ShowAdvancedConfigCommand = new RelayCommand(() => SetConfigurationView(false));
         ResetConfigChangesCommand = new RelayCommand(ResetPalworldConfigurationChanges, () => PalworldConfigLoaded && PalworldConfigIsDirty && !IsBusy);
@@ -513,6 +519,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         RefreshDistributionCommand = new AsyncCommand(RefreshDistributionAsync, () => !IsBusy);
         PreviewDistributionPlanCommand = new AsyncCommand(PreviewDistributionPlanAsync, () => !IsBusy);
         UpdatePalworldServerCommand = new AsyncCommand(UpdatePalworldServerAsync, () => !IsBusy);
+        InstallPalworldServerFromWizardCommand = new AsyncCommand(InstallPalworldServerFromWizardAsync, () => !IsBusy);
+        InstallPalworldServerWithExtrasCommand = new AsyncCommand(InstallPalworldServerWithExtrasAsync, () => !IsBusy);
+        UpdatePipCommand = new AsyncCommand(UpdatePipAsync, () => !IsBusy);
         RefreshWorldExplorerCommand = new AsyncCommand(RefreshWorldExplorerAsync, () => !IsBusy);
         ValidateActiveWorldCommand = new AsyncCommand(ValidateActiveWorldAsync, () => !IsBusy && ManagementApiConnected);
         ApplyWorldTransactionCommand = new AsyncCommand(ApplyWorldTransactionAsync, () => !IsBusy && WorldTransactionConfirmed && !string.IsNullOrWhiteSpace(WorldPreviewToken));
@@ -539,6 +548,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         DisableSelectedModCommand = new AsyncCommand(() => SetSelectedModEnabledAsync(false), () => !IsBusy);
         DeleteSelectedModCommand = new AsyncCommand(DeleteSelectedModAsync, () => !IsBusy && SelectedMod is not null);
         RollbackSelectedModCommand = new AsyncCommand(RollbackSelectedModAsync, () => !IsBusy && SelectedMod is not null);
+        RepairSelectedModCommand = new AsyncCommand(RepairSelectedModAsync, () => !IsBusy && SelectedMod is not null);
         EnableAllModsCommand = new AsyncCommand(() => SetAllModsEnabledAsync(true), () => !IsBusy);
         DisableAllModsCommand = new AsyncCommand(() => SetAllModsEnabledAsync(false), () => !IsBusy);
         RepairModsCommand = new AsyncCommand(RepairModsAsync, () => !IsBusy);
@@ -566,12 +576,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         SetUpNewServerTabCommand = new RelayCommand(OpenNewServerTab);
         ConnectLocalServerTabCommand = new RelayCommand(OpenConnectLocalServerTab);
         ConnectRemoteServerTabCommand = new RelayCommand(OpenConnectRemoteServerTab);
-        CloneServerFlowCommand = new RelayCommand(OpenCloneServerFlow, () => HasCloneableLocalTab);
         WizardAdvanceCommand = new RelayCommand(AdvanceWizardStep);
         WizardBackCommand = new RelayCommand(GoBackWizardStep);
         ChooseLocalConnectionCommand = new RelayCommand(ChooseLocalConnection);
         ChooseRemoteConnectionCommand = new RelayCommand(ChooseRemoteConnection);
         DetectLocalServiceCommand = new AsyncCommand(DetectLocalServiceAsync, () => !IsBusy);
+        ChooseCloneWorldSourceCommand = new RelayCommand(() => ChooseNewServerWorldSource("Clone"));
+        ChooseNewWorldSourceCommand = new RelayCommand(() => ChooseNewServerWorldSource("NewWorld"));
+        ChooseImportWorldSourceCommand = new RelayCommand(() => ChooseNewServerWorldSource("Import"));
+        CloneIntoNewServerCommand = new AsyncCommand(CloneIntoNewServerAsync,
+            () => !IsBusy && NewServerCloneSourceProfile is not null && !string.IsNullOrWhiteSpace(NewServerCloneTargetId));
+        ChooseWorldSettingsPresetCommand = new AsyncCommand(ChooseWorldSettingsPresetAsync, () => !IsBusy);
+        ChooseWorldSettingsCustomizeCommand = new AsyncCommand(ChooseWorldSettingsCustomizeAsync, () => !IsBusy);
+        ContinueFromInstallDirectoryCommand = new AsyncCommand(ContinueFromInstallDirectoryAsync, () => !IsBusy);
+        FinishInstallAndAdvanceCommand = new AsyncCommand(FinishInstallAndAdvanceAsync, () => !IsBusy);
+        PrepareForWorldImportCommand = new AsyncCommand(PrepareForWorldImportAsync, () => !IsBusy);
         ConnectExistingProfileTabCommand = new RelayCommand<ConnectionProfile>(ConnectExistingProfileTab);
         CloseTabCommand = new RelayCommand<TabSession>(CloseTab, _ => Tabs.Count > 1);
         CloseActiveTabCommand = new RelayCommand(() => CloseTab(ActiveTab), () => ActiveTab is not null && Tabs.Count > 1);
@@ -612,8 +631,17 @@ public sealed class MainWindowViewModel : ViewModelBase
         RebuildRibbonGroups();
         Dispatcher.UIThread.Post(async () =>
         {
-            await InitializeLocalDashboardAsync();
-            await RestoreTabSessionAsync();
+            // v0.7.74.0: these two used to share one unguarded async continuation -- an unhandled
+            // exception anywhere inside InitializeLocalDashboardAsync (e.g. local-installation
+            // discovery failing for a reason specific to wherever this build happens to be running
+            // from) silently aborted the whole continuation before RestoreTabSessionAsync ever ran,
+            // dropping every remembered tab beyond the first with no error shown anywhere -- reported
+            // live as only 1 of 3 saved tabs reopening. Isolating each phase means a failure in one
+            // can no longer take the other down with it.
+            try { await InitializeLocalDashboardAsync(); }
+            catch (Exception ex) { StatusBarText = $"Local dashboard initialization failed: {ex.Message}"; }
+            try { await RestoreTabSessionAsync(); }
+            catch (Exception ex) { StatusBarText = $"Restoring saved tabs failed: {ex.Message}"; }
         });
     }
 
@@ -628,35 +656,68 @@ public sealed class MainWindowViewModel : ViewModelBase
     // state BeginNewProfile() puts the app in), not while editing/reconnecting to a saved one.
     public bool IsCreatingNewProfile => SelectedProfile is null;
 
-    // v0.7.3.0: the "Set Up New Server" wizard's current step (0=Local/Remote choice,
-    // 1=Connection Details, 2=In-Game Server Defaults, 3=Confirm & Finish). Only meaningful while
+    // v0.7.3.0: the "Set Up New Server" wizard's current step. Only meaningful while
     // IsCreatingNewProfile -- editing an already-saved profile never shows or uses this, and its
     // Connection Details card/Save/Delete buttons are completely unaffected by the wizard. Reset to
-    // 0 by BeginNewProfile() every time "Set Up New Server" is opened.
+    // 0 by BeginNewProfile() every time "Set Up New Server"/"Connect to Local or Remote Server" is
+    // opened; step 0 itself renders nothing (see below) and is only ever a one-tick starting point
+    // immediately advanced past by ChooseLocalConnection/ChooseRemoteConnection.
     // v0.7.6.0: delegates to ActiveTab.WizardStep (was a single shared field) so two tabs mid-setup
     // at once no longer corrupt each other's step -- see TabSession.WizardStep.
-    // v0.7.13.0: gained step 0 (Local/Remote choice) -- previously the wizard started directly on
-    // Connection Details with no distinction between a local and a remote target, and the whole
-    // wizard was embedded inside the Settings page alongside unrelated app chrome, contrary to how
-    // comparable apps (a connection-manager's "New Connection" flow) keep setup a focused, separate
-    // sequence. See MainWindow.axaml's dedicated wizard host, shown in place of the normal nav
-    // sidebar/ribbon/page content while IsCreatingNewProfile is true.
+    // v0.7.82.0: raw step numbers are now REUSED across the two flows for different content --
+    // IsNewServerSetupFlow (and IsWorldSourceClone, where relevant) disambiguate which content a
+    // given number means, exactly like IsWizardStepSettings already did for step 4 pre-v0.7.82.0.
+    // The install wizard's own steps: 1 Local Service (shared with Connect) -> 2 World Source ->
+    // 3 Clone source picker (Clone) OR Identity & Ports (New World/Import) -> 4 World Settings choice
+    // (New World/Import only) -> 5 Install Directory (New World/Import only) -> 6 Download & Install
+    // (New World/Import only) -> 7 Confirm (Clone jumps here directly from 3; Connect's own Confirm
+    // stays at its original step 5, untouched -- see IsWizardStepConfirm below).
     public int NewServerWizardStep
     {
         get => ActiveTab?.WizardStep ?? 0;
         private set
         {
             if (!SetActiveTabField(t => t.WizardStep, (t, v) => t.WizardStep = v, value)) return;
-            RaisePropertyChanged(nameof(IsChoosingConnectionKind));
             RaisePropertyChanged(nameof(IsWizardStep1));
-            RaisePropertyChanged(nameof(IsWizardStep2));
-            RaisePropertyChanged(nameof(IsWizardStep3));
+            RaisePropertyChanged(nameof(IsWizardStepWorldSource));
+            RaisePropertyChanged(nameof(IsWizardStepCloneSource));
+            RaisePropertyChanged(nameof(IsWizardStepIdentityPorts));
+            RaisePropertyChanged(nameof(IsWizardStepWorldSettingsChoice));
+            RaisePropertyChanged(nameof(IsWizardStepInstallDirectory));
+            RaisePropertyChanged(nameof(IsWizardStepInstall));
+            RaisePropertyChanged(nameof(IsWizardStepMods));
+            RaisePropertyChanged(nameof(IsWizardStepSettings));
+            RaisePropertyChanged(nameof(IsWizardStepConfirm));
         }
     }
-    public bool IsChoosingConnectionKind => IsCreatingNewProfile && NewServerWizardStep == 0;
     public bool IsWizardStep1 => IsCreatingNewProfile && NewServerWizardStep == 1;
-    public bool IsWizardStep2 => IsCreatingNewProfile && NewServerWizardStep == 2;
-    public bool IsWizardStep3 => IsCreatingNewProfile && NewServerWizardStep == 3;
+    public bool IsWizardStepWorldSource => IsCreatingNewProfile && IsNewServerSetupFlow && NewServerWizardStep == 2;
+    // v0.7.82.0: step 3 now branches by world source instead of housing the old Clone-or-Install
+    // pairing -- Clone keeps its existing source-picker content unchanged; New World/Import get the
+    // new Identity & Ports step here instead of the old Install sub-view (Install itself moved to
+    // step 6, see IsWizardStepInstall).
+    public bool IsWizardStepCloneSource => IsCreatingNewProfile && IsNewServerSetupFlow && IsWorldSourceClone && NewServerWizardStep == 3;
+    public bool IsWizardStepIdentityPorts => IsCreatingNewProfile && IsNewServerSetupFlow && !IsWorldSourceClone && NewServerWizardStep == 3;
+    public bool IsWizardStepWorldSettingsChoice => IsCreatingNewProfile && IsNewServerSetupFlow && !IsWorldSourceClone && NewServerWizardStep == 4;
+    public bool IsWizardStepInstallDirectory => IsCreatingNewProfile && IsNewServerSetupFlow && !IsWorldSourceClone && NewServerWizardStep == 5;
+    public bool IsWizardStepInstall => IsCreatingNewProfile && IsNewServerSetupFlow && !IsWorldSourceClone && NewServerWizardStep == 6;
+    // v0.7.86.0: MODs step, install-wizard only, New World/Import only (Clone already has whatever
+    // MODs the source server had, copied over as part of the clone itself). Reuses the exact same
+    // Workshop-scan machinery (ScanWorkshopModsCommand/WorkshopItems/ImportSelectedWorkshopModCommand)
+    // already built for the MOD Library page -- both already correctly use
+    // BuildProfileFromEditor(SelectedProfile?.Id) rather than requiring SelectedProfile directly, so
+    // (unlike a couple of other reused commands found this session) no wizard-usability bug to fix
+    // here. Optional: the step's own "Next" just advances, whether or not any MOD was imported.
+    public bool IsWizardStepMods => IsCreatingNewProfile && IsNewServerSetupFlow && !IsWorldSourceClone && NewServerWizardStep == 7;
+    // v0.7.82.0: Connect's own Settings step, UNCHANGED in content/behavior from pre-v0.7.82.0 --
+    // now explicitly gated to !IsNewServerSetupFlow since step 4 means "World Settings choice" for
+    // the install wizard instead.
+    public bool IsWizardStepSettings => IsCreatingNewProfile && !IsNewServerSetupFlow && NewServerWizardStep == 4;
+    // v0.7.86.0: Confirm renumbered to step 8 for the install wizard (was 7 through v0.7.85.0) now
+    // that MODs (7) sits before it; reached from 3 directly for Clone (still skips MODs/Install), or
+    // from 7 for New World/Import. Stays step 5 for Connect, exactly as before -- the two flows never
+    // collide since they're on entirely different step-number tracks from step 2 onward.
+    public bool IsWizardStepConfirm => IsCreatingNewProfile && NewServerWizardStep == (IsNewServerSetupFlow ? 8 : 5);
     public ICommand WizardAdvanceCommand { get; }
     public ICommand WizardBackCommand { get; }
 
@@ -671,13 +732,167 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (!SetActiveTabField(t => t.ConnectionKind, (t, v) => t.ConnectionKind = v, value)) return;
             RaisePropertyChanged(nameof(IsLocalConnectionChoice));
             RaisePropertyChanged(nameof(IsRemoteConnectionChoice));
+            RaisePropertyChanged(nameof(WizardStep1HeaderText));
+            RaisePropertyChanged(nameof(WizardStep1InstructionText));
         }
     }
     public bool IsLocalConnectionChoice => ConnectionKind == "Local";
     public bool IsRemoteConnectionChoice => ConnectionKind == "Remote";
+    // v0.7.81.0: step 1's "Local Service" label text/step-count differs by flow ("Step 1 of 5" for
+    // the install wizard vs. the original "Step 1 of 3" for Connect to Local Server); Remote is
+    // never part of the install wizard, so it keeps its single unconditional label.
+    public bool IsWizardStep1LocalNewServer => IsLocalConnectionChoice && IsNewServerSetupFlow;
+    public bool IsWizardStep1LocalConnect => IsLocalConnectionChoice && !IsNewServerSetupFlow;
+    // v0.7.82.0 bug fix: replaces a 3-way IsVisible-toggled TextBlock row (Step 1's header silently
+    // stayed blank in practice -- reproduced live: every child started invisible on the very first
+    // layout pass since ConnectionKind/IsNewServerSetupFlow aren't set until just after this tab is
+    // created, and the row never picked up later IsVisible changes, unlike WizardStep1NextButtonLabel
+    // right below, a plain string binding on the exact same underlying flag that rendered correctly
+    // the whole time). One TextBlock bound to a computed string sidesteps that class of issue
+    // entirely rather than chasing the underlying layout quirk.
+    public string WizardStep1HeaderText => IsRemoteConnectionChoice
+        ? "Step 1 of 3 — Remote Connection Details"
+        : IsNewServerSetupFlow ? "Step 1 of 8 — Preparing MystTiq" : "Step 1 of 3 — Local Service";
+    public string WizardStep1InstructionText => IsNewServerSetupFlow
+        ? "MystTiq is starting its own local management engine automatically -- this is the engine that will run your new server, not an existing one to connect to. This normally only takes a moment; if it's stuck, use Auto-Detect below or enter a different local address."
+        : "MystTiq will look for its management service already running on this machine, or start one. If you already have another local MystTiq service running on a different port, enter its address below instead.";
+    public string WizardStep1NextButtonLabel => IsNewServerSetupFlow ? "Next: Choose World Source →" : "Next: Server Defaults →";
+    public string WizardStepSettingsLabel => "Step 2 of 3 — In-Game Server Defaults (new server only)";
+    public string WizardStepConfirmLabel => IsNewServerSetupFlow ? "Step 8 of 8 — Confirm & Finish" : "Step 3 of 3 — Confirm & Finish";
     public ICommand ChooseLocalConnectionCommand { get; }
     public ICommand ChooseRemoteConnectionCommand { get; }
     public ICommand DetectLocalServiceCommand { get; }
+
+    // v0.7.81.0: delegates to ActiveTab.IsNewServerSetupFlow/WorldSource the same way
+    // ConnectionKind delegates to ActiveTab.ConnectionKind above, for the same per-tab reason.
+    public bool IsNewServerSetupFlow
+    {
+        get => ActiveTab?.IsNewServerSetupFlow ?? false;
+        set
+        {
+            if (!SetActiveTabField(t => t.IsNewServerSetupFlow, (t, v) => t.IsNewServerSetupFlow = v, value)) return;
+            RaisePropertyChanged(nameof(IsWizardStep1LocalNewServer));
+            RaisePropertyChanged(nameof(IsWizardStep1LocalConnect));
+            RaisePropertyChanged(nameof(WizardStep1HeaderText));
+            RaisePropertyChanged(nameof(WizardStep1InstructionText));
+            RaisePropertyChanged(nameof(WizardStep1NextButtonLabel));
+            RaisePropertyChanged(nameof(WizardStepSettingsLabel));
+            RaisePropertyChanged(nameof(WizardStepConfirmLabel));
+            RaisePropertyChanged(nameof(IsWizardStepWorldSource));
+            RaisePropertyChanged(nameof(IsWizardStepCloneSource));
+            RaisePropertyChanged(nameof(IsWizardStepIdentityPorts));
+            RaisePropertyChanged(nameof(IsWizardStepWorldSettingsChoice));
+            RaisePropertyChanged(nameof(IsWizardStepInstallDirectory));
+            RaisePropertyChanged(nameof(IsWizardStepInstall));
+            RaisePropertyChanged(nameof(IsWizardStepMods));
+            RaisePropertyChanged(nameof(IsWizardStepSettings));
+        }
+    }
+    public string NewServerWorldSource
+    {
+        get => ActiveTab?.WorldSource ?? string.Empty;
+        set
+        {
+            if (!SetActiveTabField(t => t.WorldSource, (t, v) => t.WorldSource = v, value)) return;
+            RaisePropertyChanged(nameof(IsWorldSourceClone));
+            RaisePropertyChanged(nameof(IsWorldSourceNewWorld));
+            RaisePropertyChanged(nameof(IsWorldSourceImport));
+            RaisePropertyChanged(nameof(IsWizardStepCloneSource));
+            RaisePropertyChanged(nameof(IsWizardStepIdentityPorts));
+            RaisePropertyChanged(nameof(IsWizardStepWorldSettingsChoice));
+            RaisePropertyChanged(nameof(IsWizardStepInstallDirectory));
+            RaisePropertyChanged(nameof(IsWizardStepInstall));
+            RaisePropertyChanged(nameof(IsWizardStepMods));
+        }
+    }
+    public bool IsWorldSourceClone => NewServerWorldSource == "Clone";
+    public bool IsWorldSourceNewWorld => NewServerWorldSource == "NewWorld";
+    public bool IsWorldSourceImport => NewServerWorldSource == "Import";
+    public ICommand ChooseCloneWorldSourceCommand { get; }
+    public ICommand ChooseNewWorldSourceCommand { get; }
+    public ICommand ChooseImportWorldSourceCommand { get; }
+    public ICommand CloneIntoNewServerCommand { get; }
+
+    // v0.7.82.0: World Settings choice step -- a preset applies automatically right after install
+    // (real config doesn't exist to load/apply against before then, see ContinueFromInstallDirectoryAsync's
+    // own comment); "Customize" can't show real slider values pre-install either, so it defers to the
+    // existing, fully-live Configuration page after Finish rather than faking pre-install values.
+    public string NewServerWorldSettingsChoice
+    {
+        get => _newServerWorldSettingsChoice;
+        set
+        {
+            if (!SetField(ref _newServerWorldSettingsChoice, value)) return;
+            RaisePropertyChanged(nameof(IsWorldSettingsChoicePreset));
+            RaisePropertyChanged(nameof(IsWorldSettingsChoiceCustomize));
+        }
+    }
+    private string _newServerWorldSettingsChoice = "Preset";
+    public bool IsWorldSettingsChoicePreset => NewServerWorldSettingsChoice == "Preset";
+    public bool IsWorldSettingsChoiceCustomize => NewServerWorldSettingsChoice == "Customize";
+    public ICommand ChooseWorldSettingsPresetCommand { get; }
+    public ICommand ChooseWorldSettingsCustomizeCommand { get; }
+
+    // v0.7.82.0: Install Directory step -- computed when the step is entered (see
+    // EvaluateNewServerInstallDirectory), not live-bound, since it involves a filesystem probe.
+    public bool NewServerInstallDirectoryOccupied { get => _newServerInstallDirectoryOccupied; private set => SetField(ref _newServerInstallDirectoryOccupied, value); }
+    private bool _newServerInstallDirectoryOccupied;
+    // v0.7.88.0 bug fix: reported live -- the step showed only a static warning and a status
+    // sentence, no actual field to see or change the target path. Setter made public (was
+    // private-set-only, computed) so the wizard's own TextBox/Browse button can edit it directly;
+    // ContinueFromInstallDirectoryAsync already just reads whatever value is here, so a manual edit
+    // flows straight through with no further wiring needed.
+    public string NewServerInstallDirectoryEffectivePath { get => _newServerInstallDirectoryEffectivePath; set => SetField(ref _newServerInstallDirectoryEffectivePath, value); }
+    private string _newServerInstallDirectoryEffectivePath = string.Empty;
+    public string NewServerInstallDirectoryStatusText { get => _newServerInstallDirectoryStatusText; private set => SetField(ref _newServerInstallDirectoryStatusText, value); }
+    private string _newServerInstallDirectoryStatusText = string.Empty;
+    public ICommand ContinueFromInstallDirectoryCommand { get; }
+    public ICommand FinishInstallAndAdvanceCommand { get; }
+
+    // v0.7.85.0: Import a World, Phase 2 -- confirmed live against a genuinely fresh install
+    // ("MystTiqClaude") that PalServer.exe itself generates a real SaveGames/0/<32-hex-id>/Level.sav
+    // world folder within a few minutes of its very first start. That means the already-existing,
+    // already-proven World Transactions "world-import" flow (Analyze -> Apply, safety-backed atomic
+    // swap) works completely unmodified once the fresh install has been started once -- no new
+    // backend needed, unlike the originally-considered "pre-seed a folder before first launch"
+    // approach, which would have relied on an unverified assumption about PalServer.exe's own
+    // startup behavior. NewServerImportReady gates showing the embedded Analyze/Apply controls
+    // (the same WorldTransactionMode/WorldTransactionState/WorldTransactionPlanSteps/
+    // WorldTransactionConfirmed/ApplyWorldTransactionCommand bindings the World Transactions page
+    // already uses, reused verbatim).
+    public bool NewServerImportReady { get => _newServerImportReady; private set => SetField(ref _newServerImportReady, value); }
+    private bool _newServerImportReady;
+    public string NewServerImportPrepareStatusText { get => _newServerImportPrepareStatusText; private set => SetField(ref _newServerImportPrepareStatusText, value); }
+    private string _newServerImportPrepareStatusText = "Starts the server once so Palworld can generate its initial world, then stops it so that placeholder world can be safely replaced with your own.";
+    public ICommand PrepareForWorldImportCommand { get; }
+
+    // v0.7.81.0: the profile picked as the clone source in the install wizard's Clone step -- any
+    // already-saved profile. The brand-new, not-yet-saved profile being created can never appear
+    // here on its own (it has no real Id yet, so it can't match anything in Profiles).
+    //
+    // v0.7.88.0 bug fix: reported live -- "Local MystTiq" (the always-present default profile,
+    // near-permanently open in its own tab) was missing from this list entirely. Root cause: this
+    // originally reused the same "not currently open in a tab" filter as the "+" menu's own "Connect
+    // to {profile}" list (see that comment's own history), which makes sense THERE -- don't open a
+    // second, redundant tab to an already-open profile -- but has no bearing on whether a profile is
+    // valid to clone FROM. Cloning only requires the source's PalServer to be stopped (already stated
+    // in this step's own instruction text), which has nothing to do with whether its tab happens to
+    // be open.
+    private ConnectionProfile? _newServerCloneSourceProfile;
+    public ConnectionProfile? NewServerCloneSourceProfile
+    {
+        get => _newServerCloneSourceProfile;
+        set { if (SetField(ref _newServerCloneSourceProfile, value)) (CloneIntoNewServerCommand as AsyncCommand)?.RaiseCanExecuteChanged(); }
+    }
+    public IEnumerable<ConnectionProfile> CloneableSourceProfiles => Profiles;
+    private string _newServerCloneTargetId = string.Empty;
+    public string NewServerCloneTargetId
+    {
+        get => _newServerCloneTargetId;
+        set { if (SetField(ref _newServerCloneTargetId, value ?? string.Empty)) (CloneIntoNewServerCommand as AsyncCommand)?.RaiseCanExecuteChanged(); }
+    }
+    private string _newServerCloneStatusText = string.Empty;
+    public string NewServerCloneStatusText { get => _newServerCloneStatusText; private set => SetField(ref _newServerCloneStatusText, value); }
 
     // The open-tab list backing true multi-tab connections. ActiveTab is what
     // SelectedProfile/BearerToken/ManagementApiConnected/ConnectionState/IsBusy/ServerIsRunning
@@ -799,13 +1014,28 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(ServerIsRunning));
         RaisePropertyChanged(nameof(IsLocalProfile));
         RaisePropertyChanged(nameof(IsCreatingNewProfile));
-        RaisePropertyChanged(nameof(IsChoosingConnectionKind));
         RaisePropertyChanged(nameof(IsWizardStep1));
-        RaisePropertyChanged(nameof(IsWizardStep2));
-        RaisePropertyChanged(nameof(IsWizardStep3));
+        RaisePropertyChanged(nameof(IsWizardStepWorldSource));
+        RaisePropertyChanged(nameof(IsWizardStepCloneSource));
+        RaisePropertyChanged(nameof(IsWizardStepIdentityPorts));
+        RaisePropertyChanged(nameof(IsWizardStepWorldSettingsChoice));
+        RaisePropertyChanged(nameof(IsWizardStepInstallDirectory));
+        RaisePropertyChanged(nameof(IsWizardStepInstall));
+        RaisePropertyChanged(nameof(IsWizardStepMods));
+        RaisePropertyChanged(nameof(IsWizardStepSettings));
+        RaisePropertyChanged(nameof(IsWizardStepConfirm));
         RaisePropertyChanged(nameof(ConnectionKind));
         RaisePropertyChanged(nameof(IsLocalConnectionChoice));
         RaisePropertyChanged(nameof(IsRemoteConnectionChoice));
+        RaisePropertyChanged(nameof(IsNewServerSetupFlow));
+        RaisePropertyChanged(nameof(IsWizardStep1LocalNewServer));
+        RaisePropertyChanged(nameof(IsWizardStep1LocalConnect));
+        RaisePropertyChanged(nameof(WizardStep1HeaderText));
+        RaisePropertyChanged(nameof(WizardStep1InstructionText));
+        RaisePropertyChanged(nameof(NewServerWorldSource));
+        RaisePropertyChanged(nameof(IsWorldSourceClone));
+        RaisePropertyChanged(nameof(IsWorldSourceNewWorld));
+        RaisePropertyChanged(nameof(IsWorldSourceImport));
         RaisePropertyChanged(nameof(ActiveTabAccentBrush));
         RaisePropertyChanged(nameof(ActiveTabAccentGlowShadow));
         RaiseWorkspaceSummaryProperties();
@@ -872,10 +1102,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(SelectedProfile));
         RaisePropertyChanged(nameof(IsLocalProfile));
         RaisePropertyChanged(nameof(IsCreatingNewProfile));
-        RaisePropertyChanged(nameof(IsChoosingConnectionKind));
         RaisePropertyChanged(nameof(IsWizardStep1));
-        RaisePropertyChanged(nameof(IsWizardStep2));
-        RaisePropertyChanged(nameof(IsWizardStep3));
+        RaisePropertyChanged(nameof(IsWizardStepWorldSource));
+        RaisePropertyChanged(nameof(IsWizardStepCloneSource));
+        RaisePropertyChanged(nameof(IsWizardStepIdentityPorts));
+        RaisePropertyChanged(nameof(IsWizardStepWorldSettingsChoice));
+        RaisePropertyChanged(nameof(IsWizardStepInstallDirectory));
+        RaisePropertyChanged(nameof(IsWizardStepInstall));
+        RaisePropertyChanged(nameof(IsWizardStepMods));
+        RaisePropertyChanged(nameof(IsWizardStepSettings));
+        RaisePropertyChanged(nameof(IsWizardStepConfirm));
 
         ThemeApplier.Apply(updated.AccentTheme, updated.ThemeVariant);
         RefreshTabAccentVisuals();
@@ -1083,10 +1319,16 @@ public sealed class MainWindowViewModel : ViewModelBase
             // depends on exactly that transition, not just a real profile being selected.
             RaisePropertyChanged(nameof(IsLocalProfile));
             RaisePropertyChanged(nameof(IsCreatingNewProfile));
-            RaisePropertyChanged(nameof(IsChoosingConnectionKind));
             RaisePropertyChanged(nameof(IsWizardStep1));
-            RaisePropertyChanged(nameof(IsWizardStep2));
-            RaisePropertyChanged(nameof(IsWizardStep3));
+            RaisePropertyChanged(nameof(IsWizardStepWorldSource));
+            RaisePropertyChanged(nameof(IsWizardStepCloneSource));
+            RaisePropertyChanged(nameof(IsWizardStepIdentityPorts));
+            RaisePropertyChanged(nameof(IsWizardStepWorldSettingsChoice));
+            RaisePropertyChanged(nameof(IsWizardStepInstallDirectory));
+            RaisePropertyChanged(nameof(IsWizardStepInstall));
+            RaisePropertyChanged(nameof(IsWizardStepMods));
+            RaisePropertyChanged(nameof(IsWizardStepSettings));
+            RaisePropertyChanged(nameof(IsWizardStepConfirm));
             if (value is null) return;
 
             ProfileName = value.Name;
@@ -1208,7 +1450,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
     public string DashboardHealthDetail { get => _dashboardHealthDetail; private set => SetField(ref _dashboardHealthDetail, value); }
-    public bool IsHealthGlowAmber => IsServerTransitioning || (!IsServerTransitioning && DashboardHealthText == "DEGRADED");
+    public bool IsHealthGlowAmber => IsServerTransitioning || (!IsServerTransitioning && DashboardHealthText is "DEGRADED" or "STARTING");
     public bool IsHealthGlowRed => !IsServerTransitioning && DashboardHealthText == "ATTENTION";
     public bool IsHealthGlowGreen => !IsServerTransitioning && !IsHealthGlowRed && DashboardHealthText == "READY";
     public bool IsHealthGlowNeutral => !IsHealthGlowAmber && !IsHealthGlowRed && !IsHealthGlowGreen;
@@ -1371,6 +1613,31 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string CloneNewProfileId { get => _cloneNewProfileId; set { if (SetField(ref _cloneNewProfileId, value ?? string.Empty)) (CloneWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string CloneNewProfileName { get => _cloneNewProfileName; set => SetField(ref _cloneNewProfileName, value ?? string.Empty); }
     public string CloneWorldStatusText { get => _cloneWorldStatusText; private set => SetField(ref _cloneWorldStatusText, value); }
+    // v0.7.84.0: a successful clone here previously left the "needs a MystTiq service restart to
+    // come online" text as the only signal, with no in-app way to act on it (the same
+    // previously-undisclosed gap closed for the wizard's own Clone path in v0.7.83.0). Unlike the
+    // wizard's brand-new, not-yet-in-use tab, this page's connection is already actively in use, so
+    // the restart is offered as an explicit button rather than fired automatically -- the user
+    // decides when it's convenient to take the whole local service down briefly.
+    public bool CloneWorldNeedsRestart
+    {
+        get => _cloneWorldNeedsRestart;
+        private set
+        {
+            if (!SetField(ref _cloneWorldNeedsRestart, value)) return;
+            (RestartAfterCloneCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        }
+    }
+    public string? CloneWorldNewProfileId { get => _cloneWorldNewProfileId; private set => SetField(ref _cloneWorldNewProfileId, value); }
+    public ICommand RestartAfterCloneCommand { get; }
+    // v0.7.81.0: Clone World turned into an explicit step-by-step workflow (direct request: "should
+    // be a workflow with drop down options to clarify what it is doing"). The source was always
+    // implicitly "whichever profile this tab is connected to" (SelectedProfile) -- now labeled
+    // explicitly rather than left unstated. PortOffset already existed on WorldCloneRequestDto but
+    // was never exposed in the UI at all (the server just used its own default); now a real dropdown.
+    public IReadOnlyList<int> CloneWorldPortOffsetOptions { get; } = [100, 200, 300, 400];
+    public int CloneWorldPortOffset { get => _cloneWorldPortOffset; set => SetField(ref _cloneWorldPortOffset, value); }
+    public bool CloneWorldConfirmed { get => _cloneWorldConfirmed; set { if (SetField(ref _cloneWorldConfirmed, value)) (CloneWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string ActivityFileText { get => _activityFileText; private set => SetField(ref _activityFileText, value); }
     public string ActivityDetail { get => _activityDetail; private set => SetField(ref _activityDetail, value); }
     public string PlayerAdminStatusText { get => _playerAdminStatusText; private set => SetField(ref _playerAdminStatusText, value); }
@@ -1421,9 +1688,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     // (Starting/Stopping/Restarting) always reads as amber "in progress" regardless of the last
     // known ServerState, Running is green, and everything else (Stopped, Crash, Unknown,
     // Checking, ...) reads as red -- the server is not currently up.
-    public bool IsServerGlowAmber => IsServerTransitioning;
+    // v0.7.82.0: a detected-but-not-yet-ready native process (ServerState "Starting / Not Ready")
+    // used to fall through to red here, the same "genuinely stopped" color as an actual stop --
+    // matches Overall Health's own amber treatment of that same in-between state.
+    public bool IsServerGlowAmber => IsServerTransitioning || ServerState.Contains("Starting", StringComparison.OrdinalIgnoreCase);
     public bool IsServerGlowGreen => !IsServerTransitioning && ServerState.Contains("Running", StringComparison.OrdinalIgnoreCase);
-    public bool IsServerGlowRed => !IsServerTransitioning && !IsServerGlowGreen;
+    public bool IsServerGlowRed => !IsServerTransitioning && !IsServerGlowGreen && !IsServerGlowAmber;
     public string ServiceState { get => _serviceState; private set => SetField(ref _serviceState, value); }
     public string Detail { get => _detail; private set => SetField(ref _detail, value); }
     public string NativePidText { get => _nativePidText; private set => SetField(ref _nativePidText, value); }
@@ -1629,7 +1899,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ServerInstallState { get => _serverInstallState; private set => SetField(ref _serverInstallState, value); }
     public string DistributionPlatform { get => _distributionPlatform; private set => SetField(ref _distributionPlatform, value); }
     public string DistributionPlanText { get => _distributionPlanText; private set => SetField(ref _distributionPlanText, value); }
-    public string DistributionOutputText { get => _distributionOutputText; private set => SetField(ref _distributionOutputText, value); }
+    public string DistributionOutputText
+    {
+        get => _distributionOutputText;
+        private set { if (SetField(ref _distributionOutputText, value)) RaisePropertyChanged(nameof(HasDistributionOutput)); }
+    }
+    public bool HasDistributionOutput => !string.IsNullOrEmpty(DistributionOutputText);
     public bool ValidateServerFiles { get => _validateServerFiles; set => SetField(ref _validateServerFiles, value); }
     public string WorldExplorerState { get => _worldExplorerState; private set => SetField(ref _worldExplorerState, value); }
     public string WorldExplorerDetail { get => _worldExplorerDetail; private set => SetField(ref _worldExplorerDetail, value); }
@@ -1821,6 +2096,10 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ModState { get => _modState; private set => SetField(ref _modState, value); }
     public string ModSummary { get => _modSummary; private set => SetField(ref _modSummary, value); }
     public string ModHealth { get => _modHealth; private set => SetField(ref _modHealth, value); }
+    // v0.7.78.0: drives the MOD Dashboard hero health banner's color (direct request to make
+    // Dashboard feel distinct from MOD Library rather than a near-duplicate layout).
+    public bool IsModHealthGood => ModHealth == "Healthy";
+    public bool IsModHealthDegraded => ModHealth == "Degraded";
     public string ModInstalledText { get => _modInstalledText; private set => SetField(ref _modInstalledText, value); }
     public string ModConfirmedText { get => _modConfirmedText; private set => SetField(ref _modConfirmedText, value); }
     public string ModUnverifiedText { get => _modUnverifiedText; private set => SetField(ref _modUnverifiedText, value); }
@@ -1944,7 +2223,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     private DispatcherTimer? _modSafeStartPollTimer;
     private string _selectedModDescriptionSourceInput = string.Empty;
     public string SelectedModDescriptionSourceInput { get => _selectedModDescriptionSourceInput; set => SetField(ref _selectedModDescriptionSourceInput, value ?? string.Empty); }
-    public string ModInstallPackage { get => _modInstallPackage; set => SetField(ref _modInstallPackage, value ?? string.Empty); }
     public WorkshopItemDto? SelectedWorkshopItem { get => _selectedWorkshopItem; set { if (SetField(ref _selectedWorkshopItem, value)) (ImportSelectedWorkshopModCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string WorkshopScanState { get => _workshopScanState; private set => SetField(ref _workshopScanState, value); }
 
@@ -2058,6 +2336,13 @@ public sealed class MainWindowViewModel : ViewModelBase
             (LoadConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (SaveConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (SavePalworldConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            // v0.7.82.0 bug fix: both also gate on !IsBusy but were never re-queried here, only from
+            // the PalworldConfigLoaded setter -- which fires mid-load, while IsBusy is still true, so
+            // CanExecute evaluated false right then and stayed stuck disabled for the rest of the
+            // session even after IsBusy went back to false (nothing else ever re-raised these two).
+            (GenerateServerNameCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (SaveCurrentAsPresetCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (RestartAfterCloneCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -2084,6 +2369,15 @@ public sealed class MainWindowViewModel : ViewModelBase
             RaisePropertyChanged(nameof(PageTitle));
             RaisePropertyChanged(nameof(PageSubtitle));
             RaisePageVisibility();
+
+            // v0.7.78.0: MOD Library's own local Steam Workshop scan used to require a manual
+            // "Refresh" click every time the page was opened, even on a fresh navigation -- direct
+            // report that it should just load automatically, matching how the Players page already
+            // auto-refreshes on navigation (see ActiveTab's own setter). Only fires once per tab
+            // (WorkshopItems.Count == 0 guards it) rather than re-scanning every single time the
+            // page is revisited, since Explorer's own Refresh button already exists for that.
+            if (value == NavigationPage.ModLibrary && WorkshopItems.Count == 0)
+                _ = ScanWorkshopModsAsync();
         }
     }
 
@@ -2260,6 +2554,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand LoadConfigurationCommand { get; }
     public ICommand SaveConfigurationCommand { get; }
     public ICommand SavePalworldConfigurationCommand { get; }
+    public ICommand ApplyStarterPresetCommand { get; }
     public ICommand ShowSimpleConfigCommand { get; }
     public ICommand ShowAdvancedConfigCommand { get; }
     public ICommand ResetConfigChangesCommand { get; }
@@ -2276,6 +2571,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand RefreshDistributionCommand { get; }
     public ICommand PreviewDistributionPlanCommand { get; }
     public ICommand UpdatePalworldServerCommand { get; }
+    public ICommand InstallPalworldServerFromWizardCommand { get; }
+    public ICommand InstallPalworldServerWithExtrasCommand { get; }
+    public ICommand UpdatePipCommand { get; }
     public ICommand RefreshWorldExplorerCommand { get; }
     public ICommand ValidateActiveWorldCommand { get; }
     public ICommand ApplyWorldTransactionCommand { get; }
@@ -2297,6 +2595,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand DisableSelectedModCommand { get; }
     public ICommand DeleteSelectedModCommand { get; }
     public ICommand RollbackSelectedModCommand { get; }
+    public ICommand RepairSelectedModCommand { get; }
     public ICommand EnableAllModsCommand { get; }
     public ICommand DisableAllModsCommand { get; }
     public ICommand RepairModsCommand { get; }
@@ -2327,7 +2626,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand SetUpNewServerTabCommand { get; }
     public ICommand ConnectLocalServerTabCommand { get; }
     public ICommand ConnectRemoteServerTabCommand { get; }
-    public ICommand CloneServerFlowCommand { get; }
     public ICommand ConnectExistingProfileTabCommand { get; }
     public ICommand CloseTabCommand { get; }
     public ICommand CloseActiveTabCommand { get; }
@@ -2424,7 +2722,25 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string SetupRecentActivity { get => _setupRecentActivity; private set => SetField(ref _setupRecentActivity, value); }
     public double SetupOperationProgress { get => _setupOperationProgress; private set { if (SetField(ref _setupOperationProgress, value)) RaisePropertyChanged(nameof(SetupOperationProgressText)); } }
     public string SetupOperationProgressText => $"{SetupOperationProgress:0}%";
-    public string SetupServerName { get => _setupServerName; set => SetField(ref _setupServerName, value ?? string.Empty); }
+    // v0.7.82.0 bug fix: reported live -- the Confirm step's summary card ("Server: {ProfileName}")
+    // showed the generic "New Server" placeholder even after the user had typed a real name here,
+    // since ProfileName (this MystTiq connection's own label) and SetupServerName (the Palworld
+    // server's in-game name) were always two entirely separate fields with nothing syncing them --
+    // making it look like nothing had actually been configured, and the saved profile itself would
+    // keep the generic placeholder name too. Only auto-follows while ProfileName is still exactly the
+    // BeginNewProfile default (or blank); once the user edits the connection name directly at Step 1,
+    // their choice is never overwritten.
+    public string SetupServerName
+    {
+        get => _setupServerName;
+        set
+        {
+            if (!SetField(ref _setupServerName, value ?? string.Empty)) return;
+            if (IsNewServerSetupFlow && !string.IsNullOrWhiteSpace(_setupServerName) &&
+                (string.IsNullOrWhiteSpace(ProfileName) || ProfileName == "New Server"))
+                ProfileName = _setupServerName;
+        }
+    }
     public string SetupServerDescription { get => _setupServerDescription; set => SetField(ref _setupServerDescription, value ?? string.Empty); }
     public string SetupAdminPassword { get => _setupAdminPassword; set => SetField(ref _setupAdminPassword, value ?? string.Empty); }
     public string SetupServerPassword { get => _setupServerPassword; set => SetField(ref _setupServerPassword, value ?? string.Empty); }
@@ -2745,13 +3061,57 @@ public sealed class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { WanStatus = "Unable to open the port checker: " + ex.Message; }
     }
 
+    // v0.7.87.0: direct live feedback -- leaving Configuration with unsaved changes previously just
+    // discarded them silently. Navigate() is the single funnel every nav button/link already goes
+    // through (confirmed: dozens of XAML call sites), so the guard lives here rather than at each
+    // call site. The ViewModel has no Window reference for the confirm dialog (same constraint as
+    // the Close Tab/Delete Player flows), so it raises an event for MainWindow's code-behind to show
+    // the dialog and call back into one of the three continuation methods below.
+    private NavigationPage? _pendingNavigationAfterConfigPrompt;
+    public event Action? ConfigurationUnsavedChangesNavigationBlocked;
+
     private void Navigate(string? pageName)
     {
         if (!Enum.TryParse<NavigationPage>(pageName, ignoreCase: true, out var page))
             return;
 
+        if (SelectedPage == NavigationPage.Configuration && page != NavigationPage.Configuration && PalworldConfigIsDirty)
+        {
+            _pendingNavigationAfterConfigPrompt = page;
+            ConfigurationUnsavedChangesNavigationBlocked?.Invoke();
+            return;
+        }
+
+        PerformNavigation(page);
+    }
+
+    private void PerformNavigation(NavigationPage page)
+    {
         SelectedPage = page;
         Dispatcher.UIThread.Post(async () => await RefreshPageForNavigationAsync(page));
+    }
+
+    public async Task ContinuePendingNavigationSavingConfigurationAsync()
+    {
+        var target = _pendingNavigationAfterConfigPrompt;
+        _pendingNavigationAfterConfigPrompt = null;
+        if (target is null) return;
+        await SavePalworldConfigurationAsync();
+        PerformNavigation(target.Value);
+    }
+
+    public void ContinuePendingNavigationDiscardingConfigurationChanges()
+    {
+        var target = _pendingNavigationAfterConfigPrompt;
+        _pendingNavigationAfterConfigPrompt = null;
+        if (target is null) return;
+        ResetPalworldConfigurationChanges();
+        PerformNavigation(target.Value);
+    }
+
+    public void CancelPendingConfigurationNavigation()
+    {
+        _pendingNavigationAfterConfigPrompt = null;
     }
 
     private async Task RefreshPageForNavigationAsync(NavigationPage page)
@@ -2770,6 +3130,9 @@ public sealed class MainWindowViewModel : ViewModelBase
                 await RefreshDistributionAsync();
                 break;
             case NavigationPage.Configuration:
+                // v0.7.87.0: direct live feedback -- Configuration should always start on Server
+                // Settings, not silently remember Advanced from a previous visit this session.
+                SetConfigurationView(true);
                 await LoadConfigurationAsync();
                 if (!IsBusy) await LoadPalworldConfigurationAsync();
                 break;
@@ -2937,46 +3300,321 @@ public sealed class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
-    // v0.7.3.0: Next/Back only ever move between 0 and 3 -- IsChoosingConnectionKind/IsWizardStep1/
-    // 2/3 already gate the whole flow behind IsCreatingNewProfile, so once a profile is saved (or
-    // the wizard is closed by switching to an existing profile) these become no-ops rather than
-    // needing their own guard.
+    // v0.7.81.0: step machine now branches by flow/world-source instead of a blind +1/-1 -- see the
+    // IsWizardStep* properties' own comments for the full step map. IsCreatingNewProfile already
+    // gates the whole flow, so once a profile is saved (or the wizard is closed by switching to an
+    // existing profile) these become no-ops rather than needing their own guard.
     private void AdvanceWizardStep()
     {
-        if (NewServerWizardStep < 3) NewServerWizardStep++;
+        NewServerWizardStep = NewServerWizardStep switch
+        {
+            0 => 1,
+            1 => IsNewServerSetupFlow ? 2 : 4,
+            2 => 3,
+            // v0.7.85.0: World Settings choice (4) doesn't apply to Import -- the placeholder world
+            // it would apply a preset/customize to is about to be entirely replaced by the imported
+            // archive, so Import skips straight from Identity & Ports to Install Directory.
+            3 => IsWorldSourceImport ? 5 : 4,
+            4 => 5,
+            5 => IsNewServerSetupFlow ? 6 : 5,
+            // v0.7.86.0: MODs (7) inserted before Confirm (now 8, was 7 through v0.7.85.0).
+            6 => 7,
+            7 => 8,
+            _ => NewServerWizardStep
+        };
     }
     private void GoBackWizardStep()
     {
-        if (NewServerWizardStep <= 1)
+        NewServerWizardStep = NewServerWizardStep switch
         {
-            // Stepping back off Connection Details returns to the Local/Remote choice rather than
-            // going below step 0 -- re-choosing clears ConnectionKind so the sub-view doesn't show a
-            // stale branch (e.g. Local's fields) if the user picks Remote instead this time.
-            NewServerWizardStep = 0;
-            ConnectionKind = string.Empty;
-            return;
+            8 => IsWorldSourceClone ? 3 : 7,
+            7 => 6,
+            6 => 5,
+            5 => IsWorldSourceImport ? 3 : 4,
+            4 => IsNewServerSetupFlow ? 3 : 1,
+            3 => 2,
+            2 => 1,
+            // Step 1 (and the now-unreachable step 0) have no earlier step to return to -- the
+            // wizard's own Cancel button at step 1 closes the tab instead of going "back".
+            _ => NewServerWizardStep
+        };
+    }
+
+    // v0.7.81.0: sets the World Source choice and advances past it in one step, used by the three
+    // choice cards (Clone/New World/Import) at IsWizardStepWorldSource.
+    private void ChooseNewServerWorldSource(string source)
+    {
+        NewServerWorldSource = source;
+        if (source == "Import")
+        {
+            // v0.7.85.0: reset stale state from a prior World Transactions page visit -- these are
+            // the same shared properties, not wizard-scoped, so a leftover "player-recovery" mode or
+            // already-set preview token from earlier in the session must not leak into a fresh
+            // install's own import flow.
+            NewServerImportReady = false;
+            WorldTransactionMode = "world-import";
+            WorldTransactionConfirmed = false;
+            WorldPreviewToken = string.Empty;
+            WorldTransactionPlanSteps.Clear();
+            WorldTransactionState = string.Empty;
         }
-        NewServerWizardStep--;
+        AdvanceWizardStep();
+    }
+
+    // v0.7.82.0: World Settings choice step -- see NewServerWorldSettingsChoice's own comment for
+    // why "Customize" can't show real values yet. Both re-evaluate the Install Directory step's
+    // occupancy probe on the way in, since SetupServerName (used to derive a sibling folder name if
+    // needed) may have just been edited at the previous step.
+    private async Task ChooseWorldSettingsPresetAsync()
+    {
+        NewServerWorldSettingsChoice = "Preset";
+        AdvanceWizardStep();
+        await EvaluateNewServerInstallDirectoryAsync();
+    }
+    private async Task ChooseWorldSettingsCustomizeAsync()
+    {
+        NewServerWorldSettingsChoice = "Customize";
+        AdvanceWizardStep();
+        await EvaluateNewServerInstallDirectoryAsync();
+    }
+
+    private async Task EvaluateNewServerInstallDirectoryAsync()
+    {
+        IsBusy = true;
+        NewServerInstallDirectoryStatusText = "Checking the configured server directory…";
+        try
+        {
+            await LoadConfigurationAsync();
+            var root = ConfigServerRoot;
+            NewServerInstallDirectoryOccupied = !string.IsNullOrWhiteSpace(root) && Directory.Exists(root) && Directory.EnumerateFileSystemEntries(root).Any();
+            NewServerInstallDirectoryEffectivePath = NewServerInstallDirectoryOccupied
+                ? DeriveAvailableSiblingServerRoot(root, string.IsNullOrWhiteSpace(SetupServerName) ? "server" : SetupServerName)
+                : root;
+            NewServerInstallDirectoryStatusText = NewServerInstallDirectoryOccupied
+                ? $"{root} already has a server installed. Continuing will create a second, separate server at: {NewServerInstallDirectoryEffectivePath}"
+                : $"Files will install to: {root}";
+        }
+        catch (Exception ex) { NewServerInstallDirectoryStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private static string SlugifyServerName(string name)
+    {
+        var slug = new string(name.Trim().ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray());
+        while (slug.Contains("--", StringComparison.Ordinal)) slug = slug.Replace("--", "-");
+        slug = slug.Trim('-');
+        return string.IsNullOrWhiteSpace(slug) ? "server" : slug;
+    }
+
+    // v0.7.82.0: mirrors HeadlessWorldCloneService.CloneAsync's own sibling-directory pattern
+    // (<parent>\<name>-clone-<id>) -- here <parent>\<slug>, collision-suffixed -- since AddServerAsync
+    // itself does no path derivation (confirmed: it only validates/persists whatever ServerRoot the
+    // caller supplies).
+    private static string DeriveAvailableSiblingServerRoot(string existingServerRoot, string desiredName)
+    {
+        var parent = Path.GetDirectoryName(Path.GetFullPath(existingServerRoot)) ?? existingServerRoot;
+        var slug = SlugifyServerName(desiredName);
+        var candidate = Path.Combine(parent, slug);
+        var suffix = 2;
+        while (Directory.Exists(candidate) && Directory.EnumerateFileSystemEntries(candidate).Any())
+        {
+            candidate = Path.Combine(parent, $"{slug}-{suffix}");
+            suffix++;
+        }
+        return candidate;
+    }
+
+    // v0.7.82.0: ALWAYS registers a genuinely new fleet profile here, whether or not the default
+    // directory happens to be occupied -- "Local MystTiq" (the always-present built-in default
+    // profile) permanently owns the default ServerId, so a brand-new server can never legitimately
+    // reuse it (confirmed live: BuildProfileFromEditor's own duplicate-connection guard would reject
+    // saving it at Confirm). NewServerInstallDirectoryEffectivePath already resolved to the right
+    // path for either case (typical root if free, a derived sibling if occupied, see
+    // EvaluateNewServerInstallDirectoryAsync) -- only the ServerRoot varies, registration always
+    // happens. Registers via POST /api/v1/servers (no file copying -- AddServerAsync itself does
+    // none), restarts this Desktop instance's own owned sidecar so the new profile actually comes
+    // online (confirmed pre-existing constraint: a newly added profile is invisible to the running
+    // process until it restarts), then reconnects this wizard's in-progress connection to the new
+    // profile's scoped routes before advancing. Only ever offered for local desktop-sidecar
+    // connections (this flow is always local, see OpenNewServerTab) and declines outright if a real
+    // Windows Service install is detected, since the Desktop app has no code path to restart that
+    // (confirmed: IWindowsServiceManager is never referenced from MystTiq.Desktop).
+    private async Task ContinueFromInstallDirectoryAsync()
+    {
+        IsBusy = true;
+        NewServerInstallDirectoryStatusText = "Registering a new server profile…";
+        try
+        {
+            var snapshot = await _localDiscovery.DiscoverAsync();
+            if (snapshot.ServiceInstalled)
+            {
+                NewServerInstallDirectoryStatusText = "This machine runs MystTiq as an installed Windows Service, which the desktop app can't restart on its own. Add a second server profile from Fleet instead, restart the service manually, then connect to it.";
+                return;
+            }
+
+            ConnectionProfile profile;
+            try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+            catch (Exception ex) { NewServerInstallDirectoryStatusText = ex.Message; return; }
+
+            var existingProfiles = await _api.GetServerProfilesAsync(profile, BearerToken);
+            var defaultProfile = existingProfiles.FirstOrDefault(p => p.Id == "default");
+            var runtime = defaultProfile?.Runtime is { Length: > 0 } r ? r : "WindowsNative";
+
+            var slug = SlugifyServerName(string.IsNullOrWhiteSpace(SetupServerName) ? "server" : SetupServerName);
+            var candidateId = slug;
+            var suffix = 2;
+            while (existingProfiles.Any(p => p.Id.Equals(candidateId, StringComparison.OrdinalIgnoreCase)))
+            {
+                candidateId = $"{slug}-{suffix}";
+                suffix++;
+            }
+
+            var newServerRoot = NewServerInstallDirectoryEffectivePath;
+            var request = new AddFleetProfileRequestDto
+            {
+                Id = candidateId,
+                Name = string.IsNullOrWhiteSpace(SetupServerName) ? candidateId : SetupServerName.Trim(),
+                ServerRoot = newServerRoot,
+                SteamCmdPath = ConfigSteamCmdPath,
+                BackupRoot = Path.Combine(newServerRoot, "Backups"),
+                RuntimeRoot = Path.Combine(Path.GetDirectoryName(ConfigRuntimeRoot) ?? ConfigRuntimeRoot, candidateId),
+                LaunchArguments = ConfigLaunchArguments.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                Runtime = runtime
+            };
+
+            var addResult = await _api.AddFleetProfileAsync(profile, request, BearerToken);
+            if (!addResult.Success)
+            {
+                NewServerInstallDirectoryStatusText = addResult.Message;
+                return;
+            }
+
+            NewServerInstallDirectoryStatusText = "Profile registered. Restarting the local MystTiq service to bring it online…";
+            var restartResult = await _localBootstrapper.RestartOwnedSidecarAsync(snapshot, candidateId);
+            if (!restartResult.Available)
+            {
+                NewServerInstallDirectoryStatusText = $"Profile registered, but the automatic restart failed: {restartResult.Detail}";
+                return;
+            }
+
+            ServerUrl = restartResult.Endpoint;
+            TargetServerId = candidateId;
+            await RefreshAsync();
+            if (!ManagementApiConnected)
+            {
+                NewServerInstallDirectoryStatusText = "Profile registered and restarted, but reconnecting to it failed. Try again from this step.";
+                return;
+            }
+
+            NewServerInstallDirectoryStatusText = $"Connected to the new profile '{candidateId}'.";
+            AdvanceWizardStep();
+            _ = RefreshEnvironmentAsync();
+        }
+        catch (Exception ex) { NewServerInstallDirectoryStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.82.0: replaces the plain WizardAdvanceCommand on the Install step's own "Next" button --
+    // advances to Confirm (7), then automatically applies the Identity & Ports values collected back
+    // at step 3 (CreateDefaultServerSettingsAsync, reused as-is) and, if a preset was chosen at step
+    // 4, applies it too (ApplyStarterPresetAsync, reused as-is). Both already require the
+    // just-installed PalWorldSettings.ini to exist, which is exactly why this runs after Install
+    // rather than before.
+    private async Task FinishInstallAndAdvanceAsync()
+    {
+        AdvanceWizardStep();
+        if (!IsNewServerSetupFlow || IsWorldSourceClone) return;
+
+        SetupCreateConfirmed = true;
+        await CreateDefaultServerSettingsAsync();
+        if (IsWorldSettingsChoicePreset && SelectedConfigPreset is not null)
+            await ApplyStarterPresetAsync();
+
+        // v0.7.89.0: direct live feedback -- "step 7 should automatically search for workshop
+        // mods," instead of requiring a manual "Scan Workshop Mods" click on arrival. Mirrors the
+        // MOD Library page's own v0.7.78.0 auto-scan-on-arrival behavior verbatim (same
+        // WorkshopItems.Count == 0 guard, so it only fires once per tab).
+        if (IsWizardStepMods && WorkshopItems.Count == 0)
+            _ = ScanWorkshopModsAsync();
+    }
+
+    // v0.7.85.0: "Import a World" Phase 2 -- starts the freshly-installed server once so PalServer.exe
+    // generates its own initial world (empirically confirmed: a real SaveGames/0/<32-hex-id>/Level.sav
+    // appears within a few minutes of first start), then stops it so that placeholder world can be
+    // safely replaced via the already-existing, already-proven World Transactions "world-import"
+    // Analyze/Apply flow (embedded directly in this same wizard step once ready). World save content
+    // is independent of which ports the server happened to be running under, so this has no ordering
+    // dependency on Identity & Ports/CreateDefaultServerSettingsAsync -- either can happen first.
+    private async Task PrepareForWorldImportAsync()
+    {
+        IsBusy = true;
+        NewServerImportReady = false;
+        NewServerImportPrepareStatusText = "Starting the server once to generate its initial world…";
+        try
+        {
+            await StartServerAsync();
+
+            ConnectionProfile profile;
+            try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+            catch (Exception ex) { NewServerImportPrepareStatusText = ex.Message; return; }
+
+            var deadline = DateTimeOffset.UtcNow.AddMinutes(5);
+            var available = false;
+            while (DateTimeOffset.UtcNow < deadline)
+            {
+                try
+                {
+                    var snapshot = await _api.GetWorldExplorerAsync(profile, BearerToken);
+                    if (snapshot.Available) { available = true; break; }
+                }
+                catch { /* server may still be mid-startup; keep polling until the deadline */ }
+                NewServerImportPrepareStatusText = "Waiting for the initial world to finish generating…";
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
+
+            NewServerImportPrepareStatusText = "Stopping the server so its world can be safely replaced…";
+            await StopServerAsync();
+
+            NewServerImportReady = available;
+            NewServerImportPrepareStatusText = available
+                ? "Ready. Choose your world archive below, Analyze it, then Apply to replace this placeholder world."
+                : "The server didn't generate its initial world within 5 minutes. Try again, or check Doctor for issues.";
+        }
+        catch (Exception ex) { NewServerImportPrepareStatusText = ex.Message; }
+        finally { IsBusy = false; }
     }
 
     // Opens a new tab and puts it in the same "creating a new connection" state BeginNewProfile()
     // has always put the (single, shared) connection in -- now scoped to whichever tab was just
     // opened instead of replacing the app's one-and-only connection.
+    // v0.7.81.0: direct live feedback ("it should not be trying to connect to a previously installed
+    // version as we already have an option to connect to a local server or remote server from the
+    // plus... It should always be a local install"). Previously landed on the same Local/Remote
+    // choice + "find or start a service" screens as Connect to Local/Remote Server, with no real
+    // distinction beyond framing text (see the git-history comment this replaced, and the
+    // architecture doc for the full before/after). Now skips straight to the local connect step,
+    // same as OpenConnectLocalServerTab below, and sets IsNewServerSetupFlow so the wizard shows the
+    // new World Source/Clone/Install steps afterward instead of jumping straight to Settings.
     private void OpenNewServerTab()
     {
         ActiveTab = CreateTab();
         BeginNewProfile();
+        IsNewServerSetupFlow = true;
+        ChooseLocalConnection();
+        Detail = "Setting up a new local Palworld server installation.";
+        // v0.7.82.0: direct live feedback ("this should not be the first screen -- I am setting up a
+        // new one, not connecting to an existing service"). Step 1 is really just "make sure
+        // MystTiq's own local management engine is reachable" (it's the engine that will run the new
+        // server, not an existing Palworld server to find), so auto-run the exact same detection the
+        // "Auto-Detect Local Service" button does instead of making the user click it manually. See
+        // ApplyStatus's own comment for the matching auto-advance once this connects.
+        _ = DetectLocalServiceAsync();
     }
 
-    // v0.7.52.0 "+" Flow Restructure (item 53): the wizard's step 0 Local/Remote choice already
-    // existed, just one step deep -- these two open a new tab and jump straight past it, reusing
-    // ChooseLocalConnection/ChooseRemoteConnection unchanged rather than duplicating their state
-    // transitions. "Set Up New Server" (OpenNewServerTab, above) is left as-is, still landing on the
-    // step-0 choice cards -- kept as the generic/exploratory entry point since MystTiq's wizard
-    // doesn't actually distinguish "install a fresh local server" from "connect to an already-running
-    // one" as different code paths (both just resolve to the same Local sub-view); only the framing
-    // text below differs, disclosed in the architecture doc rather than inventing a backend
-    // distinction that doesn't exist.
+    // v0.7.52.0 "+" Flow Restructure (item 53): open a new tab and jump straight past the (now
+    // fully removed) Local/Remote choice step, reusing ChooseLocalConnection/ChooseRemoteConnection
+    // unchanged. IsNewServerSetupFlow stays false (TabSession's own default) so these two still land
+    // directly on Settings/Confirm after connecting, exactly as before v0.7.81.0.
     private void OpenConnectLocalServerTab()
     {
         ActiveTab = CreateTab();
@@ -2991,22 +3629,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         BeginNewProfile();
         ChooseRemoteConnection();
         Detail = "Connecting to a remote MystTiq server.";
-    }
-
-    // "Clone a Server" needs an already-connected LOCAL source tab (CloneWorldCommand's own
-    // CanExecute already requires ManagementApiConnected, and BootstrapLocalCommand/IsLocalProfile
-    // confirm cloning is a local-only concern) -- there is nothing to clone FROM otherwise. Surfaces
-    // only when at least one open tab qualifies; the flyout builder (MainWindow.axaml.cs) hides this
-    // entry entirely rather than showing it disabled when none do, matching how the existing
-    // "Connect to {profile}" entries are only added when a qualifying profile exists.
-    public bool HasCloneableLocalTab => Tabs.Any(t => t.ManagementApiConnected && t.Profile?.Id == ConnectionProfile.LocalDefault.Id);
-
-    private void OpenCloneServerFlow()
-    {
-        var source = Tabs.FirstOrDefault(t => t.ManagementApiConnected && t.Profile?.Id == ConnectionProfile.LocalDefault.Id);
-        if (source is null) return;
-        ActiveTab = source;
-        NavigateCommand.Execute("Fleet");
     }
 
     // The "+" button's "Connect to Existing Server" entries call this. The duplicate-connection
@@ -3087,6 +3709,27 @@ public sealed class MainWindowViewModel : ViewModelBase
     // the tab ListBox had a hardcoded MaxWidth="720" regardless of how much window width was
     // actually available, and tabs past whatever fit were silently clipped with no way to reach
     // them -- no scrolling, no indicator, nothing.
+    // v0.7.82.0: direct live feedback ("the server environment should expand or shrink to fill the
+    // screen") -- was a fixed MaxHeight="405" regardless of actual window size, so a taller window
+    // left the table artificially short (wasted space below) and a shorter one could overflow.
+    // Reactively recomputed on every window resize (Window_OnSizeChanged, the same trigger
+    // UpdateMaximizeGlyph already uses), same established pattern as UpdateTabStripWidth/
+    // UpdateRibbonWidth above for "this needs to track live window size" in this codebase. The
+    // subtracted offset approximates every other fixed-height chrome element above and below the
+    // table on the Server Setup page (title bar, category tabs, ribbon, page header, summary cards
+    // row, section label, table's own header row, Operation Monitor card, margins) -- clamped to a
+    // sane minimum/maximum rather than tuned to an exact pixel count, since that chrome height can
+    // itself vary slightly by theme/DPI.
+    public double ServerSetupTableMaxHeight { get => _serverSetupTableMaxHeight; private set => SetField(ref _serverSetupTableMaxHeight, value); }
+
+    public void UpdateServerSetupTableHeight(double windowHeight)
+    {
+        const double nonTableChromeHeight = 560;
+        const double minTableHeight = 180;
+        const double maxTableHeight = 900;
+        ServerSetupTableMaxHeight = Math.Clamp(windowHeight - nonTableChromeHeight, minTableHeight, maxTableHeight);
+    }
+
     public void UpdateTabStripWidth(double width)
     {
         if (width <= 0 || Math.Abs(width - _tabStripWidth) < 1) return;
@@ -3237,6 +3880,25 @@ public sealed class MainWindowViewModel : ViewModelBase
                 new("↻", "Refresh MODs", "Refresh MODs", RefreshModsCommand, null, RibbonIconColor.Amber),
                 new("✓", "Verify & Scan", "Verify and scan MODs", VerifyModsCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
             ]));
+
+            // v0.7.78.0: page-level (no-selection-required) MOD mutation actions relocated from an
+            // in-page button row, direct follow-up to the button-row redesign ("should we move the
+            // buttons to the ribbon?"). MOD Library only -- MOD Dashboard stays intentionally
+            // read-only (its own page framing already says "Open MOD Library to change enabled
+            // state," see v0.7.43.0). Selection-scoped actions (Enable/Disable/Rollback/Repair/
+            // Delete Selected) deliberately stay OFF the ribbon and move to a right-click menu on
+            // the Installed MODs list instead, matching how Bases/Guilds/Players already expose
+            // per-row mutations rather than crowding the ribbon with selection-dependent buttons.
+            if (IsModLibraryPage)
+            {
+                groups.Add(new("MOD Maintenance",
+                [
+                    new("✓", "Enable All", "Enable all MODs", EnableAllModsCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                    new("✕", "Disable All", "Disable all MODs", DisableAllModsCommand, null, RibbonIconColor.Amber),
+                    new("⚑", "Repair", "Neutralize legacy MOD overrides", RepairModsCommand, null, RibbonIconColor.Blue),
+                    new("⚠", "Safe-Start", "Diagnose which MOD is crashing or hanging startup", BeginModSafeStartCommand, null, RibbonIconColor.Red, IsDangerButton: true),
+                ]));
+            }
         }
         else if (IsUe4ssPage)
         {
@@ -3940,11 +4602,28 @@ public sealed class MainWindowViewModel : ViewModelBase
             // to a server that's plainly already configured and running. ServerIsRunning at this
             // point reflects the poll this same method just applied a few lines up, so it's a
             // reliable signal, not a stale/optimistic guess. Only short-circuits the wizard, never
-            // touches real settings -- CreateDefaultServerSettingsCommand (Step 2's own action) was
-            // already a no-op against an existing PalWorldSettings.ini before this change; skipping
-            // the step outright is strictly less surprising than showing it disabled.
-            if (IsCreatingNewProfile && NewServerWizardStep == 1 && ServerIsRunning)
-                NewServerWizardStep = 3;
+            // touches real settings -- CreateDefaultServerSettingsCommand (Settings step's own
+            // action) was already a no-op against an existing PalWorldSettings.ini before this
+            // change; skipping straight to Confirm is strictly less surprising than showing disabled
+            // World Source/Install/Settings steps for a server that's plainly already set up.
+            //
+            // v0.7.88.0 bug fix: this used to also fire for IsNewServerSetupFlow, which broke the
+            // "Set Up New Server" wizard entirely -- reported live as "it jumps right to [Confirm]."
+            // Root cause: step 1's connection for the New Server Setup flow is ALWAYS to the shared
+            // default local management API (no new fleet profile exists yet at step 1), so
+            // ServerIsRunning here reflects whatever the DEFAULT profile's own server is doing, not
+            // "is the new server already set up" -- which is nonsensical anyway since it doesn't
+            // exist yet. Any user who already has a running default server (the common case) hit this
+            // on every single "+ New Server" attempt. Scoped to the Connect flow only, where the
+            // connection genuinely targets the server being configured.
+            if (IsCreatingNewProfile && !IsNewServerSetupFlow && NewServerWizardStep == 1 && ServerIsRunning)
+                NewServerWizardStep = 5;
+            // v0.7.82.0: complementary case -- a genuinely fresh, not-yet-running connection (the
+            // common case for "Set Up New Server," auto-triggered by OpenNewServerTab above) skips
+            // straight to World Source the moment the local engine connects, instead of leaving the
+            // user sitting on a screen that reads like "connect to an existing service."
+            else if (IsCreatingNewProfile && NewServerWizardStep == 1 && IsNewServerSetupFlow && ManagementApiConnected)
+                AdvanceWizardStep();
 
             await RefreshHistoricalMetricsAsync(force: true);
 
@@ -4531,6 +5210,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
         else
         {
+            // v0.7.89.0 bug fix: reported live -- a brand-new server's Dashboard showed the exact
+            // same "Active World" card (ID, player-save count, size) as a completely different,
+            // already-running server, with no clone involved. Root cause: these fields are plain
+            // top-level ViewModel properties (not per-tab), and this branch only ever reset the
+            // clock/save-age text -- ActiveWorldIdText/DashboardWorldNicknameText/DashboardWorldText/
+            // WorldPlayerSaveCountText/WorldSizeText/DashboardWorldPulseText kept whatever the
+            // previously active tab's last successful poll had set, since a genuinely fresh server
+            // (world.Available == false, e.g. still starting and hasn't generated Level.sav yet)
+            // never got a chance to overwrite them with its own -- or lack of -- data.
+            ActiveWorldIdText = "Not resolved";
+            DashboardWorldNicknameText = string.Empty;
+            DashboardWorldText = "Unavailable";
+            WorldPlayerSaveCountText = "0";
+            WorldSizeText = "0.00 MB";
+            DashboardWorldPulseText = "World telemetry unavailable";
             DashboardWorldClockText = "Day — • --:--";
             DashboardWorldClockDetailText = "World telemetry unavailable";
             DashboardPulseSaveText = "World save: —";
@@ -5114,21 +5808,125 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private async Task CloneWorldAsync()
     {
-        if (SelectedProfile is null || string.IsNullOrWhiteSpace(CloneNewProfileId)) return;
+        if (SelectedProfile is null || string.IsNullOrWhiteSpace(CloneNewProfileId) || !CloneWorldConfirmed) return;
         IsBusy = true;
         CloneWorldStatusText = "Cloning… this copies the entire server installation and can take a while.";
+        CloneWorldNeedsRestart = false;
         try
         {
+            var newProfileId = CloneNewProfileId.Trim();
             var request = new WorldCloneRequestDto
             {
-                NewProfileId = CloneNewProfileId.Trim(),
-                NewProfileName = string.IsNullOrWhiteSpace(CloneNewProfileName) ? null : CloneNewProfileName.Trim()
+                NewProfileId = newProfileId,
+                NewProfileName = string.IsNullOrWhiteSpace(CloneNewProfileName) ? null : CloneNewProfileName.Trim(),
+                PortOffset = CloneWorldPortOffset
             };
             var result = await _api.CloneWorldAsync(SelectedProfile, request, BearerToken);
             CloneWorldStatusText = result.Message;
-            if (result.Success) await RefreshFleetAsync();
+            if (result.Success)
+            {
+                // Reset the workflow back to a fresh state rather than leaving a checked
+                // confirmation box sitting ready to re-fire against stale profile ID/name text.
+                CloneWorldConfirmed = false;
+                await RefreshFleetAsync();
+                CloneWorldNewProfileId = newProfileId;
+                CloneWorldNeedsRestart = true;
+            }
         }
         catch (Exception ex) { CloneWorldStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.84.0: explicit, user-triggered restart offered after a successful Clone World here --
+    // reuses the exact same RestartOwnedSidecarAsync built for the wizard's own second-server flow
+    // in v0.7.83.0. Deliberately does NOT touch this tab's own TargetServerId/reconnect the way the
+    // wizard does (this tab should stay on its own already-established profile); it only brings the
+    // local service back up with the new profile now visible, matching what Fleet's own profile list
+    // already needed a restart+refresh to show.
+    private async Task RestartAfterCloneAsync()
+    {
+        if (string.IsNullOrWhiteSpace(CloneWorldNewProfileId)) return;
+        IsBusy = true;
+        CloneWorldStatusText = "Restarting the local MystTiq service to bring the new server online…";
+        try
+        {
+            var snapshot = await _localDiscovery.DiscoverAsync();
+            if (snapshot.ServiceInstalled)
+            {
+                CloneWorldStatusText = "This machine runs MystTiq as an installed Windows Service, which the desktop app can't restart on its own -- restart it manually, then refresh this page.";
+                return;
+            }
+            var restartResult = await _localBootstrapper.RestartOwnedSidecarAsync(snapshot, CloneWorldNewProfileId);
+            CloneWorldStatusText = restartResult.Available
+                ? $"Restarted. '{CloneWorldNewProfileId}' is now online."
+                : $"Automatic restart failed: {restartResult.Detail}";
+            if (restartResult.Available)
+            {
+                CloneWorldNeedsRestart = false;
+                await RefreshFleetAsync();
+            }
+        }
+        catch (Exception ex) { CloneWorldStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.81.0: "Clone an Existing Server" step of the new-server install wizard. Distinct from
+    // CloneWorldAsync above (Fleet's own Clone World card), which always clones FROM the currently
+    // connected tab's own profile. Here the source is a DIFFERENT, already-saved profile (never
+    // SelectedProfile -- that's this brand-new, not-yet-saved profile being created) and the target
+    // is this wizard's in-progress profile. This works without touching MystTiqApiClient at all:
+    // CloneWorldAsync already takes an explicit source ConnectionProfile parameter rather than
+    // always using SelectedProfile, and CredentialStore.TryLoad(profileId) already resolves a
+    // bearer token for any saved profile by Id, independent of tabs -- no new backend needed.
+    private async Task CloneIntoNewServerAsync()
+    {
+        if (NewServerCloneSourceProfile is not { } source || string.IsNullOrWhiteSpace(NewServerCloneTargetId)) return;
+        IsBusy = true;
+        NewServerCloneStatusText = "Cloning… this copies the entire server installation and can take a while.";
+        try
+        {
+            var newProfileId = NewServerCloneTargetId.Trim();
+            var request = new WorldCloneRequestDto
+            {
+                NewProfileId = newProfileId,
+                NewProfileName = string.IsNullOrWhiteSpace(ProfileName) ? null : ProfileName.Trim(),
+                PortOffset = CloneWorldPortOffset
+            };
+            var token = _credentialStore.TryLoad(source.Id);
+            var result = await _api.CloneWorldAsync(source, request, token);
+            NewServerCloneStatusText = result.Message;
+            if (!result.Success) return;
+
+            // v0.7.82.0: Clone already registers the new fleet profile server-side (AddServerAsync,
+            // called internally by CloneAsync), but like any other fleet-membership change that only
+            // takes effect after a MystTiq process restart -- previously left entirely undisclosed
+            // and unhandled here, silently landing on Confirm against a profile that wasn't actually
+            // reachable yet. Now automated the same way the Install Directory step's own
+            // second-server path is (see ContinueFromInstallDirectoryAsync's comment for the full
+            // Windows-Service-install caveat).
+            NewServerCloneStatusText = "Cloned. Restarting the local MystTiq service to bring the new server online…";
+            var snapshot = await _localDiscovery.DiscoverAsync();
+            if (snapshot.ServiceInstalled)
+            {
+                NewServerCloneStatusText = $"{result.Message} This machine runs MystTiq as an installed Windows Service, which the desktop app can't restart on its own -- restart it manually, then connect to '{newProfileId}' from the \"+\" menu.";
+                return;
+            }
+            var restartResult = await _localBootstrapper.RestartOwnedSidecarAsync(snapshot, newProfileId);
+            if (!restartResult.Available)
+            {
+                NewServerCloneStatusText = $"{result.Message} Automatic restart failed: {restartResult.Detail}";
+                return;
+            }
+            ServerUrl = restartResult.Endpoint;
+            TargetServerId = newProfileId;
+            await RefreshAsync();
+            NewServerCloneStatusText = ManagementApiConnected
+                ? $"Cloned and connected to the new profile '{newProfileId}'."
+                : $"{result.Message} Restarted, but reconnecting to the new profile failed. Try again.";
+            if (ManagementApiConnected)
+                NewServerWizardStep = 8;
+        }
+        catch (Exception ex) { NewServerCloneStatusText = ex.Message; }
         finally { IsBusy = false; }
     }
 
@@ -5243,6 +6041,185 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (action is "kick" or "ban" or "unban") await RefreshPlayersPageAsync();
         }
         catch (Exception ex) { PlayerAdminStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.75.0: "Delete Player Completely" / "Copy Player" -- code-behind (MainWindow.axaml.cs)
+    // owns the dialog interaction (this ViewModel has no Window reference), these methods own the
+    // actual API calls, matching how every other dialog-driven action in this codebase splits that
+    // responsibility (e.g. CloseTabButton_OnClick / StopTabServerAsync).
+    public async Task<PlayerDeletionPreviewDto?> PreviewDeleteSelectedPlayerAsync()
+    {
+        if (SelectedPlayerRecord is null) { PlayerAdminStatusText = "Select a player first."; return null; }
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return null; }
+
+        IsBusy = true;
+        try
+        {
+            var preview = await _api.PreviewPlayerDeletionAsync(profile, SelectedPlayerRecord.PlayerId, BearerToken);
+            if (!preview.CanApply) PlayerAdminStatusText = string.Join(" ", preview.Findings);
+            return preview;
+        }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return null; }
+        finally { IsBusy = false; }
+    }
+
+    public async Task<bool> ApplyDeleteSelectedPlayerAsync(string previewToken)
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return false; }
+
+        IsBusy = true;
+        try
+        {
+            var result = await _api.ApplyPlayerDeletionAsync(profile, previewToken, true, BearerToken);
+            PlayerAdminStatusText = result.Message;
+            await RefreshPlayersPageAsync();
+            await RefreshActivityAsync();
+            return result.Success;
+        }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return false; }
+        finally { IsBusy = false; }
+    }
+
+    public async Task<PlayerCopyPreviewDto?> PreviewCopyPlayerAsync(string sourcePlayerId, string destinationPlayerId)
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return null; }
+
+        IsBusy = true;
+        try
+        {
+            var preview = await _api.PreviewPlayerCopyAsync(profile, sourcePlayerId, destinationPlayerId, BearerToken);
+            if (!preview.CanApply) PlayerAdminStatusText = string.Join(" ", preview.Findings);
+            return preview;
+        }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return null; }
+        finally { IsBusy = false; }
+    }
+
+    public async Task<bool> ApplyCopyPlayerAsync(string previewToken)
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return false; }
+
+        IsBusy = true;
+        try
+        {
+            var result = await _api.ApplyPlayerCopyAsync(profile, previewToken, true, BearerToken);
+            PlayerAdminStatusText = result.Message;
+            await RefreshPlayersPageAsync();
+            await RefreshActivityAsync();
+            return result.Success;
+        }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return false; }
+        finally { IsBusy = false; }
+    }
+
+    // v0.7.76.0: right-click quick actions for Bases/Guilds -- these call the exact same, already-
+    // shipped and already-working API endpoints the existing in-page Base Ownership Transfer/Base
+    // Recovery/Guild Ownership Operations cards use (see MainWindow.axaml's own "Applies to the
+    // selected base/guild above" cards), just with their own populated dropdown pickers instead of
+    // hand-typed IDs, and driven by code-behind's dialog sequence instead of the in-page form.
+    // Deliberately parallel methods rather than reusing the cards' own bound properties (e.g.
+    // BaseTransferTargetGuildId), to avoid coupling this flow's state to whatever the user might
+    // currently have typed into that card -- each writes its own result into the same status-text
+    // properties those cards already display, so both stay in sync regardless of which path ran.
+    public async Task<BaseOwnershipPreviewDto?> PreviewTransferBaseAsync(string baseId, string targetGuildId)
+    {
+        if (SelectedProfile is null) return null;
+        IsBusy = true;
+        BaseTransferStatusText = "Previewing…";
+        try
+        {
+            var preview = await _api.PreviewBaseOwnershipTransferAsync(SelectedProfile, baseId, targetGuildId, BearerToken);
+            if (!preview.CanApply) BaseTransferStatusText = string.Join(" ", preview.Findings);
+            return preview;
+        }
+        catch (Exception ex) { BaseTransferStatusText = ex.Message; return null; }
+        finally { IsBusy = false; }
+    }
+
+    public async Task<bool> ApplyTransferBaseAsync(string previewToken)
+    {
+        if (SelectedProfile is null) return false;
+        IsBusy = true;
+        try
+        {
+            var result = await _api.ApplyBaseOwnershipTransferAsync(SelectedProfile, previewToken, true, BearerToken);
+            BaseTransferStatusText = result.Message + (string.IsNullOrWhiteSpace(result.SafetyBackup) ? string.Empty : $" Safety backup: {result.SafetyBackup}");
+            if (result.Success) await RefreshPlayerGuildExplorerAsync();
+            await RefreshOperationsAsync();
+            return result.Success;
+        }
+        catch (Exception ex) { BaseTransferStatusText = ex.Message; return false; }
+        finally { IsBusy = false; }
+    }
+
+    public async Task<BaseRecoveryPreviewDto?> PreviewWipeBaseAsync(string baseId)
+    {
+        if (SelectedProfile is null) return null;
+        IsBusy = true;
+        BaseRecoveryStatusText = "Previewing…";
+        try
+        {
+            var preview = await _api.PreviewBaseRecoveryAsync(SelectedProfile, baseId, BearerToken);
+            if (!preview.CanApply) BaseRecoveryStatusText = string.Join(" ", preview.Findings);
+            return preview;
+        }
+        catch (Exception ex) { BaseRecoveryStatusText = ex.Message; return null; }
+        finally { IsBusy = false; }
+    }
+
+    public async Task<bool> ApplyWipeBaseAsync(string previewToken)
+    {
+        if (SelectedProfile is null) return false;
+        IsBusy = true;
+        try
+        {
+            var result = await _api.ApplyBaseRecoveryAsync(SelectedProfile, previewToken, true, BearerToken);
+            BaseRecoveryStatusText = result.Message + (string.IsNullOrWhiteSpace(result.SafetyBackup) ? string.Empty : $" Safety backup: {result.SafetyBackup}");
+            if (result.Success) await RefreshPlayerGuildExplorerAsync();
+            await RefreshOperationsAsync();
+            return result.Success;
+        }
+        catch (Exception ex) { BaseRecoveryStatusText = ex.Message; return false; }
+        finally { IsBusy = false; }
+    }
+
+    public async Task<GuildOwnershipPreviewDto?> PreviewGuildOperationForRowAsync(string operationApiName, string guildId, string playerId)
+    {
+        if (SelectedProfile is null) return null;
+        IsBusy = true;
+        GuildOperationStatusText = "Previewing…";
+        try
+        {
+            var preview = await _api.PreviewGuildOwnershipAsync(SelectedProfile, operationApiName, guildId, playerId, BearerToken);
+            if (!preview.CanApply) GuildOperationStatusText = string.Join(" ", preview.Findings);
+            return preview;
+        }
+        catch (Exception ex) { GuildOperationStatusText = ex.Message; return null; }
+        finally { IsBusy = false; }
+    }
+
+    public async Task<bool> ApplyGuildOperationForRowAsync(string previewToken)
+    {
+        if (SelectedProfile is null) return false;
+        IsBusy = true;
+        try
+        {
+            var result = await _api.ApplyGuildOwnershipAsync(SelectedProfile, previewToken, true, BearerToken);
+            GuildOperationStatusText = result.Message + (string.IsNullOrWhiteSpace(result.SafetyBackup) ? string.Empty : $" Safety backup: {result.SafetyBackup}");
+            if (result.Success) await RefreshPlayerGuildExplorerAsync();
+            await RefreshOperationsAsync();
+            return result.Success;
+        }
+        catch (Exception ex) { GuildOperationStatusText = ex.Message; return false; }
         finally { IsBusy = false; }
     }
 
@@ -6009,6 +6986,22 @@ public sealed class MainWindowViewModel : ViewModelBase
         RefreshPalworldConfigurationState();
     }
 
+    // v0.7.81.0: the new-server wizard's Settings step gained a starter preset picker (direct
+    // request: "choose one of the preset settings like vanilla or quality of life"), reusing the
+    // exact Load -> Apply -> Save sequence the Configuration page's own preset picker already does
+    // manually across three separate buttons, chained here into one action since the wizard only
+    // needs "apply this preset to the server I just created," not the Configuration page's fuller
+    // review-then-save workflow. No new backend -- LoadPalworldConfigurationAsync/
+    // SavePalworldConfigurationAsync already use BuildProfileFromEditor(SelectedProfile?.Id), so
+    // both already work mid-wizard where SelectedProfile is still null.
+    private async Task ApplyStarterPresetAsync()
+    {
+        await LoadPalworldConfigurationAsync();
+        if (!PalworldConfigLoaded) return;
+        ApplySelectedConfigurationPreset();
+        await SavePalworldConfigurationAsync();
+    }
+
     private void ApplySelectedConfigurationPreset()
     {
         if (!PalworldConfigLoaded) return;
@@ -6278,13 +7271,22 @@ public sealed class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
+    // v0.7.81.0: was a hard `if (SelectedProfile is null) return;` -- SelectedProfile is always
+    // null throughout the entire "Set Up New Server" wizard (that's what IsCreatingNewProfile
+    // means), so the environment checklist could never be shown there. Switched to the same
+    // BuildProfileFromEditor(SelectedProfile?.Id) pattern UpdatePalworldServerAsync/
+    // CheckSetupPortAsync already use, which behaves identically once a profile is saved (re-derives
+    // the same profile from ProfileName/ServerUrl) and additionally now works mid-wizard once Step
+    // 1's Connect has populated those same fields.
     private async Task RefreshEnvironmentAsync()
     {
-        if (SelectedProfile is null) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch { return; }
         EnvironmentHealthText = "Checking…";
         try
         {
-            var snapshot = await _api.GetEnvironmentChecklistAsync(SelectedProfile, BearerToken);
+            var snapshot = await _api.GetEnvironmentChecklistAsync(profile, BearerToken);
             EnvironmentItems.Clear();
             foreach (var item in snapshot.Items) EnvironmentItems.Add(item);
             var attention = Math.Max(0, snapshot.TotalCount - snapshot.ReadyCount);
@@ -6484,6 +7486,33 @@ public sealed class MainWindowViewModel : ViewModelBase
         await RefreshComponentVersionsAsync();
     }
 
+    // v0.7.82.0: the Update Center's first real, actionable in-place update -- direct request ("the
+    // update center where it says update available should allow us to click on it to update").
+    // Refreshes the whole component table afterward so the row reflects the real new installed
+    // version immediately, not just a stale "Update available" left over from before the upgrade.
+    private async Task UpdatePipAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { DistributionDetail = ex.Message; return; }
+
+        IsBusy = true;
+        DistributionState = "Updating pip…";
+        try
+        {
+            var result = await _api.UpdatePipAsync(profile, BearerToken);
+            DistributionState = result.Success ? "Complete" : "Failed";
+            DistributionDetail = result.Message;
+        }
+        catch (Exception ex)
+        {
+            DistributionState = "Failed";
+            DistributionDetail = ex.Message;
+        }
+        finally { IsBusy = false; }
+        await RefreshComponentVersionsAsync();
+    }
+
     private async Task RefreshComponentVersionsAsync()
     {
         ConnectionProfile profile;
@@ -6541,7 +7570,13 @@ public sealed class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { DistributionDetail = ex.Message; return; }
 
         IsBusy = true;
-        DistributionState = ValidateServerFiles ? "Updating / validating…" : "Updating…";
+        // v0.7.89.0: direct live feedback -- the install step gave no sense of what stage SteamCMD
+        // was actually at. This single REST call is atomic server-side (no incremental progress
+        // events exist to report yet), so rather than fabricate fake step percentages, the status
+        // text now at least sets an honest expectation up front; DistributionOutputText (SteamCMD's
+        // own tail output, already captured) is now also shown in the wizard's Install step itself
+        // once this completes, giving real detail instead of just a flat "Complete."
+        DistributionState = ValidateServerFiles ? "Updating / validating… (SteamCMD; can take several minutes on first install)" : "Updating… (SteamCMD; can take several minutes on first install)";
         DistributionOutputText = string.Empty;
 
         try
@@ -6566,6 +7601,60 @@ public sealed class MainWindowViewModel : ViewModelBase
             DistributionDetail = ex.Message;
         }
         finally { IsBusy = false; }
+    }
+
+    // v0.7.89.0 bug fix: reported live -- "after we install palworld it should install all the
+    // items we require and then automatically refresh." The wizard's own Install button called
+    // UpdatePalworldServerAsync directly, which never refreshes EnvironmentItems (only
+    // Distribution/SteamCmd state), so the Server Environment table kept showing the pre-install
+    // "MISSING" row for Palworld Dedicated Server until the user manually clicked Refresh. This
+    // wraps the same install with the missing auto-refresh, mirroring what Server Setup's own
+    // InstallMissingEnvironmentAsync already does for that page. UE4SS Runtime/Palworld Save
+    // Tools/PIM-Oodle Decoder are deliberately NOT auto-installed here -- confirmed via
+    // RunEnvironmentAction that none of the three have a one-click install path anywhere in the
+    // app today (UE4SS needs its own page's version picker, the other two have no management API
+    // at all yet, see their own "BACKEND REQUIRED" rows) -- inventing one here would be a much
+    // larger, separate feature, not a bug fix.
+    private async Task InstallPalworldServerFromWizardAsync()
+    {
+        await UpdatePalworldServerAsync();
+        await RefreshEnvironmentAsync();
+    }
+
+    // v0.7.90.0: direct live feedback -- "option to install just the server without mods and then
+    // the option of installing it with the extras." UE4SS is the only checklist item that's both
+    // "required" in spirit and actually has a real install path anywhere in the app today (Palworld
+    // Save Tools/PIM-Oodle Decoder are BACKEND REQUIRED, see InstallPalworldServerFromWizardAsync's
+    // own comment -- nothing to chain in for those yet). Reuses the UE4SS page's own established
+    // Preview-then-Apply flow verbatim, just auto-selects the newest non-prerelease Palworld Fork
+    // release instead of asking the user to pick one -- the same tradeoff offered and accepted
+    // directly: skip the manual review, since this is an explicit "with extras" choice already.
+    private async Task InstallPalworldServerWithExtrasAsync()
+    {
+        await UpdatePalworldServerAsync();
+        if (DistributionState != "Complete") return;
+        await InstallLatestUe4ssStableAsync();
+        await RefreshEnvironmentAsync();
+    }
+
+    private async Task InstallLatestUe4ssStableAsync()
+    {
+        if (Ue4ssPalworldForkReleases.Count == 0)
+            await RefreshUe4ssReleaseCatalogAsync();
+
+        var latest = Ue4ssPalworldForkReleases.Where(r => !r.Prerelease).OrderByDescending(r => r.PublishedAt).FirstOrDefault()
+            ?? Ue4ssPalworldForkReleases.OrderByDescending(r => r.PublishedAt).FirstOrDefault();
+        if (latest is null)
+        {
+            Ue4ssInstallState = "No UE4SS release catalog data was available to auto-install from.";
+            return;
+        }
+
+        SelectedUe4ssFork = "Palworld Fork";
+        SelectedUe4ssRelease = latest;
+        await PreviewUe4ssInstallAsync();
+        if (!string.IsNullOrWhiteSpace(Ue4ssInstallToken))
+            await ApplyUe4ssInstallAsync();
     }
 
     private async Task RefreshWorldTransactionsAsync()
@@ -6611,11 +7700,18 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public async Task AnalyzeWorldArchiveAsync(Stream stream, string fileName)
     {
-        if (SelectedProfile is null) return;
+        // v0.7.85.0 bug fix: same class as RefreshEnvironmentAsync's v0.7.81.0 fix -- SelectedProfile
+        // is always null while IsCreatingNewProfile (the entire "Set Up New Server" wizard), so this
+        // silently no-op'd if embedded there. BuildProfileFromEditor already correctly resolves the
+        // wizard's own in-progress connection (RefreshWorldExplorerAsync/ApplyWorldTransactionAsync
+        // use the same pattern).
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { WorldTransactionState = ex.Message; return; }
         IsBusy = true;
         try
         {
-            var preview = await _api.AnalyzeWorldArchiveAsync(SelectedProfile, WorldTransactionMode, stream, BearerToken);
+            var preview = await _api.AnalyzeWorldArchiveAsync(profile, WorldTransactionMode, stream, BearerToken);
             WorldPreviewToken = preview.PreviewToken;
             WorldTransactionConfirmed = false;
             WorldTransactionPlanSteps.Clear();
@@ -6628,20 +7724,26 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private async Task ApplyWorldTransactionAsync()
     {
-        if (SelectedProfile is null || string.IsNullOrWhiteSpace(WorldPreviewToken)) return;
+        if (string.IsNullOrWhiteSpace(WorldPreviewToken)) return;
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { WorldTransactionState = ex.Message; return; }
         BusyReason = "Applying world transaction…";
         IsBusy = true;
         try
         {
-            var result = await _api.ApplyWorldTransactionAsync(SelectedProfile, WorldPreviewToken, WorldTransactionConfirmed, BearerToken);
+            var result = await _api.ApplyWorldTransactionAsync(profile, WorldPreviewToken, WorldTransactionConfirmed, BearerToken);
             WorldTransactionState = result.Message + (string.IsNullOrWhiteSpace(result.SafetyBackup) ? string.Empty : $" Safety backup: {result.SafetyBackup}");
             WorldPreviewToken = string.Empty;
             WorldTransactionConfirmed = false;
             WorldTransactionPlanSteps.Clear();
             await RefreshWorldExplorerAsync();
-            var history = await _api.GetWorldTransactionsAsync(SelectedProfile, BearerToken);
-            WorldTransactionHistory.Clear(); foreach (var item in history) WorldTransactionHistory.Add(item);
-            await RefreshOperationsAsync();
+            if (SelectedProfile is not null)
+            {
+                var history = await _api.GetWorldTransactionsAsync(SelectedProfile, BearerToken);
+                WorldTransactionHistory.Clear(); foreach (var item in history) WorldTransactionHistory.Add(item);
+                await RefreshOperationsAsync();
+            }
         }
         catch (Exception ex) { WorldTransactionState = ex.Message; }
         finally { IsBusy = false; BusyReason = null; }
@@ -7141,6 +8243,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             ModConfirmedText = result.RuntimeConfirmed.ToString(); ModUnverifiedText = result.ActiveUnverified.ToString();
             ModDisabledText = result.Disabled.ToString(); ModIssuesText = result.Attention.ToString();
             ModState = "Verified"; ModSummary = result.Summary;
+            RaisePropertyChanged(nameof(IsModHealthGood)); RaisePropertyChanged(nameof(IsModHealthDegraded));
         }
         catch (Exception ex) { ModState = "Verification failed"; ModSummary = ex.Message; }
         finally { IsBusy = false; }
@@ -7169,7 +8272,11 @@ public sealed class MainWindowViewModel : ViewModelBase
         ConnectionProfile profile;
         try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
         catch (Exception ex) { ModSummary = ex.Message; return; }
-        var package = string.IsNullOrWhiteSpace(ModInstallPackage) ? Path.GetFileNameWithoutExtension(suggestedPackage) : ModInstallPackage.Trim();
+        // v0.7.78.0: the manual "Package name (optional)" override box was removed (direct
+        // feedback: "i dont think we need a type box here") -- the package name always comes from
+        // the ZIP's own filename now, matching how PAK vs. UE4SS type detection already works from
+        // the archive's own contents (v0.7.39.0) rather than a manual field.
+        var package = Path.GetFileNameWithoutExtension(suggestedPackage);
         IsBusy = true; ModState = "Installing…";
         // v0.7.39.0: the headless service now detects PAK vs. UE4SS from the archive's own
         // contents (HeadlessModManagementService.InstallZipAsync), no longer trusting this value
@@ -7190,6 +8297,18 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         if (SelectedMod is null) return; var selected = SelectedMod;
         await RunModMutationAsync((profile) => _api.RollbackModAsync(profile, selected.Type, selected.Package, BearerToken), "Rollback failed");
+    }
+
+    // v0.7.77.0: per-MOD "Repair / Re-install" -- direct request. Distinct from Update (only
+    // offers when Steam's local copy is newer) and the existing global Repair button (only
+    // neutralizes legacy enabled.txt overrides, never touches a MOD's own files). Always available
+    // to try for any selected MOD, not just ones already flagged Misconfigured -- the backend
+    // itself reports honestly if no local Workshop source is known rather than this trying to
+    // pre-guess availability client-side.
+    private async Task RepairSelectedModAsync()
+    {
+        if (SelectedMod is null) return; var selected = SelectedMod;
+        await RunModMutationAsync((profile) => _api.RepairModAsync(profile, selected.Type, selected.Package, BearerToken), "Repair failed");
     }
 
     private async Task SetAllModsEnabledAsync(bool enabled) =>
@@ -7414,6 +8533,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ModInstalledText = inventory.Installed.ToString(); ModConfirmedText = inventory.RuntimeConfirmed.ToString();
         ModUnverifiedText = inventory.ActiveUnverified.ToString(); ModDisabledText = inventory.Disabled.ToString();
         ModIssuesText = inventory.ConfirmedIssues.ToString();
+        RaisePropertyChanged(nameof(IsModHealthGood)); RaisePropertyChanged(nameof(IsModHealthDegraded));
         Ue4ssHealth = inventory.Ue4ss.HealthState; Ue4ssDetection = inventory.Ue4ss.DetectionMethod;
         Ue4ssActiveRoot = inventory.Ue4ss.ActiveModsRoot; Ue4ssRuntimeRoot = inventory.Ue4ss.RuntimeRootText;
         Ue4ssWarning = inventory.Ue4ss.WarningMessage;
@@ -7452,7 +8572,22 @@ public sealed class MainWindowViewModel : ViewModelBase
     private async Task<bool> EnsureManagementConnectionForLifecycleAsync()
     {
         if (ManagementApiConnected) return true;
-        if (SelectedProfile?.Id != ConnectionProfile.LocalDefault.Id) return false;
+        // v0.7.89.0 bug fix: reported live -- "the server did not start and i have no messages as
+        // to why." This used to only attempt local reconnection when SelectedProfile.Id was
+        // literally "default", silently returning false (no status text set at all -- Start just
+        // appeared to do nothing) for a genuine second local server registered via the New Server
+        // wizard or Fleet. Such a profile is exactly as local as "default" -- same owned sidecar,
+        // same machine -- it just doesn't have the reserved default Id. The actual signal that
+        // matters here is whether this profile's own address is loopback, not its Id.
+        var isLoopbackProfile = SelectedProfile is not null &&
+            System.Net.IPAddress.TryParse(SelectedProfile.BaseAddress.Host, out var loopbackCandidate) &&
+            System.Net.IPAddress.IsLoopback(loopbackCandidate);
+        if (!isLoopbackProfile)
+        {
+            LifecycleStatusText = "Not connected to the management API, and this isn't a local desktop-owned server MystTiq can automatically reconnect to. Reconnect it from Settings, then try again.";
+            Detail = LifecycleStatusText;
+            return false;
+        }
 
         LifecycleStatusText = "Connecting to the local MystTiq management backend…";
         var snapshot = await RefreshLocalInstallationAsync();
@@ -7598,19 +8733,28 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         // Same "is the server running" definition already proven server-side for gating a
         // mutating action while running (HeadlessPalEditService.ApplyAsync's precondition) --
-        // NativeProcessId alone catches "process launched but not yet Ready" (mid-startup), so
-        // Start doesn't stay clickable during that window.
-        ServerIsRunning = status.NativeProcessId.HasValue || status.Ready;
+        // IsProcessLive catches "process launched but not yet Ready" (mid-startup), so Start
+        // doesn't stay clickable during that window. v0.7.88.0 bug fix: this used to test
+        // NativeProcessId.HasValue directly, which stayed true forever using a stale last-known PID
+        // even once the backend reported the server genuinely Stopped -- see ServerStatusDto.IsProcessLive.
+        ServerIsRunning = status.IsProcessLive || status.Ready;
 
         ManagedProcesses.Clear();
         foreach (var process in status.Processes) ManagedProcesses.Add(process);
         RaisePropertyChanged(nameof(HasManagedProcesses));
 
+        // v0.7.82.0 bug fix: ServerIsRunning above already treats a detected-but-not-yet-ready
+        // native process as "running" (so Start correctly stays disabled and only Stop is offered),
+        // but this text used to collapse that exact same state down to "Stopped / Not ready" --
+        // directly contradicting the ribbon right next to it. A real PalServer process being alive
+        // is never "stopped," whether or not its port has come up yet.
         ServerState = status.Ready
             ? "Running / Ready"
             : status.CrashDetected
                 ? "Crash detected"
-                : "Stopped / Not ready";
+                : status.IsProcessLive
+                    ? "Starting / Not Ready"
+                    : "Stopped / Not ready";
 
         NativePidText = status.NativeProcessId?.ToString() ?? "—";
         ListenerText = status.GuardedListeningPorts.Count > 0
@@ -7624,7 +8768,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             : "—";
 
         Detail = status.Detail ?? "MystTiq returned server status.";
-        DashboardHealthText = status.Ready ? "READY" : status.CrashDetected ? "ATTENTION" : "STOPPED";
+        DashboardHealthText = status.Ready ? "READY" : status.CrashDetected ? "ATTENTION" : status.IsProcessLive ? "STARTING" : "STOPPED";
         // v0.7.29.0 bug fix: these two used to always show a generic hardcoded string whenever the
         // server wasn't Ready, discarding status.Detail entirely -- so even after GetStatusAsync
         // started distinguishing "genuinely not running" from "running at an unexpected path" (see
@@ -7705,16 +8849,29 @@ public sealed class MainWindowViewModel : ViewModelBase
         // different name; the two tabs would show and control the identical PalServer instance
         // with no indication they were the same thing. Compares by normalized origin (scheme+host+
         // port) rather than the raw Uri, since ".../" vs "..." would otherwise dodge the check.
-        var normalizedOrigin = uri.GetLeftPart(UriPartial.Authority);
-        var collision = Profiles.FirstOrDefault(p =>
-            p.Id != (existingId ?? string.Empty) &&
-            string.Equals(p.BaseAddress.GetLeftPart(UriPartial.Authority), normalizedOrigin, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(p.ServerId ?? string.Empty, serverId ?? string.Empty, StringComparison.OrdinalIgnoreCase));
-        if (collision is not null)
-            throw new InvalidOperationException(
-                $"'{collision.Name}' already connects to this exact server ({normalizedOrigin}" +
-                (string.IsNullOrWhiteSpace(serverId) ? string.Empty : $", server \"{serverId}\"") +
-                $"). Give this profile a different Target server ID, or edit '{collision.Name}' instead of creating a duplicate.");
+        // v0.7.82.0 bug fix: "Set Up New Server" genuinely needs to talk to the local engine through
+        // the same default-scoped connection "Local MystTiq" already uses -- purely to inspect state
+        // (ports, existing fleet profiles, environment) before a real, distinct identity exists (that
+        // only happens once the Install Directory step provisions one and sets TargetServerId). It is
+        // never trying to save a duplicate profile at this point, so the guard below (which exists to
+        // stop exactly that -- see its own comment) doesn't apply yet. Reproduced live: the very first
+        // real Connect attempt from this wizard threw "already connects to this exact server" and
+        // could never get past Step 1, since "Local MystTiq" (ServerId null, same as this wizard's own
+        // still-blank TargetServerId) is always present in Profiles as a built-in entry.
+        var skipUniquenessCheckForInProgressSetup = IsNewServerSetupFlow && string.IsNullOrWhiteSpace(TargetServerId);
+        if (!skipUniquenessCheckForInProgressSetup)
+        {
+            var normalizedOrigin = uri.GetLeftPart(UriPartial.Authority);
+            var collision = Profiles.FirstOrDefault(p =>
+                p.Id != (existingId ?? string.Empty) &&
+                string.Equals(p.BaseAddress.GetLeftPart(UriPartial.Authority), normalizedOrigin, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(p.ServerId ?? string.Empty, serverId ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+            if (collision is not null)
+                throw new InvalidOperationException(
+                    $"'{collision.Name}' already connects to this exact server ({normalizedOrigin}" +
+                    (string.IsNullOrWhiteSpace(serverId) ? string.Empty : $", server \"{serverId}\"") +
+                    $"). Give this profile a different Target server ID, or edit '{collision.Name}' instead of creating a duplicate.");
+        }
 
         return new ConnectionProfile(
             existingId ?? Guid.NewGuid().ToString("N"),

@@ -1,0 +1,17 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MystTiq.Desktop.Views.SelectPlayerDialog"
+        Title="Select Player"
+        Width="420" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource CardGradient}"
+        Icon="/Assets/PalworldServerManager.ico">
+  <StackPanel Margin="22" Spacing="14">
+    <TextBlock x:Name="PromptText" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
+    <ComboBox x:Name="PlayerCombo" HorizontalAlignment="Stretch"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+      <Button Content="Cancel" Click="Cancel_OnClick"/>
+      <Button Classes="primary" Content="Next" Click="Next_OnClick"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

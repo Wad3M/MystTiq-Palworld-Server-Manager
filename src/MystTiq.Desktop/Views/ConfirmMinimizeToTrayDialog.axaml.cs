@@ -3,7 +3,10 @@ using Avalonia.Interactivity;
 
 namespace MystTiq.Desktop.Views;
 
-public enum ConfirmMinimizeToTrayResult { Cancel, MinimizeToTray }
+// v0.7.74.0: SafeExit/ForceExit added -- previously this dialog only offered Cancel/MinimizeToTray,
+// with a text hint pointing at the tray icon's own Safe Exit/Force Exit for anyone who actually
+// wanted to stop the server here, an extra round-trip reported live as unnecessary friction.
+public enum ConfirmMinimizeToTrayResult { Cancel, MinimizeToTray, SafeExit, ForceExit }
 
 // v0.7.73.0: previously closing the main window while any server was running silently cancelled
 // the close and hid to tray with no confirmation at all (v0.7.11.0) -- reported live as surprising
@@ -26,4 +29,6 @@ public sealed partial class ConfirmMinimizeToTrayDialog : Window
 
     private void Cancel_OnClick(object? sender, RoutedEventArgs e) => Close(ConfirmMinimizeToTrayResult.Cancel);
     private void MinimizeToTray_OnClick(object? sender, RoutedEventArgs e) => Close(ConfirmMinimizeToTrayResult.MinimizeToTray);
+    private void SafeExit_OnClick(object? sender, RoutedEventArgs e) => Close(ConfirmMinimizeToTrayResult.SafeExit);
+    private void ForceExit_OnClick(object? sender, RoutedEventArgs e) => Close(ConfirmMinimizeToTrayResult.ForceExit);
 }

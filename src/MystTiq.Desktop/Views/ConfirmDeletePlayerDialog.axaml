@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MystTiq.Desktop.Views.ConfirmDeletePlayerDialog"
+        Title="Delete Player"
+        Width="480" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource CardGradient}"
+        Icon="/Assets/PalworldServerManager.ico">
+  <StackPanel Margin="22" Spacing="16">
+    <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold"/>
+    <ItemsControl x:Name="FindingsList">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,2"/>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <TextBlock Text="This permanently deletes the player's save file. A fresh safety backup is taken automatically first, and this cannot be undone except by restoring it." Foreground="{DynamicResource OrangeBrush}" TextWrapping="Wrap" FontSize="12"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+      <Button Content="Cancel" Click="Cancel_OnClick"/>
+      <Button Classes="danger" Content="Delete Permanently" Click="Confirm_OnClick"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

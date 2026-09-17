@@ -22,11 +22,27 @@ public sealed partial class MainWindow : Window
         {
             if (args.Property == WindowStateProperty)
                 UpdateMaximizeGlyph();
+            // v0.7.87.0: DataContext is assigned after this constructor runs (see App.axaml.cs's
+            // object-initializer `new MainWindow { DataContext = viewModel }`), so the subscription
+            // has to happen reactively here rather than inline above.
+            else if (args.Property == DataContextProperty && args.NewValue is MainWindowViewModel vm)
+                vm.ConfigurationUnsavedChangesNavigationBlocked += () => _ = OnConfigurationUnsavedChangesNavigationBlockedAsync();
         };
         UpdateMaximizeGlyph();
+
+        // v0.7.78.0: drag-and-drop MOD ZIP install (direct request). Avalonia's DragOver/Drop are
+        // attached routed events, not plain CLR events, so they're wired via AddHandler here rather
+        // than a XAML Click-style attribute.
+        ZipInstallDropZone.AddHandler(DragDrop.DragOverEvent, ZipInstallDropZone_OnDragOver);
+        ZipInstallDropZone.AddHandler(DragDrop.DropEvent, ZipInstallDropZone_OnDrop);
     }
 
-    private void Window_OnSizeChanged(object? sender, SizeChangedEventArgs e) => UpdateMaximizeGlyph();
+    private void Window_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        UpdateMaximizeGlyph();
+        if (DataContext is MainWindowViewModel vm)
+            vm.UpdateServerSetupTableHeight(e.NewSize.Height);
+    }
 
     // v0.7.16.0: the tab strip's own host panel, not the whole window -- it resizes whenever the
     // window does, but also whenever the fixed-width brand column or the window-chrome column
@@ -168,16 +184,6 @@ public sealed partial class MainWindow : Window
         connectRemoteItem.Click += (_, _) => vm.ConnectRemoteServerTabCommand.Execute(null);
         flyout.Items.Add(connectRemoteItem);
 
-        // Only shown when a source actually exists to clone from (an already-connected local tab) --
-        // matches the existing pattern below of only adding "Connect to {profile}" entries for
-        // profiles that are actually reachable, rather than showing a permanently-disabled item.
-        if (vm.HasCloneableLocalTab)
-        {
-            var cloneItem = new MenuItem { Header = "Clone a Server" };
-            cloneItem.Click += (_, _) => vm.CloneServerFlowCommand.Execute(null);
-            flyout.Items.Add(cloneItem);
-        }
-
         var availableProfiles = vm.Profiles.Where(p => vm.Tabs.All(t => t.Profile?.Id != p.Id)).ToList();
         if (availableProfiles.Count > 0)
         {
@@ -232,10 +238,22 @@ public sealed partial class MainWindow : Window
 
         var dialog = new Views.ConfirmMinimizeToTrayDialog(runningCount);
         var result = await dialog.ShowDialog<Views.ConfirmMinimizeToTrayResult>(this);
-        if (result != Views.ConfirmMinimizeToTrayResult.MinimizeToTray) return;
-
-        app.HideMainWindowToTray();
-        app.ShowTrayStillRunningReminder("A Palworld server is still running. MystTiq will keep managing it in the background -- open the tray icon to bring the window back, or to stop the server and exit.");
+        switch (result)
+        {
+            case Views.ConfirmMinimizeToTrayResult.MinimizeToTray:
+                app.HideMainWindowToTray();
+                app.ShowTrayStillRunningReminder("A Palworld server is still running. MystTiq will keep managing it in the background -- open the tray icon to bring the window back, or to stop the server and exit.");
+                break;
+            // v0.7.74.0: same real exit paths the tray menu's own Safe Exit/Force Exit already use,
+            // now reachable directly from the close-confirm dialog instead of requiring an extra
+            // minimize-then-find-the-tray-icon round trip.
+            case Views.ConfirmMinimizeToTrayResult.SafeExit:
+                await app.SafeExitAsync();
+                break;
+            case Views.ConfirmMinimizeToTrayResult.ForceExit:
+                await app.ForceExitAsync();
+                break;
+        }
     }
 
     // v0.7.11.0: closing a tab whose server is running previously left it running silently with
@@ -257,6 +275,165 @@ public sealed partial class MainWindow : Window
         }
 
         (vm.CloseTabCommand as RelayCommand<TabSession>)?.Execute(tab);
+    }
+
+    // v0.7.87.0: direct live feedback -- navigating away from Configuration with unsaved changes
+    // previously discarded them silently. The ViewModel raises ConfigurationUnsavedChangesNavigationBlocked
+    // (it has no Window reference of its own, same constraint as CloseTabButton_OnClick above) and
+    // this shows the confirm dialog, then calls back into whichever continuation the user picked.
+    private async Task OnConfigurationUnsavedChangesNavigationBlockedAsync()
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var dialog = new Views.ConfirmSaveDiscardDialog(vm.PalworldConfigDirtyText);
+        var result = await dialog.ShowDialog<Views.ConfirmSaveDiscardResult>(this);
+        switch (result)
+        {
+            case Views.ConfirmSaveDiscardResult.Save:
+                await vm.ContinuePendingNavigationSavingConfigurationAsync();
+                break;
+            case Views.ConfirmSaveDiscardResult.Discard:
+                vm.ContinuePendingNavigationDiscardingConfigurationChanges();
+                break;
+            case Views.ConfirmSaveDiscardResult.Cancel:
+                vm.CancelPendingConfigurationNavigation();
+                break;
+        }
+    }
+
+    // v0.7.75.0: "Delete Player Completely" -- the ViewModel has no Window reference for the
+    // dialog, so code-behind owns the Preview -> confirm dialog -> Apply sequence, matching
+    // CloseTabButton_OnClick's own split above.
+    private async void DeletePlayer_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedPlayerRecord is null) return;
+        var preview = await vm.PreviewDeleteSelectedPlayerAsync();
+        if (preview is not { CanApply: true }) return;
+
+        var dialog = new Views.ConfirmDeletePlayerDialog(preview.PlayerName, preview.Findings);
+        var result = await dialog.ShowDialog<Views.ConfirmDeletePlayerResult>(this);
+        if (result != Views.ConfirmDeletePlayerResult.Delete) return;
+
+        await vm.ApplyDeleteSelectedPlayerAsync(preview.PreviewToken);
+    }
+
+    // v0.7.75.0: "Copy Player" -- picks a source player from a populated dropdown (not a
+    // hand-typed ID) via SelectPlayerDialog, then the same Preview -> confirm -> Apply shape as
+    // deletion above.
+    private async void CopyIntoPlayer_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedPlayerRecord is null) return;
+        var destination = vm.SelectedPlayerRecord;
+
+        var options = vm.FilteredPlayerRecords
+            .Where(p => p.PlayerId != destination.PlayerId)
+            .Select(p => new Views.SelectPlayerOption(p.PlayerId, p.PlayerName))
+            .ToList();
+        if (options.Count == 0) return;
+
+        var picker = new Views.SelectPlayerDialog($"Copy data onto {destination.PlayerName} from which player?", options);
+        var sourceId = await picker.ShowDialog<string?>(this);
+        if (string.IsNullOrWhiteSpace(sourceId)) return;
+
+        var preview = await vm.PreviewCopyPlayerAsync(sourceId, destination.PlayerId);
+        if (preview is not { CanApply: true }) return;
+
+        var dialog = new Views.ConfirmCopyPlayerDialog(preview.SourcePlayerName, preview.DestinationPlayerName, preview.Findings);
+        var result = await dialog.ShowDialog<Views.ConfirmCopyPlayerResult>(this);
+        if (result != Views.ConfirmCopyPlayerResult.Copy) return;
+
+        await vm.ApplyCopyPlayerAsync(preview.PreviewToken);
+    }
+
+    // v0.7.76.0: Base/Guild right-click workflow -- same Preview -> confirm -> Apply shape as
+    // Player Delete/Copy above, driving the exact same already-shipped Base/Guild ownership API
+    // the in-page cards use, just via a populated dropdown picker instead of a hand-typed ID.
+    private async void TransferBase_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedExplorerBase is null) return;
+        var baseItem = vm.SelectedExplorerBase;
+
+        var options = vm.FilteredExplorerGuilds
+            .Where(g => g.GuildId != baseItem.GuildId)
+            .Select(g => new Views.SelectGuildOption(g.GuildId, g.GuildName))
+            .ToList();
+        if (options.Count == 0) return;
+
+        var picker = new Views.SelectGuildDialog($"Transfer base {baseItem.BaseId} to which guild?", options);
+        var targetGuildId = await picker.ShowDialog<string?>(this);
+        if (string.IsNullOrWhiteSpace(targetGuildId)) return;
+
+        var preview = await vm.PreviewTransferBaseAsync(baseItem.BaseId, targetGuildId);
+        if (preview is not { CanApply: true }) return;
+
+        var dialog = new Views.ConfirmOperationDialog(
+            $"Transfer base {baseItem.BaseId} from {preview.SourceGuildName} to {preview.TargetGuildName}?",
+            preview.Findings, "Transfer", danger: false);
+        if (await dialog.ShowDialog<bool>(this) != true) return;
+
+        await vm.ApplyTransferBaseAsync(preview.PreviewToken);
+    }
+
+    private async void WipeBase_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedExplorerBase is null) return;
+        var baseItem = vm.SelectedExplorerBase;
+
+        var preview = await vm.PreviewWipeBaseAsync(baseItem.BaseId);
+        if (preview is not { CanApply: true }) return;
+
+        var dialog = new Views.ConfirmOperationDialog(
+            $"Permanently wipe base {baseItem.BaseId}?",
+            preview.Findings, "Wipe Permanently", danger: true);
+        if (await dialog.ShowDialog<bool>(this) != true) return;
+
+        await vm.ApplyWipeBaseAsync(preview.PreviewToken);
+    }
+
+    private async void CopyBaseInfo_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedExplorerBase is null) return;
+        var b = vm.SelectedExplorerBase;
+        var text = $"Base ID: {b.BaseId}\nGuild: {b.GuildName} ({b.GuildId})\nLeader: {b.LeaderName} ({b.LeaderPlayerId})\nHealth: {b.OwnerHealth}\nEvidence: {b.Evidence}";
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is not null) await clipboard.SetTextAsync(text);
+    }
+
+    private async void TransferGuildLeadership_OnClick(object? sender, RoutedEventArgs e) =>
+        await RunGuildOperationAsync("transfer-leadership", "Transfer leadership of {0} to which player?", "Transfer Leadership", danger: false);
+
+    private async void AddPlayerToGuild_OnClick(object? sender, RoutedEventArgs e) =>
+        await RunGuildOperationAsync("add-player", "Add which player to {0}?", "Add Player", danger: false);
+
+    private async void RemoveBrokenGuildMember_OnClick(object? sender, RoutedEventArgs e) =>
+        await RunGuildOperationAsync("remove-broken-member", "Remove which broken member reference from {0}?", "Remove Member", danger: true);
+
+    private async void ClaimOrphanedGuild_OnClick(object? sender, RoutedEventArgs e) =>
+        await RunGuildOperationAsync("claim", "Which player should claim orphaned guild {0}?", "Claim Guild", danger: false);
+
+    private async Task RunGuildOperationAsync(string operationApiName, string promptFormat, string confirmLabel, bool danger)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedExplorerGuild is null) return;
+        var guild = vm.SelectedExplorerGuild;
+
+        var options = vm.FilteredPlayerRecords
+            .Select(p => new Views.SelectPlayerOption(p.PlayerId, p.PlayerName))
+            .ToList();
+        if (options.Count == 0) return;
+
+        var picker = new Views.SelectPlayerDialog(string.Format(promptFormat, guild.GuildName), options);
+        var playerId = await picker.ShowDialog<string?>(this);
+        if (string.IsNullOrWhiteSpace(playerId)) return;
+
+        var preview = await vm.PreviewGuildOperationForRowAsync(operationApiName, guild.GuildId, playerId);
+        if (preview is not { CanApply: true }) return;
+
+        var dialog = new Views.ConfirmOperationDialog(
+            $"{confirmLabel}: {preview.PlayerName} in {preview.GuildName}?",
+            preview.Findings, confirmLabel, danger);
+        if (await dialog.ShowDialog<bool>(this) != true) return;
+
+        await vm.ApplyGuildOperationForRowAsync(preview.PreviewToken);
     }
 
     private async void CopyActiveWorldId_Click(object? sender, RoutedEventArgs e)
@@ -355,7 +532,20 @@ public sealed partial class MainWindow : Window
 
     private async void WorkspaceBrowse_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || sender is not Button { Tag: string key } || !vm.IsLocalProfile) return;
+        if (DataContext is not MainWindowViewModel vm || sender is not Button { Tag: string key }) return;
+        // v0.7.88.0: the New Server wizard's Install Directory step reuses this same handler --
+        // always local (see OpenNewServerTab), so it doesn't gate on IsLocalProfile like the
+        // Workspace page's own rows below do (that guard reflects the currently-connected profile,
+        // which for a not-yet-registered new server isn't meaningful).
+        if (key == "installDirectory")
+        {
+            if (!StorageProvider.CanPickFolder) return;
+            var installFolders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Select install directory", AllowMultiple = false });
+            var installFolder = installFolders.FirstOrDefault();
+            if (installFolder is not null) vm.NewServerInstallDirectoryEffectivePath = installFolder.Path.LocalPath;
+            return;
+        }
+        if (!vm.IsLocalProfile) return;
         if (key == "steamcmd")
         {
             if (!StorageProvider.CanOpen) return;
@@ -391,6 +581,20 @@ public sealed partial class MainWindow : Window
     {
         if (DataContext is not MainWindowViewModel vm) return;
         var url = vm.SelectedModDescription?.SourceUrl;
+        if (string.IsNullOrWhiteSpace(url)) return;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)) return;
+        Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+    }
+
+    // v0.7.82.0: Update Center's per-row "Open" link, direct live feedback ("we have a couple that
+    // say unknown, we need to do better and have a way to check"). The row's own DataContext is the
+    // ComponentVersionDto itself (an ItemsControl row, not a "selected item" like
+    // OpenModDescriptionSource_Click above), so the URL comes from the clicked control, not the
+    // page-level ViewModel.
+    private void OpenComponentSourceUrl_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control control || control.DataContext is not ComponentVersionDto component) return;
+        var url = component.SourceUrl;
         if (string.IsNullOrWhiteSpace(url)) return;
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)) return;
         Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
@@ -512,6 +716,24 @@ public sealed partial class MainWindow : Window
             FileTypeFilter = [new FilePickerFileType("ZIP archive") { Patterns = ["*.zip"] }]
         });
         var file = files.FirstOrDefault(); if (file is null) return;
+        await using var stream = await file.OpenReadAsync();
+        await vm.InstallModZipAsync(stream, file.Name);
+    }
+
+    // v0.7.78.0: drag-and-drop counterpart to InstallModZip_Click above -- same install path, just
+    // reached by dropping a .zip onto the card instead of using the file picker dialog.
+    private void ZipInstallDropZone_OnDragOver(object? sender, DragEventArgs e)
+    {
+        var hasZip = e.DataTransfer.TryGetFiles()?.Any(f => f.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) == true;
+        e.DragEffects = hasZip ? DragDropEffects.Copy : DragDropEffects.None;
+    }
+
+    private async void ZipInstallDropZone_OnDrop(object? sender, DragEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        var file = e.DataTransfer.TryGetFiles()?.OfType<IStorageFile>()
+            .FirstOrDefault(f => f.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+        if (file is null) return;
         await using var stream = await file.OpenReadAsync();
         await vm.InstallModZipAsync(stream, file.Name);
     }

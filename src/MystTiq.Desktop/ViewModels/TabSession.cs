@@ -26,6 +26,8 @@ public sealed class TabSession : ViewModelBase
     private bool _serverIsRunning;
     private int _wizardStep = 1;
     private string _connectionKind = string.Empty;
+    private bool _isNewServerSetupFlow;
+    private string _worldSource = string.Empty;
     private string _serverRoot = string.Empty;
     private string _duplicateInstallWarning = string.Empty;
 
@@ -79,6 +81,18 @@ public sealed class TabSession : ViewModelBase
     // with a different choice at once.
     public string ConnectionKind { get => _connectionKind; set => SetField(ref _connectionKind, value); }
 
+    // v0.7.81.0: distinguishes a genuine "Set Up New Server" install wizard from "Connect to Local/
+    // Remote Server" -- both used to share the exact same wizard steps with no real difference in
+    // behavior, just different framing text (direct live feedback: "it should not be trying to
+    // connect to a previously installed version"). Per-tab for the same reason as WizardStep/
+    // ConnectionKind above.
+    public bool IsNewServerSetupFlow { get => _isNewServerSetupFlow; set => SetField(ref _isNewServerSetupFlow, value); }
+
+    // v0.7.81.0: the new-server wizard's "Clone an Existing Server" / "Set Up a New World" /
+    // "Import a World" choice ("Clone"/"NewWorld"/"Import", empty = not yet chosen). Only ever set
+    // when IsNewServerSetupFlow is true.
+    public string WorldSource { get => _worldSource; set => SetField(ref _worldSource, value); }
+
     // v0.7.31.0: cached last-known install directory for this tab's server, reported by the server
     // itself (GetServerDistributionStatusAsync) during routine refresh -- a ConnectionProfile alone
     // has no concept of install location, only a host:port address, so this can only ever be known
@@ -121,9 +135,16 @@ public sealed class TabSession : ViewModelBase
 
     // Shown under the server name in the tab bar. Empty while the tab is mid-setup (Profile is
     // null, e.g. right after "Set Up New Server") rather than defaulting to "Remote".
+    //
+    // v0.7.89.0 bug fix: reported live -- a brand-new, genuinely local second server (registered
+    // via the New Server wizard) was labeled "Remote" here, purely because this used to compare
+    // against the literal default profile Id instead of actually checking the address. Any
+    // loopback-addressed profile is local, whether or not it happens to be "default".
     public string ConnectionKindText => Profile is null
         ? string.Empty
-        : Profile.Id == ConnectionProfile.LocalDefault.Id ? "Local" : "Remote";
+        : System.Net.IPAddress.TryParse(Profile.BaseAddress.Host, out var address) && System.Net.IPAddress.IsLoopback(address)
+            ? "Local"
+            : "Remote";
 
     // Each open tab gets its own timer instance instead of the app sharing one -- wired up by
     // MainWindowViewModel (which owns the tick handler and knows how to tell an active tab's full

@@ -606,3 +606,13 @@ Runtime-acceptance continuation also restores hover information tooltips, right-
 - MOD Validation, Isolation & Functional Testing
 
 These items are retained but must not collide with the v0.4.8.0–v0.4.18.0 GUI restoration sequence.
+
+## Live-Session Backlog
+
+Working convention (established 2026-09-16, direct instruction): while a version is actively in
+progress, a new note/ask typed mid-session gets captured here rather than immediately
+context-switching to it -- unless it's clarifying the scope of the version already in flight, in
+which case it's applied directly instead. Cleared into a real roadmap entry (or picked up outright)
+once the current version ships.
+
+*(empty -- nothing queued right now)*

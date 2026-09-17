@@ -19,6 +19,20 @@ public sealed class DiagnosticFindingDto
 
     public string StateText => State switch { 0 => "PASS", 1 => "WARNING", 2 => "FAIL", 3 => "STARTING", 4 => "SKIPPED", _ => "UNKNOWN" };
     public bool CanFix => ActionKind is not null;
+
+    // v0.7.79.0: drives the state badge's color on the Server Doctor page (direct request: "Pass
+    // can be highlighted in green or red"). Starting/Skipped/Unknown fall through to the badge's
+    // own neutral default rather than getting their own color -- only Pass/Warning/Fail are
+    // meaningfully color-codeable states.
+    public bool IsPass => State == 0;
+    public bool IsWarning => State == 1;
+    public bool IsFail => State == 2;
+    public bool IsOtherState => State is not (0 or 1 or 2);
+    // Many findings report an identical Evidence and Recommendation string when nothing needs
+    // fixing (e.g. both "Steam installation detected.") -- showing both lines is pure redundancy,
+    // part of the same "make use of the spacing" complaint.
+    public bool ShowRecommendation => !string.IsNullOrWhiteSpace(Recommendation) &&
+        !string.Equals(Recommendation, Evidence, StringComparison.Ordinal);
 }
 
 public sealed class DiagnosticsReportDto

@@ -257,6 +257,16 @@
       <GradientStop Offset="0.6" Color="#8AD68890"/>
       <GradientStop Offset="1" Color="#9CBF7480"/>
     </LinearGradientBrush>
+    <!-- v0.7.79.0: same glass structure/alpha weight as SuccessGlassGradient above, amber-tinted.
+         Added for the Server Setup environment table's status pills (Ready/Disabled/Missing), which
+         previously used flat DynamicResource GreenBrush/AmberBrush/RedBrush fills; no amber glass
+         variant existed yet. -->
+    <LinearGradientBrush x:Key="WarningGlassGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#9AFFD585"/>
+      <GradientStop Offset="0.22" Color="#7AF0B850"/>
+      <GradientStop Offset="0.6" Color="#689E7A30"/>
+      <GradientStop Offset="1" Color="#7AB08850"/>
+    </LinearGradientBrush>
 
     <!-- v0.5.0.8 surface lighting: brighter upper-left edge, deeper lower-right face. -->
     <LinearGradientBrush x:Key="CommandSurfaceGradient" StartPoint="0%,0%" EndPoint="100%,100%">
@@ -549,6 +559,17 @@
   <Style Selector="Button:disabled">
     <Setter Property="Opacity" Value="0.38"/>
   </Style>
+  <!-- v0.7.75.0: no MenuItem styling existed anywhere in this app; context menus (e.g. the
+       Players page's Kick/Ban/Whisper/Promote/Give Item right-click menu) relied entirely on
+       FluentTheme's own default disabled-state dimming, which reads as barely distinguishable from
+       enabled against this app's own dark backgrounds. Reported live as "right-click looks broken":
+       Kick/Ban are correctly CanExecute-gated on the selected player being online (this app has no
+       server running / no online player at the time), but with no clear disabled look, a
+       legitimately-disabled item is indistinguishable from a genuinely broken one. Matches the same
+       0.38 opacity convention Button:disabled already established above, for consistency.-->
+  <Style Selector="MenuItem:disabled">
+    <Setter Property="Opacity" Value="0.38"/>
+  </Style>
   <!-- v0.7.63.0: moved from App.axaml's now-removed legacy style block, which hardcoded #75C8FF
        regardless of theme; keyboard-focus outline now follows the active accent theme instead. -->
   <Style Selector="Button:focus-visible">
@@ -800,6 +821,23 @@
   <Style Selector="Border.card.accentSystem, Border.statuscard.accentSystem">
     <Setter Property="BorderBrush" Value="{DynamicResource GreenAccentBorderBrush}"/>
     <Setter Property="BoxShadow" Value="{DynamicResource GreenAccentGlowShadowLow}"/>
+  </Style>
+
+  <!-- v0.7.82.0: unsaved-edit highlight for Simple Settings rows (Server Identity, Network toggles,
+       World Settings sliders), distinct from Advanced Settings' Border.differsFromDefault, which
+       flags active value against Palworld's factory default, regardless of save state. This flags
+       active value against what was last loaded/saved, i.e. Configuration's own IsDirty/"Unsaved"
+       state. Declared after the accentXxx block above so it wins the equal-specificity (2-class)
+       cascade tie on rows that also carry an accent class. -->
+  <Style Selector="Border.statuscard.dirty">
+    <Setter Property="BorderBrush" Value="{DynamicResource AmberAccentBorderBrush}"/>
+    <Setter Property="BorderThickness" Value="2"/>
+    <Setter Property="Background" Value="{DynamicResource CardAmberGradient}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource AmberAccentGlowShadowLow}"/>
+  </Style>
+  <Style Selector="TextBox.dirty">
+    <Setter Property="BorderBrush" Value="{DynamicResource AmberBrush}"/>
+    <Setter Property="BorderThickness" Value="2"/>
   </Style>
 
   <Style Selector="Border.card.glowGreen">
@@ -1216,11 +1254,17 @@
        install warning banner). Reuses CardStrongBrush/BorderSoftBrush rather than CardGradient/
        #426784, a plain flat tint distinguishable from Border.card's own gradient look, closer to
        what the legacy hardcoded values visually were. -->
+  <!-- v0.7.78.0: Padding was never set here at all (unlike Border.card's Padding="11" just above),
+       so every statuscard's text sat flush against its own border; direct live feedback ("the
+       text is too close to the edges"), reproduced on the UE4SS page's INSTALLED VERSION/RUNTIME
+       HEALTH/ACTIVE FORK cards, its Active/Runtime Mods Root boxes, and its release list rows, but
+       this is a shared style so it fixes every statuscard app-wide, not just that one page. -->
   <Style Selector="Border.statuscard">
     <Setter Property="Background" Value="{DynamicResource CardStrongBrush}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSoftBrush}"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="11"/>
     <Setter Property="ClipToBounds" Value="True"/>
   </Style>
   <!-- Status-driven card glows: declared after Border.card so they win the Background/BoxShadow
@@ -1401,6 +1445,13 @@
     <Setter Property="Padding" Value="7,2"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
     <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <!-- v0.7.79.0: direct live feedback on the Server Doctor page's new state badges ("can we make
+       the green a little darker or add a drop shadow to PASS to make it more readable?"). Added a
+       text shadow on the badge's own label instead of changing the shared GreenBrush itself (which
+       is used in many other places this feedback wasn't about). -->
+  <Style Selector="TextBlock.badgeText">
+    <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="3" Color="Black" Opacity="0.65"/></Setter>
   </Style>
 
   <Style Selector="ScrollBar:vertical">

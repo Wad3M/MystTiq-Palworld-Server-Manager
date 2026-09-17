@@ -56,6 +56,25 @@ if($Publish){
     Write-Host "Desktop publish: $output" -ForegroundColor Green
     Write-Host "Headless sidecar: $sidecarExe" -ForegroundColor Green
 
+    # v0.7.72.0: MystTiqConsoleProxy.dll (native/MystTiqConsoleProxy, built separately via
+    # scripts/Build-ConsoleProxy.ps1 -- it needs the MSVC toolchain, not part of the normal dotnet
+    # publish graph) rides alongside the headless sidecar so HeadlessServerDistributionService's
+    # install action has something to copy into a server's RuntimeBinaryRoot. Best-effort: a
+    # from-scratch checkout that hasn't run Build-ConsoleProxy.ps1 yet still publishes a working
+    # desktop/headless build, just without native console-capture install available until that
+    # separate build step runs -- never a hard failure here.
+    if($Runtime -eq 'win-x64'){
+        $nativeProxySource=Join-Path $root 'artifacts\native\MystTiqConsoleProxy.dll'
+        if(Test-Path $nativeProxySource -PathType Leaf){
+            $nativeProxyDestDir=Join-Path $sidecarOutput 'native'
+            New-Item -ItemType Directory -Force -Path $nativeProxyDestDir | Out-Null
+            Copy-Item $nativeProxySource (Join-Path $nativeProxyDestDir 'MystTiqConsoleProxy.dll') -Force
+            Write-Host "Native console proxy staged: $nativeProxyDestDir\MystTiqConsoleProxy.dll" -ForegroundColor Green
+        } else {
+            Write-Host "Native console proxy not found at $nativeProxySource -- run scripts\Build-ConsoleProxy.ps1 first if you want console-capture install available. Skipping (non-fatal)." -ForegroundColor Yellow
+        }
+    }
+
     if($Runtime -eq 'win-x64' -and -not $NoLaunch){
         $desktopExe=Join-Path $output 'MystTiq.Desktop.exe'
         if(-not (Test-Path $desktopExe -PathType Leaf)){ throw "Successful publish did not produce expected GUI executable: $desktopExe" }

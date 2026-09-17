@@ -123,6 +123,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var doctor = new HeadlessDoctorService(configuration, effectiveConfigurationPath, paths, lifecycle, linuxServiceManager);
             var distribution = ServerDistributionPlatformService.ForCurrentPlatform();
             var serverDistribution = new HeadlessServerDistributionService(paths, lifecycle, distribution);
+            var consoleCaptureProxy = new HeadlessConsoleCaptureProxyService(paths);
             var worldExplorer = new HeadlessWorldExplorerService(paths);
             var worldTransactions = new HeadlessWorldTransactionService(paths, lifecycle, backups, activity, worldExplorer, operations, profileId);
             var playerGuildExplorer = new HeadlessPlayerGuildExplorerService(paths, monitoring);
@@ -131,6 +132,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var baseOwnership = new HeadlessBaseOwnershipService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var characterMigration = new HeadlessCharacterMigrationService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var palEdit = new HeadlessPalEditService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
+            var playerDeletion = new HeadlessPlayerDeletionService(paths, lifecycle, backups, activity, playerGuildExplorer, playerRegistry, guildOwnership, operations, profileId);
+            var playerCopy = new HeadlessPlayerCopyService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var consoleLog = new HeadlessConsoleLogWriter(paths);
             var modManagement = new HeadlessModManagementService(paths, lifecycle, activity, consoleLog);
             var networkPlatform = NetworkDiagnosticsPlatformService.ForCurrentPlatform();
@@ -181,6 +184,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 Doctor = doctor,
                 Diagnostics = diagnostics,
                 ServerDistribution = serverDistribution,
+                ConsoleCaptureProxy = consoleCaptureProxy,
                 WorldExplorer = worldExplorer,
                 WorldTransactions = worldTransactions,
                 PlayerGuildExplorer = playerGuildExplorer,
@@ -201,6 +205,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 WanReachability = wanReachability,
                 CrashRecovery = crashRecovery,
                 PalEdit = palEdit,
+                PlayerDeletion = playerDeletion,
+                PlayerCopy = playerCopy,
                 DiscordBot = discordBot,
                 AntiCheat = antiCheat,
                 Whitelist = whitelist,
@@ -768,6 +774,28 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             return result.Success ? Results.Ok(result) : Results.BadRequest(result);
         }).RequireRole(MystTiqRole.Admin, p.Id);
 
+        // v0.7.75.0: "Delete Player Completely" / "Copy Player" -- see HeadlessPlayerDeletionService
+        // and HeadlessPlayerCopyService for the full design and disclosed scope.
+        routes.MapPost("/players/{playerId}/delete/preview", async (string playerId, CancellationToken token) =>
+            Results.Ok(await p.PlayerDeletion.PreviewAsync(playerId, token)))
+            .RequireRole(MystTiqRole.Admin, p.Id);
+
+        routes.MapPost("/players/delete/apply", async (HeadlessPlayerDeletionApplyRequest request, CancellationToken token) =>
+        {
+            var result = await p.PlayerDeletion.ApplyAsync(request.PreviewToken, request.Confirmed, token);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+
+        routes.MapPost("/players/copy/preview", async (HeadlessPlayerCopyPreviewRequest request, CancellationToken token) =>
+            Results.Ok(await p.PlayerCopy.PreviewAsync(request.SourcePlayerId, request.DestinationPlayerId, token)))
+            .RequireRole(MystTiqRole.Admin, p.Id);
+
+        routes.MapPost("/players/copy/apply", async (HeadlessPlayerCopyApplyRequest request, CancellationToken token) =>
+        {
+            var result = await p.PlayerCopy.ApplyAsync(request.PreviewToken, request.Confirmed, token);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+
         routes.MapGet("/automation/rules", () => Results.Ok(p.Automation.ListRules()));
         routes.MapPost("/automation/rules", (AutomationRuleRequest request) =>
         {
@@ -928,6 +956,13 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         });
 
+        // v0.7.77.0: per-MOD Repair/Re-install -- see HeadlessModManagementService.RepairModAsync.
+        routes.MapPost("/mods/{type}/{package}/repair", async (string type, string package, CancellationToken token) =>
+        {
+            var result = await p.ModManagement.RepairModAsync(type, package, token);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        });
+
         routes.MapPost("/server/clone", async (HeadlessWorldCloneRequest request, CancellationToken token) =>
         {
             var result = await p.WorldClone.CloneAsync(request, token);
@@ -944,6 +979,17 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapGet("/update-center/components", async (CancellationToken token) =>
             Results.Ok(await p.ComponentUpdates.GetSnapshotAsync(token)));
 
+        // v0.7.82.0: the Update Center's first real, actionable in-place component update -- direct
+        // request ("the update center where it says update available should allow us to click on it
+        // to update"). Mutation-gated the same way distribution/update above is; unlike the GET
+        // route above (read-only network comparison), this actually runs "pip install --upgrade
+        // pip" and must be invoked explicitly, never automatically.
+        routes.MapPost("/update-center/components/pip/update", async (CancellationToken token) =>
+        {
+            var result = await p.ComponentUpdates.UpdatePipAsync(token);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        });
+
         routes.MapGet("/server/distribution", () =>
             Results.Ok(p.ServerDistribution.GetStatus()));
 
@@ -955,6 +1001,25 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             CancellationToken token) =>
         {
             var result = await p.ServerDistribution.UpdateAsync(validate ?? true, token);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        });
+
+        // v0.7.72.0: native console capture (see HeadlessConsoleCaptureProxyService for the full
+        // design). Deliberately opt-in and mutation-gated the same way distribution/update is --
+        // GetStatus is a harmless read, Install/Uninstall actually write a DLL next to the game
+        // executable and must be invoked explicitly, never automatically.
+        routes.MapGet("/server/console-capture", () =>
+            Results.Ok(p.ConsoleCaptureProxy.GetStatus()));
+
+        routes.MapPost("/server/console-capture/install", async (CancellationToken token) =>
+        {
+            var result = await p.ConsoleCaptureProxy.InstallAsync(token);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        });
+
+        routes.MapPost("/server/console-capture/uninstall", async () =>
+        {
+            var result = await p.ConsoleCaptureProxy.UninstallAsync();
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         });
 

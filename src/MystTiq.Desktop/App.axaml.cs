@@ -1,8 +1,11 @@
+using System.Linq;
+using System.Threading.Tasks;
 using MystTiq.Core.Services;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using MystTiq.Desktop.Services;
 using MystTiq.Desktop.ViewModels;
 using MystTiq.Desktop.Views;
@@ -16,6 +19,7 @@ public sealed partial class App : Application
     private MainWindowViewModel? viewModel;
     private LocalManagementBootstrapper? localBootstrapper;
     private bool explicitExitRequested;
+    private DispatcherTimer? trayStatusTimer;
 
     public bool IsExplicitExitRequested => explicitExitRequested;
 
@@ -41,8 +45,35 @@ public sealed partial class App : Application
             viewModel = new MainWindowViewModel(api, profileStore, localDiscovery, serviceDiscovery, localBootstrapper, themeStore, credentialStore);
             mainWindow = new MainWindow { DataContext = viewModel };
             desktop.MainWindow = mainWindow;
+
+            // v0.7.73.0: the tray icon is the one thing left visible once the window is hidden or
+            // the GUI is fully gone (see ExitGui_OnClick's own v0.7.73.0 note on why "no tray icon"
+            // now specifically means "nothing running") -- but its tooltip was a static string,
+            // never actually saying whether anything's running. Each tab already tracks its own
+            // ServerIsRunning; this just periodically summarizes it into the one place still on
+            // screen when everything else is hidden. 5s matches this app's other lightweight
+            // background-tab polling cadence closely enough that the tray is never far behind what
+            // the tabs themselves would show.
+            trayStatusTimer = new DispatcherTimer(TimeSpan.FromSeconds(5), DispatcherPriority.Background, (_, _) => UpdateTrayStatus());
+            trayStatusTimer.Start();
+            UpdateTrayStatus();
         }
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void UpdateTrayStatus()
+    {
+        var icons = TrayIcon.GetIcons(this);
+        var trayIcon = icons?.FirstOrDefault();
+        if (trayIcon is null || viewModel is null) return;
+
+        var running = viewModel.Tabs.Where(t => t.ServerIsRunning).ToList();
+        trayIcon.ToolTipText = running.Count switch
+        {
+            0 => "MystTiq — idle, nothing running",
+            1 => $"MystTiq — running: {running[0].ProfileName}",
+            _ => $"MystTiq — {running.Count} servers running: {string.Join(", ", running.Select(t => t.ProfileName))}"
+        };
     }
 
     public void HideMainWindowToTray()
@@ -87,7 +118,15 @@ public sealed partial class App : Application
     private void RestartServer_OnClick(object? sender, EventArgs e) => Execute(viewModel?.RestartCommand);
     private void StopServer_OnClick(object? sender, EventArgs e) => Execute(viewModel?.StopCommand);
 
-    private async void SafeExit_OnClick(object? sender, EventArgs e)
+    private async void SafeExit_OnClick(object? sender, EventArgs e) => await SafeExitAsync();
+    private async void ForceExit_OnClick(object? sender, EventArgs e) => await ForceExitAsync();
+
+    // v0.7.74.0: pulled out of the tray menu's own click handlers so the window's own close-confirm
+    // dialog (ConfirmMinimizeToTrayDialog) can offer the same two real exit options directly,
+    // instead of only ever offering Cancel/Minimize and telling the user to go find the tray icon
+    // afterward if they actually wanted to stop the server -- reported live as an extra, avoidable
+    // step. Both paths now run through the exact same shutdown logic.
+    public async Task SafeExitAsync()
     {
         if (viewModel is not null)
             await viewModel.ShutdownForExitAsync(force: false);
@@ -96,7 +135,7 @@ public sealed partial class App : Application
         RequestExplicitExit();
     }
 
-    private async void ForceExit_OnClick(object? sender, EventArgs e)
+    public async Task ForceExitAsync()
     {
         if (viewModel is not null)
             await viewModel.ShutdownForExitAsync(force: true);
@@ -105,7 +144,23 @@ public sealed partial class App : Application
         RequestExplicitExit();
     }
 
-    private void ExitGui_OnClick(object? sender, EventArgs e) => RequestExplicitExit();
+    // v0.7.73.0: "Exit GUI Only" used to always fully quit the Avalonia app -- including its own
+    // tray icon -- even while it deliberately left PalServer/the headless host running in the
+    // background. That made "no tray icon" stop meaning "nothing is running," the one thing the
+    // tray is supposed to honestly signal (see MainWindow_Closing's own runningCount==0 check,
+    // which this now matches). When something is actually running, this collapses to the same
+    // minimize-to-tray state the window's own close button already uses, instead of exiting --
+    // the tray icon (and therefore an honest "something's running" signal) stays up. Only a
+    // genuinely idle app -- nothing running in any tab -- still exits with no tray at all.
+    private void ExitGui_OnClick(object? sender, EventArgs e)
+    {
+        if (viewModel is not null && viewModel.Tabs.Any(t => t.ServerIsRunning))
+        {
+            HideMainWindowToTray();
+            return;
+        }
+        RequestExplicitExit();
+    }
 
     private static void Execute(System.Windows.Input.ICommand? command)
     {

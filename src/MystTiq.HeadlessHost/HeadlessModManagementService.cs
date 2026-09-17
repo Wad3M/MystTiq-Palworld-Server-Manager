@@ -709,6 +709,28 @@ public sealed class HeadlessModManagementService
         mods.AddRange(ScanPakMods(serverRunning));
         mods.AddRange(ScanUe4ssMods(ue4ss, enabledUe4ss, runtimeEvidence, serverRunning));
 
+        // v0.7.78.0: per-mod update availability and installed version, surfaced directly on the
+        // Installed MODs list instead of requiring a manual "Check for Update" click per selection.
+        // Update-availability reuses CheckModUpdateAsync's own existing, cheap, local, no-network
+        // comparison unchanged. Version reads the installed mod's own Info.json directly out of its
+        // install folder (ReadWorkshopManifestVersion, already used elsewhere for the UE4SS-runtime
+        // hash-match case) -- this is the actually-installed copy's own declared version, not the
+        // local Workshop cache's version, so it stays honest even if the installed copy predates an
+        // available update. Non-Workshop MODs (no Info.json ever copied in) simply report no
+        // version, rather than a misleading guess.
+        for (var i = 0; i < mods.Count; i++)
+        {
+            var check = await CheckModUpdateAsync(mods[i].Type, mods[i].Package, cancellationToken);
+            var installedVersion = ReadWorkshopManifestVersion(mods[i].InstallPath);
+            if ((check.HasKnownSource && check.UpdateAvailable) || installedVersion is not null)
+                mods[i] = mods[i] with
+                {
+                    UpdateAvailable = check.HasKnownSource && check.UpdateAvailable,
+                    UpdateHint = check.HasKnownSource && check.UpdateAvailable ? "Update available locally" : "",
+                    InstalledVersion = installedVersion,
+                };
+        }
+
         var issues = mods.Count(m => m.Health is "Failed" or "Missing" or "Misconfigured" or "Attention");
         var disabled = mods.Count(m => m.Health == "Disabled");
         var unverified = mods.Count(m => m.Health == "Active / Unverified");
@@ -1057,11 +1079,49 @@ public sealed class HeadlessModManagementService
                 ? "Both modern and legacy UE4SS Mods roots exist. Modern root is active."
                 : string.Empty;
 
+        // v0.7.78.0: direct request -- "runtime health should capture after it has run one time...
+        // display something useful like no crashes or anything, or server ran without issue."
+        // Before this, HealthState reverted to "Unverified" every time TryReadRuntimeModsRoot()
+        // found no current evidence (server stopped, log rotated/cleared, etc.), even on an install
+        // that had already run cleanly. A small persisted marker -- written only when verified is
+        // actually true, matching the existing Ue4ssInstallManifest pattern just above -- lets a
+        // past successful run keep being reported once seen, instead of the signal being lost the
+        // moment its one-time evidence source goes away.
+        if (verified && matches) WriteUe4ssRuntimeVerification();
+        var priorVerification = verified ? null : TryReadUe4ssRuntimeVerification();
+        var healthState = verified
+            ? (matches ? "Healthy" : "Degraded")
+            : priorVerification is not null
+                ? $"Confirmed — ran without issue (last verified {priorVerification.VerifiedAtUtc:u})"
+                : "Unverified";
+
         return new HeadlessUe4ssStatus(
             paths.RuntimeBinaryRoot, paths.Ue4ssRoot, modern, legacy, active, runtimeRoot, method,
             Directory.Exists(paths.Ue4ssRoot), Directory.Exists(modern), Directory.Exists(legacy),
-            verified, matches, !verified ? "Unverified" : matches ? "Healthy" : "Degraded",
+            verified, matches, healthState,
             warning, runtime.LogPath, SafeDirectoryCount(active), SafeDirectoryCount(legacy), DetectUe4ssVersion());
+    }
+
+    private string Ue4ssRuntimeVerificationPath => Path.Combine(paths.ManagerRuntimeRoot, "ue4ss-runtime-verification.json");
+
+    private void WriteUe4ssRuntimeVerification()
+    {
+        try
+        {
+            Directory.CreateDirectory(paths.ManagerRuntimeRoot);
+            File.WriteAllText(Ue4ssRuntimeVerificationPath, JsonSerializer.Serialize(new Ue4ssRuntimeVerification(DateTimeOffset.UtcNow)));
+        }
+        catch { /* Best-effort record -- a failed write just means this falls back to "Unverified" next time, same as before this feature existed. */ }
+    }
+
+    private Ue4ssRuntimeVerification? TryReadUe4ssRuntimeVerification()
+    {
+        try
+        {
+            if (!File.Exists(Ue4ssRuntimeVerificationPath)) return null;
+            return JsonSerializer.Deserialize<Ue4ssRuntimeVerification>(File.ReadAllText(Ue4ssRuntimeVerificationPath));
+        }
+        catch { return null; }
     }
 
     // v0.7.60.0: the one reliable source of the real installed UE4SS version -- see the write site
@@ -1146,7 +1206,96 @@ public sealed class HeadlessModManagementService
             catch { }
         }
 
+        if (Directory.Exists(paths.Ue4ssRoot))
+        {
+            var hashMatch = TryDetectVersionFromLocalWorkshopHash();
+            if (hashMatch is not null) return hashMatch;
+        }
+
         return Directory.Exists(paths.Ue4ssRoot) ? "Installed — version metadata unavailable" : "Not installed";
+    }
+
+    // v0.7.77.0: last-resort version detection when nothing else above identified it -- this fork's
+    // UE4SS.dll ships with no meaningful FileVersionInfo and no marker file, but a Steam Workshop
+    // subscription to a UE4SS runtime distribution carries its own copy of UE4SS.dll AND a real
+    // declared version in its Info.json manifest. If the currently-active UE4SS.dll is byte-for-byte
+    // identical (SHA-256) to a local Workshop item's own copy, that manifest's version is genuinely
+    // the installed version, not a guess -- confirmed live against a real install (hash match,
+    // Workshop item "UE4SS Experimental (Palworld)" declaring "2281fa31", which also matches the
+    // real upstream release tag the UE4SS Release Catalog already knows about). Windows-only, same
+    // as every other Workshop-scan capability -- Workshop subscriptions live on the admin's local
+    // Steam client, not a headless Linux host.
+    private string? TryDetectVersionFromLocalWorkshopHash()
+    {
+        if (!OperatingSystem.IsWindows()) return null;
+
+        var activeDllPath = ResolveActiveUe4ssDllPath();
+        if (activeDllPath is null) return null;
+
+        string activeHash;
+        try { activeHash = ComputeSha256(activeDllPath); }
+        catch { return null; }
+
+        foreach (var root in DiscoverWorkshopContentRoots())
+        {
+            if (!Directory.Exists(root)) continue;
+            foreach (var itemDir in Directory.EnumerateDirectories(root))
+            {
+                var manifest = ReadWorkshopManifest(itemDir);
+                var isRuntime = manifest?.Rules.Any(r => string.Equals(r.Type, "UE4SS", StringComparison.OrdinalIgnoreCase)) == true;
+                var workshopDllPath = Path.Combine(itemDir, "UE4SS.dll");
+                if (!isRuntime || !File.Exists(workshopDllPath)) continue;
+
+                string workshopHash;
+                try { workshopHash = ComputeSha256(workshopDllPath); }
+                catch { continue; }
+
+                if (!string.Equals(activeHash, workshopHash, StringComparison.OrdinalIgnoreCase)) continue;
+
+                var declaredVersion = ReadWorkshopManifestVersion(itemDir);
+                var workshopId = Path.GetFileName(itemDir);
+                return string.IsNullOrWhiteSpace(declaredVersion)
+                    ? $"Matched local Workshop item {workshopId} (SHA-256 identical) — no declared version"
+                    : $"{declaredVersion} (matched via local Workshop item {workshopId}, SHA-256 identical)";
+            }
+        }
+        return null;
+    }
+
+    // v0.7.77.0: real bug found live while building the hash-match check above -- this real
+    // install has BOTH a modern-layout UE4SS.dll (Pal/Binaries/Win64/ue4ss/UE4SS.dll, the one
+    // actually loaded) AND a stale legacy-location one (Pal/Binaries/Win64/UE4SS.dll, 16MB dated
+    // Feb 2024 vs the modern one's 20MB dated Sept 2026 -- genuinely different files). A naive
+    // "check legacy path first" order picks the wrong, inactive one whenever both exist side by
+    // side. This mirrors ResolveUe4ss()'s own modern-vs-legacy preference instead of guessing.
+    private string? ResolveActiveUe4ssDllPath()
+    {
+        if (Directory.Exists(paths.Ue4ssRoot) && Directory.Exists(paths.Ue4ssModsRoot))
+        {
+            var modernDll = Path.Combine(paths.Ue4ssRoot, "UE4SS.dll");
+            if (File.Exists(modernDll)) return modernDll;
+        }
+        var legacyDll = Path.Combine(paths.RuntimeBinaryRoot, "UE4SS.dll");
+        return File.Exists(legacyDll) ? legacyDll : null;
+    }
+
+    private static string? ReadWorkshopManifestVersion(string itemDir)
+    {
+        var infoJson = Path.Combine(itemDir, "Info.json");
+        if (!File.Exists(infoJson)) return null;
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(infoJson));
+            return document.RootElement.TryGetProperty("Version", out var v) && v.ValueKind == System.Text.Json.JsonValueKind.String
+                ? v.GetString() : null;
+        }
+        catch { return null; }
+    }
+
+    private static string ComputeSha256(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream));
     }
 
     private static bool IsMeaningfulVersion(string? value) =>
@@ -1313,11 +1462,12 @@ public sealed class HeadlessModManagementService
         var inventory = await GetInventoryAsync(cancellationToken);
         var installedPackages = new HashSet<string>(inventory.Mods.Select(m => m.Package), StringComparer.OrdinalIgnoreCase);
 
+        var ue4ssInstalled = Directory.Exists(paths.Ue4ssRoot);
         var items = new List<HeadlessWorkshopItem>();
         foreach (var root in roots)
         {
             foreach (var itemDir in Directory.EnumerateDirectories(root))
-                items.Add(DescribeWorkshopItem(itemDir, installedPackages));
+                items.Add(DescribeWorkshopItem(itemDir, installedPackages, ue4ssInstalled));
         }
         var ordered = items.OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ToArray();
         return new HeadlessWorkshopScanResult(true, $"{ordered.Length} local Workshop item(s) found across {roots.Count} Steam librar{(roots.Count == 1 ? "y" : "ies")}.", ordered);
@@ -1420,6 +1570,46 @@ public sealed class HeadlessModManagementService
         }
         catch (Exception ex) { return HeadlessModMutationResult.Failure(ex.Message); }
         finally { TryDeleteDirectory(staging); mutationGate.Release(); }
+    }
+
+    // v0.7.77.0: per-MOD "Repair / Re-install" -- direct request, distinct from
+    // CheckModUpdateAsync/the Update button above (which only offers to re-import when Steam's
+    // local copy is *newer* than what's installed) and distinct from the existing global "Repair"
+    // button (RepairAsync, which only neutralizes legacy enabled.txt overrides and ensures
+    // mods.txt exists -- it never touches a MOD's own file content). This re-imports from the
+    // matched local Workshop source unconditionally, regardless of timestamps, which is exactly
+    // what fixes a MOD reported Misconfigured/incomplete (missing files, a mismatched
+    // .ucas/.utoc pair, etc.) -- reuses ImportWorkshopItemAsync's own proven copy logic, the same
+    // one just used live to properly install PalSchema/QualityOfLife.
+    public async Task<HeadlessModMutationResult> RepairModAsync(string type, string package, CancellationToken cancellationToken)
+    {
+        package = NormalizePackage(package);
+        if (!OperatingSystem.IsWindows())
+            return HeadlessModMutationResult.Failure("Repair via Steam Workshop requires Windows -- Workshop content lives on the local Steam client.");
+
+        var match = FindMatchingWorkshopItem(package);
+        if (match is null)
+            return HeadlessModMutationResult.Failure(
+                $"No local Steam Workshop source is known for \"{package}\" -- it may have been installed manually, from a ZIP, or from a source other than Steam Workshop. Delete it and re-install from its original source, or install a fresh ZIP if you have one.");
+
+        // v0.7.77.0 real bug found live: ImportWorkshopItemAsync's own UE4SS-Lua copy path
+        // (InstallUe4ssFiles) refuses outright when the destination folder already exists --
+        // correct, safe behavior for a fresh Import (never silently clobber an existing MOD), but
+        // it directly defeats Repair's own purpose of fixing an existing, incomplete install.
+        // Delete first -- which already captures its own pre-delete snapshot via CaptureSnapshot,
+        // the same safety net every other install/delete in this service already relies on -- then
+        // import fresh. If the re-import fails after the delete succeeded, the MOD is genuinely
+        // gone but recoverable: Rollback restores exactly the snapshot Delete just took.
+        var deleteResult = await DeleteAsync(type, package, cancellationToken);
+        if (!deleteResult.Success)
+            return HeadlessModMutationResult.Failure($"Repair could not remove the existing incomplete install first: {deleteResult.Message}");
+
+        var importResult = await ImportWorkshopItemAsync(match.WorkshopId, cancellationToken);
+        if (!importResult.Success)
+            return HeadlessModMutationResult.Failure(
+                $"Repair removed the incomplete install but the fresh re-import failed: {importResult.Message} Use Rollback Selected to restore the previous (incomplete) state if needed.");
+
+        return importResult with { Message = $"Repaired {package}: removed the incomplete install and re-imported it fresh from local Steam Workshop item {match.WorkshopId}." };
     }
 
     // v0.7.41.0: MOD update detection (item 52). Deliberately scoped to what's actually knowable
@@ -1642,12 +1832,13 @@ public sealed class HeadlessModManagementService
     {
         if (!OperatingSystem.IsWindows()) return null;
         var matchSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { package };
+        var ue4ssInstalled = Directory.Exists(paths.Ue4ssRoot);
         foreach (var root in DiscoverWorkshopContentRoots())
         {
             if (!Directory.Exists(root)) continue;
             foreach (var itemDir in Directory.EnumerateDirectories(root))
             {
-                var described = DescribeWorkshopItem(itemDir, matchSet);
+                var described = DescribeWorkshopItem(itemDir, matchSet, ue4ssInstalled);
                 if (string.Equals(described.SuggestedPackage, package, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(described.WorkshopId, package, StringComparison.OrdinalIgnoreCase))
                     return described;
@@ -1682,7 +1873,14 @@ public sealed class HeadlessModManagementService
         return null;
     }
 
-    private static HeadlessWorkshopItem DescribeWorkshopItem(string itemDir, HashSet<string> installedPackages)
+    // v0.7.77.0: `ue4ssInstalled` fixes a real bug found live -- a Workshop item whose own manifest
+    // declares an InstallRule of type "UE4SS" isn't a mod at all, it's a full UE4SS runtime
+    // distribution (confirmed against a real local Workshop item, "UE4SS Experimental (Palworld)":
+    // its bundled UE4SS.dll is byte-for-byte identical, SHA-256 verified, to the actually-running
+    // one). The old check always looked it up in the MOD inventory, which by definition never
+    // contains the runtime itself, so this kind of item showed "NOT INSTALLED" unconditionally
+    // regardless of whether UE4SS was actually installed.
+    private static HeadlessWorkshopItem DescribeWorkshopItem(string itemDir, HashSet<string> installedPackages, bool ue4ssInstalled)
     {
         var workshopId = Path.GetFileName(itemDir);
         var manifest = ReadWorkshopManifest(itemDir);
@@ -1708,7 +1906,9 @@ public sealed class HeadlessModManagementService
         {
             (true, true) => "PAK + UE4SS", (true, false) => "PAK", (false, true) => "UE4SS", _ => "Unrecognized"
         };
-        var installed = installedPackages.Contains(package) || installedPackages.Contains(workshopId);
+        var installed = hasRuntime
+            ? ue4ssInstalled
+            : installedPackages.Contains(package) || installedPackages.Contains(workshopId);
         return new HeadlessWorkshopItem(workshopId, name, package, kind, installed, itemDir);
     }
 
@@ -1842,10 +2042,15 @@ public sealed record HeadlessUe4ssStatus(
     public bool HasPathMismatch => RuntimeVerified && !RuntimeMatchesActiveRoot;
 }
 
+// UpdateAvailable/UpdateHint default to false/empty for every construction site below, then get
+// filled in once per inventory scan (GetInventoryAsync) by reusing CheckModUpdateAsync's own
+// cheap, local, no-network comparison against Steam's local Workshop content cache -- direct
+// request: "under installed MODs card it should have the info if there is an updated version."
 public sealed record HeadlessModItem(
     string Type, string Package, string Name, string InstallPath, bool Enabled,
     string Health, string RuntimeState, string Evidence, int FileCount,
-    bool RuntimeConfirmed, string Attention);
+    bool RuntimeConfirmed, string Attention,
+    bool UpdateAvailable = false, string UpdateHint = "", string? InstalledVersion = null);
 
 public sealed record HeadlessModInventory(
     string Platform, bool ServerRunning, int Installed, int RuntimeConfirmed,
@@ -1928,3 +2133,5 @@ internal sealed record Ue4ssSnapshotMeta(string[] PlannedPaths, string[] Existed
 // see that method and DetectUe4ssVersion() for why this is the only reliable source of the real
 // installed UE4SS version this fork provides no marker file for.
 internal sealed record Ue4ssInstallManifest(string Source, string TagName, DateTimeOffset InstalledAtUtc);
+
+internal sealed record Ue4ssRuntimeVerification(DateTimeOffset VerifiedAtUtc);

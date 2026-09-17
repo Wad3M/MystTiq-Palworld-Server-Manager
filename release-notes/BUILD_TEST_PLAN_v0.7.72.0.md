@@ -1,0 +1,11 @@
+# v0.7.72.0 Build and Test Plan
+
+1. Close artifact-hosted MystTiq desktop and sidecar processes with Clean.
+2. Build the native proxy: `scripts/Build-ConsoleProxy.ps1 -Configuration Release` (MSVC toolchain). Confirm exports land at ordinals 1/3/6/8/11/12 via `dumpbin /exports` (must match the real system `dsound.dll`'s own export ordinals for the 6 functions PalServer imports).
+3. Run strict validation and the complete v0.7.72.0 logic suite (`scripts/Test-v0.7.72.0-Logic.ps1 -RunBuild`), including the frozen v0.7.71.0 checkpoint regression gate and the carried-forward smoke suites.
+4. Build shared, Windows/Linux headless, and Windows/Linux Avalonia targets — `Build.ps1 DesktopWindows` now also stages `artifacts/native/MystTiqConsoleProxy.dll` into the published headless sidecar's `native/` folder (best-effort; skipped with a warning, not a failure, if the native artifact hasn't been built).
+5. New surface this release: `native/MystTiqConsoleProxy/dllmain.cpp` (the real WriteConsoleA/WriteConsoleW IAT hook), `src/MystTiq.HeadlessHost/HeadlessConsoleCaptureProxyService.cs`, three new routes in `LocalManagementApiHost.cs`, a new source in `HeadlessMonitoringService.ResolveConsoleSources`.
+6. **Live-verified, not just statically, on an isolated clone — never the real production server**: robocopy clone with offset ports, raw process launch first (proved the native mechanism alone: process stayed alive, reached full readiness, captured real `LogMemory` engine diagnostics, concurrent-readable while running), then re-verified through the real shipped path (isolated `mysttiq-server api-run` instance with its own isolated fleet root and API port, install via the real API route, start via the real lifecycle service, confirmed `/logs/tail` surfaces the new source). Isolated clone and config fully torn down afterward; the real production install and its config were untouched throughout (confirmed via process list before/after).
+7. Create FullSource and Changed Files ZIPs and verify their entries and SHA-256 hashes.
+
+Any failure blocks promotion. Installing the proxy onto this machine's own real production server is explicitly NOT part of this build/test pass — requires a separate, explicit decision.

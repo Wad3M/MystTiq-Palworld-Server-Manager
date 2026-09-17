@@ -559,6 +559,20 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         throw new HttpRequestException($"World clone request failed with HTTP {(int)response.StatusCode} {response.ReasonPhrase}. {body}".Trim());
     }
 
+    public async Task<AddFleetProfileResultDto> AddFleetProfileAsync(
+        ConnectionProfile profile,
+        AddFleetProfileRequestDto request,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsJsonAsync("/api/v1/servers", request, cancellationToken);
+        var result = await response.Content.ReadFromJsonAsync<AddFleetProfileResultDto>(cancellationToken);
+        if (result is not null) return result;
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        throw new HttpRequestException($"Add server profile request failed with HTTP {(int)response.StatusCode} {response.ReasonPhrase}. {body}".Trim());
+    }
+
     public async Task<ServerDistributionStatusDto> GetServerDistributionStatusAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
@@ -609,6 +623,16 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         using var client = BuildClient(profile, bearerToken);
         return await client.GetFromJsonAsync<ComponentVersionSnapshotDto>("/api/v1/update-center/components", cancellationToken)
             ?? new ComponentVersionSnapshotDto();
+    }
+
+    public async Task<ComponentUpdateResultDto> UpdatePipAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/update-center/components/pip/update", null, cancellationToken);
+        return await ReadOperationAsync<ComponentUpdateResultDto>(response, cancellationToken);
     }
 
     public async Task<Ue4ssReleaseCatalogDto> GetUe4ssReleaseCatalogAsync(
@@ -789,6 +813,34 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         return await ReadOperationAsync<BaseOwnershipResultDto>(response, cancellationToken);
     }
 
+    public async Task<PlayerDeletionPreviewDto> PreviewPlayerDeletionAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync($"/api/v1/players/{Uri.EscapeDataString(playerId)}/delete/preview", null, cancellationToken);
+        return await ReadOperationAsync<PlayerDeletionPreviewDto>(response, cancellationToken);
+    }
+
+    public async Task<PlayerDeletionResultDto> ApplyPlayerDeletionAsync(ConnectionProfile profile, string previewToken, bool confirmed, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsJsonAsync("/api/v1/players/delete/apply", new { previewToken, confirmed }, cancellationToken);
+        return await ReadOperationAsync<PlayerDeletionResultDto>(response, cancellationToken);
+    }
+
+    public async Task<PlayerCopyPreviewDto> PreviewPlayerCopyAsync(ConnectionProfile profile, string sourcePlayerId, string destinationPlayerId, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsJsonAsync("/api/v1/players/copy/preview", new { sourcePlayerId, destinationPlayerId }, cancellationToken);
+        return await ReadOperationAsync<PlayerCopyPreviewDto>(response, cancellationToken);
+    }
+
+    public async Task<PlayerCopyResultDto> ApplyPlayerCopyAsync(ConnectionProfile profile, string previewToken, bool confirmed, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsJsonAsync("/api/v1/players/copy/apply", new { previewToken, confirmed }, cancellationToken);
+        return await ReadOperationAsync<PlayerCopyResultDto>(response, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<OperationRecordDto>> GetOperationsAsync(ConnectionProfile profile, int max = 50, string? bearerToken = null, CancellationToken cancellationToken = default)
     {
         using var client = BuildClient(profile, bearerToken);
@@ -903,6 +955,12 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     public async Task<ModMutationResultDto> RollbackModAsync(ConnectionProfile profile, string type, string package, string? bearerToken = null, CancellationToken cancellationToken = default)
     {
         using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsync($"/api/v1/mods/{Uri.EscapeDataString(type)}/{Uri.EscapeDataString(package)}/rollback", null, cancellationToken);
+        return await ReadOperationAsync<ModMutationResultDto>(response, cancellationToken);
+    }
+
+    public async Task<ModMutationResultDto> RepairModAsync(ConnectionProfile profile, string type, string package, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsync($"/api/v1/mods/{Uri.EscapeDataString(type)}/{Uri.EscapeDataString(package)}/repair", null, cancellationToken);
         return await ReadOperationAsync<ModMutationResultDto>(response, cancellationToken);
     }
 

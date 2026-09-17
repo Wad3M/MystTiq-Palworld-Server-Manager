@@ -13,6 +13,17 @@ public sealed class ServerStatusDto
     [JsonPropertyName("crashDetected")] public bool CrashDetected { get; init; }
     [JsonPropertyName("observedAt")] public DateTimeOffset ObservedAt { get; init; }
     [JsonPropertyName("lastTransitionAt")] public DateTimeOffset? LastTransitionAt { get; init; }
+
+    // v0.7.88.0 bug fix: NativeProcessId alone is not "a process is alive right now" -- both
+    // WindowsServerLifecycleService and LinuxServerLifecycleService (MystTiq.Core) deliberately keep
+    // returning the last-known PID even once Phase has genuinely gone to Stopped/Crashed, purely for
+    // reference display. Confirmed live: a stopped server kept reporting its previous run's PID with
+    // Phase==1 (Stopped) and Detail=="PalServer is not running.", permanently stuck showing
+    // "Starting / Not Ready" with Start greyed out. Phase 3 mirrors
+    // MystTiq.Core.Models.ServerLifecyclePhase.Running -- the only phase where a native process is
+    // actually confirmed alive right now (including the genuine mid-launch window: the OS process
+    // exists and is found immediately once Start spawns it, well before Ready flips true).
+    [JsonIgnore] public bool IsProcessLive => Phase == 3;
 }
 
 public sealed class ServerProcessDto

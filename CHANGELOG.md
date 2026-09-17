@@ -1,3 +1,540 @@
+## v0.7.90.0 — Install With Extras (UE4SS)
+
+- Direct live feedback: "we should add that as part of the install, option to install just the
+  server without mods and then the option of installing it with the extras."
+- The wizard's Install step now offers two buttons: "Install Palworld Dedicated Server" (unchanged,
+  server only) and a new "Install with Extras (+ UE4SS)", which installs the server and then
+  automatically installs the newest stable UE4SS release via the exact same Preview/Apply flow the
+  UE4SS page's own manual picker already uses.
+- Palworld Save Tools and PIM/Oodle Decoder are not part of "extras" -- confirmed neither has any
+  install capability anywhere in the app yet (both explicitly "BACKEND REQUIRED").
+- Touches `MystTiq.Desktop` only; no backend changes.
+
+Full detail: [`release-notes/v0.7.90.0.md`](release-notes/v0.7.90.0.md),
+[`docs/architecture/v0.7.90.0-install-with-extras.md`](docs/architecture/v0.7.90.0-install-with-extras.md).
+
+## v0.7.89.0 — Second-Server Lifecycle Fixes and Wizard Polish
+
+- Direct live feedback while driving a genuine second local server through setup and Start surfaced
+  a cluster of real bugs, most from code that treated "the literal default profile" as a stand-in
+  for "a local server" -- breaking once a genuine second local server exists.
+- **"Server did not start, no error message"** -- `EnsureManagementConnectionForLifecycleAsync`
+  silently returned false for any non-default local profile. Now checks the actual loopback address.
+- **Tab labeled "Remote" for a genuinely local server** -- same root cause, same fix
+  (`TabSession.ConnectionKindText`).
+- **Dashboard showed a different server's world data** -- confirmed live via `GET /world/explorer`
+  across profiles: a brand-new server's "not ready yet" state left the *previous* tab's Active World
+  ID/player-save count/size on screen. `ApplyDashboardSupport`'s stale branch now clears them.
+- **"How is this overall progress at 100% when there are missing items?"** -- the bar only ever
+  tracked the last operation's own completion. Relabeled to "OPERATION PROGRESS."
+- **Install step didn't auto-refresh or show progress detail** -- now auto-refreshes the Server
+  Environment checklist after install and shows SteamCMD's own captured output.
+- **MODs step required a manual scan** -- now auto-scans Steam Workshop on arrival, matching MOD
+  Library's own established auto-scan pattern.
+- **MODs step had no local-ZIP install option** -- added a distinctly-colored "Install MOD ZIP…"
+  button reusing MOD Library's own install path.
+- Touches `MystTiq.Desktop` only; no backend changes. Live-verified the backend itself was never
+  broken -- a direct `POST /server/start` against the new profile succeeded and produced a real
+  running `PalServer.exe`.
+
+Full detail: [`release-notes/v0.7.89.0.md`](release-notes/v0.7.89.0.md),
+[`docs/architecture/v0.7.89.0-second-server-lifecycle-and-wizard-polish.md`](docs/architecture/v0.7.89.0-second-server-lifecycle-and-wizard-polish.md).
+
+## v0.7.88.0 — New Server Wizard and Dashboard Bug Fixes
+
+- Direct live feedback with screenshots against a running v0.7.87.0 build surfaced five real bugs.
+- **Wizard jumped straight to Confirm & Finish** on every "+ New Server" attempt when a default
+  server was already running -- a short-circuit meant only for the Connect flow was wrongly also
+  firing for New Server Setup, since step 1 always connects to the shared default API before any new
+  profile exists. Scoped to Connect only.
+- **Install Directory step had no field** to see or change the target path. Added a real editable
+  path `TextBox` + folder-browse button.
+- **Game Port now highlighted** on Server Identity & Ports, with a permanent note explaining it only
+  needs to change when running multiple servers on the same machine at once.
+- **Clone source list was missing "Local MystTiq"** -- it reused the "+" menu's open-tab-exclusion
+  filter, which has no bearing on clone-source validity. Now lists every saved profile.
+- **Dashboard could get stuck on "Starting / Not Ready"** with Start greyed out after the server had
+  genuinely stopped. Root cause, confirmed live: the backend correctly reports Stopped but also (by
+  design) includes the previous run's PID for reference; the client was treating PID presence alone
+  as "alive." New `ServerStatusDto.IsProcessLive` checks the actual reported phase instead.
+- Touches `MystTiq.Desktop` only; no backend changes.
+
+Full detail: [`release-notes/v0.7.88.0.md`](release-notes/v0.7.88.0.md),
+[`docs/architecture/v0.7.88.0-new-server-wizard-and-dashboard-bug-fixes.md`](docs/architecture/v0.7.88.0-new-server-wizard-and-dashboard-bug-fixes.md).
+
+## v0.7.87.0 — Configuration: Advanced Dirty Highlighting, Save/Discard Prompt, Default Tab
+
+- Direct live feedback: "When i change items on this page they should highlight so that we know
+  what has been changed in both simple and advanced settings. If I do not save the changes and click
+  away it should ask if I want to save changes or discard. when i load up configuration it should
+  always start with the servers settings."
+- **Advanced Settings rows now highlight when edited** (new `Border.rowDirty` style + `TextBox.dirty`
+  on the Active Value column), matching Simple Settings' existing amber unsaved-change highlight from
+  v0.7.82.0. Distinct from and coexists with the existing "differs from Palworld's default" highlight.
+- **Navigating away from Configuration with unsaved changes now prompts** Save Changes / Discard /
+  Cancel via a new `ConfirmSaveDiscardDialog`, instead of silently discarding them. The guard lives
+  once in `Navigate()`, the single funnel every nav call site already goes through.
+- **Configuration always opens on Server Settings** (Simple view) rather than remembering Advanced
+  from an earlier visit in the same session.
+- Touches `MystTiq.Desktop` only; no backend changes.
+
+Full detail: [`release-notes/v0.7.87.0.md`](release-notes/v0.7.87.0.md),
+[`docs/architecture/v0.7.87.0-configuration-dirty-highlighting-and-save-prompt.md`](docs/architecture/v0.7.87.0-configuration-dirty-highlighting-and-save-prompt.md).
+
+## v0.7.86.0 — New Server Wizard: MODs Step
+
+- The last item scoped out of v0.7.81.0's original wizard rework: "embed the existing MOD Library
+  Workshop-scan machinery as a wizard step... same commands, new step placement, no new backend."
+- **New MODs step (7 of 8)**, install-wizard only, New World/Import paths only (Clone already
+  carries over the source server's MODs). Reuses `ScanWorkshopModsCommand`/`WorkshopItems`/
+  `ImportSelectedWorkshopModCommand` verbatim — both already correctly used
+  `BuildProfileFromEditor`, so no wizard-usability bug fix was needed here.
+- Entirely optional; Next advances to Confirm whether or not anything was imported.
+- Confirm & Finish renumbered from step 7 to step 8 across the whole wizard (Clone's own
+  jump-to-confirm and the "server already running" short-circuit both updated); Connect's own step
+  numbers are untouched.
+- Touches `MystTiq.Desktop` only; no configuration changes.
+
+Full detail: [`release-notes/v0.7.86.0.md`](release-notes/v0.7.86.0.md),
+[`docs/architecture/v0.7.86.0-new-server-wizard-mods-step.md`](docs/architecture/v0.7.86.0-new-server-wizard-mods-step.md).
+
+## v0.7.85.0 — Import a World, Phase 2
+
+- Closes out the honest interim placeholder scoped from v0.7.81.0: `ApplyCoreAsync` hard-requires an
+  already-active world, a real mismatch with a brand-new install that has no world to replace.
+- **Verified live, not assumed**: starting a genuinely fresh install for the very first time makes
+  PalServer.exe generate its own real world save (`SaveGames/0/<32-hex-id>/Level.sav`) within a few
+  minutes — confirmed by direct filesystem inspection. That means the already-existing, already-proven
+  World Transactions "world-import" flow works completely unmodified once a fresh install has been
+  started once. No new backend method, route, or DTO needed.
+- **New: "Prepare for Import"** in the wizard's Install step (Import path only) — starts the server
+  once, polls until a world exists, stops it, then embeds the same Analyze/Apply controls the World
+  Transactions page already uses. World Settings choice (step 4) is skipped for Import, since a
+  preset/customize choice doesn't apply to a placeholder world about to be entirely replaced.
+- **Fixed a real bug found while wiring this in**: `AnalyzeWorldArchiveAsync`/`ApplyWorldTransactionAsync`
+  hard-required `SelectedProfile` directly and silently no-op'd during the wizard (`SelectedProfile`
+  is always null there) — the same bug class as `RefreshEnvironmentAsync`'s v0.7.81.0 fix. Both now
+  use `BuildProfileFromEditor`, the established pattern.
+- **Live end-to-end tested against a real server**: started a genuinely fresh install, confirmed real
+  world generation, built a real test archive from that world's own save data, and ran it through the
+  actual Analyze → Apply routes — completed successfully with a real safety backup created.
+- Touches `MystTiq.Desktop` only; no configuration changes.
+
+Full detail: [`release-notes/v0.7.85.0.md`](release-notes/v0.7.85.0.md),
+[`docs/architecture/v0.7.85.0-import-world-phase-2.md`](docs/architecture/v0.7.85.0-import-world-phase-2.md).
+
+## v0.7.84.0 — Fleet Clone World Workflow
+
+- Direct live feedback (built earlier this session, explicitly tabled at the time: "table this for a
+  future update"): "the clone world option in fleet should be a workflow with drop down options to
+  clarify what it is doing," followed by "it should indicate better what server is being cloned
+  (server name - description)."
+- **Clone World on the Fleet page is now a labeled workflow**: SOURCE (this tab's connection, name
+  plus `BaseAddress`), NEW PROFILE (ID/name), and PORT OFFSET (dropdown with an explanation),
+  instead of one flat unlabeled card.
+- **New: "Restart MystTiq Now" button** after a successful clone, reusing `RestartOwnedSidecarAsync`
+  (built in v0.7.83.0 for the wizard's own second-server flow) to close the same "needs a restart to
+  come online" gap here — offered as an explicit button rather than fired automatically, since this
+  page's connection is already actively in use.
+- Touches `MystTiq.Desktop` only; no configuration changes.
+
+Full detail: [`release-notes/v0.7.84.0.md`](release-notes/v0.7.84.0.md),
+[`docs/architecture/v0.7.84.0-fleet-clone-world-workflow.md`](docs/architecture/v0.7.84.0-fleet-clone-world-workflow.md).
+
+## v0.7.83.0 — New Server Wizard: Reordered Steps & Genuine Second-Server Support
+
+- Direct live feedback against the v0.7.81.0 wizard: remove the standalone "+" → "Clone a Server"
+  shortcut; reorder to World Source → Server Identity & Ports → World Settings → Install Directory →
+  Download & Install, with the directory "the one we typically use unless it already exists, then
+  the same root but a different name based on the server's name."
+- **Reordered wizard steps**: Identity & Ports and the World Settings preset choice are now
+  collected right after World Source, but only actually applied automatically right after Install
+  produces a real `PalWorldSettings.ini` — `CreateDefault` genuinely requires that file to already
+  exist. "Customize" defers to the existing Configuration page after Finish instead of faking
+  pre-install slider values.
+- **New: genuine second-server support** — "Local MystTiq" permanently owns the default ServerId
+  (confirmed live: reusing it collided with the existing duplicate-connection guard), so every
+  completion now registers a real, separate fleet profile — at the typical root if free, or a
+  derived sibling directory if occupied — then automatically restarts the local MystTiq sidecar
+  (new `RestartOwnedSidecarAsync`) and reconnects. Clone gets the same restart-and-reconnect
+  treatment, closing a previously-undisclosed identical gap in its own flow.
+- **Removed**: the "+" menu's "Clone a Server" shortcut (it only ever navigated to Fleet's Clone
+  World card). Clone is now reached solely through the wizard's own World Source step.
+- **Set Up New Server auto-connects** instead of requiring a manual click, and skips straight to
+  World Source once ready, instead of sitting on a screen that read like "connect to an existing
+  service."
+- **Fixed real bugs found live**: `BuildProfileFromEditor`'s duplicate-connection guard blocked the
+  wizard's own Connect entirely; Step 1's header silently stayed blank (a 3-way `IsVisible`-toggled
+  row that never updated, replaced with one `TextBlock` bound to a computed string); Confirm's
+  summary showed the generic "New Server" placeholder instead of the real configured name
+  (`SetupServerName` now syncs into `ProfileName`); and a second, deeper round of the Alert Center
+  disk-space-prediction crash fix (explicit `double.IsFinite` guards plus a last-resort catch).
+- Touches `MystTiq.Desktop` (and `MystTiq.HeadlessHost` for the Alert Center round-2 fix); no
+  configuration schema changes.
+
+Full detail: [`release-notes/v0.7.83.0.md`](release-notes/v0.7.83.0.md),
+[`docs/architecture/v0.7.83.0-new-server-wizard-second-server-support.md`](docs/architecture/v0.7.83.0-new-server-wizard-second-server-support.md).
+
+## v0.7.82.0 — Update Center Actionability & Server Setup Table Resize
+
+- Direct live feedback: "the update center where it says update available should allow us to click
+  on it to update. we have a couple that say unknown, we need to do better and have a way to
+  check." Follow-up: "the server environment should expand or shrink to fill the screen."
+- **New: pip's "Update" button** — `HeadlessComponentUpdateService.UpdatePipAsync` runs
+  `python -m pip install --upgrade pip` for real via a new `POST /update-center/components/pip/update`
+  route, mutation-gated like every other real update action in this app. `RunProcessAsync` gained
+  an optional longer timeout for this specific real install, unchanged 8s default everywhere else.
+- **New: "Open" links for Unknown rows** — Python Runtime, Visual C++ Runtime, Microsoft C++ Build
+  Tools, and PIM/Oodle Decoder each get a link to the real official page to check manually, since
+  none has a reliable unattended "latest version" feed this app could safely automate (already
+  disclosed). New `ComponentVersionDto.SourceUrl`, keyed by `Component` since two of these rows
+  share an identical `Source` label but need different URLs.
+- **Fixed**: Server Setup's environment table had a fixed `MaxHeight="405"` regardless of actual
+  window size. New `ServerSetupTableMaxHeight`, recomputed on every window resize (same established
+  pattern as `UpdateTabStripWidth`/`UpdateRibbonWidth`).
+- **Fixed a real crash**: Alert Center's disk-space-exhaustion prediction could overflow
+  `DateTimeOffset.AddDays` when growth-per-day was a near-zero positive fraction, flooding Activity
+  & Audit with a repeating warning roughly once a minute. Capped at `MaxProjectableDays` (100 years).
+- **Configuration page reordered**: direct live feedback ("Server Identity should be moved to the
+  top... the second screenshot items should be moved just above world settings... the server
+  identity text needs some spacing"). Server Identity now sits first with more breathing room; the
+  Simple/Advanced toggle, QoL preset, and search bar moved to just above World Settings.
+- **New: unsaved-change highlighting** ("anything that has changed from the save[d] preset should
+  highlight in Amber or Green") — Server Identity, Network toggles/settings, and World Settings
+  sliders all highlight amber while dirty, via new `Border.statuscard.dirty`/`TextBox.dirty` styles.
+- **Fixed a real Dashboard bug**: "why does it say ... PalServer process is active. The server is
+  stopped and not ready, but the only option i have is to stop?" `ServerState`/`DashboardHealthText`
+  now show "Starting / Not Ready" instead of a contradictory "Stopped" when a process is detected but
+  not yet confirmed ready.
+- **Fixed**: the Server Identity "🎲 Generate" and "Save As Preset" buttons stayed permanently
+  disabled after the first Configuration load every session — their `CanExecuteChanged` was only
+  ever re-raised from a property setter that fires mid-load, before `IsBusy` returns to false.
+- Touches `MystTiq.Desktop` and `MystTiq.HeadlessHost`; no configuration changes.
+
+Full detail: [`release-notes/v0.7.82.0.md`](release-notes/v0.7.82.0.md),
+[`docs/architecture/v0.7.82.0-update-center-actionability.md`](docs/architecture/v0.7.82.0-update-center-actionability.md).
+
+## v0.7.81.0 — "Set Up New Server" Wizard Rework
+
+- Direct live feedback: "When i setup a new server it should always be a local install. It should
+  not be trying to connect to a previously installed version as we already have an option to
+  connect to a local server or remote server from the plus... It should have the option to clone
+  an existing server, setup a new world, import a world, and then move onto the specific
+  settings... If another service is detected it should flag that when selecting the ports."
+- **Rebuilt**: "Set Up New Server" was reusing the exact same wizard as "Connect to Local/Remote
+  Server," landing on an identical Local/Remote choice screen and "find a service" step regardless
+  of intent (a gap already disclosed in the code's own comments). Now always local, skips that
+  choice entirely, and walks through a real World Source step (Clone an Existing Server / Set Up a
+  New World / Import a World) before Settings/Confirm.
+- **New: Clone an Existing Server, inline in the wizard** — pick any saved profile as the source,
+  choose a port offset, no new backend needed (`CloneWorldAsync` already took an explicit source
+  profile; `CredentialStore.TryLoad` already resolves a token for any saved profile by Id).
+- **New: read-only environment checklist during Install**, auto-loaded, surfacing SteamCMD/
+  dependencies/UE4SS status. Found and fixed a real bug along the way: `RefreshEnvironmentAsync`
+  had a hard `SelectedProfile is null` guard that made it unreachable during the entire wizard.
+- **New: starter preset picker** (Vanilla/Balanced QoL/Relaxed QoL/custom) in the Settings step,
+  chaining the existing Load → Apply → Save sequence the Configuration page already had.
+- Port selection with live conflict detection was already built (`CheckSetupPortAsync`) — kept in
+  the renumbered step order, no new work needed there.
+- Import a World stays an honest interim placeholder this version — the existing world-import
+  backend hard-requires an already-active world to replace, a real mismatch with a brand-new
+  install that has none yet; a proper fix is scoped as a separate future version.
+- **New**: `scripts/Test-v0.7.81.0-RouteSmoke.ps1`, live end-to-end coverage of the whole
+  flow (connect, port-conflict detection, install-status, create-default-settings, starter-preset
+  apply, clone) against a genuinely fresh, empty server root.
+- `MystTiq.Desktop` only, no backend or configuration changes.
+
+Full detail: [`release-notes/v0.7.81.0.md`](release-notes/v0.7.81.0.md),
+[`docs/architecture/v0.7.81.0-new-server-wizard-rework.md`](docs/architecture/v0.7.81.0-new-server-wizard-rework.md).
+
+## v0.7.80.0 — Server Setup Status Pill Centering & Glass Gradient
+
+- Direct live feedback on the Server Setup page: "the Ready should be in the middle of the green.
+  can we also add a gradient glassy effect."
+- **Fixed**: the per-row STATUS pill (Ready/Disabled/Missing) relied on default Border/TextBlock
+  layout behavior instead of explicit alignment, so its text wasn't reliably centered within the
+  badge. Now explicit `HorizontalAlignment="Stretch"` on the pill plus
+  `HorizontalAlignment`/`VerticalAlignment`/`TextAlignment="Center"` on its label.
+- **Redesigned**: flat `GreenBrush`/`AmberBrush`/`RedBrush` fills replaced with this app's existing
+  glass-gradient family (`SuccessGlassGradient`, `DangerGlassGradient`, and a new
+  `WarningGlassGradient` added for amber, matching the same alpha-stop structure), plus a thin
+  matching accent border for definition — the same glassy look already used on ribbon buttons
+  elsewhere in the app.
+- `MystTiq.Desktop` only, no backend or configuration changes.
+
+Full detail: [`release-notes/v0.7.80.0.md`](release-notes/v0.7.80.0.md),
+[`docs/architecture/v0.7.80.0-server-setup-status-pill-glass.md`](docs/architecture/v0.7.80.0-server-setup-status-pill-glass.md).
+
+## v0.7.79.0 — Server Doctor Compact, Color-Coded Checks
+
+- Direct live feedback on the Server Doctor page: "these items listed should be compacted and make
+  use of the spacing a bit more. Perhaps Pass can be highlighted in green or red."
+- **Redesigned**: each diagnostic finding is now a denser single row (colored state badge,
+  component/category, evidence, actions) instead of a tall stacked card. A redundant line
+  (Recommendation duplicating Evidence word-for-word, common on passing checks) is now hidden via a
+  new `ShowRecommendation` computed property.
+- **Color-coded**: PASS/WARNING/FAIL now show as a small colored badge (green/amber/red) instead of
+  plain bold text, via new `IsPass`/`IsWarning`/`IsFail`/`IsOtherState` computed properties on
+  `DiagnosticFindingDto`.
+- **Follow-up**: added a subtle text-shadow style (`TextBlock.badgeText`) to keep the badge label
+  legible against the bright green PASS background, per direct request, without touching the
+  shared `GreenBrush` resource used elsewhere.
+- `MystTiq.Desktop` only, no backend or configuration changes.
+
+Full detail: [`release-notes/v0.7.79.0.md`](release-notes/v0.7.79.0.md),
+[`docs/architecture/v0.7.79.0-server-doctor-compact-checks.md`](docs/architecture/v0.7.79.0-server-doctor-compact-checks.md).
+
+## v0.7.78.0 — MOD Pages UX Pass
+
+- Started from direct live feedback on the MOD Library page ("there are a number of buttons for the
+  installed mods and the whole page just looks odd. Also the local steam Mods should load
+  automatically") and grew through several rounds of live, iterative feedback into a full pass
+  across MOD Library, MOD Dashboard, and the UE4SS page.
+- **MOD Library**: local Steam Workshop scan now runs automatically on first visit each tab.
+  Install Validated ZIP and Available Local Steam Workshop Mods moved side by side into their own
+  row at the top; Installed MODs (2/3 width) and MOD DETAILS (1/3 width) sit below. The old 9-button
+  row is gone: all-MODs actions (Enable All, Disable All, Repair, Safe-Start Diagnostic) moved to a
+  new ribbon "MOD Maintenance" group, and per-mod actions (Enable/Disable/Rollback/Repair/Delete
+  Selected) are now a right-click context menu on the list, matching the established Bases/Guilds/
+  Players pattern.
+- **Install Validated ZIP simplified**: removed the manual "Package name (optional)" box (the
+  package name now always comes from the ZIP's own filename) and the two permanently-disabled
+  "BACKEND REQUIRED" placeholder buttons. Added real drag-and-drop: drop a `.zip` directly onto the
+  card to install it, using Avalonia 11.3's current `DataTransfer` API.
+- **Per-mod version and update info**: `HeadlessModItem` gained `UpdateAvailable`/`UpdateHint`/
+  `InstalledVersion`, computed once per mod during the regular inventory scan by reusing the
+  existing `CheckModUpdateAsync` comparison and reading each installed mod's own `Info.json`
+  directly from its install folder. Shown as a version line + "UPDATE AVAILABLE" badge per row on
+  the Library list and in the MOD DETAILS panel.
+- **MOD Dashboard redesigned** to feel distinct from MOD Library (direct follow-up: "help with the
+  MOD dashboard... so it doesn't feel like it is essentially the same as the MOD library"): a new
+  color-coded hero health banner, recolored status cards (green/cyan/amber/red by meaning instead of
+  one flat look), and a deliberately lighter read-only list — renamed "MOD Overview" — with no
+  install path, version, or update badge, since that detail lives in Library instead.
+- **Fixed**: `Border.statuscard` never had a `Padding` setter at all (unlike `Border.card`), so text
+  sat flush against every statuscard's border app-wide — found on the UE4SS page, fixed at the
+  shared style so every page benefits.
+- **Fixed**: UE4SS Runtime Health used to revert to "Unverified" any time its one-time evidence
+  source disappeared (server stopped, log rotated), even on an install that had already run
+  cleanly. A new small persisted marker now lets a confirmed-good run keep being reported
+  ("Confirmed — ran without issue") instead of losing that signal.
+- Touches `MystTiq.Desktop` and `MystTiq.HeadlessHost`; no configuration changes.
+
+Full detail: [`release-notes/v0.7.78.0.md`](release-notes/v0.7.78.0.md),
+[`docs/architecture/v0.7.78.0-mod-pages-ux-pass.md`](docs/architecture/v0.7.78.0-mod-pages-ux-pass.md).
+
+## v0.7.77.0 — MOD/Workshop Detection Fixes, UE4SS Version via Hash, Per-MOD Repair
+
+- Direct live investigation into three real observations: Steam Workshop items showing "NOT
+  INSTALLED" when believed installed, UE4SS's own page showing "version metadata unavailable"
+  despite an ask for a real version signal, and a discrepancy between 6 currently-detected MODs
+  and a remembered "8" from v0.2.16.4. Investigated the real file system directly before writing
+  any code: found real Workshop content on a second Steam library, found QualityOfLife's `.pak`
+  files manually quarantined (`.quarantined-slow-start-cause`, dated Aug 9, never restored) from a
+  past troubleshooting session, found PalSchema only in inert staging folders never actually
+  copied into the active mods root, and confirmed via direct SHA-256 comparison that the real
+  active `UE4SS.dll` is byte-identical to the one bundled in the "UE4SS Experimental (Palworld)"
+  Workshop item.
+- **Fixed**: `DescribeWorkshopItem` always checked a Workshop item's install status against the
+  MOD inventory — correct for real mods, but wrong for a Workshop item whose manifest declares
+  itself as the UE4SS runtime (the mod inventory never contains the runtime by definition). Now
+  checks whether UE4SS is actually installed instead for that case.
+- **Fixed**: UE4SS version now resolved via local-Workshop-copy hash match when nothing else
+  identifies it — reports a real version string (`"2281fa31 (matched via local Workshop item
+  3625223587, SHA-256 identical)"`) instead of "version metadata unavailable." Found a second real
+  bug while wiring this up: two different `UE4SS.dll` files existed side by side (a stale
+  legacy-location one from Feb 2024, the real active modern one from Sept 2026) and the naive
+  candidate order was hashing the wrong one. New `ResolveActiveUe4ssDllPath()` mirrors
+  `ResolveUe4ss()`'s own modern-vs-legacy preference instead of guessing.
+- **Real data restored, direct user request**: PalSchema and QualityOfLife actually imported into
+  the real active mods folder via the already-existing `ImportWorkshopItemAsync` — `mods.txt` now
+  lists 8 mods, matching what was remembered from v0.2.16.4.
+- **New: per-MOD Repair / Re-install** (`HeadlessModManagementService.RepairModAsync`) — direct
+  request: "if a MOD is incomplete there should be an option for repair/re-install." Distinct from
+  Update (only offers when Steam's local copy is *newer*) and the existing global Repair button
+  (only fixes legacy `enabled.txt` overrides, never a MOD's own files). Finds a matching local
+  Workshop source and does a clean delete-then-reimport, reusing the existing delete snapshot for
+  a safety net — found live that a naive straight re-import fails outright since the install
+  method correctly refuses to overwrite an existing MOD folder by design. Fails honestly, without
+  touching anything, when no local Workshop source is known. New route:
+  `POST /mods/{type}/{package}/repair`; new "Repair / Re-install Selected" button on the MOD
+  Library page.
+- Everything live-verified directly against the real production install — no isolated clone
+  needed, since none of this touches player save data.
+
+Full detail: [`release-notes/v0.7.77.0.md`](release-notes/v0.7.77.0.md),
+[`docs/architecture/v0.7.77.0-mod-workshop-fixes-and-repair.md`](docs/architecture/v0.7.77.0-mod-workshop-fixes-and-repair.md).
+
+## v0.7.76.0 — Base/Guild Right-Click Workflow
+
+- Direct follow-up completing the deferred half of the previous version's request. **Bases page**
+  right-click menu: "Copy Base Info" (full details to clipboard), "Transfer to Guild…" (a
+  populated dropdown of real guilds instead of typing a 32-hex ID), "Wipe Base Completely…".
+  **Guilds page** right-click menu: "Transfer Leadership To…", "Add Player…", "Remove Broken
+  Member…", "Claim Orphaned Guild…" — the same four operation types the existing card's own
+  dropdown already supports, each with a real player picker instead of a hand-typed ID.
+- Every flow follows Preview → real server-reported findings → mandatory safety-backup notice →
+  confirm → Apply, matching the exact workflow shape requested.
+- **No new server-side mutation code**: reuses `HeadlessBaseOwnershipService`/
+  `HeadlessGuildOwnershipService` entirely unchanged — both were already real, working, Preview →
+  Safety Backup → Apply operations, previously reachable only through in-page cards requiring
+  hand-typed IDs. New Desktop-side orchestration only: `SelectGuildDialog` (mirrors v0.7.75.0's
+  `SelectPlayerDialog`), one reusable `ConfirmOperationDialog` instead of a bespoke dialog per
+  operation, and parallel `MainWindowViewModel` Preview/Apply method pairs that write into the
+  exact same status-text properties the in-page cards already display, so both entry points stay
+  in sync.
+
+Full detail: [`release-notes/v0.7.76.0.md`](release-notes/v0.7.76.0.md),
+[`docs/architecture/v0.7.76.0-base-guild-right-click-workflow.md`](docs/architecture/v0.7.76.0-base-guild-right-click-workflow.md).
+
+## v0.7.75.0 — Delete Player Completely / Copy Player
+
+- **New: Delete Player Completely** (`HeadlessPlayerDeletionService`) — permanently deletes a
+  player's save file, then as a separate follow-up operation reuses the already-proven Remove
+  Broken Member operation to clean up their now-dangling guild reference, and clears their
+  registry history. Same Preview → Safety Backup → Apply discipline as every other destructive
+  operation in this app.
+- **New: Copy Player** (`HeadlessPlayerCopyService`) — clones a player's inventory, unlocked
+  recipes, records, skins, and quest progress onto another player's own save, while the
+  destination keeps its own identity, position, session history, and pal-party/storage
+  references. Real investigation before writing any code: decoded a real production player's
+  `.sav` file read-only via the existing generic PlM/Oodle converter (first time this codebase has
+  decoded a per-player save, not just `Level.sav`) and found the exact field split to copy versus
+  preserve. Character level/stats (a separate `Level.sav` decode target) and pal-party contents
+  are deliberately deferred, disclosed rather than silently dropped.
+- **Real bug found and fixed during live testing on an isolated clone of the real production
+  save**: the deletion's guild-cleanup follow-up initially failed with a lock conflict —
+  `OperationCoordinator.Complete()` doesn't release the operation's resource lock, only
+  `Dispose()` does, and the follow-up call ran before that disposal happened. Fixed by disposing
+  explicitly right after `Complete()`. Re-verified after the fix: both the deletion and the
+  follow-up guild cleanup were independently confirmed correct by decoding the raw save a second,
+  separate way outside the app entirely — not just trusting the app's own success response.
+- **Root-caused a separately reported "right-click looks broken" issue**: Kick/Ban were always
+  correctly wired to a real backend call — they were just correctly disabled (no online player /
+  no server running) with zero visible disabled styling, since no `MenuItem` style existed
+  anywhere in this app. Added a real `MenuItem:disabled` style matching the existing
+  `Button:disabled` convention.
+- Desktop: Players page's right-click menu gains "Copy Player Data From…" (a populated
+  player-picker dropdown via the new, genuinely reusable `SelectPlayerDialog`, not a hand-typed
+  ID) and "Delete Player Completely…", both showing real server-reported preview findings before
+  confirming.
+- **Deferred, not forgotten**: Base/Guild right-click convenience (jump to the already-working
+  transfer/wipe cards; populated target dropdowns) was requested in the same conversation and is
+  scoped for its own follow-up rather than rushed in here — the underlying capability already
+  fully works today via the existing cards, so this is lower urgency than Player Delete/Copy,
+  which had zero existing UI.
+
+Full detail: [`release-notes/v0.7.75.0.md`](release-notes/v0.7.75.0.md),
+[`docs/architecture/v0.7.75.0-delete-and-copy-player.md`](docs/architecture/v0.7.75.0-delete-and-copy-player.md).
+
+## v0.7.74.0 — Close-Dialog Exit Shortcuts & Tab-Restore Exception Isolation
+
+- Direct live report after clicking through the v0.7.73.0 build: the "Server is running"
+  close-confirm dialog only offered Cancel/Minimize to Tray, with a text hint pointing at the tray
+  icon's own Safe Exit/Force Exit for anyone who actually wanted to stop the server — an extra,
+  avoidable round-trip. `App.axaml.cs`'s `SafeExit_OnClick`/`ForceExit_OnClick` were split into
+  public `SafeExitAsync()`/`ForceExitAsync()` (the tray menu's own handlers now just call these);
+  `ConfirmMinimizeToTrayDialog` gained two more buttons wired to two new
+  `ConfirmMinimizeToTrayResult` values, handled by `MainWindow_Closing` calling the same public
+  methods. Both paths now run identical shutdown logic, nothing duplicated.
+- **Real bug found and fixed, also reported live**: only 1 of 3 saved tabs reopened after a
+  relaunch. Confirmed the saved data itself was intact — `%APPDATA%\MystTiq\open-tabs.json` had all
+  3 profile IDs, `connections.json` had all 3 matching profiles. Root cause: the startup sequence
+  ran `InitializeLocalDashboardAsync()` and `RestoreTabSessionAsync()` as one unguarded async
+  continuation — an exception anywhere in the first silently aborted the whole thing before the
+  second ever ran, dropping every remembered tab beyond the first with no error shown anywhere.
+  Each phase now runs in its own try/catch, surfacing any failure to `StatusBarText` instead of
+  swallowing it. Directly answers the user's own diagnostic question: tab session storage itself
+  isn't tied to which copy of the exe is running (it's per-user-profile, not per-install-location),
+  but the underlying suspicion wasn't unreasonable — the discovery step this cascade started from
+  really can behave differently depending on where it's run from, and the missing exception
+  isolation is what let that turn into lost tabs.
+- **Checked, not re-fixed**: a separately reported per-tab color bug (switching tabs left chrome
+  tinted like the previous tab). Traced directly to already being fixed by other work already
+  present in the source tree — `RefreshTabAccentVisuals()` already re-syncs every open tab's own
+  color after any global theme switch, and each tab's own `AccentBrush` already takes precedence
+  over the shared selected-state style. Not this version's work; flagged for the record rather than
+  claimed. The screenshots that reported it were from the older, frozen v0.7.73.0 checkpoint build.
+
+Full detail: [`release-notes/v0.7.74.0.md`](release-notes/v0.7.74.0.md),
+[`docs/architecture/v0.7.74.0-close-dialog-shortcuts-and-tab-restore-fix.md`](docs/architecture/v0.7.74.0-close-dialog-shortcuts-and-tab-restore-fix.md).
+
+## v0.7.73.0 — Tray Icon Honestly Reflects Running State
+
+- Direct live bug report: the user found two real PalServer processes running with no MystTiq tray
+  icon visible, and expected "no tray icon" to reliably mean "nothing is running." Investigated
+  auto-start thoroughly before touching anything: no Windows Startup-folder entry, `Run` registry
+  key, scheduled task, Windows service, or configured automation rule anywhere; tab-session restore
+  (`RestoreTabSessionAsync` → `ConnectExistingProfileTab`) only reconnects/polls an already-running
+  server's status, never calls Start. Root cause instead: the tray menu's "Exit GUI Only — keep
+  services running" item always fully quit the Avalonia app — taking the tray icon down with it —
+  even while deliberately leaving PalServer running in the background. The one exit path
+  specifically built to leave something running had no visible trace once used.
+- Fix, per direct confirmation on how to reconcile it: `ExitGui_OnClick` now checks
+  `Tabs.Any(t => t.ServerIsRunning)` first (the same check `MainWindow_Closing` already uses for
+  the window's own close button) — if anything is running, it collapses to the same
+  minimize-to-tray path instead of exiting, so the tray icon stays up as an honest "something's
+  running" signal. Only a genuinely idle app still fully exits with no tray at all.
+- Tray tooltip was a static string regardless of state; added a 5-second `DispatcherTimer`
+  (`UpdateTrayStatus()`) that names what's actually running — "idle, nothing running" / "running:
+  Default Server" / "2 servers running: Default Server, second-local".
+- Confirmed, not changed: headless log capture (`HeadlessConsoleLogWriter`,
+  `WindowsServerLifecycleService`'s redirection, v0.7.72.0's native console-write hook) already runs
+  entirely inside the separate `mysttiq-server.exe` process — `Exit GUI Only` never stopped that
+  sidecar even before this fix, so logging already continued headless regardless of GUI state; this
+  version makes that already-true guarantee visible via the tray rather than needing to add it.
+
+Full detail: [`release-notes/v0.7.73.0.md`](release-notes/v0.7.73.0.md),
+[`docs/architecture/v0.7.73.0-tray-reflects-running-state.md`](docs/architecture/v0.7.73.0-tray-reflects-running-state.md).
+
+## v0.7.72.0 — Console-Write Hook (Native Console Capture, completed)
+
+- Completes the native console capture project scoped (foundation-only) in v0.7.57.0. The
+  originally-planned hook target, Unreal's own `FOutputDevice::LogfImpl`, was never viable — not
+  exported, unstable offset across builds. Re-checked the same `dumpbin /imports` data v0.7.57.0's
+  DSOUND target was picked from and found a better target: `PalServer-Win64-Shipping-Cmd.exe`
+  imports `WriteConsoleA`/`WriteConsoleW` directly from `KERNEL32.dll` — the same low-level path
+  Unreal's own console window writes through. Hooked both in the game's own Import Address Table
+  (`native/MystTiqConsoleProxy/dllmain.cpp`'s new `PatchKernel32Import`) — surgical, only this one
+  importer is touched, unlike a shared kernel32 export patch which would hit every DLL in the
+  process.
+- **Real bug found and fixed during live testing**: the capture log initially opened with no file
+  sharing at all (plain `_wfopen_s`), so MystTiq's own concurrent tail-read failed with a sharing
+  violation for the entire life of the game process. Fixed via `_wfsopen(..., _SH_DENYWR)` —
+  confirmed live, reading the file successfully while PalServer was still running.
+- **Live-verified safe end-to-end, never touching the real production server**: proven twice on an
+  isolated clone (offset ports, throwaway admin password) — first via a raw process launch (proved
+  the native mechanism alone: process stayed alive, reached full readiness, captured real
+  `LogMemory` engine diagnostics never visible anywhere before), then again through the real
+  shipped code path (a fully isolated `mysttiq-server api-run` instance, its own isolated fleet
+  root and API port, install via the new API route, start via the real lifecycle service, confirmed
+  `/logs/tail` surfaces the new `"PalServer console capture (native hook)"` source with the same
+  real content).
+- New opt-in backend capability: `HeadlessConsoleCaptureProxyService` (Windows-only; Linux honestly
+  reports no DLL-proxy equivalent exists) + three routes (`GET /server/console-capture`,
+  `POST .../install`, `POST .../uninstall`). Nothing in the lifecycle/launch path calls Install
+  automatically — this places native code that runs inside the game process on every future
+  launch, a materially different risk category from every other console source this app reads (all
+  pre-existing files something else already writes), so it stays explicit-action-only. Refuses to
+  overwrite a foreign `dsound.dll` or touch a locked file (server must be stopped to install/remove).
+- `Build-AvaloniaDesktop.ps1`/`Build-WindowsHeadless.ps1` now stage the native proxy DLL (built
+  separately via `scripts/Build-ConsoleProxy.ps1`, MSVC toolchain required) into the published
+  headless host's `native/` folder — best-effort, never fails the .NET publish if the native
+  artifact hasn't been built yet.
+- **Honest finding, confirmed empirically rather than just predicted**: let the isolated test
+  server run several minutes past full readiness — the capture log never grew past its initial
+  handful of startup lines. Palworld's Windows dedicated server build genuinely writes nothing
+  further to console once startup finishes, consistent with the earlier `NO_LOGGING` finding. This
+  version adds real, previously-invisible startup diagnostics (memory stats, console-variable
+  echoes); it does not solve "the console goes quiet during actual gameplay" — that appears to have
+  no further fix available short of Palworld's own build re-enabling logging.
+- **Not installed on this machine's real production server** — every risky step was proven safe on
+  an isolated clone first; actually placing native code next to the real, live PalServer executable
+  needs the user's own explicit go-ahead, asked for separately.
+
+Full detail: [`release-notes/v0.7.72.0.md`](release-notes/v0.7.72.0.md),
+[`docs/architecture/v0.7.72.0-console-write-hook.md`](docs/architecture/v0.7.72.0-console-write-hook.md).
+
 ## v0.7.71.0 — Console Source: PalDefender Log
 
 - Direct follow-up to a user-provided screenshot of a visible Windows Terminal console window

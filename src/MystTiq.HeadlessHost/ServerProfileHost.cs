@@ -34,6 +34,7 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required HeadlessConfigurationApiService ConfigurationApi { get; init; }
     public required HeadlessDoctorService Doctor { get; init; }
     public required HeadlessServerDistributionService ServerDistribution { get; init; }
+    public required HeadlessConsoleCaptureProxyService ConsoleCaptureProxy { get; init; }
     public required HeadlessWorldExplorerService WorldExplorer { get; init; }
     public required HeadlessWorldTransactionService WorldTransactions { get; init; }
     public required HeadlessPlayerGuildExplorerService PlayerGuildExplorer { get; init; }
@@ -55,6 +56,8 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required WanReachabilityService WanReachability { get; init; }
     public required HeadlessFleetCrashRecoveryService CrashRecovery { get; init; }
     public required HeadlessPalEditService PalEdit { get; init; }
+    public required HeadlessPlayerDeletionService PlayerDeletion { get; init; }
+    public required HeadlessPlayerCopyService PlayerCopy { get; init; }
     public required HeadlessDiscordBotService DiscordBot { get; init; }
     public required HeadlessAntiCheatService AntiCheat { get; init; }
     public required HeadlessWhitelistService Whitelist { get; init; }

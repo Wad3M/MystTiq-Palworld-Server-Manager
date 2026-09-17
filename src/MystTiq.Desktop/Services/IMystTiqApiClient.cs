@@ -242,6 +242,12 @@ public interface IMystTiqApiClient
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
 
+    Task<AddFleetProfileResultDto> AddFleetProfileAsync(
+        ConnectionProfile profile,
+        AddFleetProfileRequestDto request,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
     Task<ServerDistributionStatusDto> GetServerDistributionStatusAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
@@ -261,6 +267,11 @@ public interface IMystTiqApiClient
 
     // v0.7.45.0: Update Center Overhaul -- real installed/latest version tracking per component.
     Task<ComponentVersionSnapshotDto> GetComponentVersionsAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ComponentUpdateResultDto> UpdatePipAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
@@ -321,6 +332,10 @@ public interface IMystTiqApiClient
 
     Task<BaseRecoveryPreviewDto> PreviewBaseRecoveryAsync(ConnectionProfile profile, string baseId, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<BaseOwnershipResultDto> ApplyBaseRecoveryAsync(ConnectionProfile profile, string previewToken, bool confirmed, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PlayerDeletionPreviewDto> PreviewPlayerDeletionAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PlayerDeletionResultDto> ApplyPlayerDeletionAsync(ConnectionProfile profile, string previewToken, bool confirmed, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PlayerCopyPreviewDto> PreviewPlayerCopyAsync(ConnectionProfile profile, string sourcePlayerId, string destinationPlayerId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PlayerCopyResultDto> ApplyPlayerCopyAsync(ConnectionProfile profile, string previewToken, bool confirmed, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<OperationRecordDto>> GetOperationsAsync(ConnectionProfile profile, int max = 50, string? bearerToken = null, CancellationToken cancellationToken = default);
 
@@ -349,6 +364,7 @@ public interface IMystTiqApiClient
     Task<ModMutationResultDto> RollbackModAsync(ConnectionProfile profile, string type, string package, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> SetAllModsEnabledAsync(ConnectionProfile profile, bool enabled, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> RepairModsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ModMutationResultDto> RepairModAsync(ConnectionProfile profile, string type, string package, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<WorkshopScanResultDto> ScanWorkshopModsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> ImportWorkshopModAsync(ConnectionProfile profile, string workshopId, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModUpdateCheckResultDto> CheckModUpdateAsync(ConnectionProfile profile, string type, string package, string? bearerToken = null, CancellationToken cancellationToken = default);

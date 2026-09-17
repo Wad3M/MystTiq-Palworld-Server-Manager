@@ -213,6 +213,17 @@ public sealed class HeadlessMonitoringService
         Add(result, "UE4SS.log", Path.Combine(paths.Ue4ssRoot, "UE4SS.log"));
         Add(result, "UE4SS.log (legacy layout)", Path.Combine(paths.RuntimeBinaryRoot, "UE4SS.log"));
 
+        // v0.7.72.0: MystTiqConsoleProxy.dll -- the DSOUND.dll proxy scaffolded in v0.7.57.0 -- now
+        // hooks WriteConsoleA/WriteConsoleW in PalServer-Win64-Shipping-Cmd.exe's own import table
+        // and writes every byte the real console window would have shown into this file, verbatim.
+        // Live-verified against a real, isolated clone of the production install to capture genuine
+        // Unreal engine diagnostics (LogMemory stats, console-variable echoes) that no other source
+        // here ever sees, since Palworld's own file-logging subsystem is compiled out. Only present
+        // when the proxy DLL has actually been installed as dsound.dll next to the game executable
+        // AND has run at least once -- opt-in, not automatic, since it is native code injected into
+        // the game process; absent, this Add() is a harmless no-op like every other optional source.
+        Add(result, "PalServer console capture (native hook)", Path.Combine(paths.RuntimeBinaryRoot, "MystTiqConsoleProxy-Capture.log"));
+
         var adminLogs = Path.Combine(paths.RuntimeBinaryRoot, "ue4ss", "Mods", "AdminCommands", "Scripts", "logs", "serverlogs");
         var latestAdmin = FindNewestTextLog(adminLogs);
         if (latestAdmin is not null) Add(result, "AdminCommands server log", latestAdmin);

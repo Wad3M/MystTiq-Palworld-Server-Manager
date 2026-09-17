@@ -488,7 +488,7 @@
                 <TextBlock Grid.Column="3" Text="LOCATION" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold"/>
                 <TextBlock Grid.Column="4" Text="DETAILS" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold"/>
               </Grid>
-              <ScrollViewer Grid.Row="1" MaxHeight="405" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+              <ScrollViewer Grid.Row="1" MaxHeight="{Binding ServerSetupTableMaxHeight}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding EnvironmentItems}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="models:EnvironmentChecklistItemDto">
@@ -496,10 +496,18 @@
                         <Grid ColumnDefinitions="110,190,95,2*,2.35*" MinHeight="39">
                           <Button Content="{Binding ActionDisplay}" Click="EnvironmentAction_Click" Margin="4,3" Padding="6,3" MinHeight="30" FontSize="9" IsEnabled="{Binding ActionSupported}" ToolTip.Tip="{Binding ActionToolTip}" Classes.inspectAction="{Binding IsInspectAction}" Classes.targetAction="{Binding IsTargetAction}"/>
                           <TextBlock Grid.Column="1" Text="{Binding Component}" Margin="10,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                          <!-- v0.7.79.0: direct live feedback ("the Ready should be in the middle
+                               of the green. can we also add a gradient glassy effect"). Explicit
+                               Stretch + Center (rather than relying on Border/TextBlock defaults)
+                               guarantees the text sits centered in the full pill regardless of how
+                               wide the STATUS column ends up; flat GreenBrush/AmberBrush/RedBrush
+                               fills replaced with the app's existing glass-gradient family
+                               (Success/Warning/Danger Glass, the same ones ribbon buttons already
+                               use) plus a thin matching accent border for definition. -->
                           <Grid Grid.Column="2" Margin="8,6">
-                            <Border Background="{DynamicResource GreenBrush}" CornerRadius="4" Padding="6,3" IsVisible="{Binding IsReady}"><TextBlock Text="{Binding Status}" HorizontalAlignment="Center" FontSize="10" FontWeight="Bold"/></Border>
-                            <Border Background="{DynamicResource AmberBrush}" CornerRadius="4" Padding="6,3" IsVisible="{Binding IsDisabled}"><TextBlock Text="{Binding Status}" HorizontalAlignment="Center" FontSize="10" FontWeight="Bold"/></Border>
-                            <Border Background="{DynamicResource RedBrush}" CornerRadius="4" Padding="6,3" IsVisible="{Binding IsMissing}"><TextBlock Text="{Binding Status}" HorizontalAlignment="Center" FontSize="10" FontWeight="Bold"/></Border>
+                            <Border Background="{DynamicResource SuccessGlassGradient}" BorderBrush="{DynamicResource GreenAccentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,3" HorizontalAlignment="Stretch" IsVisible="{Binding IsReady}"><TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" FontSize="10" FontWeight="Bold"/></Border>
+                            <Border Background="{DynamicResource WarningGlassGradient}" BorderBrush="{DynamicResource AmberAccentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,3" HorizontalAlignment="Stretch" IsVisible="{Binding IsDisabled}"><TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" FontSize="10" FontWeight="Bold"/></Border>
+                            <Border Background="{DynamicResource DangerGlassGradient}" BorderBrush="{DynamicResource RedAccentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,3" HorizontalAlignment="Stretch" IsVisible="{Binding IsMissing}"><TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" FontSize="10" FontWeight="Bold"/></Border>
                           </Grid>
                           <TextBlock Grid.Column="3" Text="{Binding Location}" Margin="10,0" VerticalAlignment="Center" FontSize="10" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Location}"/>
                           <TextBlock Grid.Column="4" Text="{Binding Details}" Margin="10,0" VerticalAlignment="Center" FontSize="10" TextWrapping="Wrap" MaxHeight="34"/>
@@ -523,8 +531,14 @@
                 <TextBlock Text="{Binding SetupOperationDetail}" Classes="muted" TextWrapping="Wrap" Margin="0,4,0,0"/>
                 <TextBlock Text="{Binding SetupRecentActivity}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,6,0,0"/>
               </StackPanel>
+              <!-- v0.7.89.0 bug fix: reported live. "how is this overall progress at 100% when
+                   there are missing items?" This bar only ever tracked the most recently run
+                   operation's own progress (e.g. Create Default Settings finishing), never the
+                   environment's actual ready/missing count, which is already shown by the
+                   READY/ATTENTION cards above. "OVERALL" wrongly implied it summarized the whole
+                   environment. -->
               <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock Text="OVERALL PROGRESS" Classes="muted" FontSize="10" FontWeight="SemiBold"/>
+                <TextBlock Text="OPERATION PROGRESS" Classes="muted" FontSize="10" FontWeight="SemiBold"/>
                 <ProgressBar Value="{Binding SetupOperationProgress}" Minimum="0" Maximum="100" Height="18" Margin="0,6,0,0"/>
                 <TextBlock Text="{Binding SetupOperationProgressText}" HorizontalAlignment="Right" Margin="0,3,0,0"/>
               </StackPanel>
@@ -590,6 +604,14 @@
                           <TextBlock Grid.Column="4" Text="{Binding Source}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                         </Grid>
                         <TextBlock Text="{Binding Detail}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                        <!-- v0.7.82.0: direct live feedback. "Update" for the one component with a
+                             real, safe in-place update (pip); "Open" (manual check) for components
+                             with no reliable unattended "latest version" feed. Neither shows for a
+                             row that's neither (e.g. already up to date, or fully auto-compared). -->
+                        <WrapPanel>
+                          <Button Classes="success" Content="Update" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).UpdatePipCommand}" IsVisible="{Binding CanUpdateInPlace}" Padding="8,3" FontSize="11"/>
+                          <Button Content="Open" Click="OpenComponentSourceUrl_Click" IsVisible="{Binding HasSourceUrl}" ToolTip.Tip="Open the official page to check this manually." Padding="8,3" FontSize="11"/>
+                        </WrapPanel>
                       </StackPanel>
                     </Border>
                   </DataTemplate>
@@ -611,6 +633,10 @@
                           <TextBlock Grid.Column="4" Text="{Binding Source}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                         </Grid>
                         <TextBlock Text="{Binding Detail}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                        <WrapPanel>
+                          <Button Classes="success" Content="Update" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).UpdatePipCommand}" IsVisible="{Binding CanUpdateInPlace}" Padding="8,3" FontSize="11"/>
+                          <Button Content="Open" Click="OpenComponentSourceUrl_Click" IsVisible="{Binding HasSourceUrl}" ToolTip.Tip="Open the official page to check this manually." Padding="8,3" FontSize="11"/>
+                        </WrapPanel>
                       </StackPanel>
                     </Border>
                   </DataTemplate>
@@ -807,7 +833,15 @@
               <Border Classes="card accentWorld">
                 <Grid RowDefinitions="Auto,*" RowSpacing="8">
                   <TextBlock Text="Guild Directory" FontSize="18" FontWeight="SemiBold"/>
-                  <ListBox Grid.Row="1" ItemsSource="{Binding FilteredExplorerGuilds}" SelectedItem="{Binding SelectedExplorerGuild}" MaxHeight="480">
+                  <ListBox Grid.Row="1" ItemsSource="{Binding FilteredExplorerGuilds}" SelectedItem="{Binding SelectedExplorerGuild}" MaxHeight="480" ToolTip.Tip="Right-click for guild administration actions.">
+                    <ListBox.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="Transfer Leadership To…" Click="TransferGuildLeadership_OnClick"/>
+                        <MenuItem Header="Add Player…" Click="AddPlayerToGuild_OnClick"/>
+                        <MenuItem Header="Remove Broken Member…" Click="RemoveBrokenGuildMember_OnClick"/>
+                        <MenuItem Header="Claim Orphaned Guild…" Click="ClaimOrphanedGuild_OnClick"/>
+                      </ContextMenu>
+                    </ListBox.ContextMenu>
                     <ListBox.ItemTemplate><DataTemplate x:DataType="models:GuildExplorerItemDto"><Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="10" Margin="0,8"><StackPanel><TextBlock Text="{Binding GuildName}" FontWeight="SemiBold"/><TextBlock Text="{Binding GuildId}" FontFamily="Consolas, monospace" FontSize="10" Foreground="{DynamicResource MutedBrush}"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="{Binding LeaderDisplay}"/><TextBlock Text="{Binding CountText}" FontSize="11" Foreground="{DynamicResource MutedBrush}"/></StackPanel><TextBlock Grid.Column="2" Text="{Binding Health}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/></Grid></DataTemplate></ListBox.ItemTemplate>
                   </ListBox>
                 </Grid>
@@ -823,7 +857,16 @@
           <StackPanel IsVisible="{Binding IsBasesPage}" Spacing="14">
             <Border Classes="card accentWorld"><Grid ColumnDefinitions="2*,*,Auto,Auto" ColumnSpacing="10"><TextBox Watermark="Search base ID, guild, or leader" Text="{Binding BaseSearchText}"/><ComboBox Grid.Column="1" ItemsSource="{Binding BaseStatusFilters}" SelectedItem="{Binding SelectedBaseStatusFilter}"/><TextBlock Grid.Column="2" Text="{Binding BaseVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/><Button Grid.Column="3" Content="Export Bases CSV" Click="ExportBasesCsv_Click"/></Grid></Border>
             <Grid ColumnDefinitions="3*,2*" ColumnSpacing="14">
-              <Border Classes="card accentWorld"><Grid RowDefinitions="Auto,*" RowSpacing="8"><TextBlock Text="Authoritative Base References" FontSize="18" FontWeight="SemiBold"/><ListBox Grid.Row="1" ItemsSource="{Binding FilteredExplorerBases}" SelectedItem="{Binding SelectedExplorerBase}" MaxHeight="480"><ListBox.ItemTemplate><DataTemplate x:DataType="models:BaseExplorerItemDto"><Grid ColumnDefinitions="2*,2*,*" ColumnSpacing="10" Margin="0,8"><StackPanel><TextBlock Text="{Binding BaseId}" FontFamily="Consolas, monospace" FontWeight="SemiBold"/><TextBlock Text="{Binding Evidence}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="{Binding GuildName}"/><TextBlock Text="{Binding GuildId}" FontSize="10" Foreground="{DynamicResource MutedBrush}"/></StackPanel><TextBlock Grid.Column="2" Text="{Binding OwnerHealth}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
+              <Border Classes="card accentWorld"><Grid RowDefinitions="Auto,*" RowSpacing="8"><TextBlock Text="Authoritative Base References" FontSize="18" FontWeight="SemiBold"/><ListBox Grid.Row="1" ItemsSource="{Binding FilteredExplorerBases}" SelectedItem="{Binding SelectedExplorerBase}" MaxHeight="480" ToolTip.Tip="Right-click for base administration actions.">
+                <ListBox.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="Copy Base Info" Click="CopyBaseInfo_OnClick"/>
+                    <Separator/>
+                    <MenuItem Header="Transfer to Guild…" Click="TransferBase_OnClick"/>
+                    <MenuItem Header="Wipe Base Completely…" Click="WipeBase_OnClick"/>
+                  </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate><DataTemplate x:DataType="models:BaseExplorerItemDto"><Grid ColumnDefinitions="2*,2*,*" ColumnSpacing="10" Margin="0,8"><StackPanel><TextBlock Text="{Binding BaseId}" FontFamily="Consolas, monospace" FontWeight="SemiBold"/><TextBlock Text="{Binding Evidence}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="{Binding GuildName}"/><TextBlock Text="{Binding GuildId}" FontSize="10" Foreground="{DynamicResource MutedBrush}"/></StackPanel><TextBlock Grid.Column="2" Text="{Binding OwnerHealth}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
               <StackPanel Grid.Column="1" Spacing="14"><Border Classes="card accentWorld"><StackPanel Spacing="7"><TextBlock Text="Base Ownership Evidence" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedExplorerBase.BaseId}" FontFamily="Consolas, monospace" FontSize="16" Foreground="{DynamicResource VioletBrush}"/><TextBlock Text="{Binding SelectedExplorerBase.GuildName}" FontSize="18"/><TextBlock Text="{Binding SelectedExplorerBase.GuildId}"/><TextBlock Text="{Binding SelectedExplorerBase.LeaderName}"/><TextBlock Text="{Binding SelectedExplorerBase.LeaderPlayerId}" FontFamily="Consolas, monospace" FontSize="11"/><TextBlock Text="{Binding SelectedExplorerBase.OwnerHealth}"/><TextBlock Text="{Binding SelectedExplorerBase.Evidence}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Button Content="Copy Base ID" Click="CopyBaseId_Click"/></StackPanel></Border></StackPanel>
             </Grid>
             <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="Base Ownership Transfer" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="Applies to the selected base above. Moves the base's base_ids entry between guild records and retags every structure/container/worker record placed at that base (confirmed against real save data: ~130 records per base) to the new owning guild. Requires PalServer stopped. Follows Preview → Safety Backup → Server-side Transaction → Validate → Journal/Audit → Refresh GUI." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="2*,Auto" ColumnSpacing="10"><TextBox Watermark="Target guild ID (32-hex)" Text="{Binding BaseTransferTargetGuildId}"/><Button Grid.Column="1" Content="Preview Transfer" Command="{Binding PreviewBaseTransferCommand}"/></Grid><TextBlock Text="{Binding BaseTransferStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="I reviewed this plan and confirm the active Palworld server is stopped." IsChecked="{Binding BaseTransferConfirmed}"/><Button Classes="danger" Content="Apply With Fresh Safety Backup" HorizontalAlignment="Left" Command="{Binding ApplyBaseTransferCommand}"/></StackPanel></Border>
@@ -847,7 +890,59 @@
         <!-- SERVER -->
         <StackPanel IsVisible="{Binding IsServerPage}" Spacing="12">
           <Border Classes="card accentServer" ClipToBounds="True">
-            <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
+            <!-- v0.7.82.0: flattened from a row-indexed Grid to a single StackPanel so Server
+                 Identity can sit first, with the Simple/Advanced toggle, QoL preset, search and
+                 file path controls relocated further down (just above World Settings) instead of
+                 competing with identity/network for the top of the page. -->
+            <StackPanel Spacing="10">
+              <Border Classes="statuscard accentServer" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" IsVisible="{Binding HasSimpleSettingsGap}">
+                <TextBlock Text="{Binding SimpleSettingsGapText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="12"/>
+              </Border>
+              <Border Classes="statuscard accentServer" BorderBrush="{DynamicResource AmberAccentBorderBrush}" BorderThickness="2" Background="{DynamicResource CardStrongBrush}" BoxShadow="{DynamicResource AmberAccentGlowShadowLow}" Padding="16">
+                <Grid ColumnDefinitions="150,*,150,*" ColumnSpacing="16" RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
+                  <TextBlock Text="SERVER IDENTITY" Grid.ColumnSpan="4" FontWeight="Bold" Foreground="{DynamicResource AmberBrush}" Margin="0,0,0,4"/>
+                  <TextBlock Grid.Row="1" Text="Server name" Classes="muted" VerticalAlignment="Center"/>
+                  <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                    <TextBox Text="{Binding ServerNameSetting.DisplayValue, Mode=TwoWay}" Watermark="Palworld server name" Classes.dirty="{Binding ServerNameSetting.IsDirty}"/>
+                    <Button Grid.Column="1" Content="🎲 Generate" Classes="inspectAction" Command="{Binding GenerateServerNameCommand}" ToolTip.Tip="Generates a random server-browser name locally; Save Changes is still required." AutomationProperties.Name="Generate a random server name" Padding="14,7" FontWeight="SemiBold"/>
+                  </Grid>
+                  <TextBlock Grid.Row="1" Grid.Column="2" Text="Description" Classes="muted" VerticalAlignment="Center"/>
+                  <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding ServerDescriptionSetting.DisplayValue, Mode=TwoWay}" Watermark="Server browser description" Classes.dirty="{Binding ServerDescriptionSetting.IsDirty}"/>
+                  <TextBlock Grid.Row="2" Text="Admin password" Classes="muted" VerticalAlignment="Center"/>
+                  <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AdminPasswordSetting.DisplayValue, Mode=TwoWay}" PasswordChar="●" Classes.dirty="{Binding AdminPasswordSetting.IsDirty}"/>
+                  <TextBlock Grid.Row="2" Grid.Column="2" Text="Server password" Classes="muted" VerticalAlignment="Center"/>
+                  <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding ServerPasswordSetting.DisplayValue, Mode=TwoWay}" PasswordChar="●" Classes.dirty="{Binding ServerPasswordSetting.IsDirty}"/>
+                </Grid>
+              </Border>
+
+              <TextBlock Text="NETWORK, ACCESS &amp; LIMITS" FontWeight="Bold" Margin="4,4,0,0"/>
+              <ItemsControl ItemsSource="{Binding SimpleToggleSettings}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:PalworldSimpleToggleItem">
+                    <Border Classes="statuscard accentServer" Classes.dirty="{Binding IsDirty}" Margin="0,0,10,7" Padding="10,8" Width="260">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Center"/>
+                        <StackPanel><TextBlock Text="{Binding Title}" FontWeight="Bold"/><TextBlock Text="{Binding Description}" Classes="muted" FontSize="10" TextWrapping="Wrap"/></StackPanel>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <ItemsControl ItemsSource="{Binding SimpleNetworkSettings}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:PalworldSettingDto">
+                    <Border Classes="statuscard accentServer" Classes.dirty="{Binding IsDirty}" Margin="0,0,10,7" Padding="10,8">
+                      <StackPanel Spacing="3" Width="160">
+                        <TextBlock Text="{Binding DisplayName}" Classes="muted" FontSize="10"/>
+                        <TextBox Text="{Binding DisplayValue, Mode=TwoWay}"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
               <!-- v0.7.26.0: Import/Export/Load Active/Save Changes/Reset Unsaved moved to the
                    ribbon (Load Active removed entirely as redundant), see MainWindowViewModel's
                    BuildRibbonGroupsForActivePage. Only Simple/Advanced/QoL preset/Save As Preset
@@ -861,79 +956,17 @@
                 <Button Grid.Column="6" Content="Save As Preset" Command="{Binding SaveCurrentAsPresetCommand}" ToolTip.Tip="Saves every currently-loaded setting value as a new named preset, stored locally on this machine."/>
               </Grid>
 
-              <Grid Grid.Row="1" ColumnDefinitions="*,180" ColumnSpacing="8">
+              <Grid ColumnDefinitions="*,180" ColumnSpacing="8">
                 <TextBox Watermark="Search setting name, category, or description" Text="{Binding ConfigSearchText, Mode=TwoWay}"/>
                 <ComboBox Grid.Column="1" ItemsSource="{Binding PalworldConfigCategories}" SelectedItem="{Binding SelectedConfigCategory, Mode=TwoWay}"/>
               </Grid>
 
-              <!-- v0.7.38.0: the preset/dirty/validation notification strip and Simple Settings'
-                   helper line used to sit directly under the toggle row (this Grid.Row="2"),
-                   competing with the Simple/Advanced toggle and search row for attention right as
-                   the page loads. Only the file path and the Advanced Settings helper line stay
-                   here; the rest moved down to just above World Settings in the Simple view below,
-                   next to the settings it's actually reporting on. -->
-              <StackPanel Grid.Row="2" Spacing="3">
+              <StackPanel Spacing="3">
                 <TextBlock Text="{Binding PalworldConfigPath}" FontFamily="Consolas, monospace" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
                 <TextBlock IsVisible="{Binding IsConfigAdvancedView}" Text="Advanced Settings exposes every known and custom OptionSettings entry returned by the server. Unknown settings are preserved. Highlighted rows differ from Palworld's default." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
               </StackPanel>
 
-              <!-- v0.7.38.0: Server Identity and Network/Access & Limits used to exist only in
-                   Simple view; Advanced view jumped straight to a bare flat table with no
-                   identity/network context at all, "a totally different page layout" rather than
-                   the same cards with different content below. Both cards are now shared, always
-                   visible regardless of view; only the settings list beneath them differs
-                   (World Settings' 3 labeled groups for Simple, the full OptionSettings table for
-                   Advanced). -->
-              <StackPanel Grid.Row="3" Spacing="10">
-                <Border Classes="statuscard accentServer" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" IsVisible="{Binding HasSimpleSettingsGap}">
-                  <TextBlock Text="{Binding SimpleSettingsGapText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="12"/>
-                </Border>
-                <Border Classes="statuscard accentServer" BorderBrush="{DynamicResource AmberAccentBorderBrush}" BorderThickness="2" Background="{DynamicResource CardStrongBrush}" BoxShadow="{DynamicResource AmberAccentGlowShadowLow}">
-                  <Grid ColumnDefinitions="150,*,150,*" ColumnSpacing="10" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
-                    <TextBlock Text="SERVER IDENTITY" Grid.ColumnSpan="4" FontWeight="Bold" Foreground="{DynamicResource AmberBrush}"/>
-                    <TextBlock Grid.Row="1" Text="Server name" Classes="muted" VerticalAlignment="Center"/>
-                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                      <TextBox Text="{Binding ServerNameSetting.DisplayValue, Mode=TwoWay}" Watermark="Palworld server name"/>
-                      <Button Grid.Column="1" Content="🎲 Generate" Classes="inspectAction" Command="{Binding GenerateServerNameCommand}" ToolTip.Tip="Generates a random server-browser name locally; Save Changes is still required." AutomationProperties.Name="Generate a random server name" Padding="14,7" FontWeight="SemiBold"/>
-                    </Grid>
-                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Description" Classes="muted" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding ServerDescriptionSetting.DisplayValue, Mode=TwoWay}" Watermark="Server browser description"/>
-                    <TextBlock Grid.Row="2" Text="Admin password" Classes="muted" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AdminPasswordSetting.DisplayValue, Mode=TwoWay}" PasswordChar="●"/>
-                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Server password" Classes="muted" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding ServerPasswordSetting.DisplayValue, Mode=TwoWay}" PasswordChar="●"/>
-                  </Grid>
-                </Border>
-
-                <TextBlock Text="NETWORK, ACCESS &amp; LIMITS" FontWeight="Bold" Margin="4,4,0,0"/>
-                <ItemsControl ItemsSource="{Binding SimpleToggleSettings}">
-                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="models:PalworldSimpleToggleItem">
-                      <Border Classes="statuscard accentServer" Margin="0,0,10,7" Padding="10,8" Width="260">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                          <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Center"/>
-                          <StackPanel><TextBlock Text="{Binding Title}" FontWeight="Bold"/><TextBlock Text="{Binding Description}" Classes="muted" FontSize="10" TextWrapping="Wrap"/></StackPanel>
-                        </StackPanel>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <ItemsControl ItemsSource="{Binding SimpleNetworkSettings}">
-                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="models:PalworldSettingDto">
-                      <Border Classes="statuscard accentServer" Margin="0,0,10,7" Padding="10,8">
-                        <StackPanel Spacing="3" Width="160">
-                          <TextBlock Text="{Binding DisplayName}" Classes="muted" FontSize="10"/>
-                          <TextBox Text="{Binding DisplayValue, Mode=TwoWay}"/>
-                        </StackPanel>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <StackPanel IsVisible="{Binding IsConfigSimpleView}" Spacing="10">
+              <StackPanel IsVisible="{Binding IsConfigSimpleView}" Spacing="10">
                   <!-- v0.7.38.0: preset-loaded/unsaved-changes/validation notification strip,
                        relocated here from directly under the Simple/Advanced toggle row above,
                        right next to World Settings (renamed from Gameplay Rates), the section it's
@@ -956,7 +989,7 @@
                   <ItemsControl ItemsSource="{Binding SimpleWorldRateSettings}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:PalworldSimpleSettingItem">
-                        <Border Classes="statuscard accentServer" Margin="0,0,0,7" Padding="10,8">
+                        <Border Classes="statuscard accentServer" Classes.dirty="{Binding IsDirty}" Margin="0,0,0,7" Padding="10,8">
                           <Grid ColumnDefinitions="Auto,2*,220,95,130" ColumnSpacing="10">
                             <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" ToolTip.Tip="Clear to return this option to its default value."/>
                             <StackPanel Grid.Column="1"><TextBlock Text="{Binding Title}" FontWeight="Bold"/><TextBlock Text="{Binding Description}" Classes="muted" FontSize="10" TextWrapping="Wrap"/></StackPanel>
@@ -973,7 +1006,7 @@
                   <ItemsControl ItemsSource="{Binding SimplePlayerPalRateSettings}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:PalworldSimpleSettingItem">
-                        <Border Classes="statuscard accentServer" Margin="0,0,0,7" Padding="10,8">
+                        <Border Classes="statuscard accentServer" Classes.dirty="{Binding IsDirty}" Margin="0,0,0,7" Padding="10,8">
                           <Grid ColumnDefinitions="Auto,2*,220,95,130" ColumnSpacing="10">
                             <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" ToolTip.Tip="Clear to return this option to its default value."/>
                             <StackPanel Grid.Column="1"><TextBlock Text="{Binding Title}" FontWeight="Bold"/><TextBlock Text="{Binding Description}" Classes="muted" FontSize="10" TextWrapping="Wrap"/></StackPanel>
@@ -990,7 +1023,7 @@
                   <ItemsControl ItemsSource="{Binding SimpleItemsWorkRateSettings}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:PalworldSimpleSettingItem">
-                        <Border Classes="statuscard accentServer" Margin="0,0,0,7" Padding="10,8">
+                        <Border Classes="statuscard accentServer" Classes.dirty="{Binding IsDirty}" Margin="0,0,0,7" Padding="10,8">
                           <Grid ColumnDefinitions="Auto,2*,220,95,130" ColumnSpacing="10">
                             <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" ToolTip.Tip="Clear to return this option to its default value."/>
                             <StackPanel Grid.Column="1"><TextBlock Text="{Binding Title}" FontWeight="Bold"/><TextBlock Text="{Binding Description}" Classes="muted" FontSize="10" TextWrapping="Wrap"/></StackPanel>
@@ -1017,16 +1050,21 @@
                     <ListBox.Styles>
                       <Style Selector="ListBoxItem"><Setter Property="HorizontalAlignment" Value="Stretch"/></Style>
                       <Style Selector="Border.differsFromDefault"><Setter Property="BorderBrush" Value="#F4C542"/><Setter Property="BorderThickness" Value="0,0,0,2"/><Setter Property="Background" Value="#14D4A017"/></Style>
+                      <!-- v0.7.87.0: unsaved-edit highlight for Advanced Settings rows, matching Simple
+                           Settings' own Border.statuscard.dirty. Flags active value against what was
+                           last loaded/saved, distinct from differsFromDefault above (which flags against
+                           Palworld's factory default regardless of save state). Both can apply at once. -->
+                      <Style Selector="Border.rowDirty"><Setter Property="BorderBrush" Value="{DynamicResource AmberAccentBorderBrush}"/><Setter Property="BorderThickness" Value="0,0,0,3"/><Setter Property="Background" Value="{DynamicResource CardAmberGradient}"/></Style>
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="models:PalworldSettingDto">
-                        <Border BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,0,1" Padding="4,7" HorizontalAlignment="Stretch" Classes.differsFromDefault="{Binding IsDifferentFromDefault}">
+                        <Border BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,0,1" Padding="4,7" HorizontalAlignment="Stretch" Classes.differsFromDefault="{Binding IsDifferentFromDefault}" Classes.rowDirty="{Binding IsDirty}">
                           <Grid ColumnDefinitions="135,210,*,150,190,95" ColumnSpacing="8">
                             <TextBlock Text="{Binding Category}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                             <StackPanel Grid.Column="1"><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/><TextBlock Text="{Binding Name}" Classes="muted" FontSize="9"/></StackPanel>
                             <TextBlock Grid.Column="2" Text="{Binding Description}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
                             <TextBlock Grid.Column="3" Text="{Binding DefaultValue}" FontFamily="Consolas, monospace" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                            <TextBox Grid.Column="4" Text="{Binding DisplayValue, Mode=TwoWay}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="4" Text="{Binding DisplayValue, Mode=TwoWay}" VerticalAlignment="Center" Classes.dirty="{Binding IsDirty}"/>
                             <TextBlock Grid.Column="5" Text="{Binding IsModifiedDisplay}" Foreground="{DynamicResource AmberBrush}" VerticalAlignment="Center" TextAlignment="Center"/>
                           </Grid>
                         </Border>
@@ -1034,8 +1072,7 @@
                     </ListBox.ItemTemplate>
                   </ListBox>
                 </Grid>
-              </StackPanel>
-            </Grid>
+            </StackPanel>
           </Border>
         </StackPanel>
 
@@ -1073,6 +1110,9 @@
                     <ContextMenu>
                       <MenuItem Header="Kick Player" Command="{Binding KickSelectedPlayerCommand}" ToolTip.Tip="Available only while the selected player is online."/>
                       <MenuItem Header="Ban Player" Command="{Binding BanSelectedPlayerCommand}" ToolTip.Tip="Available only while the selected player is online."/>
+                      <Separator/>
+                      <MenuItem Header="Copy Player Data From…" Click="CopyIntoPlayer_OnClick" ToolTip.Tip="Copies inventory, recipes, records, skins, and quest progress from another player onto this one. Requires PalServer stopped."/>
+                      <MenuItem Header="Delete Player Completely…" Click="DeletePlayer_OnClick" ToolTip.Tip="Permanently deletes this player's save file and cleans up their guild membership. Requires PalServer stopped."/>
                       <Separator/>
                       <MenuItem Header="Whisper — BACKEND REQUIRED" Command="{Binding WhisperSelectedPlayerCommand}" IsEnabled="False"/>
                       <MenuItem Header="Promote — BACKEND REQUIRED" Command="{Binding PromoteSelectedPlayerCommand}" IsEnabled="False"/>
@@ -1606,34 +1646,50 @@
         <StackPanel IsVisible="{Binding IsModsPage}" Spacing="12">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel>
-              <StackPanel IsVisible="{Binding IsModDashboardPage}">
-                <TextBlock Text="At-a-glance operational health and confirmed issues. Open MOD Library to browse, install, or change enabled state." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-              </StackPanel>
-              <StackPanel IsVisible="{Binding IsModLibraryPage}">
-                <TextBlock Text="Inspect installed server MOD packages, install new ones, and control enabled state through the managed backend." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-              </StackPanel>
+              <!-- v0.7.78.0: the MOD Library variant of this header text moved into its own card
+                   above "Install Validated ZIP" (direct request: "the top comments could be moved
+                   to its own card and then added above install validated zip"), so it's gated out
+                   here now. MOD Dashboard's own description/state/summary text moved into the new
+                   hero banner below instead of sitting here as plain text, part of the same
+                   request's follow-up: "help with the MOD dashboard to change the look and feel of
+                   it so it doesn't feel like it is essentially the same as the MOD library." -->
               <StackPanel IsVisible="{Binding IsUe4ssPage}">
                 <TextBlock Text="Inspect the active runtime resolver, Mods roots, runtime evidence, and compatibility warnings." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-              </StackPanel>
-              <StackPanel IsVisible="{Binding IsModInventoryPage}">
-                <TextBlock Text="{Binding ModState}" Foreground="{DynamicResource VioletBrush}" />
-                <TextBlock Text="{Binding ModSummary}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
               </StackPanel>
             </StackPanel>
           </Grid>
           <!-- v0.7.27.0: "Refresh MODs"/"Verify & Scan" (MOD Dashboard + MOD Library) and "Refresh
                Runtime" (UE4SS) moved to the ribbon (BuildRibbonGroupsForActivePage). -->
 
+          <!-- v0.7.78.0: hero health banner, new. Dashboard previously opened with the exact same
+               plain description-text pattern every other page uses, then went straight into 6
+               flat, identically-styled stat cards matching Library's own card look almost exactly.
+               This leads with one big, color-coded status statement (green=Healthy,
+               amber=Degraded) the way an actual monitoring dashboard would, distinct from Library's
+               working/management framing. -->
+          <Border Classes="card" Classes.glowGreen="{Binding IsModHealthGood}" IsVisible="{Binding IsModDashboardPage}">
+            <Grid ColumnDefinitions="Auto,*">
+              <TextBlock Text="{Binding ModHealth}" FontSize="28" FontWeight="Bold"/>
+              <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Text="At-a-glance operational health and confirmed issues. Open MOD Library to browse, install, or change enabled state." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding ModSummary}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding ModState}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+
           <!-- v0.7.32.0: gated to IsModDashboardPage only (was IsModInventoryPage, shared with MOD
                Library); these 6 cards duplicated MOD Dashboard on the Library page, per direct
-               request; Dashboard keeps its own copy. -->
+               request; Dashboard keeps its own copy. v0.7.78.0: recolored by what each card means
+               instead of all six sharing the same flat accentMods look, part of the same
+               look-and-feel differentiation as the hero banner above. -->
           <Grid ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="10" IsVisible="{Binding IsModDashboardPage}">
-            <Border Classes="card accentMods"><StackPanel><TextBlock Text="HEALTH" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModHealth}" FontSize="18" FontWeight="SemiBold"/></StackPanel></Border>
-            <Border Grid.Column="1" Classes="card accentMods"><StackPanel><TextBlock Text="INSTALLED" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModInstalledText}" FontSize="22"/></StackPanel></Border>
-            <Border Grid.Column="2" Classes="card accentMods"><StackPanel><TextBlock Text="CONFIRMED" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModConfirmedText}" FontSize="22"/></StackPanel></Border>
-            <Border Grid.Column="3" Classes="card accentMods"><StackPanel><TextBlock Text="UNVERIFIED" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModUnverifiedText}" FontSize="22"/></StackPanel></Border>
+            <Border Classes="card" Classes.glowGreen="{Binding IsModHealthGood}"><StackPanel><TextBlock Text="HEALTH" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModHealth}" FontSize="18" FontWeight="SemiBold"/></StackPanel></Border>
+            <Border Grid.Column="1" Classes="card glowCyan"><StackPanel><TextBlock Text="INSTALLED" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModInstalledText}" FontSize="22"/></StackPanel></Border>
+            <Border Grid.Column="2" Classes="card glowGreen"><StackPanel><TextBlock Text="CONFIRMED" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModConfirmedText}" FontSize="22"/></StackPanel></Border>
+            <Border Grid.Column="3" Classes="card accentMods" BorderBrush="{DynamicResource AmberBrush}"><StackPanel><TextBlock Text="UNVERIFIED" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModUnverifiedText}" FontSize="22"/></StackPanel></Border>
             <Border Grid.Column="4" Classes="card accentMods"><StackPanel><TextBlock Text="DISABLED" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModDisabledText}" FontSize="22"/></StackPanel></Border>
-            <Border Grid.Column="5" Classes="card accentMods"><StackPanel><TextBlock Text="ISSUES" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModIssuesText}" FontSize="22"/></StackPanel></Border>
+            <Border Grid.Column="5" Classes="card accentMods" BorderBrush="{DynamicResource RedBrush}"><StackPanel><TextBlock Text="ISSUES" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding ModIssuesText}" FontSize="22"/></StackPanel></Border>
           </Grid>
 
           <Border Classes="card accentMods" IsVisible="{Binding IsUe4ssPage}">
@@ -1719,14 +1775,20 @@
           <Grid ColumnDefinitions="1.6*,*" ColumnSpacing="12" IsVisible="{Binding IsModDashboardPage}">
             <Border Classes="card accentMods">
               <StackPanel Spacing="10">
-                <TextBlock Text="Installed MODs" FontSize="18" FontWeight="SemiBold"/>
+                <!-- v0.7.78.0: renamed from "Installed MODs" (identical to Library's own card
+                     title) to something distinct, direct follow-up to the look-and-feel ask. -->
+                <TextBlock Text="MOD Overview" FontSize="18" FontWeight="SemiBold"/>
                 <TextBlock Text="Read-only here. Open MOD Library to change enabled state, install, delete, or update a MOD." Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
-                <ListBox ItemsSource="{Binding ModItems}" SelectedItem="{Binding SelectedMod}" MaxHeight="420">
+                <!-- v0.7.78.0: intentionally more compact than Library's own row (no install path,
+                     no version, no update badge); Dashboard is a glance view, Library is where
+                     that detail actually matters and where you can act on it. Part of the same
+                     look-and-feel differentiation as the hero banner and recolored stat cards. -->
+                <ListBox ItemsSource="{Binding ModItems}" SelectedItem="{Binding SelectedMod}" MaxHeight="360">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:ModItemDto">
-                      <Grid ColumnDefinitions="60,2*,*" ColumnSpacing="8" Margin="0,6">
+                      <Grid ColumnDefinitions="60,2*,*" ColumnSpacing="8" Margin="0,4">
                         <TextBlock Text="{Binding Type}" FontWeight="SemiBold" FontSize="11"/>
-                        <StackPanel Grid.Column="1"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding InstallPath}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"/></StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="2"><TextBlock Text="{Binding EnabledText}" FontSize="11"/><TextBlock Text="{Binding Health}" FontSize="11" Foreground="{DynamicResource VioletBrush}"/></StackPanel>
                       </Grid>
                     </DataTemplate>
@@ -1763,62 +1825,49 @@
             </Border>
           </Grid>
 
-          <!-- v0.7.40.0: Install Validated ZIP moved above the Installed MODs list (was sandwiched
-               between Installed MODs and Available Workshop Mods). -->
-          <Border Classes="card accentMods" IsVisible="{Binding IsModLibraryPage}">
-            <StackPanel Spacing="10">
-              <TextBlock Text="Install Validated ZIP" FontSize="18" FontWeight="SemiBold"/>
-              <!-- v0.7.39.0: PAK vs. UE4SS is now detected from the archive's own contents
-                   server-side (any .pak/.ucas/.utoc file anywhere in it means PAK, otherwise
-                   UE4SS), so the manual type picker that used to sit here is gone; a wrong guess
-                   there used to silently install a mod under the wrong type. -->
-              <TextBlock Text="The GUI uploads the archive to the headless server. Extraction is size-bounded, staged, and rejects absolute or traversal paths. PAK vs. UE4SS is detected automatically from the archive's own contents." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-              <WrapPanel>
-                <TextBox Text="{Binding ModInstallPackage}" Watermark="Package name (optional)" Width="260" Margin="0,0,8,0"/>
-                <Button Classes="primary" Content="Choose ZIP &amp; Install" Click="InstallModZip_Click"/>
-              </WrapPanel>
-              <WrapPanel>
-                <Button Content="Legacy Migration — BACKEND REQUIRED" IsEnabled="False" Margin="0,0,8,0"/>
-                <Button Content="Workshop Information — BACKEND REQUIRED" IsEnabled="False"/>
-              </WrapPanel>
-            </StackPanel>
-          </Border>
-
-          <!-- v0.7.40.0: side-by-side Installed MODs / Available Workshop Mods / MOD DETAILS
-               split, matching the v0.2.16.4 reference's 3-column layout (previously three
-               full-width cards stacked vertically). The details panel (item 40) is new; SelectedMod
-               was previously only used to target the Enable/Disable/Delete/Rollback buttons; nothing
-               rendered its details. The website-sourced MOD description part of item 40 stays
-               explicitly out of scope, per the roadmap's own deferral (source diversity across
-               MODs and an outbound fetch from an admin tool need their own design pass). -->
-          <Grid ColumnDefinitions="1.3*,1.3*,*" ColumnSpacing="12" IsVisible="{Binding IsModLibraryPage}">
-            <Border Classes="card accentMods">
+          <!-- v0.7.78.0: Install Validated ZIP and Available Local Steam Workshop Mods placed
+               side by side at the top of the page (direct request: "put install zip and available
+               local steam mods in cards side by side at the top"), replacing v0.7.40.0's stacked
+               ZIP-card-above-3-column-grid layout. The left column is a StackPanel of two cards
+               (page info, then Install Validated ZIP); Available Workshop Mods on the right sits in
+               the same Grid row and naturally stretches to their combined height (direct request:
+               "the available steam mods would still be on the right but the height of those 2
+               combined"). -->
+          <Grid ColumnDefinitions="*,1.4*" ColumnSpacing="12" IsVisible="{Binding IsModLibraryPage}">
+            <StackPanel Spacing="12">
+              <Border Classes="card accentMods">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Inspect installed server MOD packages, install new ones, and control enabled state through the managed backend." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding ModState}" Foreground="{DynamicResource VioletBrush}"/>
+                  <TextBlock Text="{Binding ModSummary}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Border>
+              <Border Classes="card accentMods">
               <StackPanel Spacing="10">
-                <TextBlock Text="Installed MODs" FontSize="18" FontWeight="SemiBold"/>
-                <TextBlock Text="Disabled and Active / Unverified are informational states; only explicit enabled-MOD failures degrade health." Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
-                <WrapPanel>
-                  <Button Content="Enable Selected" Command="{Binding EnableSelectedModCommand}" Margin="0,0,6,6"/>
-                  <Button Content="Disable Selected" Command="{Binding DisableSelectedModCommand}" Margin="0,0,6,6"/>
-                  <Button Content="Delete Selected" Command="{Binding DeleteSelectedModCommand}" Margin="0,0,6,6"/>
-                  <Button Content="Rollback Selected" Command="{Binding RollbackSelectedModCommand}" ToolTip.Tip="Restores this MOD to its state before the last Install or Delete. A snapshot is captured automatically on every install/delete." Margin="0,0,6,6"/>
-                  <Button Content="Enable All" Command="{Binding EnableAllModsCommand}" Margin="0,0,6,6"/>
-                  <Button Content="Disable All" Command="{Binding DisableAllModsCommand}" Margin="0,0,6,6"/>
-                  <Button Content="Repair" Command="{Binding RepairModsCommand}" Margin="0,0,6,6"/>
-                  <Button Content="Safe-Start Diagnostic" Classes="danger" Command="{Binding BeginModSafeStartCommand}" Margin="0,0,6,6" ToolTip.Tip="Stops the server, then restarts it one MOD at a time to find which one (if any) is crashing or hanging startup -- automates the standard 'remove mods one by one' troubleshooting technique. Runs over several minutes; any implicated MOD is disabled automatically and the rest are left running."/>
-                </WrapPanel>
-                <ListBox ItemsSource="{Binding ModItems}" SelectedItem="{Binding SelectedMod}" MaxHeight="500">
-                  <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="models:ModItemDto">
-                      <Grid ColumnDefinitions="60,2*,*" ColumnSpacing="8" Margin="0,6">
-                        <TextBlock Text="{Binding Type}" FontWeight="SemiBold" FontSize="11"/>
-                        <StackPanel Grid.Column="1"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding InstallPath}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"/></StackPanel>
-                        <StackPanel Grid.Column="2"><TextBlock Text="{Binding EnabledText}" FontSize="11"/><TextBlock Text="{Binding Health}" FontSize="11" Foreground="{DynamicResource VioletBrush}"/></StackPanel>
-                      </Grid>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
+                <TextBlock Text="Install Validated ZIP" FontSize="18" FontWeight="SemiBold"/>
+                <!-- v0.7.39.0: PAK vs. UE4SS is now detected from the archive's own contents
+                     server-side (any .pak/.ucas/.utoc file anywhere in it means PAK, otherwise
+                     UE4SS), so the manual type picker that used to sit here is gone; a wrong guess
+                     there used to silently install a mod under the wrong type. -->
+                <TextBlock Text="The GUI uploads the archive to the headless server. Extraction is size-bounded, staged, and rejects absolute or traversal paths. PAK vs. UE4SS is detected automatically from the archive's own contents." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                <!-- v0.7.78.0: direct feedback removed the manual "Package name (optional)" box
+                     (package name now always comes from the ZIP's own filename, matching PAK/UE4SS
+                     type auto-detection) and the two permanently-disabled "BACKEND REQUIRED"
+                     buttons (no backend exists for either and none is planned near-term, so they
+                     were removed rather than left as dead clutter). Added a drag-and-drop zone
+                     (direct request)
+                     wired to the exact same InstallModZipAsync path the picker button already uses;
+                     ZipInstallDropZone_OnDragOver/_OnDrop in MainWindow.axaml.cs only accept a
+                     single real, existing .zip file, matching the Choose ZIP dialog's own filter. -->
+                <Border x:Name="ZipInstallDropZone" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="2" CornerRadius="6" Padding="16" DragDrop.AllowDrop="True">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <Button Classes="primary" Content="Choose ZIP &amp; Install" Click="InstallModZip_Click" HorizontalAlignment="Center"/>
+                    <TextBlock Text="or drag a ZIP file here" Foreground="{DynamicResource MutedBrush}" FontSize="11" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
               </StackPanel>
-            </Border>
+              </Border>
+            </StackPanel>
 
             <Border Grid.Column="1" Classes="card accentMods">
               <StackPanel Spacing="10">
@@ -1829,7 +1878,7 @@
                   <Button Classes="primary" Content="Import Selected" Command="{Binding ImportSelectedWorkshopModCommand}" Margin="0,0,6,6"/>
                 </WrapPanel>
                 <TextBlock Text="{Binding WorkshopScanState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-                <ListBox ItemsSource="{Binding WorkshopItems}" SelectedItem="{Binding SelectedWorkshopItem}" MaxHeight="500">
+                <ListBox ItemsSource="{Binding WorkshopItems}" SelectedItem="{Binding SelectedWorkshopItem}" MaxHeight="320">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:WorkshopItemDto">
                       <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8" Margin="0,6">
@@ -1842,8 +1891,60 @@
                 </ListBox>
               </StackPanel>
             </Border>
+          </Grid>
 
-            <Border Grid.Column="2" Classes="card accentMods">
+          <!-- v0.7.78.0: Installed MODs widened to 2/3 of the row, MOD DETAILS to the right at 1/3
+               (direct request), replacing v0.7.40.0's equal 1.3*/1.3*/* three-column split now that
+               Available Workshop Mods moved to its own row above. The selected-MOD button cluster
+               (Enable/Disable/Rollback/Repair/Delete Selected) that used to sit above this list is
+               gone entirely; those actions are now a right-click context menu on the list itself
+               (matching how Bases/Guilds/Players already expose per-row mutations), and the
+               page-level all-MODs/maintenance actions (Enable All, Disable All, Repair, Safe-Start)
+               moved to the ribbon's new "MOD Maintenance" group. Direct follow-up to the
+               button-row-redesign request: "should we move the buttons to the ribbon? can we add a
+               right click as well." -->
+          <Grid ColumnDefinitions="2*,*" ColumnSpacing="12" IsVisible="{Binding IsModLibraryPage}">
+            <Border Classes="card accentMods">
+              <StackPanel Spacing="10">
+                <TextBlock Text="Installed MODs" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock Text="Disabled and Active / Unverified are informational states; only explicit enabled-MOD failures degrade health. Right-click a MOD for actions; Enable All/Disable All/Repair/Safe-Start Diagnostic are in the ribbon above." Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+                <ListBox ItemsSource="{Binding ModItems}" SelectedItem="{Binding SelectedMod}" MaxHeight="560" ToolTip.Tip="Right-click a MOD for Enable/Disable/Rollback/Repair/Delete.">
+                  <ListBox.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Enable Selected" Command="{Binding EnableSelectedModCommand}"/>
+                      <MenuItem Header="Disable Selected" Command="{Binding DisableSelectedModCommand}"/>
+                      <Separator/>
+                      <MenuItem Header="Rollback Selected" Command="{Binding RollbackSelectedModCommand}" ToolTip.Tip="Restores this MOD to its state before the last Install or Delete. A snapshot is captured automatically on every install/delete."/>
+                      <MenuItem Header="Repair Selected" Command="{Binding RepairSelectedModCommand}" ToolTip.Tip="Re-imports this MOD fresh from its matched local Steam Workshop copy, fixing missing or incomplete files. Fails honestly if no local Workshop source is known for it."/>
+                      <Separator/>
+                      <MenuItem Header="Delete Selected" Command="{Binding DeleteSelectedModCommand}"/>
+                    </ContextMenu>
+                  </ListBox.ContextMenu>
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:ModItemDto">
+                      <Grid ColumnDefinitions="60,2*,*" ColumnSpacing="8" Margin="0,6">
+                        <TextBlock Text="{Binding Type}" FontWeight="SemiBold" FontSize="11"/>
+                        <StackPanel Grid.Column="1">
+                          <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                          <TextBlock Text="{Binding InstallPath}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                          <!-- v0.7.78.0: per-row update availability, direct request ("under
+                               installed MODs card it should have the info if there is an updated
+                               version"). Reuses the same local Steam Workshop content-cache
+                               comparison the MOD DETAILS panel's on-demand Check for Update already
+                               used; here it's computed once per mod during the regular inventory
+                               scan instead of needing a manual click per selection. -->
+                          <TextBlock Text="{Binding InstalledVersionText}" FontSize="10" Foreground="{DynamicResource CyanBrush}" Margin="0,2,0,0"/>
+                          <Border Classes="badge" Background="{DynamicResource AmberBrush}" HorizontalAlignment="Left" Margin="0,2,0,0" IsVisible="{Binding UpdateAvailable}" ToolTip.Tip="{Binding UpdateHint}"><TextBlock Text="UPDATE AVAILABLE" FontSize="9"/></Border>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2"><TextBlock Text="{Binding EnabledText}" FontSize="11"/><TextBlock Text="{Binding Health}" FontSize="11" Foreground="{DynamicResource VioletBrush}"/></StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Classes="card accentMods">
               <Grid>
               <StackPanel Spacing="10" IsVisible="{Binding HasSelectedMod}">
                 <TextBlock Text="MOD DETAILS" FontSize="18" FontWeight="SemiBold"/>
@@ -1858,6 +1959,7 @@
                   <TextBlock Text="{Binding SelectedMod.Package}" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
                   <TextBlock Text="{Binding SelectedMod.InstallPath}" FontSize="10" FontFamily="Consolas, monospace" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
                   <TextBlock Text="{Binding SelectedMod.EnabledText}"/>
+                  <TextBlock Text="{Binding SelectedMod.InstalledVersionText}" Foreground="{DynamicResource CyanBrush}"/>
                 </StackPanel>
                 <StackPanel Spacing="3">
                   <TextBlock Text="RUNTIME" Classes="muted" FontSize="10"/>
@@ -2135,23 +2237,33 @@
           <TextBlock Text="No Palworld instances detected on this machine yet. Use &quot;Detect Instances&quot; in the ribbon or run the Doctor to scan." Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !HasAllInstances}"/>
 
           <TextBlock Text="{Binding DiagnosticsReportDetail}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-          <!-- v0.7.32.0: compact variant, tighter Padding/Margin/Spacing and smaller FontSize so
-               more checks fit on screen without scrolling. -->
+          <!-- v0.7.79.0: denser than v0.7.32.0's own compact pass. Direct live feedback ("these
+               items listed should be compacted and make use of the spacing a bit more. Perhaps
+               Pass can be highlighted in green or red"). State is now a colored badge (green
+               Pass/red Fail/amber Warning/neutral for anything else) instead of plain bold text, so
+               status reads at a glance without scanning the word itself. Evidence and Recommendation
+               collapse onto one row of columns instead of two full-width stacked lines, and
+               Recommendation is hidden entirely when it's identical to Evidence (common for a
+               passing check, e.g. both saying "Steam installation detected."), real redundant
+               text this feedback was also about, not just visual density. -->
           <ItemsControl ItemsSource="{Binding DiagnosticFindings}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:DiagnosticFindingDto">
-                <Border Classes="card accentTools" Padding="8,6" Margin="0,0,0,6">
-                  <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Spacing="3">
-                      <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="{Binding StateText}" FontWeight="Bold" FontSize="12" />
-                        <TextBlock Text="{Binding Component}" FontSize="14" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Category}" Foreground="{DynamicResource MutedBrush}" FontSize="10" VerticalAlignment="Center"/>
-                      </StackPanel>
-                      <TextBlock Text="{Binding Evidence}" TextWrapping="Wrap" FontSize="11" />
-                      <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="11" />
+                <Border Classes="card accentTools" Padding="8,5" Margin="0,0,0,4">
+                  <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                    <Border Classes="badge" Background="{DynamicResource GreenBrush}" IsVisible="{Binding IsPass}"><TextBlock Classes="badgeText" Text="{Binding StateText}" FontWeight="Bold" FontSize="10"/></Border>
+                    <Border Classes="badge" Background="{DynamicResource AmberBrush}" IsVisible="{Binding IsWarning}"><TextBlock Classes="badgeText" Text="{Binding StateText}" FontWeight="Bold" FontSize="10"/></Border>
+                    <Border Classes="badge" Background="{DynamicResource RedBrush}" IsVisible="{Binding IsFail}"><TextBlock Classes="badgeText" Text="{Binding StateText}" FontWeight="Bold" FontSize="10"/></Border>
+                    <Border Classes="badge" IsVisible="{Binding IsOtherState}"><TextBlock Text="{Binding StateText}" FontWeight="Bold" FontSize="10"/></Border>
+                    <StackPanel Grid.Column="1" MinWidth="150" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Component}" FontSize="13" FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding Category}" Foreground="{DynamicResource MutedBrush}" FontSize="10"/>
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1">
+                      <TextBlock Text="{Binding Evidence}" TextWrapping="Wrap" FontSize="11"/>
+                      <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="11" IsVisible="{Binding ShowRecommendation}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                       <Button Content="Recheck" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).RecheckDiagnosticCommand}" CommandParameter="{Binding}"/>
                       <Button Content="Fix Automatically" Classes="success" IsVisible="{Binding CanFix}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).FixDiagnosticCommand}" CommandParameter="{Binding}"/>
                     </StackPanel>
@@ -2440,16 +2552,58 @@
           <Border Classes="card accentSystem"><StackPanel Spacing="8"><TextBlock Text="Server Profiles" FontSize="17" FontWeight="SemiBold"/>
             <ListBox ItemsSource="{Binding FleetServers}" MaxHeight="360"><ListBox.ItemTemplate><DataTemplate x:DataType="models:ServerProfileSummaryDto"><Border Classes="statuscard accentSystem" Margin="0,3"><Grid ColumnDefinitions="12,*,140,Auto" ColumnSpacing="10"><Ellipse Width="8" Height="8" Fill="{Binding StatusDotColorKey, Converter={x:Static converters:SemanticStatusColorConverter.Instance}}" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Grid.Column="2" Text="{Binding Runtime}" Classes="muted"/><TextBlock Grid.Column="3" Text="{Binding StatusText}"/></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
           </StackPanel></Border>
+          <!-- v0.7.81.0: turned into an explicit step-by-step workflow, direct request: "the clone
+               world option in fleet should be a workflow with drop down options to clarify what it
+               is doing." Was a single row of two textboxes and a Clone button with no confirmation
+               gate, for an operation that copies an entire server installation. Now: an explicit
+               SOURCE label (previously only implicit, always "whichever profile this tab is
+               connected to"), a real PORT OFFSET dropdown (WorldCloneRequestDto already had this
+               field; it was never exposed in the UI at all before, the server just used its own
+               default), and a confirmation checkbox gating the Clone button, matching the same
+               Preview-adjacent safety-gate pattern already used for Guild/Base Ownership operations
+               elsewhere on this page. No server-side Preview endpoint exists for cloning yet, so
+               this doesn't claim to have one; the checkbox is the safety gate here, not a preview
+               step. -->
           <Border Classes="card accentSystem" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="10">
               <TextBlock Text="Clone World" FontSize="17" FontWeight="SemiBold"/>
               <TextBlock Text="Duplicates the currently connected profile's entire installation (game binaries + world/config) into a brand-new profile, with ports offset so both can run together. The source server must be stopped first. The new profile requires a MystTiq service restart to come online." Classes="muted" TextWrapping="Wrap"/>
-              <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="10">
-                <TextBox Watermark="New profile ID (e.g. world-2)" Text="{Binding CloneNewProfileId}"/>
-                <TextBox Grid.Column="1" Watermark="Display name (optional)" Text="{Binding CloneNewProfileName}"/>
-                <Button Grid.Column="2" Content="Clone" Command="{Binding CloneWorldCommand}"/>
-              </Grid>
+
+              <!-- v0.7.81.0 follow-up: direct request ("it should indicate better what server is
+                   being cloned (server name - description)"). Name alone doesn't distinguish two
+                   profiles that happen to share a display name, or say anything about where this
+                   server actually lives. BaseAddress (the profile's own connection URL, always
+                   accurate since it's what this tab is actually talking to) is added as the
+                   description line, matching the "name - description" ask as two lines rather than
+                   forcing both into one combined string. -->
+              <StackPanel Spacing="3">
+                <TextBlock Text="SOURCE (the connection this tab currently uses)" Classes="muted" FontSize="10"/>
+                <TextBlock Text="{Binding SelectedProfile.Name}" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding SelectedProfile.BaseAddress}" Classes="muted" FontSize="11" FontFamily="Consolas, monospace"/>
+              </StackPanel>
+
+              <StackPanel Spacing="3">
+                <TextBlock Text="NEW PROFILE" Classes="muted" FontSize="10"/>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                  <TextBox Watermark="New profile ID (e.g. world-2)" Text="{Binding CloneNewProfileId}"/>
+                  <TextBox Grid.Column="1" Watermark="Display name (optional)" Text="{Binding CloneNewProfileName}"/>
+                </Grid>
+              </StackPanel>
+
+              <StackPanel Spacing="3">
+                <TextBlock Text="PORT OFFSET" Classes="muted" FontSize="10"/>
+                <TextBlock Text="Added to the source server's own ports (game, query, REST API) so both installations can run at the same time without colliding." Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                <ComboBox ItemsSource="{Binding CloneWorldPortOffsetOptions}" SelectedItem="{Binding CloneWorldPortOffset}" HorizontalAlignment="Left" MinWidth="140"/>
+              </StackPanel>
+
+              <CheckBox Content="I understand this copies the entire server installation and can take a while." IsChecked="{Binding CloneWorldConfirmed}"/>
+              <Button Classes="primary" Content="Clone" Command="{Binding CloneWorldCommand}" HorizontalAlignment="Left"/>
               <TextBlock Text="{Binding CloneWorldStatusText}" Classes="muted" TextWrapping="Wrap"/>
+              <!-- v0.7.84.0: closes the previously-undisclosed "needs a restart to come online" gap
+                   the wizard's own Clone path already fixed in v0.7.83.0, offered here as an
+                   explicit button rather than fired automatically, since this page's connection is
+                   already actively in use. -->
+              <Button Classes="success" Content="Restart MystTiq Now to Bring It Online" Command="{Binding RestartAfterCloneCommand}" HorizontalAlignment="Left" IsVisible="{Binding CloneWorldNeedsRestart}"/>
             </StackPanel>
           </Border>
           <Border Classes="card accentSystem"><StackPanel Spacing="8"><TextBlock Text="Last Fleet Action Results" FontSize="17" FontWeight="SemiBold"/>
@@ -2642,45 +2796,21 @@
              were clipping, not just wrapping). -->
         <StackPanel Margin="22" Spacing="20" MaxWidth="860" HorizontalAlignment="Center" VerticalAlignment="Center">
 
-          <!-- STEP 0: LOCAL OR REMOTE -->
-          <StackPanel IsVisible="{Binding IsChoosingConnectionKind}" Spacing="18">
-            <StackPanel Spacing="4" HorizontalAlignment="Center">
-              <TextBlock Text="Set Up New Server" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock Text="Where does this Palworld server run?" Classes="muted" HorizontalAlignment="Center"/>
-            </StackPanel>
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
-              <Button Classes="ghost" Padding="0" Command="{Binding ChooseLocalConnectionCommand}">
-                <Border Classes="card accentHome" Padding="24">
-                  <StackPanel Spacing="8" HorizontalAlignment="Center">
-                    <TextBlock Text="🖥" FontSize="32" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Local" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Runs on this computer. MystTiq finds or starts its own local management service." Classes="muted" TextWrapping="Wrap" TextAlignment="Center"/>
-                  </StackPanel>
-                </Border>
-              </Button>
-              <Button Grid.Column="1" Classes="ghost" Padding="0" Command="{Binding ChooseRemoteConnectionCommand}">
-                <Border Classes="card accentWorld" Padding="24">
-                  <StackPanel Spacing="8" HorizontalAlignment="Center">
-                    <TextBlock Text="🌐" FontSize="32" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Remote" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Runs on another machine. Scan your LAN or enter its address directly." Classes="muted" TextWrapping="Wrap" TextAlignment="Center"/>
-                  </StackPanel>
-                </Border>
-              </Button>
-            </Grid>
-            <Button Content="Cancel" HorizontalAlignment="Center" Command="{Binding CloseActiveTabCommand}" ToolTip.Tip="Closes this tab. Disabled if it's the only open tab."/>
-          </StackPanel>
+          <!-- v0.7.81.0: the old STEP 0 (Local/Remote choice cards) was removed. Direct live
+               feedback ("it should not be trying to connect to a previously installed version as we
+               already have an option to connect to a local server or remote server from the plus").
+               Every "+"-menu entry point now resolves Local vs. Remote itself before ever reaching
+               step 1 (ChooseLocalConnection/ChooseRemoteConnection called immediately in
+               OpenNewServerTab/OpenConnectLocalServerTab/OpenConnectRemoteServerTab), so this
+               screen had become dead, unreachable UI. -->
 
-          <!-- STEP 1: CONNECTION DETAILS (Local or Remote sub-view, per the Step 0 choice) -->
+          <!-- STEP 1: CONNECTION DETAILS (Local or Remote sub-view, per which "+" entry was used) -->
           <Border Classes="card accentSystem" IsVisible="{Binding IsWizardStep1}">
             <StackPanel Spacing="12">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="Step 1 of 3 — Local Service" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" IsVisible="{Binding IsLocalConnectionChoice}"/>
-                <TextBlock Text="Step 1 of 3 — Remote Connection Details" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" IsVisible="{Binding IsRemoteConnectionChoice}"/>
-              </StackPanel>
+              <TextBlock Text="{Binding WizardStep1HeaderText}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}"/>
 
               <StackPanel IsVisible="{Binding IsLocalConnectionChoice}" Spacing="10">
-                <TextBlock Text="MystTiq will look for its management service already running on this machine, or start one. If you already have another local MystTiq service running on a different port, enter its address below instead." Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding WizardStep1InstructionText}" Classes="muted" TextWrapping="Wrap"/>
                 <StackPanel Orientation="Horizontal" Spacing="10">
                   <Button Classes="primary" Content="Auto-Detect Local Service" Command="{Binding DetectLocalServiceCommand}"/>
                   <TextBlock Text="{Binding Detail}" VerticalAlignment="Center" Classes="muted" TextWrapping="Wrap"/>
@@ -2721,19 +2851,341 @@
                 </Grid>
               </StackPanel>
 
+              <!-- v0.7.81.0: "← Back" removed, since there's no earlier step to return to now that
+                   step 0 is gone; this cancels the wizard (closes the tab) instead. -->
               <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
-                <Button Content="← Back" Command="{Binding WizardBackCommand}"/>
+                <Button Content="Cancel" Command="{Binding CloseActiveTabCommand}" ToolTip.Tip="Closes this tab. Disabled if it's the only open tab."/>
                 <Button Grid.Column="1" Classes="primary" Content="Connect" Command="{Binding ConnectCommand}"/>
-                <Button Grid.Column="2" Classes="success" Content="Next: Server Defaults →" HorizontalAlignment="Right" Command="{Binding WizardAdvanceCommand}" IsEnabled="{Binding ManagementApiConnected}" ToolTip.Tip="Connect first, then continue to the new server's in-game defaults."/>
+                <Button Grid.Column="2" Classes="success" Content="{Binding WizardStep1NextButtonLabel}" HorizontalAlignment="Right" Command="{Binding WizardAdvanceCommand}" IsEnabled="{Binding ManagementApiConnected}" ToolTip.Tip="Connect first, then continue."/>
               </Grid>
             </StackPanel>
           </Border>
 
-          <Border Classes="card accentSystem" IsVisible="{Binding IsWizardStep2}">
+          <!-- v0.7.82.0: World Source choice, install-wizard only. Cards reordered to New World /
+               Import / Clone to match direct feedback's own stated order. -->
+          <StackPanel IsVisible="{Binding IsWizardStepWorldSource}" Spacing="18">
+            <StackPanel Spacing="4" HorizontalAlignment="Center">
+              <TextBlock Text="Step 2 of 8 — World Source" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" HorizontalAlignment="Center"/>
+              <TextBlock Text="How should this new server's world start out?" Classes="muted" HorizontalAlignment="Center"/>
+            </StackPanel>
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
+              <Button Classes="ghost" Padding="0" Command="{Binding ChooseNewWorldSourceCommand}">
+                <Border Classes="card accentHome" Padding="20">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="🌱" FontSize="28" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Set Up a New World" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                    <TextBlock Text="Installs the Palworld dedicated server fresh and creates a brand-new default world." Classes="muted" FontSize="11" TextWrapping="Wrap" TextAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </Button>
+              <Button Grid.Column="1" Classes="ghost" Padding="0" Command="{Binding ChooseImportWorldSourceCommand}">
+                <Border Classes="card accentWorld" Padding="20">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="📦" FontSize="28" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Import a World" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                    <TextBlock Text="Installs fresh, then brings in a world archive from a backup or another server." Classes="muted" FontSize="11" TextWrapping="Wrap" TextAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </Button>
+              <Button Grid.Column="2" Classes="ghost" Padding="0" Command="{Binding ChooseCloneWorldSourceCommand}">
+                <Border Classes="card accentMods" Padding="20">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="🧬" FontSize="28" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Clone an Existing Server" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                    <TextBlock Text="Copies an already-configured server's binaries, world, and settings into this new one, with ports offset automatically." Classes="muted" FontSize="11" TextWrapping="Wrap" TextAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </Button>
+            </Grid>
+          </StackPanel>
+
+          <!-- v0.7.82.0: Clone source picker, unchanged content from the old combined step 3, just
+               its own gate/label changed (no longer paired with Install in the same step). -->
+          <Border Classes="card accentSystem" IsVisible="{Binding IsWizardStepCloneSource}">
+            <StackPanel Spacing="12">
+              <TextBlock Text="Step 3 of 8 — Clone an Existing Server" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}"/>
+              <TextBlock Text="Pick a server you've already set up to copy from. It must be stopped first -- files can't be safely copied while PalServer has them open." Classes="muted" TextWrapping="Wrap"/>
+              <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
+                <TextBlock Text="Clone From" VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="1" ItemsSource="{Binding CloneableSourceProfiles}" SelectedItem="{Binding NewServerCloneSourceProfile}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:ConnectionProfile">
+                      <TextBlock Text="{Binding Name}"/>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Grid.Row="1" Text="New Server ID" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewServerCloneTargetId}" Watermark="e.g. world-2"/>
+                <TextBlock Grid.Row="2" Text="Port Offset" VerticalAlignment="Center"/>
+                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding CloneWorldPortOffsetOptions}" SelectedItem="{Binding CloneWorldPortOffset}" HorizontalAlignment="Left" MinWidth="140"/>
+              </Grid>
+              <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                <Button Content="← Back" Command="{Binding WizardBackCommand}"/>
+                <Button Grid.Column="1" Classes="success" Content="Clone Now" Command="{Binding CloneIntoNewServerCommand}"/>
+              </Grid>
+              <TextBlock Text="{Binding NewServerCloneStatusText}" Classes="muted" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+
+          <!-- v0.7.82.0: Identity & Ports, moved out of the old combined Settings step so it's
+               collected right after World Source instead of after Install. The values are only
+               staged here (Setup* fields); FinishInstallAndAdvanceCommand actually applies them
+               (CreateDefaultServerSettingsAsync) once Install (step 6) has produced a real
+               PalWorldSettings.ini to write into; that constraint is genuine, not arbitrary
+               sequencing, see PalworldSettingsConfigurationService.CreateDefault. -->
+          <Border Classes="card accentSystem" IsVisible="{Binding IsWizardStepIdentityPorts}">
+            <StackPanel Spacing="10">
+              <StackPanel>
+                <TextBlock Text="Step 3 of 8 — Server Identity &amp; Ports" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}"/>
+                <TextBlock Text="These values are applied automatically right after Install (step 6) creates PalWorldSettings.ini -- nothing here is saved yet. This is the Palworld dedicated server's own name/settings -- separate from the Profile Name above, which only labels this MystTiq connection." Classes="muted" TextWrapping="Wrap"/>
+              </StackPanel>
+              <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                <StackPanel><TextBlock Text="Server Name" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="6"><TextBox Text="{Binding SetupServerName, Mode=TwoWay}" MaxLength="128"/><Button Grid.Column="1" Content="🎲" Command="{Binding GenerateSetupServerNameCommand}" ToolTip.Tip="Generate a random server name" AutomationProperties.Name="Generate a random server name" Padding="10,7"/></Grid></StackPanel>
+                <StackPanel Grid.Column="1"><TextBlock Text="Description" Classes="muted"/><TextBox Text="{Binding SetupServerDescription, Mode=TwoWay}" MaxLength="512"/></StackPanel>
+                <StackPanel Grid.Row="1"><TextBlock Text="Admin Password" Classes="muted"/><TextBox Text="{Binding SetupAdminPassword, Mode=TwoWay}" PasswordChar="●" Watermark="Optional; sent only to the authenticated headless service"/></StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="1"><TextBlock Text="Server Password (optional)" Classes="muted"/><TextBox Text="{Binding SetupServerPassword, Mode=TwoWay}" PasswordChar="●"/></StackPanel>
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12">
+                  <StackPanel><TextBlock Text="Players" Classes="muted"/><TextBox Text="{Binding SetupMaximumPlayers, Mode=TwoWay}" Width="72"/></StackPanel>
+                  <!-- v0.7.88.0: direct live feedback. Game Port should draw attention and explain
+                       when it needs to change, since the default is correct for the common
+                       single-server case and only needs changing to avoid colliding with another
+                       server already running on the same machine. -->
+                  <Border Classes="statuscard accentSystem" Padding="8" BorderBrush="{DynamicResource AmberAccentBorderBrush}" BorderThickness="2">
+                    <StackPanel><TextBlock Text="Game Port" Classes="muted"/><TextBox Text="{Binding SetupGamePort, Mode=TwoWay}" Width="82"/></StackPanel>
+                  </Border>
+                  <StackPanel><TextBlock Text="REST Port" Classes="muted"/><TextBox Text="{Binding SetupRestPort, Mode=TwoWay}" Width="82"/></StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Spacing="2">
+                  <TextBlock Text="Only change Game Port if you're running multiple Palworld servers on this same machine at the same time -- each needs its own port. Otherwise the default is fine." Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding SetupGamePortWarningText}" IsVisible="{Binding HasSetupGamePortWarning}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding SetupRestPortWarningText}" IsVisible="{Binding HasSetupRestPortWarning}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                <Button Content="← Back" Command="{Binding WizardBackCommand}"/>
+                <Button Grid.Column="2" Classes="primary" Content="Next: World Settings →" HorizontalAlignment="Right" Command="{Binding WizardAdvanceCommand}"/>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- v0.7.82.0: World Settings choice. A preset applies automatically right after Install;
+               "Customize" can't show real slider values before a real PalWorldSettings.ini exists, so
+               it defers to the existing, fully-live Configuration page after Finish instead of faking
+               pre-install values (see NewServerWorldSettingsChoice's own comment). -->
+          <StackPanel IsVisible="{Binding IsWizardStepWorldSettingsChoice}" Spacing="18">
+            <StackPanel Spacing="4" HorizontalAlignment="Center">
+              <TextBlock Text="Step 4 of 8 — World Settings" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" HorizontalAlignment="Center"/>
+              <TextBlock Text="Apply a starter preset automatically after install, or customize your own once the server's real settings file exists." Classes="muted" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+            </StackPanel>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+              <Button Classes="ghost" Padding="0" Command="{Binding ChooseWorldSettingsPresetCommand}">
+                <Border Classes="card accentBackups" Padding="20">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="⚙️" FontSize="28" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Use a Starter Preset" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                    <TextBlock Text="Pick a preset (Vanilla, Quality of Life, etc.) below -- applied automatically right after install." Classes="muted" FontSize="11" TextWrapping="Wrap" TextAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </Button>
+              <Button Grid.Column="1" Classes="ghost" Padding="0" Command="{Binding ChooseWorldSettingsCustomizeCommand}">
+                <Border Classes="card accentWorld" Padding="20">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="🎛️" FontSize="28" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Customize After Install" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                    <TextBlock Text="Finish setup with defaults, then fine-tune every World Setting on the Configuration page." Classes="muted" FontSize="11" TextWrapping="Wrap" TextAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </Button>
+            </Grid>
+            <StackPanel IsVisible="{Binding IsWorldSettingsChoicePreset}" Spacing="6" HorizontalAlignment="Center">
+              <TextBlock Text="Starter Preset" Classes="muted" FontSize="11" HorizontalAlignment="Center"/>
+              <ComboBox ItemsSource="{Binding PalworldConfigPresets}" SelectedItem="{Binding SelectedConfigPreset}" MinWidth="240"/>
+            </StackPanel>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <Button Content="← Back" Command="{Binding WizardBackCommand}"/>
+            </Grid>
+          </StackPanel>
+
+          <!-- v0.7.82.0: Install Directory. See ContinueFromInstallDirectoryAsync's own comment for
+               the full registration/restart/reconnect story. It always registers a new, genuinely
+               distinct server profile now, since the "typical" default location is permanently owned
+               by the always-present "Local MystTiq" profile (confirmed live: reusing it collided with
+               BuildProfileFromEditor's own duplicate-connection guard). Only the target directory
+               varies by occupancy, not whether registration happens. -->
+          <Border Classes="card accentSystem" IsVisible="{Binding IsWizardStepInstallDirectory}">
+            <StackPanel Spacing="12">
+              <TextBlock Text="Step 5 of 8 — Install Directory" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}"/>
+              <TextBlock Text="{Binding NewServerInstallDirectoryStatusText}" Classes="muted" TextWrapping="Wrap"/>
+              <!-- v0.7.88.0 bug fix: reported live. This step previously showed no field at all to
+                   see or change the target directory, just the warning box below. -->
+              <StackPanel Spacing="3">
+                <TextBlock Text="Target directory" Classes="muted" FontSize="11"/>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                  <TextBox Text="{Binding NewServerInstallDirectoryEffectivePath, Mode=TwoWay}" FontFamily="Consolas, monospace"/>
+                  <Button Grid.Column="1" Content="Browse" Tag="installDirectory" Click="WorkspaceBrowse_Click"/>
+                </Grid>
+              </StackPanel>
+              <Border Classes="statuscard accentSystem" BorderBrush="{DynamicResource AmberAccentBorderBrush}" BorderThickness="1">
+                <TextBlock Text="Continuing registers this as a new server profile and restarts the local MystTiq service automatically to bring it online, then reconnects this wizard to it. Only available for local, non-Windows-Service MystTiq installs." Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
+              </Border>
+              <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                <Button Content="← Back" Command="{Binding WizardBackCommand}"/>
+                <Button Grid.Column="1" Classes="success" Content="Continue →" Command="{Binding ContinueFromInstallDirectoryCommand}"/>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- v0.7.82.0: Download &amp; Install, moved from the old combined step 3. Content is
+               unchanged, only its own gate/label/step-count and final button changed (now finishes
+               into the auto-apply step instead of the old Settings step). -->
+          <Border Classes="card accentSystem" IsVisible="{Binding IsWizardStepInstall}">
+            <StackPanel Spacing="12">
+              <TextBlock Text="Step 6 of 8 — Install Palworld Dedicated Server" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}"/>
+              <TextBlock Text="Downloads and installs the Palworld dedicated server via SteamCMD (also installs SteamCMD itself if it's missing). Safe to run again later -- it validates rather than reinstalling if the files already exist." Classes="muted" TextWrapping="Wrap"/>
+              <!-- v0.7.85.0: real inline world import, not a placeholder anymore. PalServer.exe
+                   generates its own real initial world within a few minutes of its first start
+                   (confirmed live), so this starts the server once, stops it, then embeds the
+                   already-existing World Transactions "world-import" Analyze/Apply flow to replace
+                   that placeholder world, the same bindings the World Transactions page itself uses. -->
+              <StackPanel IsVisible="{Binding IsWorldSourceImport}" Spacing="10">
+                <Border Classes="statuscard accentWorld">
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="Import Your World" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding NewServerImportPrepareStatusText}" Classes="muted" TextWrapping="Wrap"/>
+                    <Button Classes="primary" Content="Prepare for Import" Command="{Binding PrepareForWorldImportCommand}" HorizontalAlignment="Left" IsVisible="{Binding !NewServerImportReady}"/>
+                    <StackPanel IsVisible="{Binding NewServerImportReady}" Spacing="8">
+                      <Grid ColumnDefinitions="190,Auto,*" ColumnSpacing="10">
+                        <ComboBox ItemsSource="{Binding WorldTransactionModes}" SelectedItem="{Binding WorldTransactionMode}"/>
+                        <Button Grid.Column="1" Content="Analyze ZIP Archive" Click="AnalyzeWorldArchive_Click"/>
+                        <TextBlock Grid.Column="2" Text="{Binding WorldTransactionState}" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                      </Grid>
+                      <Border Classes="statuscard accentWorld"><StackPanel Spacing="6"><TextBlock Text="Transaction Plan" FontWeight="SemiBold"/><ItemsControl ItemsSource="{Binding WorldTransactionPlanSteps}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding StringFormat='• {0}'}" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+                      <CheckBox Content="I reviewed this plan and confirm the server is stopped." IsChecked="{Binding WorldTransactionConfirmed}"/>
+                      <Button Classes="danger" Content="Apply With Fresh Safety Backup" HorizontalAlignment="Left" Command="{Binding ApplyWorldTransactionCommand}"/>
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+              <!-- v0.7.89.0 bug fix: reported live. The checklist below used to keep showing the
+                   pre-install "MISSING" row after a successful install, requiring a manual Refresh
+                   click. Now wired to a command that auto-refreshes the checklist right after
+                   install completes; direct live feedback also asked for more visibility into what
+                   the install is actually doing, so SteamCMD's own captured output tail is now shown
+                   here too, not just a flat state word. -->
+              <!-- v0.7.90.0: direct live feedback. "option to install just the server without
+                   mods and then the option of installing it with the extras." The second button
+                   chains in UE4SS (the only checklist item that both has a real install path today
+                   and isn't behind "BACKEND REQUIRED"), auto-picking the newest stable Palworld Fork
+                   release instead of the UE4SS page's own manual Preview/Confirm picker: an explicit
+                   tradeoff of that review step for one-click convenience, only taken when this
+                   button is deliberately chosen over the plain install. -->
+              <WrapPanel>
+                <Button Classes="success" Content="Install Palworld Dedicated Server" Command="{Binding InstallPalworldServerFromWizardCommand}" Margin="0,0,6,6"/>
+                <Button Classes="success" Content="Install with Extras (+ UE4SS)" Command="{Binding InstallPalworldServerWithExtrasCommand}" Margin="0,0,6,6" ToolTip.Tip="Installs the server, then automatically installs the newest stable UE4SS release. Palworld Save Tools and PIM/Oodle Decoder have no install capability anywhere in the app yet."/>
+                <TextBlock Text="{Binding DistributionState}" VerticalAlignment="Center" Classes="muted"/>
+              </WrapPanel>
+              <TextBlock Text="{Binding DistributionDetail}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Ue4ssInstallState}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBox Text="{Binding DistributionOutputText}" IsVisible="{Binding HasDistributionOutput}" AcceptsReturn="True" IsReadOnly="True" MaxHeight="140" FontFamily="Consolas, monospace" FontSize="11"/>
+
+              <!-- v0.7.81.0: read-only environment checklist, direct follow-up request ("it should
+                   start a new server installation, like folder paths, steamcmd server, dependencies,
+                   UE4SS, etc."). Reuses EnvironmentItems/RefreshEnvironmentCommand unchanged (the
+                   exact same data the Server Setup page's own checklist shows), auto-loaded on
+                   arrival here (ContinueFromInstallDirectoryAsync). Deliberately read-only here, no
+                   per-row Verify/Manage buttons, since several of those navigate to other pages
+                   (Configuration/UE4SS/Update Center), which the wizard's full-screen overlay hides
+                   while IsCreatingNewProfile is true; those actions stay reachable from the real
+                   Server Setup page after finishing setup. -->
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="SERVER ENVIRONMENT" FontSize="13" FontWeight="Bold"/>
+                <Button Grid.Column="1" Content="↻ Refresh" Command="{Binding RefreshEnvironmentCommand}" Padding="8,3" FontSize="11"/>
+              </Grid>
+              <Border Classes="card accentServer" Padding="0" ClipToBounds="True" MaxHeight="260">
+                <Grid RowDefinitions="Auto,*">
+                  <Grid Background="{DynamicResource Bg2Brush}" ColumnDefinitions="150,95,2*,2.35*" Height="32">
+                    <TextBlock Text="COMPONENT" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold" FontSize="11"/>
+                    <TextBlock Grid.Column="1" Text="STATUS" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold" FontSize="11"/>
+                    <TextBlock Grid.Column="2" Text="LOCATION" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold" FontSize="11"/>
+                    <TextBlock Grid.Column="3" Text="DETAILS" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold" FontSize="11"/>
+                  </Grid>
+                  <ScrollViewer Grid.Row="1" MaxHeight="228" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding EnvironmentItems}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:EnvironmentChecklistItemDto">
+                          <Border BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,0,1" Padding="2">
+                            <Grid ColumnDefinitions="150,95,2*,2.35*" MinHeight="34">
+                              <TextBlock Text="{Binding Component}" Margin="10,0" VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap"/>
+                              <Grid Grid.Column="1" Margin="8,4">
+                                <Border Background="{DynamicResource SuccessGlassGradient}" BorderBrush="{DynamicResource GreenAccentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Stretch" IsVisible="{Binding IsReady}"><TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" FontSize="9" FontWeight="Bold"/></Border>
+                                <Border Background="{DynamicResource WarningGlassGradient}" BorderBrush="{DynamicResource AmberAccentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Stretch" IsVisible="{Binding IsDisabled}"><TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" FontSize="9" FontWeight="Bold"/></Border>
+                                <Border Background="{DynamicResource DangerGlassGradient}" BorderBrush="{DynamicResource RedAccentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Stretch" IsVisible="{Binding IsMissing}"><TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" FontSize="9" FontWeight="Bold"/></Border>
+                              </Grid>
+                              <TextBlock Grid.Column="2" Text="{Binding Location}" Margin="10,0" VerticalAlignment="Center" FontSize="10" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Location}"/>
+                              <TextBlock Grid.Column="3" Text="{Binding Details}" Margin="10,0" VerticalAlignment="Center" FontSize="10" TextWrapping="Wrap" MaxHeight="30"/>
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Grid>
+              </Border>
+
+              <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                <Button Content="← Back" Command="{Binding WizardBackCommand}"/>
+                <Button Grid.Column="2" Classes="primary" Content="Next: MODs →" HorizontalAlignment="Right" Command="{Binding FinishInstallAndAdvanceCommand}" ToolTip.Tip="Installing is optional here if the files already exist at this location. Applies Identity &amp; Ports and any chosen preset automatically."/>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- v0.7.86.0: MODs step, install-wizard only, New World/Import only. Reuses the exact same
+               Workshop-scan machinery already built for the MOD Library page
+               (ScanWorkshopModsCommand/WorkshopItems/ImportSelectedWorkshopModCommand), verbatim.
+               Both already correctly resolved the in-progress wizard connection, so no fix was needed
+               here (unlike a couple of other reused commands found this session). Entirely optional:
+               Next advances whether or not anything was imported. -->
+          <Border Classes="card accentSystem" IsVisible="{Binding IsWizardStepMods}">
+            <StackPanel Spacing="12">
+              <TextBlock Text="Step 7 of 8 — MODs" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}"/>
+              <TextBlock Text="Optional. Scans locally installed Steam Workshop content for Palworld and imports any you pick before finishing setup. You can always add more later from MOD Library." Classes="muted" TextWrapping="Wrap"/>
+              <WrapPanel>
+                <Button Content="↻ Scan Workshop Mods" Command="{Binding ScanWorkshopModsCommand}" Margin="0,0,6,6"/>
+                <Button Classes="primary" Content="Import Selected" Command="{Binding ImportSelectedWorkshopModCommand}" Margin="0,0,6,6"/>
+                <!-- v0.7.89.0: direct live feedback. A distinctly-colored button (green, matching
+                     the other install-type actions in this wizard) for installing a MOD from a local
+                     ZIP file directly, separate from the Workshop scan/import flow above. Reuses
+                     InstallModZip_Click verbatim, the exact same picker plus InstallModZipAsync path
+                     the MOD Library page's own "Choose ZIP and Install" button already uses. ZIP
+                     only, same as MOD Library: a bare .pak file has no install path anywhere in this
+                     app today and would need its own separate backend capability, not just wiring up
+                     a button. -->
+                <Button Classes="success" Content="📦 Install MOD ZIP…" Click="InstallModZip_Click" Margin="0,0,6,6"/>
+              </WrapPanel>
+              <TextBlock Text="{Binding WorkshopScanState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+              <ListBox ItemsSource="{Binding WorkshopItems}" SelectedItem="{Binding SelectedWorkshopItem}" MaxHeight="300">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="models:WorkshopItemDto">
+                    <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8" Margin="0,6">
+                      <StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding WorkshopId}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontFamily="Consolas, monospace"/></StackPanel>
+                      <TextBlock Grid.Column="1" Text="{Binding SuggestedPackage}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap"/>
+                      <Border Grid.Column="2" Classes="badge" VerticalAlignment="Center"><TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center"/></Border>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                <Button Content="← Back" Command="{Binding WizardBackCommand}"/>
+                <Button Grid.Column="2" Classes="primary" Content="Next: Confirm &amp; Finish →" HorizontalAlignment="Right" Command="{Binding WizardAdvanceCommand}"/>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card accentSystem" IsVisible="{Binding IsWizardStepSettings}">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
               <StackPanel Spacing="10">
                 <StackPanel>
-                  <TextBlock Text="Step 2 of 3 — In-Game Server Defaults (new server only)" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource BlueBrush}"/>
+                  <TextBlock Text="{Binding WizardStepSettingsLabel}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource BlueBrush}"/>
                   <TextBlock Text="Once connected, create PalWorldSettings.ini from the server's official default file. Existing active settings are never overwritten. This is the Palworld dedicated server's own name/settings -- separate from the Profile Name above, which only labels this MystTiq connection." Classes="muted" TextWrapping="Wrap"/>
                 </StackPanel>
                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
@@ -2754,6 +3206,19 @@
                     <TextBlock Text="{Binding SetupGamePortWarningText}" IsVisible="{Binding HasSetupGamePortWarning}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding SetupRestPortWarningText}" IsVisible="{Binding HasSetupRestPortWarning}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
                   </StackPanel>
+                  <!-- v0.7.81.0: starter preset picker, direct request ("choose one of the preset
+                       settings like vanilla or quality of life"). Reuses the exact same preset list
+                       (PalworldConfigPresets/SelectedConfigPreset, Official/Balanced/Relaxed/custom)
+                       already built for the Configuration page, chained through Load -> Apply -> Save
+                       in one action (ApplyStarterPresetCommand). Only meaningful after Create Default
+                       Settings has created the file this loads/overwrites. -->
+                  <StackPanel Grid.Row="5" Grid.ColumnSpan="2" Spacing="4">
+                    <TextBlock Text="Starter Preset (optional, applied after Create Default Settings above)" Classes="muted" FontSize="11"/>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                      <ComboBox ItemsSource="{Binding PalworldConfigPresets}" SelectedItem="{Binding SelectedConfigPreset}"/>
+                      <Button Grid.Column="1" Content="Apply Preset" Command="{Binding ApplyStarterPresetCommand}"/>
+                    </Grid>
+                  </StackPanel>
                 </Grid>
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
@@ -2766,13 +3231,13 @@
             </Grid>
           </Border>
 
-          <!-- v0.7.3.0 wizard step 3: a lightweight confirm/finish step, additive only. Save
-               Profile/Delete Profile remain exactly where they always were in the editing card for
-               editing an existing profile; this is just a second, wizard-scoped path to the same
-               SaveProfileCommand for a brand-new profile's natural "last step." -->
-          <Border Classes="card accentSystem" IsVisible="{Binding IsWizardStep3}">
+          <!-- v0.7.3.0 wizard's confirm/finish step, additive only. Save Profile/Delete Profile
+               remain exactly where they always were in the editing card for editing an existing
+               profile; this is just a second, wizard-scoped path to the same SaveProfileCommand for
+               a brand-new profile's natural "last step." -->
+          <Border Classes="card accentSystem" IsVisible="{Binding IsWizardStepConfirm}">
             <StackPanel Spacing="10">
-              <TextBlock Text="Step 3 of 3 — Confirm &amp; Finish" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource BlueBrush}"/>
+              <TextBlock Text="{Binding WizardStepConfirmLabel}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource BlueBrush}"/>
               <Border Classes="statuscard accentSystem">
                 <StackPanel Spacing="4">
                   <TextBlock Text="{Binding ProfileName, StringFormat='Server: {0}'}" FontWeight="SemiBold"/>
@@ -2780,7 +3245,18 @@
                   <TextBlock Text="{Binding ConnectionState, StringFormat='Connection: {0}'}" Classes="muted"/>
                 </StackPanel>
               </Border>
-              <TextBlock Text="Save this profile to add it to your server list. You can always come back and finish the in-game defaults later from Settings." Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock Text="Save this profile to add it to your server list. You can always come back and finish the in-game defaults later from Settings." Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !IsNewServerSetupFlow}"/>
+              <!-- v0.7.82.0: install wizard's own Confirm messaging. Identity &amp; Ports and any
+                   chosen preset were already applied automatically by FinishInstallAndAdvanceCommand
+                   (Clone needs none of this, it already has both). "Customize" points to the
+                   Configuration page rather than embedding a duplicate live settings editor here. -->
+              <StackPanel IsVisible="{Binding IsNewServerSetupFlow}" Spacing="4">
+                <TextBlock Text="Server identity, description, and ports were applied automatically after install." Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !IsWorldSourceClone}"/>
+                <TextBlock Text="{Binding SetupOperationDetail}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !IsWorldSourceClone}"/>
+                <TextBlock Text="Your chosen starter preset was applied automatically." Classes="muted" TextWrapping="Wrap" IsVisible="{Binding IsWorldSettingsChoicePreset}"/>
+                <TextBlock Text="Customize World Settings any time from Server → Configuration on this server." Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding IsWorldSettingsChoiceCustomize}"/>
+                <TextBlock Text="Save this profile to add it to your server list." Classes="muted" TextWrapping="Wrap"/>
+              </StackPanel>
               <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
                 <Button Content="← Back" Command="{Binding WizardBackCommand}"/>
                 <Button Grid.Column="1" Classes="success" Content="Save Profile" FontWeight="Bold" Command="{Binding SaveProfileCommand}"/>

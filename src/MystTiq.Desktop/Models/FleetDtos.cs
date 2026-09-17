@@ -53,3 +53,31 @@ public sealed class WorldCloneResultDto
     public long BytesCopied { get; set; }
     public string Message { get; set; } = string.Empty;
 }
+
+// v0.7.82.0: registers a blank (no file copying) new fleet profile at an arbitrary ServerRoot --
+// mirrors HeadlessAddServerProfileRequest server-side (LocalManagementApiHost.cs POST /api/v1/servers).
+// Used by the "Set Up New Server" wizard's Install Directory step when the default location is
+// already occupied by another server, so a genuinely separate second server can be created.
+public sealed class AddFleetProfileRequestDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string ServerRoot { get; set; } = string.Empty;
+    public string SteamCmdPath { get; set; } = string.Empty;
+    public string BackupRoot { get; set; } = string.Empty;
+    public string RuntimeRoot { get; set; } = string.Empty;
+    public IReadOnlyList<string> LaunchArguments { get; set; } = [];
+    // ServerRuntimeKind is [JsonConverter(typeof(JsonStringEnumConverter))] on the server side
+    // (HeadlessConfiguration.cs), so a plain string here ("WindowsNative"/"LinuxNative") round-trips
+    // correctly without needing the enum type mirrored client-side.
+    public string Runtime { get; set; } = "WindowsNative";
+}
+
+public sealed class AddFleetProfileResultDto
+{
+    public bool Success { get; set; }
+    public bool RestartRequired { get; set; }
+    public string? RollbackPath { get; set; }
+    public IReadOnlyList<string> ValidationErrors { get; set; } = [];
+    public string Message { get; set; } = string.Empty;
+}

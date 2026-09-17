@@ -133,6 +133,22 @@ public sealed class HeadlessPlayerRegistryService
             return events.AsEnumerable().Reverse().Take(Math.Clamp(maximum, 1, MaximumEvents)).ToArray();
     }
 
+    // v0.7.75.0: part of "Delete Player Completely" -- removes this player's own registry record
+    // and every presence event naming them, then persists immediately (not on the usual 30s
+    // throttle) since a deletion is a deliberate, one-shot admin action that should be durable
+    // right away, not lost if the process exits before the next throttled save.
+    public void Forget(string playerId)
+    {
+        var id = NormalizeId(playerId);
+        if (string.IsNullOrWhiteSpace(id)) return;
+        lock (gate)
+        {
+            records.Remove(id);
+            events.RemoveAll(e => string.Equals(e.PlayerId, id, StringComparison.OrdinalIgnoreCase));
+            Save();
+        }
+    }
+
     private static TimeSpan Min(TimeSpan a, TimeSpan b) => a < b ? a : b;
     private static string Coalesce(string? incoming, string fallback) => string.IsNullOrWhiteSpace(incoming) ? fallback : incoming;
     private static string NormalizeId(string? value) => (value ?? string.Empty).Trim();

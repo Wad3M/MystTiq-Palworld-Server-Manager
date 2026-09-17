@@ -1,0 +1,7 @@
+# Apply v0.7.82.0 Changed Files
+
+The Changed Files ZIP is an audit/convenience package for the promoted v0.7.82.0 source baseline. Normal installation should use `MystTiqPalworldServer_v0.7.82.0_FullSource.zip` with `Update-FromDownloads.ps1` so the running artifact app closes, the staged source replaces cleanly, and the complete current-version gate runs before relaunch.
+
+No configuration schema change. Touches `MystTiq.HeadlessHost` (`HeadlessComponentUpdateService.cs` — new `UpdatePipAsync`, `RunProcessAsync` gained an optional timeout; `LocalManagementApiHost.cs` — new pip-update route; `HeadlessAlertCenterService.cs` — `MaxProjectableDays` cap fixing the disk-space-prediction crash) and `MystTiq.Desktop` (`Models/ComponentVersionDto.cs` — new `CanUpdateInPlace`/`SourceUrl`/`HasSourceUrl`, new `ComponentUpdateResultDto`; `Models/PalworldConfigurationDtos.cs` — `PalworldSimpleToggleItem.IsDirty`; `Services/MystTiqApiClient.cs`/`IMystTiqApiClient.cs` — new `UpdatePipAsync` client method; `ViewModels/MainWindowViewModel.cs` — `UpdatePipCommand`, `ServerSetupTableMaxHeight`, `ServerState`/`DashboardHealthText`/`IsHealthGlowAmber`/`IsServerGlowAmber` STARTING-state fix, `RaiseIsBusyDependents` gained `GenerateServerNameCommand`/`SaveCurrentAsPresetCommand`; `MainWindow.axaml`/`.axaml.cs` — Update/Open buttons, resize wiring, Configuration page reorder + dirty-state `Classes.dirty` bindings; `Styles/DesignSystem.axaml` — `Border.statuscard.dirty`/`TextBox.dirty`). No change to `MystTiq.Core`.
+
+Do not overlay it onto v0.4.17.4 or an unknown source tree.

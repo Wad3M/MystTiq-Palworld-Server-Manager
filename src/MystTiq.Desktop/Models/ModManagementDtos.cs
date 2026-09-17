@@ -24,7 +24,12 @@ public sealed class ModItemDto
     [JsonPropertyName("runtimeState")] public string RuntimeState { get; init; } = string.Empty;
     [JsonPropertyName("evidence")] public string Evidence { get; init; } = string.Empty;
     [JsonPropertyName("runtimeConfirmed")] public bool RuntimeConfirmed { get; init; }
+    [JsonPropertyName("updateAvailable")] public bool UpdateAvailable { get; init; }
+    [JsonPropertyName("updateHint")] public string UpdateHint { get; init; } = string.Empty;
+    [JsonPropertyName("installedVersion")] public string? InstalledVersion { get; init; }
     public string EnabledText => Enabled ? "Enabled" : "Disabled";
+    public bool HasInstalledVersion => !string.IsNullOrWhiteSpace(InstalledVersion);
+    public string InstalledVersionText => HasInstalledVersion ? $"v{InstalledVersion}" : "Version unknown";
 }
 public sealed class ModInventoryDto
 {

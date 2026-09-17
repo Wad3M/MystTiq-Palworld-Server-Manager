@@ -9,9 +9,10 @@
   <StackPanel Margin="22" Spacing="16">
     <TextBlock Text="Server is running" FontSize="16" FontWeight="SemiBold"/>
     <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
-    <TextBlock Text="To stop the server and fully exit instead, use the tray icon's Safe Exit or Force Exit after minimizing." Classes="muted" FontSize="11" TextWrapping="Wrap"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
       <Button Content="Cancel" Click="Cancel_OnClick"/>
+      <Button Content="Force Exit" Classes="danger" Click="ForceExit_OnClick" ToolTip.Tip="Terminate the server immediately and exit -- skips the graceful shutdown."/>
+      <Button Content="Safe Exit" Click="SafeExit_OnClick" ToolTip.Tip="Stop the server gracefully, then exit."/>
       <Button Classes="primary" Content="Minimize to Tray" Click="MinimizeToTray_OnClick"/>
     </StackPanel>
   </StackPanel>

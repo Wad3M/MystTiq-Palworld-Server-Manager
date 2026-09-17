@@ -19,6 +19,16 @@ public interface ILocalManagementBootstrapper
     // connection profile could silently attach to a different already-running MystTiq instance.
     Task<LocalManagementBootstrapResult> EnsureAvailableAsync(LocalInstallationSnapshot snapshot, string expectedServerProfileId = "default", CancellationToken cancellationToken = default);
     Task<bool> StopOwnedSidecarAsync(CancellationToken cancellationToken = default);
+
+    // v0.7.82.0: composes the two methods above so a newly fleet-registered profile (added via
+    // POST /api/v1/servers, which only takes effect after the management process restarts --
+    // confirmed pre-existing constraint, see HeadlessFleetConfigurationService/HeadlessWorldCloneService)
+    // can be brought online automatically from the Desktop app itself, without asking the user to do
+    // anything out-of-band. Only ever restarts a sidecar THIS bootstrapper spawned (StopOwnedSidecarAsync's
+    // own safety check); if nothing was owned (e.g. the sidecar predates this app session), Stop is a
+    // safe no-op and EnsureAvailableAsync falls through to its own existing "launch a fresh instance on
+    // a free port" path when the reused instance doesn't have the expected profile yet.
+    Task<LocalManagementBootstrapResult> RestartOwnedSidecarAsync(LocalInstallationSnapshot snapshot, string expectedServerProfileId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -179,6 +189,12 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
         {
             return false;
         }
+    }
+
+    public async Task<LocalManagementBootstrapResult> RestartOwnedSidecarAsync(LocalInstallationSnapshot snapshot, string expectedServerProfileId, CancellationToken cancellationToken = default)
+    {
+        await StopOwnedSidecarAsync(cancellationToken);
+        return await EnsureAvailableAsync(snapshot, expectedServerProfileId, cancellationToken);
     }
 
     private static void AddOverride(ProcessStartInfo info, string option, string? value)

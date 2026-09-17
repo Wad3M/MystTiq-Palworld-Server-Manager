@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MystTiq.Desktop.Views.ConfirmOperationDialog"
+        Title="Confirm"
+        Width="480" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource CardGradient}"
+        Icon="/Assets/PalworldServerManager.ico">
+  <StackPanel Margin="22" Spacing="16">
+    <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
+    <ItemsControl x:Name="FindingsList">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,2"/>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <TextBlock Text="A fresh safety backup is taken automatically before this change. Requires PalServer stopped." Foreground="{DynamicResource OrangeBrush}" TextWrapping="Wrap" FontSize="12"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+      <Button Content="Cancel" Click="Cancel_OnClick"/>
+      <Button x:Name="ConfirmButton" Click="Confirm_OnClick"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

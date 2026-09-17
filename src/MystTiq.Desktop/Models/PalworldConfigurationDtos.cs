@@ -152,12 +152,17 @@ public sealed class PalworldSimpleToggleItem : INotifyPropertyChanged
         Setting = setting;
         Title = title;
         Description = description;
-        Setting.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(PalworldSettingDto.Value)) Raise(nameof(IsChecked)); };
+        Setting.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(PalworldSettingDto.Value)) Raise(nameof(IsChecked));
+            if (args.PropertyName is nameof(PalworldSettingDto.Value) or nameof(PalworldSettingDto.IsDirty)) Raise(nameof(IsDirty));
+        };
     }
 
     public PalworldSettingDto Setting { get; }
     public string Title { get; }
     public string Description { get; }
+    public bool IsDirty => Setting.IsDirty;
     public bool IsChecked
     {
         get => bool.TryParse(Setting.Value, out var parsed) && parsed;

@@ -208,6 +208,24 @@ public sealed class HeadlessComponentUpdateService
             $"PyPI's current pip release is {latestVersion}.");
     }
 
+    // v0.7.82.0: the Update Center's first real, actionable in-place update -- direct request ("the
+    // update center where it says update available should allow us to click on it to update"). pip
+    // is the one component here genuinely upgradable with a single, safe, well-known command;
+    // reuses the exact same python resolution CheckPipAsync above already does, so this can only
+    // ever target the same installation the status check reported on.
+    public async Task<ComponentUpdateResult> UpdatePipAsync(CancellationToken cancellationToken)
+    {
+        var python = FindOnPath(OperatingSystem.IsWindows() ? ["python.exe", "py.exe"] : ["python3", "python"]);
+        if (python is null)
+            return new ComponentUpdateResult(false, "pip requires a Python installation, which was not found on PATH.");
+
+        var (exitCode, stdout, stderr) = await RunProcessAsync(python, "-m pip install --upgrade pip", cancellationToken, TimeSpan.FromSeconds(60));
+        if (exitCode != 0)
+            return new ComponentUpdateResult(false, $"pip upgrade failed (exit code {exitCode}). {stderr.Trim()}");
+
+        return new ComponentUpdateResult(true, stdout.Trim().Length > 0 ? stdout.Trim() : "pip upgraded successfully.");
+    }
+
     private async Task<ComponentVersionInfo> CheckSaveToolsAsync(DateTimeOffset now, CancellationToken ct)
     {
         var scriptPath = FindFirstExisting(
@@ -421,7 +439,11 @@ public sealed class HeadlessComponentUpdateService
 
     private static string? FindFirstExisting(params string[] candidates) => candidates.FirstOrDefault(File.Exists);
 
-    private static async Task<(int ExitCode, string Stdout, string Stderr)> RunProcessAsync(string fileName, string arguments, CancellationToken cancellationToken)
+    // v0.7.82.0: gained an optional timeout override for UpdatePipAsync below -- the fixed 8-second
+    // ProcessTimeout every version check uses is right for a "--version" query, but a real "pip
+    // install --upgrade pip" downloads a package and needs real room to finish. Every existing
+    // caller keeps passing no timeout, so behavior is unchanged for them.
+    private static async Task<(int ExitCode, string Stdout, string Stderr)> RunProcessAsync(string fileName, string arguments, CancellationToken cancellationToken, TimeSpan? timeout = null)
     {
         try
         {
@@ -439,7 +461,7 @@ public sealed class HeadlessComponentUpdateService
             };
             if (!process.Start()) return (-1, string.Empty, string.Empty);
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(ProcessTimeout);
+            timeoutCts.CancelAfter(timeout ?? ProcessTimeout);
             var stdoutTask = process.StandardOutput.ReadToEndAsync(timeoutCts.Token);
             var stderrTask = process.StandardError.ReadToEndAsync(timeoutCts.Token);
             await process.WaitForExitAsync(timeoutCts.Token);
@@ -525,3 +547,7 @@ public sealed record ComponentVersionInfo(
     string Detail);
 
 public sealed record ComponentVersionSnapshot(IReadOnlyList<ComponentVersionInfo> Components, DateTimeOffset ObservedAt);
+
+// v0.7.82.0: result of an actual in-place component update (currently only pip) -- distinct from
+// ComponentVersionInfo, which is read-only comparison data.
+public sealed record ComponentUpdateResult(bool Success, string Message);

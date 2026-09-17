@@ -12,6 +12,12 @@ public sealed class HeadlessAlertCenterService
     private static readonly TimeSpan EvaluationInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan DefaultCooldown = TimeSpan.FromMinutes(30);
 
+    // A near-zero (but positive) growthPerDay from two close-together/near-identical samples can
+    // make daysRemaining astronomically large; DateTimeOffset.AddDays only accepts a range up to
+    // roughly year 9999, so anything past this cap can't be projected as a real date. 100 years is
+    // already far beyond a meaningful exhaustion warning.
+    private const double MaxProjectableDays = 36500;
+
     private readonly IServerPathProfile paths;
     private readonly HeadlessHistoricalMetricsService history;
     private readonly HeadlessNotificationService notifications;
@@ -52,13 +58,32 @@ public sealed class HeadlessAlertCenterService
     {
         var free = FreeBytes();
         var (growthPerDay, _) = ComputeGrowthPerDay();
-        if (growthPerDay <= 0)
+        // v0.7.82.0 bug fix, round 2: the MaxProjectableDays cap alone did not actually stop the
+        // crash live (confirmed: it kept recurring every ~60-75s across many rebuilds). A NaN
+        // daysRemaining -- possible if growthPerDay itself is somehow non-finite -- compares false
+        // against every bound (NaN > X and NaN <= 0 are both false), so it silently slipped past both
+        // guards and reached AddDays. !double.IsFinite catches NaN and +/-Infinity explicitly, and
+        // AddDays is now wrapped as a last-resort belt-and-suspenders: this is a best-effort
+        // informational prediction, never worth crashing the shared background evaluation loop over.
+        if (!double.IsFinite(growthPerDay) || growthPerDay <= 0)
             return new DiskSpacePrediction(free, growthPerDay, null, null, "Storage is not growing; no exhaustion projected from current trend.");
 
         var daysRemaining = free / growthPerDay;
-        var projected = DateTimeOffset.UtcNow.AddDays(daysRemaining);
-        return new DiskSpacePrediction(free, growthPerDay, projected, daysRemaining,
-            $"At the current growth rate, the backup volume has about {daysRemaining:F1} day(s) of free space remaining.");
+        if (!double.IsFinite(daysRemaining) || daysRemaining > MaxProjectableDays)
+            return new DiskSpacePrediction(free, growthPerDay, null, daysRemaining,
+                "Storage is growing too slowly to project a meaningful exhaustion date.");
+
+        try
+        {
+            var projected = DateTimeOffset.UtcNow.AddDays(daysRemaining);
+            return new DiskSpacePrediction(free, growthPerDay, projected, daysRemaining,
+                $"At the current growth rate, the backup volume has about {daysRemaining:F1} day(s) of free space remaining.");
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return new DiskSpacePrediction(free, growthPerDay, null, daysRemaining,
+                "Storage is growing too slowly to project a meaningful exhaustion date.");
+        }
     }
 
     public async Task EvaluateThrottledAsync(CancellationToken token)
