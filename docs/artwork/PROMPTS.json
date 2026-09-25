@@ -1,0 +1,202 @@
+[
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-home-light.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: a distant crystalline mountain citadel and misty valleys. Original polished painterly cinematic game environment, restrained cyan teal accents. LIGHT MODE DAYTIME variant: pearl sky, ivory mist, pale stone, soft natural daylight, clear midtone subject edges, airy pastel atmosphere, absolutely not a dark night image. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-world-light.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: a luminous ancient tree on a floating island over layered mountain valleys. Original polished painterly cinematic game environment, restrained violet lavender accents. LIGHT MODE DAYTIME variant: pearl sky, ivory mist, pale stone, soft natural daylight, clear midtone subject edges, airy pastel atmosphere, absolutely not a dark night image. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-server-dark.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: a secluded mountain observatory with crystalline server-like towers and discreet connected energy conduits. Original polished painterly cinematic game environment, restrained cyan teal accents. DARK MODE NIGHTTIME variant: deep navy charcoal atmosphere, restrained luminous accents, mist and depth, no harsh bright lights. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-server-light.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: a secluded mountain observatory with crystalline server-like towers and discreet connected energy conduits. Original polished painterly cinematic game environment, restrained cyan teal accents. LIGHT MODE DAYTIME variant: pearl sky, ivory mist, pale stone, soft natural daylight, clear midtone subject edges, airy pastel atmosphere, absolutely not a dark night image. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-backups-dark.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: an ancient mountain archive vault with terraced stone shelves and protected glowing crystal repositories. Original polished painterly cinematic game environment, restrained emerald teal accents. DARK MODE NIGHTTIME variant: deep navy charcoal atmosphere, restrained luminous accents, mist and depth, no harsh bright lights. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-backups-light.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: an ancient mountain archive vault with terraced stone shelves and protected glowing crystal repositories. Original polished painterly cinematic game environment, restrained emerald teal accents. LIGHT MODE DAYTIME variant: pearl sky, ivory mist, pale stone, soft natural daylight, clear midtone subject edges, airy pastel atmosphere, absolutely not a dark night image. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-mods-dark.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: a crystalline artisan forge with floating modular hexagonal artifacts and purple energy arcs. Original polished painterly cinematic game environment, restrained magenta violet accents. DARK MODE NIGHTTIME variant: deep navy charcoal atmosphere, restrained luminous accents, mist and depth, no harsh bright lights. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-mods-light.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: a crystalline artisan forge with floating modular hexagonal artifacts and purple energy arcs. Original polished painterly cinematic game environment, restrained magenta violet accents. LIGHT MODE DAYTIME variant: pearl sky, ivory mist, pale stone, soft natural daylight, clear midtone subject edges, airy pastel atmosphere, absolutely not a dark night image. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-tools-dark.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: an elegant mountaintop workshop and astronomical instruments with a warm amber crystal beacon. Original polished painterly cinematic game environment, restrained amber gold accents. DARK MODE NIGHTTIME variant: deep navy charcoal atmosphere, restrained luminous accents, mist and depth, no harsh bright lights. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-tools-light.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: an elegant mountaintop workshop and astronomical instruments with a warm amber crystal beacon. Original polished painterly cinematic game environment, restrained amber gold accents. LIGHT MODE DAYTIME variant: pearl sky, ivory mist, pale stone, soft natural daylight, clear midtone subject edges, airy pastel atmosphere, absolutely not a dark night image. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-system-dark.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: a distant network of watchtowers joined by fine blue light over misty mountains. Original polished painterly cinematic game environment, restrained azure blue accents. DARK MODE NIGHTTIME variant: deep navy charcoal atmosphere, restrained luminous accents, mist and depth, no harsh bright lights. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-system-light.png",
+    "prompt": "Use case: stylized-concept. Asset type: panoramic header background artwork for MystTiq fantasy server manager. Scene: a distant network of watchtowers joined by fine blue light over misty mountains. Original polished painterly cinematic game environment, restrained azure blue accents. LIGHT MODE DAYTIME variant: pearl sky, ivory mist, pale stone, soft natural daylight, clear midtone subject edges, airy pastel atmosphere, absolutely not a dark night image. Wide 3:1 panorama. Subject and visual interest on rightmost third, left two thirds quiet smooth atmospheric mist for UI text. Main subject sits near vertical center so it survives shallow header crops. No lettering, no logo, no frame, no UI, no watermark, no characters. High quality background illustration, not a mockup.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-configuration.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: three clearly spaced vertical adjustment sliders. Cohesive polished 3D crystal-and-brushed-gunmetal icon, cyan faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-console.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: terminal screen with a single angular prompt chevron, no letters. Cohesive polished 3D crystal-and-brushed-gunmetal icon, cyan faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-workspace.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: open folder with two neatly layered metallic panels. Cohesive polished 3D crystal-and-brushed-gunmetal icon, cyan faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-inspector.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: large magnifying glass over a faceted violet crystal. Cohesive polished 3D crystal-and-brushed-gunmetal icon, violet faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-players.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: two friendly stylized person bust silhouettes. Cohesive polished 3D crystal-and-brushed-gunmetal icon, violet faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-bases.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: small fortress with a broad central doorway and two towers. Cohesive polished 3D crystal-and-brushed-gunmetal icon, violet faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-guilds.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: two crossed pennants in a unified heraldic crest. Cohesive polished 3D crystal-and-brushed-gunmetal icon, violet faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-map.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: folded map with a prominent location pin. Cohesive polished 3D crystal-and-brushed-gunmetal icon, violet faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-backup-sphere.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: sturdy archive chest with a curved restore arrow. Cohesive polished 3D crystal-and-brushed-gunmetal icon, emerald teal faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-mod_library.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: three upright modular crystal cartridges on a low shelf. Cohesive polished 3D crystal-and-brushed-gunmetal icon, magenta purple faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-ue4ss.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: square microchip with bold separated metallic pins and crystalline core. Cohesive polished 3D crystal-and-brushed-gunmetal icon, magenta purple faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-update_center.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: large upward arrow above an open deployment tray. Cohesive polished 3D crystal-and-brushed-gunmetal icon, amber gold faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-server_doctor.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: mechanical heart with a simple bright pulse line. Cohesive polished 3D crystal-and-brushed-gunmetal icon, amber gold faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-crash_analyzer.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: angular broken crystal held inside a magnifying glass. Cohesive polished 3D crystal-and-brushed-gunmetal icon, amber gold faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-save_tools.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: faceted storage cartridge crossed by a short wrench. Cohesive polished 3D crystal-and-brushed-gunmetal icon, amber gold faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-diagnostics.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: three tall telemetry bars above a simple pulse trace. Cohesive polished 3D crystal-and-brushed-gunmetal icon, amber gold faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-settings.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: single chunky eight-tooth gear with faceted core. Cohesive polished 3D crystal-and-brushed-gunmetal icon, cool blue faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-notifications.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: single elegant notification bell. Cohesive polished 3D crystal-and-brushed-gunmetal icon, cool blue faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-activity_audit.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: clipboard with three thick horizontal lines and a checkmark. Cohesive polished 3D crystal-and-brushed-gunmetal icon, cool blue faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-automation.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: large mechanical cog incorporating a clock hand. Cohesive polished 3D crystal-and-brushed-gunmetal icon, cool blue faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-alert_center.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: upright triangular warning beacon with an exclamation symbol. Cohesive polished 3D crystal-and-brushed-gunmetal icon, amber orange faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-security.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: broad shield with a strong padlock silhouette. Cohesive polished 3D crystal-and-brushed-gunmetal icon, cool blue faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-fleet.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG navigation icon for MystTiq server management desktop application. Subject: three small server towers connected by a broad branching base. Cohesive polished 3D crystal-and-brushed-gunmetal icon, cool blue faceted glass inlays with restrained glow, dark navy structural outlines plus bright silver edge highlights, readable on BOTH ivory and navy backgrounds. Front three-quarter view, chunky distinct silhouette, bold few details readable at 32px and 56px. Centered single isolated object occupies 80 percent of a square canvas, generous clear padding. Genuinely transparent alpha background, no floor, no background color or checkerboard, no enclosing sphere, no words, no letters, no watermark, no tiny embellishment.",
+    "method": "Built-in image_gen"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-dashboard.png",
+    "prompt": "Use case: stylized-concept. New production raster asset for MystTiq, a dark navy fantasy-tech server management desktop app. No text, no letters, no wordmark, no watermark, no UI screenshot. Square isolated navigation icon: a bold luminous cyan telemetry dial inset in a faceted midnight-blue crystal-metal shield, three broad dial ticks and one clear needle, small cyan core. Refined game inventory emblem, polished bevels, simple unmistakable silhouette readable at 32-56px. Single centered object fills 80% square with comfortable margin. Transparent background with real alpha. No ground plane, no enclosing sphere, no tiny circuit patterns, restrained glow, upper-left lighting.",
+    "method": "Built-in image_gen; reused approved initial artwork"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-server_setup.png",
+    "prompt": "Use case: stylized-concept. New production raster asset for MystTiq, a dark navy fantasy-tech server management desktop app. No text, no letters, no wordmark, no watermark, no UI screenshot. Square isolated navigation icon: compact two-tier server tower built from dark blue brushed metal and cyan crystal rails, two broad horizontal drive slots and two cyan status lights, clear geometric silhouette. Refined game inventory emblem, polished bevels, readable at 32-56px. Single centered object fills 80% square. Transparent background with real alpha. No ground plane, no enclosing sphere, no tiny circuit patterns, restrained glow, upper-left lighting.",
+    "method": "Built-in image_gen; reused approved initial artwork"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-mod_dashboard.png",
+    "prompt": "Use case: stylized-concept. New production raster asset for MystTiq, a dark navy fantasy-tech server management desktop app. No text, no letters, no wordmark, no watermark, no UI screenshot. Square isolated navigation icon: three interlocking beveled modular hexagonal components forming a compact triangular cluster, dark amethyst metal faces and magenta illuminated joints. Refined fantasy-tech inventory emblem, bold simple silhouette readable at 32-56px. Single centered object fills 80% square. Transparent background with real alpha. No ground plane, no enclosing sphere, no tiny circuit patterns, restrained purple glow, upper-left lighting.",
+    "method": "Built-in image_gen; reused approved initial artwork"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-home-dark.png",
+    "prompt": "Use case: stylized-concept. New production raster asset for MystTiq, a dark navy fantasy-tech server management desktop app. No text, no letters, no wordmark, no watermark, no UI screenshot. Wide 3:1 panoramic background artwork, cinematic original fantasy-tech landscape. Distant angular mountain ridges and a small luminous cyan crystalline monitoring citadel on the far right third; layered midnight navy fog and faint cyan aurora. Left 60% mostly quiet deep navy atmospheric sky/mist for readable UI text. Primary silhouette sits near center vertical band, survives shallow header cropping. Painterly high-end game environment with precise broad shapes, visual depth, restrained cyan teal highlights, tiny warm lights in citadel. No characters, no floating UI, no dense circuitry, no large bright central object. Avoid purple overload and crushed all-black shadows.",
+    "method": "Built-in image_gen; reused approved initial artwork"
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-world-dark.png",
+    "prompt": "Use case: stylized-concept. New production raster asset for MystTiq, a dark navy fantasy-tech server management desktop app. No text, no letters, no wordmark, no watermark, no UI screenshot. Wide 3:1 panoramic background artwork, cinematic original fantasy wilderness with distant floating rock islands and a luminous violet crystalline world-tree-like rock formation concentrated on right third; a calm teal river and layered mountain silhouettes dissolve into midnight-blue mist. Left 60% quiet atmospheric navy for UI labels. Main details centered vertically so shallow header cropping retains atmosphere. Painterly high-end game environment, readable broad silhouettes, sparse violet and teal luminescence, restrained soft bloom, rich depth. No characters, no UI, no text, no dense stars, no bright central focal point.",
+    "method": "Built-in image_gen; reused approved initial artwork"
+  }
+]

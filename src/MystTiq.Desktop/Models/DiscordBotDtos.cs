@@ -16,6 +16,10 @@ public sealed class DiscordBotConfigurationDto
     public string? GuildId { get; set; }
     public string? OwnerDiscordUserId { get; set; }
     public List<DiscordRoleMappingDto> RoleMappings { get; set; } = [];
+    // v0.7.95.0: live features. Blank channel ids turn the matching feature off.
+    public string? StatusChannelId { get; set; }
+    public string? EventsChannelId { get; set; }
+    public bool ShowPresence { get; set; } = true;
 }
 
 // Returned from GET /notifications/discord-bot. Never carries the actual token, only whether one
@@ -28,4 +32,7 @@ public sealed class DiscordBotConfigurationViewDto
     public string? OwnerDiscordUserId { get; set; }
     public List<DiscordRoleMappingDto> RoleMappings { get; set; } = [];
     public string ConnectionState { get; set; } = "NotConfigured";
+    public string? StatusChannelId { get; set; }
+    public string? EventsChannelId { get; set; }
+    public bool ShowPresence { get; set; } = true;
 }

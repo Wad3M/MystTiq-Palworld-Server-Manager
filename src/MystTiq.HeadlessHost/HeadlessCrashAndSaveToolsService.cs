@@ -10,9 +10,13 @@ public sealed class HeadlessCrashAndSaveToolsService
     private const int MaximumLogFiles = 12;
     private const int MaximumLogLines = 4000;
     private const int MaximumSaveFiles = 5000;
+    public const int MaximumCrashReports = 20;
     private readonly IServerPathProfile paths;
     private readonly HeadlessActivityLogService activity;
     private readonly string historyRoot;
+    // v0.8.9.0: one analysis at a time. The crash-recovery observer and the crash-report watcher can both ask for one, and
+    // each marks its findings as reported; running them together could report the same crash twice.
+    private readonly object analyzeGate = new();
 
     public HeadlessCrashAndSaveToolsService(IServerPathProfile paths, HeadlessActivityLogService activity)
     {
@@ -22,27 +26,66 @@ public sealed class HeadlessCrashAndSaveToolsService
         Directory.CreateDirectory(historyRoot);
     }
 
-    public HeadlessCrashAnalysisSnapshot Analyze()
+    // v0.7.97.0: findings now come from the known-signature catalog (cause + fixes per signature,
+    // one signature per line, mods named in the evidence) and are marked new or already reported
+    // relative to earlier analyses, so re-running Analyze on the same logs does not re-alarm.
+    // installedModNames is optional: without it the analysis simply names no mods.
+    public HeadlessCrashAnalysisSnapshot Analyze(IReadOnlyCollection<string>? installedModNames = null)
     {
-        var evidence = ReadRecentLogEvidence();
-        var findings = new List<HeadlessCrashFinding>();
-        AddFinding(findings, evidence, "Fatal error", "Critical", "fatal error");
-        AddFinding(findings, evidence, "Unhandled exception", "Critical", "unhandled exception");
-        AddFinding(findings, evidence, "Access violation", "Critical", "access violation", "0xc0000005");
-        AddFinding(findings, evidence, "Out of memory", "Critical", "out of memory", "oom");
-        AddFinding(findings, evidence, "Watchdog or hang", "Warning", "watchdog", "hang detected", "not responding");
-        AddFinding(findings, evidence, "UE4SS context", "Warning", "ue4ss", "dwmapi.dll");
+        lock (analyzeGate) return AnalyzeLocked(installedModNames);
+    }
+
+    // v0.8.9.0: where Unreal writes its crash report folders for this server.
+    public string CrashReportsRoot => Path.Combine(paths.ServerRoot, "Pal", "Saved", "Crashes");
+
+    // The newest crash report folders that hold a readable crash context, newest first.
+    public IReadOnlyList<UnrealCrashReport> ReadCrashReports()
+    {
+        var root = CrashReportsRoot;
+        if (!Directory.Exists(root)) return [];
+        var reports = new List<UnrealCrashReport>();
+        try
+        {
+            foreach (var folder in Directory.EnumerateDirectories(root).Select(d => new DirectoryInfo(d)).OrderByDescending(d => d.LastWriteTimeUtc).Take(MaximumCrashReports))
+            {
+                var context = Path.Combine(folder.FullName, UnrealCrashReportParser.ContextFileName);
+                if (!File.Exists(context)) continue;
+                try
+                {
+                    var parsed = UnrealCrashReportParser.Parse(folder.Name, File.GetLastWriteTimeUtc(context), File.ReadAllText(context));
+                    if (parsed is not null) reports.Add(parsed);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        return reports;
+    }
+
+    private HeadlessCrashAnalysisSnapshot AnalyzeLocked(IReadOnlyCollection<string>? installedModNames)
+    {
+        var logEvidence = ReadRecentLogEvidence();
+        var reports = ReadCrashReports();
+        // Report lines go after the (already capped) log lines: a finding keeps its newest evidence lines, so a busy log can
+        // never push a crash report out of what the finding shows.
+        var evidence = (Lines: logEvidence.Lines.Concat(reports.OrderBy(r => r.WrittenAt).Select(UnrealCrashReportParser.ToEvidenceLine)).ToArray(),
+            FilesScanned: logEvidence.FilesScanned + reports.Count, LinesScanned: logEvidence.LinesScanned + reports.Count);
+        var previousKeys = History(30)
+            .SelectMany(r => r.Findings)
+            .Select(f => f.Key)
+            .Where(k => !string.IsNullOrEmpty(k))
+            .ToHashSet(StringComparer.Ordinal);
+        var findings = CrashAnalysisBuilder.Build(evidence.Lines, installedModNames, previousKeys);
 
         var report = new HeadlessCrashAnalysisSnapshot(
             Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow, evidence.FilesScanned, evidence.LinesScanned,
-            findings, BuildIsolationPlan(findings),
-            findings.Count == 0
-                ? "No explicit crash signature was found in the bounded recent-log window. This is not proof that no crash occurred."
-                : $"Found {findings.Count} evidence-backed crash signature group(s). Correlation is shown without claiming an unproven cause.");
+            findings, CrashAnalysisBuilder.BuildIsolationPlan(findings),
+            CrashAnalysisBuilder.BuildSummary(findings) + (reports.Count > 0 ? $" Read {reports.Count} Unreal crash report(s) from Pal\\Saved\\Crashes (newest {reports.Max(r => r.WrittenAt).ToLocalTime():yyyy-MM-dd HH:mm})." : string.Empty),
+            findings.Count(f => f.IsNew), findings.Count(f => !f.IsNew), reports.Count);
         var path = Path.Combine(historyRoot, $"crash-{report.ObservedAt:yyyyMMdd-HHmmss}-{report.Id[..8]}.json");
         File.WriteAllText(path, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
-        activity.Record(findings.Any(x => x.Severity == "Critical") ? "Warning" : "Information", "Crash Analyzer",
-            "Completed crash analysis", $"report={report.Id}; files={report.FilesScanned}; findings={report.Findings.Count}");
+        activity.Record(findings.Any(x => x.IsNew && x.Severity == "Critical") ? "Warning" : "Information", "Crash Analyzer",
+            "Completed crash analysis", $"report={report.Id}; files={report.FilesScanned}; findings={report.Findings.Count}; new={report.NewFindings}");
         return report;
     }
 
@@ -122,24 +165,6 @@ public sealed class HeadlessCrashAndSaveToolsService
         return (lines.TakeLast(MaximumLogLines).ToArray(), files.Length, Math.Min(lines.Count, MaximumLogLines));
     }
 
-    private static void AddFinding(List<HeadlessCrashFinding> findings, (IReadOnlyList<string> Lines, int FilesScanned, int LinesScanned) evidence,
-        string title, string severity, params string[] needles)
-    {
-        var matches = evidence.Lines.Where(line => needles.Any(n => line.Contains(n, StringComparison.OrdinalIgnoreCase))).TakeLast(5).ToArray();
-        if (matches.Length > 0) findings.Add(new(title, severity, matches.Length, matches));
-    }
-
-    private static IReadOnlyList<string> BuildIsolationPlan(IReadOnlyList<HeadlessCrashFinding> findings)
-    {
-        var steps = new List<string> { "Preserve the current logs and create a verified backup before changing server files." };
-        if (findings.Any(x => x.Title.Contains("UE4SS", StringComparison.OrdinalIgnoreCase)))
-            steps.Add("Use MOD Library to disable one recently changed UE4SS mod at a time, then reproduce under observation.");
-        if (findings.Any(x => x.Title.Contains("memory", StringComparison.OrdinalIgnoreCase)))
-            steps.Add("Compare memory history and player load before attributing the failure to a mod.");
-        steps.Add("Validate Palworld server files after evidence is captured; do not treat successful load messages as causal proof.");
-        return steps;
-    }
-
     private string? FindActiveLevelSave() => Directory.Exists(paths.SaveRoot)
         ? Directory.EnumerateFiles(paths.SaveRoot, "Level.sav", SearchOption.AllDirectories).OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault()
         : null;
@@ -181,9 +206,14 @@ public sealed class HeadlessCrashAndSaveToolsService
     }
 }
 
-public sealed record HeadlessCrashFinding(string Title, string Severity, int MatchCount, IReadOnlyList<string> Evidence);
+// The fields after Evidence are optional so a report saved before v0.7.97.0 still loads.
+public sealed record HeadlessCrashFinding(string Title, string Severity, int MatchCount, IReadOnlyList<string> Evidence,
+    string SignatureId = "", string Cause = "", IReadOnlyList<string>? Fixes = null,
+    DateTimeOffset? FirstSeen = null, DateTimeOffset? LastSeen = null,
+    IReadOnlyList<string>? MentionedMods = null, bool IsNew = true, string Key = "");
 public sealed record HeadlessCrashAnalysisSnapshot(string Id, DateTimeOffset ObservedAt, int FilesScanned, int LinesScanned,
-    IReadOnlyList<HeadlessCrashFinding> Findings, IReadOnlyList<string> IsolationPlan, string Summary);
+    IReadOnlyList<HeadlessCrashFinding> Findings, IReadOnlyList<string> IsolationPlan, string Summary,
+    int NewFindings = 0, int RepeatedFindings = 0, int CrashReportsRead = 0);
 public sealed record HeadlessSaveToolsTest(string Name, bool Success, int ExitCode, string Detail);
 public sealed record HeadlessSaveToolsDiagnostics(DateTimeOffset ObservedAt, bool Ready, string? PythonPath, string? LegacyConverterPath,
     string? PlmConverterPath, string? OodlePath, string? ActiveLevelSavePath, long ActiveLevelSaveBytes, string ActiveLevelSignature,

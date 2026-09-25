@@ -100,7 +100,7 @@ try {
     }
 
     Test-RouteSmoke 'api-run starts against the resulting config and actually enforces authentication+TLS' {
-        $args = @('api-run', '--config', $config, '--server-root', $missingServer, '--steamcmd', $steamCmd, '--backup-root', $backupRoot, '--runtime-root', $runtime)
+        $args = @('api-run', '--config', $config, '--fleet-root', (Join-Path $temp 'fleet'), '--server-root', $missingServer, '--steamcmd', $steamCmd, '--backup-root', $backupRoot, '--runtime-root', $runtime)
         $script:proc = Start-Process -FilePath $exe -ArgumentList $args -WorkingDirectory (Split-Path $exe -Parent) -PassThru -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $err
         $base = "https://${bindAddress}:$Port"
         $ready = $false

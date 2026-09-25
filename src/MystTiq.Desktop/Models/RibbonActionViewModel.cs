@@ -30,6 +30,28 @@ public sealed record RibbonActionViewModel(
     public bool IsBlueIcon => IconColor == RibbonIconColor.Blue;
     public bool IsRedIcon => IconColor == RibbonIconColor.Red;
     public bool IsCyanIcon => IconColor == RibbonIconColor.Cyan;
+
+    // v0.8.1.0: the user's vector Ribbon icons (see Services/RibbonIcons). Buttons without one keep their text glyph.
+    // v0.8.8.0: the user's colour image icons come first, then the vector icons, then the text glyph.
+    public string? ImageIconKey => MystTiq.Desktop.Services.RibbonIcons.ImageKeyFor(Label);
+    public Avalonia.Media.Imaging.Bitmap? ImageIcon => MystTiq.Desktop.Services.RibbonIcons.Image(ImageIconKey);
+    public bool HasImageIcon => ImageIconKey is not null;
+    public string? VectorIconKey => HasImageIcon ? null : MystTiq.Desktop.Services.RibbonIcons.KeyFor(Label, Glyph);
+    public Avalonia.Media.Geometry? VectorIcon => MystTiq.Desktop.Services.RibbonIcons.Geometry(VectorIconKey);
+    public bool HasVectorIcon => VectorIconKey is not null;
+    public bool ShowGlyph => !HasImageIcon && !HasVectorIcon;
+
+    // v0.8.19.0: the role the button's route needs (null = any role), and whether the signed-in role has it. A button the
+    // role cannot use is disabled, and its tooltip says which role it needs, instead of letting the server refuse it.
+    public string? RequiredRole { get; init; }
+    public bool RoleAllowed { get; init; } = true;
+    public string ToolTipText => RoleAllowed || RequiredRole is null ? AutomationName : $"{AutomationName} (needs the {RequiredRole} role)";
+    // v0.8.6.0: Label stays the English identity (RibbonIcons maps icons by it); this is what is shown.
+    public string DisplayLabel { get; init; } = Label;
 }
 
-public sealed record RibbonGroupViewModel(string Title, IReadOnlyList<RibbonActionViewModel> Actions);
+public sealed record RibbonGroupViewModel(string Title, IReadOnlyList<RibbonActionViewModel> Actions)
+{
+    // v0.8.6.0: the translated group title; Title stays English.
+    public string DisplayTitle { get; init; } = Title;
+}

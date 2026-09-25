@@ -13,7 +13,7 @@ using MystTiq.Desktop.Services;
 
 namespace MystTiq.Desktop.ViewModels;
 
-public sealed class MainWindowViewModel : ViewModelBase
+public sealed partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IMystTiqApiClient _api;
     private readonly IConnectionProfileStore _profileStore;
@@ -24,6 +24,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly ILocalManagementBootstrapper _localBootstrapper;
     private readonly LocalDiagnosticsService _localDiagnostics = new();
     private readonly LocalMapPreferencesStore _mapPreferences = new();
+    // v0.8.16.0: density (every tab); the theme mode stays per tab, in ConnectionProfile.ThemeVariant.
+    private readonly LocalDisplayPreferencesStore _displayPreferences;
     private readonly MapPresetService _mapPresets = new();
     private string? _mapBackgroundPath;
     private string? _busyReason;
@@ -34,7 +36,10 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string? _busyServerName;
     private string _busyElapsedText = string.Empty;
     private readonly DispatcherTimer _busyElapsedTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private bool _useCalibratedWorldPositions;
+    // v0.7.96.0: on by default. The old image mapping assumed the pre-expansion frame; the
+    // conversion is now calibrated to the bundled expanded map (see PalworldMapCoordinates). It
+    // only ever applies while the Palpagos map is the background (IsPalpagosMapActive).
+    private bool _useCalibratedWorldPositions = true;
     private IReadOnlyList<PlayerSnapshotDto> _lastPlayersForMap = [];
     private readonly LocalConfigPresetStore _configPresetStore = new();
     // v0.7.79.0: theme is now per-tab (read/written through ActiveTab.Profile.AccentTheme/
@@ -346,7 +351,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _palworldConfigPath = "Not loaded";
     private bool _palworldConfigLoaded;
     private bool _isConfigSimpleView = true;
-    private bool _isWorldMapExpanded;
+    // v0.7.96.0: open by default. It was collapsed in v0.7.5.0 to save vertical space, but a
+    // collapsed card is exactly why "where are the players and bases" read as missing.
+    private bool _isWorldMapExpanded = true;
     private bool _isPalEditorExpanded;
     private bool _isWanDiagnosticsExpanded;
     private bool _isLocalDiagnosticsExpanded;
@@ -389,14 +396,29 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _historyStatusText = "Collecting";
     private DateTimeOffset _lastHistoryRefresh = DateTimeOffset.MinValue;
 
-    public MainWindowViewModel(IMystTiqApiClient api, IConnectionProfileStore profileStore, ILocalInstallationDiscoveryService localDiscovery, IMystTiqServiceDiscoveryService serviceDiscovery, ILocalManagementBootstrapper? localBootstrapper = null, LocalThemePreferencesStore? themeStore = null, CredentialStore? credentialStore = null, TabSessionStore? tabSessionStore = null)
+    public MainWindowViewModel(IMystTiqApiClient api, IConnectionProfileStore profileStore, ILocalInstallationDiscoveryService localDiscovery, IMystTiqServiceDiscoveryService serviceDiscovery, ILocalManagementBootstrapper? localBootstrapper = null, LocalThemePreferencesStore? themeStore = null, CredentialStore? credentialStore = null, TabSessionStore? tabSessionStore = null, INexusModsClient? nexusClient = null, LocalDisplayPreferencesStore? displayPreferencesStore = null)
     {
         _api = api;
+        _nexus = nexusClient ?? new NexusModsClient();
         _profileStore = profileStore;
         _localDiscovery = localDiscovery;
         _serviceDiscovery = serviceDiscovery;
         _localBootstrapper = localBootstrapper ?? new LocalManagementBootstrapper();
         _credentialStore = credentialStore ?? new CredentialStore();
+        _displayPreferences = displayPreferencesStore ?? new LocalDisplayPreferencesStore();
+        ThemeApplier.ApplyDensity(_displayPreferences.LoadDensity());
+        // v0.8.16.0: a tab set to follow the system changes with it (Windows' app mode, the Linux desktop's color scheme).
+        if (Avalonia.Application.Current?.PlatformSettings is { } platformSettings)
+            platformSettings.ColorValuesChanged += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(OnSystemThemeChanged);
+        InitializeNexusMods();
+        // v0.8.5.0: the saved display language, before anything is shown.
+        Localizer.Instance.SetLanguage(_languageStore.Load());
+        Localizer.Instance.LanguageChanged += OnLanguageChanged;
+        InitializeKits();
+        InitializeGameIdPicker();
+        InitializeTeleportCommands();
+        InitializeHostCommands();
+        InitializeUserAccountCommands();
         _tabSessionStore = tabSessionStore ?? new TabSessionStore();
         Tabs.CollectionChanged += (_, _) => RecomputeTabLayout();
         // v0.7.43.0: footer elapsed-time ticker (item 6) -- started/stopped from
@@ -446,6 +468,11 @@ public sealed class MainWindowViewModel : ViewModelBase
         RevokePrincipalCommand = new AsyncCommand(RevokePrincipalAsync, () => !IsBusy && SelectedPrincipal is not null);
         RefreshAlertCenterCommand = new AsyncCommand(RefreshAlertCenterAsync, () => !IsBusy);
         SaveAlertRulesCommand = new AsyncCommand(SaveAlertRulesAsync, () => !IsBusy);
+        // v0.7.111.0: CommandParameter is the mute length in minutes as text ("60", "480", "1440", "0" = unmute).
+        MuteAlertsCommand = new RelayCommand<string>(m => { if (!IsBusy && int.TryParse(m, out var minutes)) Dispatcher.UIThread.Post(async () => await MuteAlertsAsync(minutes)); });
+        // v0.8.4.0: same shape for pausing outside delivery ("0" resumes).
+        PauseDeliveryCommand = new RelayCommand<string>(m => { if (!IsBusy && int.TryParse(m, out var minutes)) Dispatcher.UIThread.Post(async () => await PauseDeliveryAsync(minutes)); });
+        SendTestNotificationCommand = new RelayCommand(() => { if (!IsBusy) Dispatcher.UIThread.Post(async () => await SendTestNotificationAsync()); });
         RefreshDiscordBotConfigCommand = new AsyncCommand(RefreshDiscordBotConfigAsync, () => !IsBusy);
         SaveDiscordBotConfigCommand = new AsyncCommand(SaveDiscordBotConfigAsync, () => !IsBusy);
         AddDiscordRoleMappingCommand = new RelayCommand(AddDiscordRoleMapping);
@@ -481,7 +508,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         RefreshBanListCommand = new AsyncCommand(RefreshBanListAsync, () => !IsBusy);
         WhisperSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("whisper"), () => false);
         PromoteSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("promote"), () => false);
-        GiveItemSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("give-item"), () => false);
+        // v0.7.112.0: real now (PalDefender over RCON, the Starter Kits provider), no longer hardcoded off.
+        GiveItemSelectedPlayerCommand = new AsyncCommand(GiveItemsToSelectedPlayerAsync, () => !IsBusy && SelectedPlayerRecord?.Online == true && !string.IsNullOrWhiteSpace(GiveItemsText));
         RefreshBackupsCommand = new AsyncCommand(RefreshBackupsAsync, () => !IsBusy);
         CreateBackupCommand = new AsyncCommand(CreateBackupAsync, () => !IsBusy && ManagementApiConnected);
         DeleteBackupCommand = new AsyncCommand(DeleteBackupAsync, () => !IsBusy && SelectedBackup is not null);
@@ -504,14 +532,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         GenerateSetupServerNameCommand = new RelayCommand(() => SetupServerName = GenerateRandomServerName());
         RunDoctorCommand = new AsyncCommand(RunDoctorAsync, () => !IsBusy);
         RecheckDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy) Dispatcher.UIThread.Post(async () => await RecheckDiagnosticAsync(f)); });
-        FixDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy && f is { CanFix: true }) Dispatcher.UIThread.Post(async () => await FixDiagnosticAsync(f)); });
+        // v0.7.105.0: FixConfirmed gates this the same way BackupRestoreConfirmed gates RestoreBackupCommand --
+        // checked here too, not just via the button's IsEnabled, so the command itself can never fire unconfirmed.
+        FixDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy && f is { CanFix: true, FixConfirmed: true }) Dispatcher.UIThread.Post(async () => await FixDiagnosticAsync(f)); });
         RunNetworkDiagnosticsCommand = new AsyncCommand(RunNetworkDiagnosticsAsync, () => !IsBusy);
         DiagnoseConnectionCommand = new AsyncCommand(DiagnoseConnectionAsync, () => !IsBusy && SelectedProfile is not null);
         RepairFirewallCommand = new AsyncCommand(RepairFirewallAsync, () => !IsBusy);
         RunWanReachabilityCommand = new AsyncCommand(RunWanReachabilityAsync, () => !IsBusy);
         RepairUpnpMappingCommand = new AsyncCommand(RepairUpnpMappingAsync, () => !IsBusy);
         OpenExternalPortCheckerCommand = new RelayCommand(OpenExternalPortChecker);
-        RestartFromDiagnosticsCommand = new AsyncCommand(RestartFromDiagnosticsAsync, () => !IsBusy);
+        RestartFromDiagnosticsCommand = new AsyncCommand(RestartFromDiagnosticsAsync, () => !IsBusy && ManagementApiConnected && ServerIsRunning);
         RefreshEnvironmentCommand = new AsyncCommand(RefreshEnvironmentAsync, () => !IsBusy);
         VerifyEnvironmentCommand = new AsyncCommand(VerifyEnvironmentAsync, () => !IsBusy);
         CreateDefaultServerSettingsCommand = new AsyncCommand(CreateDefaultServerSettingsAsync, () => !IsBusy && SetupCreateConfirmed);
@@ -533,6 +563,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         RefreshPalsCommand = new AsyncCommand(RefreshPalsAsync, () => !IsBusy);
         PreviewPalEditCommand = new AsyncCommand(PreviewPalEditAsync, () => !IsBusy && SelectedExplorerPal is not null);
         ApplyPalEditCommand = new AsyncCommand(ApplyPalEditAsync, () => !IsBusy && PalEditConfirmed && !string.IsNullOrWhiteSpace(PalEditPreviewToken));
+        // The "nothing is scheduled" hint follows the collection, so it disappears the moment a rule is created.
+        AutomationRules.CollectionChanged += (_, _) => RaisePropertyChanged(nameof(HasNoAutomationRules));
         ClearMapBackgroundCommand = new RelayCommand(ClearMapBackground);
         SetMapPresetCommand = new RelayCommand<MapPreset>(SetMapPreset);
         LoadMapBackgroundPreference();
@@ -601,7 +633,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         // successful Connect just saved one). Delete-on-nothing-to-delete is a safe no-op either way.
         ForgetSavedTokenCommand = new RelayCommand(ForgetSavedToken, () => SelectedProfile is not null);
         NavigateCommand = new RelayCommand<string>(Navigate);
-        ToggleWorldMapCommand = new RelayCommand(() => IsWorldMapExpanded = !IsWorldMapExpanded);
+        ToggleWorldMapCommand = new RelayCommand(() =>
+        {
+            IsWorldMapExpanded = !IsWorldMapExpanded;
+            if (IsWorldMapExpanded) LoadMapBasesIfNeeded();
+        });
+        RefreshMapBasesCommand = new AsyncCommand(RefreshMapBasesAsync, () => !IsBusy);
+        SelectMapPlayerCommand = new RelayCommand<string>(SelectMapPlayer);
+        ResetMapViewCommand = new RelayCommand(ResetMapView);
+        ZoomToBaseCommand = new RelayCommand<string>(ZoomToBase);
+        ZoomToPalGroupCommand = new RelayCommand<string>(ZoomToPalGroup);
         TogglePalEditorCommand = new RelayCommand(() => IsPalEditorExpanded = !IsPalEditorExpanded);
         ToggleWanDiagnosticsCommand = new RelayCommand(() => IsWanDiagnosticsExpanded = !IsWanDiagnosticsExpanded);
         ToggleLocalDiagnosticsCommand = new RelayCommand(() => IsLocalDiagnosticsExpanded = !IsLocalDiagnosticsExpanded);
@@ -628,6 +669,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         // CommandParameter -- following the same Dispatcher.UIThread.Post(async () => ...) pattern
         // already used by ToggleWhitelistCommand/ToggleBanListCommand above rather than adding one.
         CancelTemporaryBanCommand = new RelayCommand<string>(playerId => Dispatcher.UIThread.Post(async () => await CancelTemporaryBanAsync(playerId)));
+        // v0.8.23.0: every command exists now, so the role each needs can be attached.
+        InstallCommandRoleGates();
         RebuildRibbonGroups();
         Dispatcher.UIThread.Post(async () =>
         {
@@ -935,6 +978,10 @@ public sealed class MainWindowViewModel : ViewModelBase
             {
                 ThemeApplier.Apply(activeProfile.AccentTheme, activeProfile.ThemeVariant);
                 RefreshTabAccentVisuals();
+                RaisePropertyChanged(nameof(IsLightMode));
+                RaisePropertyChanged(nameof(SelectedThemeModeIndex));
+                RaisePropertyChanged(nameof(PageArtwork));
+                RaisePropertyChanged(nameof(SetupArtwork));
             }
             // v0.7.6.0: OnlinePlayers/backups/mods/Pal lists are per-server data that isn't yet
             // itself tab-scoped (see RefreshActiveTabDataAsync below) -- until the newly active
@@ -959,6 +1006,33 @@ public sealed class MainWindowViewModel : ViewModelBase
             SelectedMod = null;
             SelectedExplorerPal = null;
             SelectedExplorerBase = null;
+            // v0.7.92.0: base marker coordinates are per-server world data, same stale-carryover
+            // class as the Dashboard's Active World card (v0.7.89.0): clear them so a different
+            // server's bases are never drawn on this tab's map before its own arrive.
+            _lastBaseLocations = [];
+            _lastPlayerLocations = [];
+            _lastExplorerPlayers = [];
+            // v0.8.11.0: Pals are per-server world data too.
+            _lastPalLocations = [];
+            _lastPalSummary = null;
+            _lastPalsSemanticAvailable = false;
+            PalMapPoints.Clear();
+            MapPalsStatusText = string.Empty;
+            // v0.8.3.0: the Give Item picker's ids come from this server's own world save; another server's list
+            // must not be offered here.
+            ClearGameIdCatalog();
+            BaseMapPoints.Clear();
+            MapBasesStatusText = string.Empty;
+            // v0.7.100.0: a new server starts on the whole map, not zoomed on the previous one's base.
+            _mapViewport.Reset();
+            OnMapViewportChanged();
+            // v0.7.97.0: crash findings, their plan and history are per-server too, so another
+            // server's causes and fixes must never sit under this tab's name until its own arrive.
+            CrashFindings.Clear();
+            CrashIsolationPlan.Clear();
+            CrashHistory.Clear();
+            SelectedCrashFinding = null;
+            CrashAnalyzerState = string.Empty;
             // v0.7.74.0: reported live -- switching tabs previously left whatever page the PREVIOUS
             // tab was on displayed for the newly active one too, rather than returning to wherever
             // this tab itself was last left. Restoring before RaiseActiveTabPropertiesChanged/the
@@ -967,7 +1041,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             RaiseActiveTabPropertiesChanged();
             RecomputeTabLayout();
             _ = RefreshActiveTabDataAsync();
-            if (SelectedPage == NavigationPage.Players) _ = RefreshPlayersPageAsync();
+            if (SelectedPage is NavigationPage.Players or NavigationPage.Map) _ = RefreshPlayersPageAsync();
+            if (SelectedPage == NavigationPage.CrashAnalyzer) _ = RefreshCrashHistoryAsync();
         }
     }
 
@@ -1063,9 +1138,13 @@ public sealed class MainWindowViewModel : ViewModelBase
             ApplyProfileTheme(profile with { AccentTheme = value });
         }
     }
+    // v0.8.16.0: "the Light palette is showing" (Light, or Follow the system on a light system) -- the page art reads it.
+    // The Settings checkbox it used to back is now the mode picker below.
     public bool IsLightMode
     {
-        get => (ActiveTab?.Profile?.ThemeVariant ?? "Dark") == "Light";
+        get => ActiveTab?.Profile is { } profile
+            ? ThemeApplier.ResolveVariant(profile.ThemeVariant) == "Light"
+            : Avalonia.Application.Current?.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Light;
         set
         {
             if (ActiveTab?.Profile is not { } profile) return;
@@ -1073,6 +1152,51 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (profile.ThemeVariant == variant) return;
             ApplyProfileTheme(profile with { ThemeVariant = variant });
         }
+    }
+
+    // v0.8.16.0: the mode picker (Dark, Light, Midnight, High contrast, Follow the system), per tab like the accent theme.
+    public IReadOnlyList<string> ThemeModeLabels { get; } = ThemeCatalog.ModeLabels;
+    public int SelectedThemeModeIndex
+    {
+        get => Array.IndexOf(ThemeCatalog.Modes, ThemeCatalog.NormalizeMode(ActiveTab?.Profile?.ThemeVariant ?? ThemeApplier.CurrentMode));
+        set
+        {
+            // -1 comes from the ComboBox while its items are replaced; it is not a choice.
+            if (value < 0 || value >= ThemeCatalog.Modes.Length || ActiveTab?.Profile is not { } profile) return;
+            var mode = ThemeCatalog.Modes[value];
+            if (profile.ThemeVariant == mode) return;
+            ApplyProfileTheme(profile with { ThemeVariant = mode });
+        }
+    }
+
+    // v0.8.16.0: density applies to every tab and is remembered on this computer.
+    public IReadOnlyList<string> DensityLabels { get; } = ThemeCatalog.Densities;
+    private string _displayPreferencesStatusText = string.Empty;
+    public string DisplayPreferencesStatusText { get => _displayPreferencesStatusText; private set => SetField(ref _displayPreferencesStatusText, value); }
+    public int SelectedDensityIndex
+    {
+        get => Array.IndexOf(ThemeCatalog.Densities, ThemeApplier.CurrentDensity);
+        set
+        {
+            if (value < 0 || value >= ThemeCatalog.Densities.Length || ThemeCatalog.Densities[value] == ThemeApplier.CurrentDensity) return;
+            ThemeApplier.ApplyDensity(ThemeCatalog.Densities[value]);
+            try { _displayPreferences.SaveDensity(ThemeApplier.CurrentDensity); }
+            catch (Exception ex) { DisplayPreferencesStatusText = "Density applied, but it could not be remembered: " + ex.Message; }
+            RaisePropertyChanged();
+        }
+    }
+
+    // v0.8.16.0: the operating system switched light/dark. Only a tab set to follow the system changes.
+    public void OnSystemThemeChanged()
+    {
+        // v0.8.25.0: High contrast follows too, since a Windows contrast theme being switched on, off or changed changes it.
+        if (ActiveTab?.Profile is not { } profile || ThemeCatalog.NormalizeMode(profile.ThemeVariant) is not ("System" or "HighContrast")) return;
+        ThemeApplier.Apply(profile.AccentTheme, profile.ThemeVariant);
+        RefreshTabAccentVisuals();
+        RaisePropertyChanged(nameof(IsLightMode));
+        RaisePropertyChanged(nameof(SelectedThemeModeIndex));
+        RaisePropertyChanged(nameof(PageArtwork));
+        RaisePropertyChanged(nameof(SetupArtwork));
     }
 
     // v0.7.79.0: shared by both setters above -- persists the updated profile (this tab's and the
@@ -1117,10 +1241,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         RefreshTabAccentVisuals();
         RaisePropertyChanged(nameof(SelectedAccentTheme));
         RaisePropertyChanged(nameof(IsLightMode));
-        RaisePropertyChanged(nameof(IsHomePageArtDark));
-        RaisePropertyChanged(nameof(IsHomePageArtLight));
-        RaisePropertyChanged(nameof(IsWorldPageArtDark));
-        RaisePropertyChanged(nameof(IsWorldPageArtLight));
+        RaisePropertyChanged(nameof(SelectedThemeModeIndex));
+        RaisePropertyChanged(nameof(PageArtwork));
+        RaisePropertyChanged(nameof(SetupArtwork));
     }
 
     // v0.7.52.0: TabSession.AccentBrush is a plain bound value, not a {DynamicResource}, so it does
@@ -1164,6 +1287,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ObservableCollection<NotificationItemDto> Notifications { get; } = [];
     public ObservableCollection<NotificationItemDto> FilteredNotifications { get; } = [];
     public ObservableCollection<AutomationRuleDto> AutomationRules { get; } = [];
+    // v0.7.102.0: with no rules at all nothing is scheduled, including backups. The page says so and points at
+    // the New Rule form below, whose defaults are already a nightly 03:00 backup.
+    public bool HasNoAutomationRules => AutomationRules.Count == 0;
     public ObservableCollection<AutomationRunRecordDto> AutomationRuns { get; } = [];
     public ObservableCollection<MystTiqPrincipalDto> Principals { get; } = [];
     public ObservableCollection<ServerProfileSummaryDto> FleetServers { get; } = [];
@@ -1172,6 +1298,14 @@ public sealed class MainWindowViewModel : ViewModelBase
     public IReadOnlyList<string> AutomationActionKinds { get; } = ["CreateBackup", "StartServer", "StopServer", "RestartServer", "SendNotification", "SendRconCommand"];
     public IReadOnlyList<string> MystTiqRoles { get; } = ["Viewer", "Operator", "Admin", "Owner"];
     public ObservableCollection<CrashFindingDto> CrashFindings { get; } = [];
+    // v0.7.97.0: the finding whose cause, fixes and evidence are shown beside the list.
+    private CrashFindingDto? _selectedCrashFinding;
+    public CrashFindingDto? SelectedCrashFinding
+    {
+        get => _selectedCrashFinding;
+        set { if (SetField(ref _selectedCrashFinding, value)) RaisePropertyChanged(nameof(HasSelectedCrashFinding)); }
+    }
+    public bool HasSelectedCrashFinding => _selectedCrashFinding is not null;
     public ObservableCollection<string> CrashIsolationPlan { get; } = [];
     public ObservableCollection<CrashAnalysisSnapshotDto> CrashHistory { get; } = [];
     public ObservableCollection<SaveToolsTestDto> SaveToolsTests { get; } = [];
@@ -1250,6 +1384,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             SelectedPlayerNotes = string.Empty;
             PlayerMetadataState = value is null ? "Select a player to load notes and warnings." : "Metadata not loaded.";
             RaisePlayerCommandStates();
+            RaiseKitCommandStates();
         }
     }
 
@@ -1329,7 +1464,15 @@ public sealed class MainWindowViewModel : ViewModelBase
             RaisePropertyChanged(nameof(IsWizardStepMods));
             RaisePropertyChanged(nameof(IsWizardStepSettings));
             RaisePropertyChanged(nameof(IsWizardStepConfirm));
-            if (value is null) return;
+            if (value is null)
+            {
+                // Wizard tabs retain the currently applied theme, including its artwork.
+                RaisePropertyChanged(nameof(IsLightMode));
+                RaisePropertyChanged(nameof(SelectedThemeModeIndex));
+                RaisePropertyChanged(nameof(PageArtwork));
+                RaisePropertyChanged(nameof(SetupArtwork));
+                return;
+            }
 
             ProfileName = value.Name;
             ServerUrl = value.BaseAddress.ToString().TrimEnd('/');
@@ -1353,10 +1496,9 @@ public sealed class MainWindowViewModel : ViewModelBase
             RefreshTabAccentVisuals();
             RaisePropertyChanged(nameof(SelectedAccentTheme));
             RaisePropertyChanged(nameof(IsLightMode));
-            RaisePropertyChanged(nameof(IsHomePageArtDark));
-            RaisePropertyChanged(nameof(IsHomePageArtLight));
-            RaisePropertyChanged(nameof(IsWorldPageArtDark));
-            RaisePropertyChanged(nameof(IsWorldPageArtLight));
+            RaisePropertyChanged(nameof(SelectedThemeModeIndex));
+            RaisePropertyChanged(nameof(PageArtwork));
+            RaisePropertyChanged(nameof(SetupArtwork));
             WorkspaceState = IsLocalProfile
                 ? "Local profile: browse and open actions use this computer."
                 : "Remote profile: paths belong to the managed server; local browse/open actions are disabled.";
@@ -1509,9 +1651,15 @@ public sealed class MainWindowViewModel : ViewModelBase
         (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (RefreshAllInstancesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (TerminateSelectedInstanceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        // v0.8.14.0: the Fleet Actions buttons also depend on the connection, but were never re-evaluated, so they
+        // stayed greyed out after connecting (found in the live check for this version).
+        (BackupAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (DoctorAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (UpdateAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
     }
     // Set from the real status poll's ServerStatusDto.Ready (see ApplyStatus), not
     // parsed from ServerState's display text -- Start greys out while already running, Stop/
@@ -1531,6 +1679,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
     }
     public string LifecycleStatusText { get => _lifecycleStatusText; private set => SetField(ref _lifecycleStatusText, value); }
@@ -1571,8 +1720,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string? LastCreatedPrincipalToken { get => _lastCreatedPrincipalToken; private set { if (SetField(ref _lastCreatedPrincipalToken, value)) RaisePropertyChanged(nameof(HasLastCreatedPrincipalToken)); } }
     public bool HasLastCreatedPrincipalToken => !string.IsNullOrEmpty(LastCreatedPrincipalToken);
     // The visible client-side payoff of RBAC: buttons a Viewer/Operator principal cannot use are disabled.
-    public bool CanManageAdmin => CurrentPrincipal is null || CurrentPrincipal.Role is "Admin" or "Owner";
-    public bool CanManagePrincipals => CurrentPrincipal is null || CurrentPrincipal.Role == "Owner";
+    // v0.8.14.0: one rule for every card (RoleAccess): hidden when the role cannot use it at all, read-only when it can
+    // only read. CanOperate is new; Fleet Actions (Operator on the server) was wrongly gated at Admin.
+    public bool CanOperate => RoleAccess.Allows(CurrentPrincipal is not null, CurrentPrincipal?.Role, RoleAccess.Operator);
+    public bool CanManageAdmin => RoleAccess.Allows(CurrentPrincipal is not null, CurrentPrincipal?.Role, RoleAccess.Admin);
+    public bool CanManagePrincipals => RoleAccess.Allows(CurrentPrincipal is not null, CurrentPrincipal?.Role, RoleAccess.Owner);
+    public string RoleHiddenNotice => RoleAccess.HiddenNotice(CurrentPrincipal is not null, CurrentPrincipal?.Role);
+    public bool HasRoleHiddenNotice => RoleHiddenNotice.Length > 0;
 
     public string AlertCenterState { get => _alertCenterState; private set => SetField(ref _alertCenterState, value); }
     public AlertRuleSetDto AlertRules { get => _alertRules; set => SetField(ref _alertRules, value ?? new()); }
@@ -1662,6 +1816,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         RaisePropertyChanged(nameof(IsServerGlowGreen));
         RaisePropertyChanged(nameof(IsServerGlowRed));
@@ -1753,14 +1908,28 @@ public sealed class MainWindowViewModel : ViewModelBase
     // a separately-tracked "active preset" field that could drift out of sync with it.
     public bool IsPalpagosMapActive => _mapPresets.TryGetPresetForPath(_mapBackgroundPath)?.Key == "palpagos";
 
-    // Explicit opt-in, off by default -- see PalworldMapCoordinates' own header comment for what
-    // is and isn't verified about this conversion. A wrong-but-plausible-looking calibration is
-    // worse than the existing, already-correct relative-spread view, so this never silently
-    // replaces it.
+    // On by default since v0.7.96.0 (it was an off-by-default experiment from v0.7.21.0 until the
+    // image mapping was calibrated). See PalworldMapCoordinates' header comment for how. Turning
+    // it off falls back to the relative-spread view, which cannot show bases.
     public bool UseCalibratedWorldPositions
     {
         get => _useCalibratedWorldPositions;
-        set { if (SetField(ref _useCalibratedWorldPositions, value)) RebuildPlayerMapPoints(_lastPlayersForMap); }
+        set
+        {
+            if (!SetField(ref _useCalibratedWorldPositions, value)) return;
+            RaisePropertyChanged(nameof(IsBaseMarkersActive));
+            RebuildPlayerMapPoints(_lastPlayersForMap);
+            LoadMapBasesIfNeeded();
+        }
+    }
+
+    // Base coordinates come from a full decoded-world parse server-side, so they are fetched once
+    // when the markers first become visible (map expanded in calibrated mode) and then only on the
+    // explicit Refresh Bases button, never on the every-few-seconds status poll.
+    private void LoadMapBasesIfNeeded()
+    {
+        if (IsBaseMarkersActive && IsWorldMapExpanded && _lastBaseLocations.Count == 0 && ManagementApiConnected)
+            _ = RefreshMapBasesAsync();
     }
 
     // v0.6.16.0: the map background image is a Desktop-local preference (which machine's chosen
@@ -1776,7 +1945,9 @@ public sealed class MainWindowViewModel : ViewModelBase
             MapBackgroundStatusText = $"Background: {Path.GetFileName(path)}";
             _mapBackgroundPath = path;
             RaisePropertyChanged(nameof(IsPalpagosMapActive));
+            RaisePropertyChanged(nameof(IsBaseMarkersActive));
             RebuildPlayerMapPoints(_lastPlayersForMap);
+            LoadMapBasesIfNeeded();
         }
         catch (Exception ex)
         {
@@ -1791,6 +1962,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         MapBackgroundStatusText = "Background: plain coordinate grid.";
         _mapBackgroundPath = null;
         RaisePropertyChanged(nameof(IsPalpagosMapActive));
+        RaisePropertyChanged(nameof(IsBaseMarkersActive));
         RebuildPlayerMapPoints(_lastPlayersForMap);
     }
 
@@ -1814,6 +1986,18 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void LoadMapBackgroundPreference()
     {
         var path = _mapPreferences.LoadBackgroundImagePath();
+        // v0.7.96.0: a first run (no saved preference at all) starts on the bundled Palpagos map
+        // instead of a blank grid. Someone who pressed Clear Background has a saved preference
+        // (an empty one), so that choice is still respected.
+        if (!_mapPreferences.HasSavedPreference)
+        {
+            var palpagos = MapPresetService.Presets.FirstOrDefault(p => p.Key == "palpagos");
+            if (palpagos is not null)
+            {
+                SetMapPreset(palpagos);
+                if (_mapBackgroundPath is not null) return;
+            }
+        }
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
             MapBackgroundStatusText = "Background: plain coordinate grid.";
@@ -2284,6 +2468,10 @@ public sealed class MainWindowViewModel : ViewModelBase
                 : string.Empty;
             StatusBarText = value ? reasonWithServer : (ConnectionState == "Connected" ? $"Connected — {ServerState}" : ConnectionState);
 
+            RaiseNexusCommandStates();
+            RaiseKitCommandStates();
+            RaiseHostCommandStates();
+            _loadGameIdsCommand?.RaiseCanExecuteChanged();
             (ConnectCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (DetectLocalServiceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (DiscoverServicesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -2346,7 +2534,12 @@ public sealed class MainWindowViewModel : ViewModelBase
             (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            // v0.8.14.0: the Fleet Actions buttons gate on !IsBusy too but were never re-queried, so they stayed disabled.
+            (BackupAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (DoctorAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (UpdateAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (InstallMissingEnvironmentCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RefreshAllInstancesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (TerminateSelectedInstanceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -2381,44 +2574,32 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public string PageTitle => SelectedPage switch
+    // v0.8.5.0: page headers come from the translation files (Assets/i18n); English, the fallback, holds exactly the
+    // text these used to hardcode.
+    public string PageTitle => Localizer.Instance[$"page.{SelectedPage}.title"];
+    public string PageSubtitle => Localizer.Instance[$"page.{SelectedPage}.subtitle"];
+
+    // v0.8.5.0: display language, a Desktop-local preference (Settings > Appearance). Applies at once.
+    private readonly LocalLanguagePreferenceStore _languageStore = new();
+    public IReadOnlyList<UiLanguage> UiLanguages => Localizer.Languages;
+    public UiLanguage SelectedUiLanguage
     {
-        NavigationPage.ServerSetup => "Server Setup", NavigationPage.ModDashboard => "MOD Dashboard", NavigationPage.ModLibrary => "MOD Library",
-        NavigationPage.Ue4ss => "UE4SS", NavigationPage.UpdateCenter => "Update Center", NavigationPage.Doctor => "Server Doctor",
-        NavigationPage.CrashAnalyzer => "Crash Analyzer", NavigationPage.SaveTools => "Palworld Save Tools", NavigationPage.DiagnosticsCenter => "Diagnostics Center",
-        NavigationPage.WorldTransactions => "World Validator & Recovery", NavigationPage.ActivityAudit => "Activity & Audit", NavigationPage.Notifications => "Notifications",
-        NavigationPage.Automation => "Automation", NavigationPage.Security => "Security", NavigationPage.AlertCenter => "Alert Center",
-        NavigationPage.Fleet => "Fleet", _ => SelectedPage.ToString()
-    };
-    public string PageSubtitle => SelectedPage switch
+        get => Localizer.Languages.FirstOrDefault(l => l.Code == Localizer.Instance.LanguageCode) ?? Localizer.Languages[0];
+        set
+        {
+            if (value is null || value.Code == Localizer.Instance.LanguageCode) return;
+            Localizer.Instance.SetLanguage(value.Code);
+            _languageStore.Save(value.Code);
+        }
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
     {
-        NavigationPage.Dashboard => "Monitor resources, control the server, and follow live activity.",
-        NavigationPage.ServerSetup => "Install, verify, and maintain the components required to run your Palworld dedicated server.",
-        NavigationPage.Configuration => "Server configuration and lifecycle settings",
-        NavigationPage.Backups => "Create, inspect, delete and safely restore backups",
-        NavigationPage.Console => "Runtime monitoring and PalServer log output",
-        NavigationPage.Workspace => "Server workspace paths and managed configuration",
-        NavigationPage.Inspector => "Read-only active-world and save-file inventory",
-        NavigationPage.WorldTransactions => "Validate, preview, back up, transact, verify and audit world recovery",
-        NavigationPage.Players => "Live sessions, known saves, player notes, warnings, and audited administration",
-        NavigationPage.Bases => "Authoritative guild-owned base references and recovery capability planning",
-        NavigationPage.Guilds => "Guild identity, leadership, membership, health, and base-reference evidence",
-        NavigationPage.ModDashboard => "MOD / UE4SS health and runtime evidence",
-        NavigationPage.ModLibrary => "Installed MOD inventory and controls",
-        NavigationPage.Ue4ss => "UE4SS runtime evidence and management",
-        NavigationPage.UpdateCenter => "Palworld server installation evidence and SteamCMD update/validation",
-        NavigationPage.Doctor => "Production health evidence and repair recommendations",
-        NavigationPage.CrashAnalyzer => "Evidence-backed crash history, stability review and isolation guidance",
-        NavigationPage.SaveTools => "Server-side Python, converter, Oodle and read-only save diagnostics",
-        NavigationPage.DiagnosticsCenter => "Network connectivity, firewall and socket ownership diagnostics",
-        NavigationPage.Settings => "Connection profiles and desktop settings",
-        NavigationPage.ActivityAudit => "Runtime activity and audit evidence", NavigationPage.Notifications => "Persistent alerts, read state, pins and dismissals",
-        NavigationPage.Automation => "Scheduled backups, lifecycle actions and notifications",
-        NavigationPage.Security => "API principals, roles and access",
-        NavigationPage.AlertCenter => "Threshold alerts and disk-space prediction",
-        NavigationPage.Fleet => "Every configured server profile, with fleet-wide backup, doctor and update actions",
-        _ => string.Empty
-    };
+        RebuildRibbonGroups();
+        RaisePropertyChanged(nameof(PageTitle));
+        RaisePropertyChanged(nameof(PageSubtitle));
+        RaisePropertyChanged(nameof(SelectedUiLanguage));
+    }
 
     public bool ShowGlobalPageHeader => true;
     public bool IsDashboardPage => SelectedPage == NavigationPage.Dashboard;
@@ -2432,6 +2613,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool IsPlayersPage => SelectedPage == NavigationPage.Players;
     public bool IsBasesPage => SelectedPage == NavigationPage.Bases;
     public bool IsGuildsPage => SelectedPage == NavigationPage.Guilds;
+    public bool IsMapPage => SelectedPage == NavigationPage.Map;
     public bool IsMonitoringPage => SelectedPage is NavigationPage.Console or NavigationPage.ActivityAudit;
     public bool IsConsolePage => SelectedPage == NavigationPage.Console;
     public bool IsActivityAuditPage => SelectedPage == NavigationPage.ActivityAudit;
@@ -2455,30 +2637,21 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool IsSaveToolsPage => SelectedPage == NavigationPage.SaveTools;
     public bool IsHomeGroupSelected => SelectedPage == NavigationPage.Dashboard;
     public bool IsServerGroupSelected => SelectedPage is NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Backups or NavigationPage.Console or NavigationPage.Workspace;
-    public bool IsWorldGroupSelected => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds;
+    public bool IsWorldGroupSelected => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds or NavigationPage.Map;
     public bool IsModsGroupSelected => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.Ue4ss;
     public bool IsToolsGroupSelected => SelectedPage is NavigationPage.UpdateCenter or NavigationPage.Doctor or NavigationPage.CrashAnalyzer or NavigationPage.SaveTools or NavigationPage.DiagnosticsCenter;
     public bool IsSystemGroupSelected => SelectedPage is NavigationPage.Settings or NavigationPage.Notifications or NavigationPage.ActivityAudit or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter or NavigationPage.Fleet;
     public bool IsV5HomeCategory => SelectedPage == NavigationPage.Dashboard;
     public bool IsV5ServerCategory => SelectedPage is NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Console or NavigationPage.Workspace;
-    public bool IsV5WorldCategory => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds;
+    public bool IsV5WorldCategory => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds or NavigationPage.Map;
     public bool IsV5BackupsCategory => SelectedPage == NavigationPage.Backups;
     public bool IsV5ModsCategory => IsModsGroupSelected;
     public bool IsV5ToolsCategory => IsToolsGroupSelected;
     public bool IsV5SystemCategory => SelectedPage is NavigationPage.Settings or NavigationPage.ActivityAudit or NavigationPage.Notifications or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter or NavigationPage.Fleet;
 
-    // v0.7.54.0 Per-Page Title Background Artwork (item 8) -- real illustrated artwork behind the
-    // page header, per category tab, matching Dark/Light. Only Home and World have art so far (a
-    // free anonymous AI-image-generation session hit its daily guest limit after these two);
-    // Server/Backups/Mods/Tools/System are deliberately left without art for now rather than
-    // guessing at placeholder gradients -- the original finding explicitly wanted real
-    // illustration, not a tint, so an incomplete-but-real set was chosen over a complete-but-fake
-    // one. Each combination is its own bool (rather than a single computed image-path property)
-    // matching this codebase's existing convention for per-state Classes/IsVisible bindings.
-    public bool IsHomePageArtDark => IsV5HomeCategory && !IsLightMode;
-    public bool IsHomePageArtLight => IsV5HomeCategory && IsLightMode;
-    public bool IsWorldPageArtDark => IsV5WorldCategory && !IsLightMode;
-    public bool IsWorldPageArtLight => IsV5WorldCategory && IsLightMode;
+    // v0.7.110.1: every page has category artwork and a real daytime variant.
+    public Bitmap PageArtwork => ArtworkCatalog.Page(SelectedPage, IsLightMode);
+    public Bitmap SetupArtwork => ArtworkCatalog.Page(NavigationPage.ServerSetup, IsLightMode);
 
     public ICommand ConnectCommand { get; }
     public ICommand DiscoverServicesCommand { get; }
@@ -2507,6 +2680,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand RevokePrincipalCommand { get; }
     public ICommand RefreshAlertCenterCommand { get; }
     public ICommand SaveAlertRulesCommand { get; }
+    public ICommand MuteAlertsCommand { get; }
+    public ICommand PauseDeliveryCommand { get; }
+    public ICommand SendTestNotificationCommand { get; }
+    private NotificationDeliveryStateDto _notificationDelivery = new();
+    public NotificationDeliveryStateDto NotificationDelivery { get => _notificationDelivery; private set => SetField(ref _notificationDelivery, value); }
     public ICommand RefreshDiscordBotConfigCommand { get; }
     public ICommand SaveDiscordBotConfigCommand { get; }
     public ICommand AddDiscordRoleMappingCommand { get; }
@@ -3028,7 +3206,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             var report = await _api.GetWanReachabilityAsync(SelectedProfile, BearerToken);
             WanPublicIpPort = report.PublicIpPortText;
             WanUpnpState = report.UpnpStateText;
-            WanRouterDescription = report.RouterDescription ?? "—";
+            WanRouterDescription = (report.RouterDescription ?? "—") + (string.IsNullOrWhiteSpace(report.RouterWanIPv4) ? string.Empty : $" · internet address {report.RouterWanIPv4}");
             WanReachabilityChecks.Clear();
             foreach (var check in report.Checks) WanReachabilityChecks.Add(check);
             WanStatus = "Checked " + report.CheckedAt.ToLocalTime().ToString("t");
@@ -3116,7 +3294,16 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private async Task RefreshPageForNavigationAsync(NavigationPage page)
     {
-        if (IsBusy) return;
+        if (IsBusy)
+        {
+            // v0.7.100.0: opening a page while the app was still busy (start-up work, another refresh)
+            // used to skip its load silently, so the Map and Players pages stayed empty until Refresh
+            // was pressed. These two show live data, so they wait for the busy state to clear (up to a
+            // minute) and load if the user is still on the page. Other pages keep the old behaviour.
+            if (page is not (NavigationPage.Map or NavigationPage.Players)) return;
+            for (var i = 0; i < 120 && IsBusy; i++) await Task.Delay(500);
+            if (IsBusy || SelectedPage != page) return;
+        }
         switch (page)
         {
             case NavigationPage.Dashboard:
@@ -3168,6 +3355,9 @@ public sealed class MainWindowViewModel : ViewModelBase
             case NavigationPage.Fleet:
                 await RefreshFleetAsync();
                 break;
+            case NavigationPage.Host:
+                await RefreshHostAsync(silent: false);
+                break;
             case NavigationPage.Inspector:
                 await RefreshWorldExplorerAsync();
                 break;
@@ -3177,6 +3367,11 @@ public sealed class MainWindowViewModel : ViewModelBase
             case NavigationPage.Bases:
             case NavigationPage.Guilds:
                 await RefreshPlayerGuildExplorerAsync();
+                break;
+            case NavigationPage.Map:
+                // The Map page reads the same live players and base locations as the Players page.
+                await RefreshPlayersPageAsync();
+                if (!IsBusy) await RefreshTeleportAsync();
                 break;
             case NavigationPage.ModDashboard:
             case NavigationPage.ModLibrary:
@@ -3798,7 +3993,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     // SelectedPage as their own buttons get relocated into the ribbon.
     private void RebuildRibbonGroups()
     {
-        _allRibbonGroups = BuildRibbonGroupsForActivePage();
+        _allRibbonGroups = GateRibbonByRole(LocalizeRibbon(BuildRibbonGroupsForActivePage()));
         RecomputeRibbonLayout();
     }
 
@@ -3955,6 +4150,14 @@ public sealed class MainWindowViewModel : ViewModelBase
                 new("↻", "Refresh Evidence", "Refresh guild and base evidence", RefreshPlayerGuildExplorerCommand, null, RibbonIconColor.Amber),
             ]));
         }
+        else if (IsMapPage)
+        {
+            groups.Add(new("Map",
+            [
+                new("↻", "Refresh Map", "Refresh online players and base locations", RefreshPlayersCommand, null, RibbonIconColor.Amber),
+                new("⌂", "Refresh Bases", "Re-read base locations from the world save", RefreshMapBasesCommand, null, RibbonIconColor.Cyan),
+            ]));
+        }
         else if (IsPlayersPage)
         {
             groups.Add(new("Players",
@@ -4018,6 +4221,13 @@ public sealed class MainWindowViewModel : ViewModelBase
                 new("↻", "Refresh", "Refresh fleet", RefreshFleetCommand, null, RibbonIconColor.Amber),
             ]));
         }
+        else if (IsHostPage)
+        {
+            groups.Add(new("Host",
+            [
+                new("↻", "Refresh", "Read the machine again", RefreshHostCommand, null, RibbonIconColor.Amber),
+            ]));
+        }
         else if (IsCrashAnalyzerPage)
         {
             groups.Add(new("Crash Analyzer",
@@ -4046,6 +4256,17 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         return groups;
     }
+
+    // v0.8.6.0: the shown text comes from the translations ("ribbon.<Label>", "ribbon.group.<Title>", letters and digits
+    // only); Label and Title stay English because RibbonIcons and the dialog dispatch key off them.
+    public static string RibbonKey(string text) => new(text.Where(char.IsLetterOrDigit).ToArray());
+
+    private static List<RibbonGroupViewModel> LocalizeRibbon(List<RibbonGroupViewModel> groups) =>
+        groups.Select(g => g with
+        {
+            DisplayTitle = Localizer.Instance[$"ribbon.group.{RibbonKey(g.Title)}"],
+            Actions = g.Actions.Select(a => a with { DisplayLabel = Localizer.Instance[$"ribbon.{RibbonKey(a.Label)}"] }).ToArray()
+        }).ToList();
 
     // Groups don't share one fixed width like tabs do (RecomputeTabLayout's perTabWidth constant),
     // since button count/labels vary per group -- so this walks groups in order accumulating an
@@ -4086,8 +4307,11 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     // Border.ribbonGroup: Padding="6" (12px) + Margin="0,0,5,0" (5px) = 17px of group chrome.
     // Button.ribbon: MinWidth="68"; the buttons' own StackPanel: Spacing="5" between each.
-    private static double EstimateRibbonGroupWidth(RibbonGroupViewModel group) =>
-        17 + group.Actions.Count * 68 + Math.Max(0, group.Actions.Count - 1) * 5;
+    // v0.8.6.0: a button also grows with its label (translations run longer than English), so each is estimated as the
+    // wider of its minimum and its text (about 7.2 px per character plus padding); so is the group title underneath.
+    public static double EstimateRibbonGroupWidth(RibbonGroupViewModel group) =>
+        Math.Max(17 + group.Actions.Sum(a => Math.Max(68, a.DisplayLabel.Length * 7.2 + 16)) + Math.Max(0, group.Actions.Count - 1) * 5,
+                 17 + group.DisplayTitle.Length * 6 + 8);
 
     private void SyncRibbonCollections(IReadOnlyList<RibbonGroupViewModel> visible, IReadOnlyList<RibbonGroupViewModel> overflow)
     {
@@ -4152,6 +4376,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
 
         await RefreshStatusPollingAsync();
+        // v0.8.17.0: the HOST tab's readings follow the same 5-second tick while the page is open.
+        if (IsHostPage) await RefreshHostAsync(silent: true);
         _refreshTick++;
     }
 
@@ -4570,7 +4796,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (!string.Equals(health.Component, "mysttiq-headless", StringComparison.OrdinalIgnoreCase) || health.ApiVersion < 1)
                 throw new InvalidOperationException($"The endpoint answered health checks but is not a compatible MystTiq management API (component={health.Component}, apiVersion={health.ApiVersion}).");
             if (health.Authentication && string.IsNullOrWhiteSpace(BearerToken))
-                throw new UnauthorizedAccessException("This MystTiq management API requires a bearer token. The desktop-owned local sidecar should not require remote credentials.");
+                throw new UnauthorizedAccessException("This MystTiq management API requires a bearer token: paste one, or sign in with a user account below. The desktop-owned local sidecar should not require remote credentials.");
 
             // Initial connection uses the same aggregate endpoint as periodic status polling. This
             // prevents connection establishment from fanning out into independent status/service
@@ -4595,6 +4821,12 @@ public sealed class MainWindowViewModel : ViewModelBase
             // reaches this line. No-op on non-Windows builds.
             if (!string.IsNullOrWhiteSpace(BearerToken))
                 _credentialStore.Save(profile.Id, BearerToken);
+
+            // v0.7.114.0: know who is connected from the start, so every role-gated card (CanManageAdmin,
+            // CanManagePrincipals) reflects the real role on every page, not only after visiting Security.
+            // With authentication off everyone is Owner, which is what a null principal already means.
+            try { ApplyCurrentPrincipal(health.Authentication ? await _api.WhoAmIAsync(profile, BearerToken) : null); }
+            catch (Exception) { /* the Security page reports this properly; the connection itself is fine */ }
 
             // v0.7.64.0: reported live -- connecting to an already-running remote server still
             // routed through wizard Step 2 ("In-Game Server Defaults (new server only)", its own
@@ -4709,6 +4941,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             ApplyDashboardSupport(poll);
 
             var snapshot = await explorerTask;
+            ApplyBaseLocations(snapshot);
             PlayerRecords.Clear();
             foreach (var player in snapshot.Players.OrderByDescending(x => x.Online).ThenBy(x => x.PlayerName).ThenBy(x => x.PlayerId))
                 PlayerRecords.Add(player);
@@ -5012,49 +5245,347 @@ public sealed class MainWindowViewModel : ViewModelBase
     // already-correct auto-fit behavior. Revisit if a reliable source for the exact formula turns up.
     //
     // v0.7.21.0: revisited with a numerically-verified formula this time (PalworldMapCoordinates --
-    // reproduces its source project's own published worked example exactly). Still not the default:
-    // the formula is verified, but the Palpagos image's own origin-corner/Y-orientation isn't
-    // independently confirmed, so this only activates when the user explicitly opts in via
-    // UseCalibratedWorldPositions AND the active background is specifically the Palpagos preset --
-    // every other case (World Tree, a browsed image, no background) keeps this exact auto-fit path.
+    // reproduces its source project's own published worked example exactly). It was opt-in until
+    // v0.7.96.0 calibrated the world-to-image mapping to the expanded map. It applies only when
+    // UseCalibratedWorldPositions is on AND the active background is specifically the Palpagos
+    // preset -- every other case (World Tree, a browsed image, no background) keeps this exact
+    // auto-fit path.
     private const double MapCanvasSize = 480;
     private const double MapPadding = 24;
+
+    // v0.7.100.0: the map's zoom and pan. Markers are recomputed at the current zoom (their shapes stay
+    // the same size); only the background image is scaled, through MapImageTransform.
+    private readonly MapViewport _mapViewport = new(MapCanvasSize);
+    private Avalonia.Media.ITransform _mapImageTransform = new Avalonia.Media.MatrixTransform(Avalonia.Matrix.Identity);
+    public Avalonia.Media.ITransform MapImageTransform => _mapImageTransform;
+    public string MapZoomText => _mapViewport.IsZoomed ? $"Zoom {_mapViewport.Scale:0.0}×" : "Zoom 1.0× (whole map)";
+    public bool IsMapZoomed => _mapViewport.IsZoomed;
+    public ICommand ResetMapViewCommand { get; private set; } = null!;
+    public ICommand ZoomToBaseCommand { get; private set; } = null!;
+    public ICommand ZoomToPalGroupCommand { get; private set; } = null!;
+
+    // v0.8.11.0: owned Pals out in the world (base workers and party members), from the same explorer read as bases.
+    private IReadOnlyList<PalLocationDto> _lastPalLocations = [];
+    private PalSummaryDto? _lastPalSummary;
+    private bool _lastPalsSemanticAvailable;
+    private bool _showPalsOnMap = true;
+    public bool ShowPalsOnMap
+    {
+        get => _showPalsOnMap;
+        set { if (SetField(ref _showPalsOnMap, value)) RebuildPlayerMapPoints(_lastPlayersForMap); }
+    }
+    public ObservableCollection<PalMapPointDto> PalMapPoints { get; } = [];
+    private string _mapPalsStatusText = string.Empty;
+    public string MapPalsStatusText { get => _mapPalsStatusText; private set => SetField(ref _mapPalsStatusText, value); }
+
+    private IReadOnlyList<PlayerLocationDto> _lastPlayerLocations = [];
+    private IReadOnlyList<PlayerExplorerItemDto> _lastExplorerPlayers = [];
+    private bool _showOfflinePlayersOnMap = true;
+    public bool ShowOfflinePlayersOnMap
+    {
+        get => _showOfflinePlayersOnMap;
+        set { if (SetField(ref _showOfflinePlayersOnMap, value)) RebuildPlayerMapPoints(_lastPlayersForMap); }
+    }
+
+    // Called by the Map page's pointer handlers. Positions are in map canvas units (0..480).
+    public void ZoomMapAt(double viewX, double viewY, double wheelDelta)
+    {
+        _mapViewport.ZoomByWheel(viewX, viewY, wheelDelta);
+        OnMapViewportChanged();
+    }
+
+    public void PanMapBy(double viewDx, double viewDy)
+    {
+        if (!_mapViewport.IsZoomed) return;
+        _mapViewport.PanBy(viewDx, viewDy);
+        OnMapViewportChanged();
+    }
+
+    private void ResetMapView()
+    {
+        _mapViewport.Reset();
+        OnMapViewportChanged();
+    }
+
+    private void ZoomToMapPoint(double flatX, double flatY)
+    {
+        _mapViewport.CenterOn(flatX, flatY, MapViewport.MarkerZoomScale);
+        OnMapViewportChanged();
+    }
+
+    private void ZoomToBase(string? baseId)
+    {
+        var point = BaseMapPoints.FirstOrDefault(b => string.Equals(b.BaseId, baseId, StringComparison.OrdinalIgnoreCase));
+        if (point is not null) ZoomToMapPoint(point.UnzoomedX, point.UnzoomedY);
+    }
+
+    private void ZoomToPalGroup(string? key)
+    {
+        var point = PalMapPoints.FirstOrDefault(p => string.Equals(p.Key, key, StringComparison.Ordinal));
+        if (point is null) return;
+        // All the way in: base workers stand within a few dozen metres of each other.
+        _mapViewport.CenterOn(point.UnzoomedX, point.UnzoomedY, MapViewport.MaxScale);
+        OnMapViewportChanged();
+    }
+
+    // v0.8.11.0: the Pals layer, clustered at the current zoom (PalMapLayout). Drawn under bases and players, and only
+    // in the calibrated Palpagos view, like bases, since both come from save coordinates.
+    private void RebuildPalMapPoints()
+    {
+        PalMapPoints.Clear();
+        var workers = _lastPalLocations.Count(p => p.Placement == PalMapLayout.BaseWorker);
+        var party = _lastPalLocations.Count(p => p.Placement == PalMapLayout.Party);
+        MapPalsStatusText = IsBaseMarkersActive
+            ? PalMapLayout.Status(workers, party, _lastPalSummary?.InPalbox ?? 0, _lastPalSummary?.WithoutPosition ?? 0, _lastPalsSemanticAvailable,
+                namesAvailable: _lastPalLocations.Count > 0 && _lastPalLocations.All(p => !string.IsNullOrWhiteSpace(p.SpeciesName)))
+            : string.Empty;
+        if (!IsBaseMarkersActive || !ShowPalsOnMap) return;
+
+        var points = _lastPalLocations.Select(pal =>
+        {
+            var (flatX, flatY) = PalworldMapCoordinates.ToCanvasPosition(pal.X, pal.Y, MapCanvasSize);
+            var (viewX, viewY) = _mapViewport.ToView(flatX, flatY);
+            var guild = string.Equals(pal.GuildName, "Unowned", StringComparison.Ordinal) ? string.Empty : pal.GuildName;
+            return (viewX, viewY, flatX, flatY, new PalMapEntry(pal.Species, pal.IsAlpha, pal.Level, pal.NickName, pal.OwnerName, pal.Placement, guild, pal.X, pal.Y, pal.SpeciesName));
+        }).ToList();
+        var clusters = PalMapLayout.Cluster(points);
+        var baseMarkers = ShowBasesOnMap ? BaseMapPoints.Select(b => (b.CanvasX, b.CanvasY)).ToArray() : [];
+        for (var i = 0; i < clusters.Count; i++)
+        {
+            var cluster = clusters[i];
+            var where = PalworldMapCoordinates.Describe(cluster.Members.Average(m => m.WorldX), cluster.Members.Average(m => m.WorldY));
+            var badge = PalMapLayout.BadgePosition(cluster.ViewX, cluster.ViewY, baseMarkers);
+            var (x, y) = badge ?? (cluster.ViewX, cluster.ViewY);
+            PalMapPoints.Add(new PalMapPointDto($"pals-{i}", PalMapLayout.Title(cluster), cluster.Members.Count,
+                x, y, cluster.FlatX, cluster.FlatY, PalMapLayout.Tooltip(cluster, where, badge is not null)));
+        }
+    }
+
+    private void OnMapViewportChanged()
+    {
+        var s = _mapViewport.Scale;
+        _mapImageTransform = new Avalonia.Media.MatrixTransform(new Avalonia.Matrix(s, 0, 0, s, _mapViewport.OffsetX, _mapViewport.OffsetY));
+        RaisePropertyChanged(nameof(MapImageTransform));
+        RaisePropertyChanged(nameof(MapZoomText));
+        RaisePropertyChanged(nameof(IsMapZoomed));
+        RebuildPlayerMapPoints(_lastPlayersForMap);
+    }
+
+    private static string NormalizePlayerKey(string? value) =>
+        new((value ?? string.Empty).Where(char.IsLetterOrDigit).Select(char.ToUpperInvariant).ToArray());
 
     private void RebuildPlayerMapPoints(IReadOnlyList<PlayerSnapshotDto> players)
     {
         _lastPlayersForMap = players;
         PlayerMapPoints.Clear();
+        BaseMapPoints.Clear();
+
+        // v0.7.92.0: guild-base markers. Only ever drawn in the calibrated real-world-position mode:
+        // bases come from decoded save coordinates and players from the REST API's location fields,
+        // and only the calibrated formula treats both as the same coordinate space. The default
+        // auto-fit view spreads dots relative to whoever is online, which has no meaning for a
+        // saved base, so mixing them there would be a misleading picture.
+        if (IsBaseMarkersActive && ShowBasesOnMap)
+        {
+            foreach (var location in _lastBaseLocations)
+            {
+                var (flatX, flatY) = PalworldMapCoordinates.ToCanvasPosition(location.X, location.Y, MapCanvasSize);
+                var (viewX, viewY) = _mapViewport.ToView(flatX, flatY);
+                BaseMapPoints.Add(new BaseMapPointDto(location.BaseId, location.GuildName, viewX, viewY, PalworldMapCoordinates.Describe(location.X, location.Y), flatX, flatY));
+            }
+        }
+
+        RebuildPalMapPoints();
+
         var located = players
             .Select(p => (Player: p, X: TryParseCoordinate(p.LocationX), Y: TryParseCoordinate(p.LocationY)))
             .Where(t => t.X.HasValue && t.Y.HasValue)
             .Select(t => (t.Player, X: t.X!.Value, Y: t.Y!.Value))
             .ToList();
-        if (located.Count == 0) return;
 
-        if (UseCalibratedWorldPositions && IsPalpagosMapActive)
+        var calibrated = UseCalibratedWorldPositions && IsPalpagosMapActive;
+
+        // v0.7.100.0: players who are not online are drawn at the last position the save recorded for
+        // them, as hollow markers, before the online dots so an online dot is never hidden under one.
+        // Anyone the server currently lists as online is skipped even if it gave no position yet.
+        var offlineCount = 0;
+        if (calibrated && ShowOfflinePlayersOnMap)
         {
-            foreach (var (player, x, y) in located)
+            var onlineKeys = players.Select(p => NormalizePlayerKey(p.PlayerId)).ToHashSet(StringComparer.Ordinal);
+            foreach (var saved in _lastPlayerLocations)
             {
-                var (canvasX, canvasY) = PalworldMapCoordinates.ToCanvasPosition(x, y, MapCanvasSize);
-                PlayerMapPoints.Add(new PlayerMapPointDto(player.DisplayName, canvasX, canvasY));
+                var key = NormalizePlayerKey(saved.PlayerId);
+                if (onlineKeys.Contains(key)) continue;
+                var record = _lastExplorerPlayers.FirstOrDefault(p => NormalizePlayerKey(p.PlayerId) == key);
+                if (record?.Online == true) continue;
+                var name = !string.IsNullOrWhiteSpace(record?.PlayerName) ? record!.PlayerName
+                    : !string.IsNullOrWhiteSpace(saved.Name) ? saved.Name : "Unknown player";
+                var (flatX, flatY) = PalworldMapCoordinates.ToCanvasPosition(saved.X, saved.Y, MapCanvasSize);
+                var (viewX, viewY) = _mapViewport.ToView(flatX, flatY);
+                var lastSeen = record?.SaveLastWriteUtc is { } written ? $"save written {written.ToLocalTime():yyyy-MM-dd HH:mm}" : string.Empty;
+                PlayerMapPoints.Add(new PlayerMapPointDto(record?.PlayerId ?? saved.PlayerId, name, viewX, viewY,
+                    PalworldMapCoordinates.Describe(saved.X, saved.Y), flatX, flatY, IsOnline: false, LastSeenText: lastSeen));
+                offlineCount++;
             }
-            return;
         }
 
-        var minX = located.Min(t => t.X); var maxX = located.Max(t => t.X);
-        var minY = located.Min(t => t.Y); var maxY = located.Max(t => t.Y);
-        var spanX = Math.Max(maxX - minX, 1d);
-        var spanY = Math.Max(maxY - minY, 1d);
-        var usable = MapCanvasSize - MapPadding * 2;
-
-        foreach (var (player, x, y) in located)
+        MapPlayersStatusText = MapContentsText.Describe(players.Count, located.Count, BaseMapPoints.Count, offlineCount);
+        if (located.Count > 0)
         {
-            var canvasX = MapPadding + (x - minX) / spanX * usable;
-            // World Y increases northward in Palworld's coordinate system; canvas Y increases
-            // downward, so this is inverted to keep "up" on the map meaning "north" in-world.
-            var canvasY = MapPadding + (1 - (y - minY) / spanY) * usable;
-            PlayerMapPoints.Add(new PlayerMapPointDto(player.DisplayName, canvasX, canvasY));
+            if (calibrated)
+            {
+                foreach (var (player, x, y) in located)
+                {
+                    var (flatX, flatY) = PalworldMapCoordinates.ToCanvasPosition(x, y, MapCanvasSize);
+                    var (viewX, viewY) = _mapViewport.ToView(flatX, flatY);
+                    PlayerMapPoints.Add(new PlayerMapPointDto(player.PlayerId, player.DisplayName, viewX, viewY, PalworldMapCoordinates.Describe(x, y), flatX, flatY));
+                }
+            }
+            else
+            {
+                var minX = located.Min(t => t.X); var maxX = located.Max(t => t.X);
+                var minY = located.Min(t => t.Y); var maxY = located.Max(t => t.Y);
+                var spanX = Math.Max(maxX - minX, 1d);
+                var spanY = Math.Max(maxY - minY, 1d);
+                var usable = MapCanvasSize - MapPadding * 2;
+
+                foreach (var (player, x, y) in located)
+                {
+                    var canvasX = MapPadding + (x - minX) / spanX * usable;
+                    // World Y increases northward in Palworld's coordinate system; canvas Y increases
+                    // downward, so this is inverted to keep "up" on the map meaning "north" in-world.
+                    var canvasY = MapPadding + (1 - (y - minY) / spanY) * usable;
+                    var (viewX, viewY) = _mapViewport.ToView(canvasX, canvasY);
+                    PlayerMapPoints.Add(new PlayerMapPointDto(player.PlayerId, player.DisplayName, viewX, viewY, string.Empty, canvasX, canvasY));
+                }
+            }
         }
+
+        ApplyMapLabelDeoverlap();
+    }
+
+    // v0.7.106.0: markers standing close together had their name labels drawn directly on top of each
+    // other. Runs after every rebuild (including every zoom and pan, since RebuildPlayerMapPoints is
+    // called again on each), over the current SCREEN position of every base and player marker together --
+    // MapLabelLayout is the pure pass that decides how far each label is pushed down. Bases are listed
+    // first, matching their draw order, so a base keeps its label at the dot and a player standing on it
+    // is the one that staggers.
+    //
+    // v0.7.109.0: two markers at (or extremely near) the exact same pixel used to render as one visible
+    // icon -- named as a residual gap in v0.7.106.0's own doc, since that version only ever staggered
+    // labels, never dots. ComputeMarkerOffsets runs first, fanning a truly coincident marker out a few
+    // pixels from the shared point (the first in the cluster stays exactly on the real spot); the label
+    // pass then runs against those FANNED-OUT positions, so a spread-apart marker's label reacts to where
+    // it now actually sits rather than where it started.
+    private void ApplyMapLabelDeoverlap()
+    {
+        var rawPoints = new List<(double X, double Y)>(BaseMapPoints.Count + PlayerMapPoints.Count);
+        foreach (var b in BaseMapPoints) rawPoints.Add((b.CanvasX, b.CanvasY));
+        foreach (var p in PlayerMapPoints) rawPoints.Add((p.CanvasX, p.CanvasY));
+        var markerOffsets = MapLabelLayout.ComputeMarkerOffsets(rawPoints);
+        var effectivePoints = rawPoints.Select((pt, i) => (X: pt.X + markerOffsets[i].X, Y: pt.Y + markerOffsets[i].Y)).ToList();
+        // v0.7.115.0: labels are laid out as real text rectangles. Widths match the XAML fonts: base names are
+        // FontSize 9, player names FontSize 10.
+        var labels = new List<MapLabelLayout.MapLabel>(effectivePoints.Count);
+        for (var i = 0; i < effectivePoints.Count; i++)
+        {
+            var width = i < BaseMapPoints.Count
+                ? MapLabelLayout.EstimateLabelWidth(BaseMapPoints[i].GuildName, 9)
+                : MapLabelLayout.EstimateLabelWidth(PlayerMapPoints[i - BaseMapPoints.Count].Name, 10);
+            labels.Add(new(effectivePoints[i].X, effectivePoints[i].Y, width));
+        }
+        // v0.8.11.0: name labels step around the Pals markers, so a badge's count is never written over.
+        var palBoxes = PalMapPoints.Select(p => new MapLabelLayout.Box(p.CanvasX - PalMapPointDto.MarkerSize / 2, p.CanvasY - PalMapPointDto.MarkerSize / 2,
+            PalMapPointDto.MarkerSize, PalMapPointDto.MarkerSize)).ToArray();
+        var labelOffsets = MapLabelLayout.ComputeLabelOffsets(labels, palBoxes);
+
+        for (var i = 0; i < BaseMapPoints.Count; i++)
+        {
+            var (mx, my) = markerOffsets[i];
+            var (lx, ly) = labelOffsets[i];
+            if (mx != 0 || my != 0 || lx != 0 || ly != 0)
+                BaseMapPoints[i] = BaseMapPoints[i] with { LabelOffsetX = lx, LabelOffsetY = ly, MarkerOffsetX = mx, MarkerOffsetY = my };
+        }
+
+        var baseCount = BaseMapPoints.Count;
+        for (var i = 0; i < PlayerMapPoints.Count; i++)
+        {
+            var (mx, my) = markerOffsets[baseCount + i];
+            var (lx, ly) = labelOffsets[baseCount + i];
+            if (mx != 0 || my != 0 || lx != 0 || ly != 0)
+                PlayerMapPoints[i] = PlayerMapPoints[i] with { LabelOffsetX = lx, LabelOffsetY = ly, MarkerOffsetX = mx, MarkerOffsetY = my };
+        }
+    }
+
+    // v0.7.92.0: guild-base markers and click-to-select on the live map.
+    private IReadOnlyList<BaseLocationDto> _lastBaseLocations = [];
+    private bool _showBasesOnMap = true;
+    private string _mapBasesStatusText = string.Empty;
+    public ObservableCollection<BaseMapPointDto> BaseMapPoints { get; } = [];
+    public bool ShowBasesOnMap
+    {
+        get => _showBasesOnMap;
+        set { if (SetField(ref _showBasesOnMap, value)) RebuildPlayerMapPoints(_lastPlayersForMap); }
+    }
+    public string MapBasesStatusText { get => _mapBasesStatusText; private set => SetField(ref _mapBasesStatusText, value); }
+    public bool IsBaseMarkersActive => UseCalibratedWorldPositions && IsPalpagosMapActive;
+
+    // v0.7.96.0: says plainly what is (and is not) drawn, so an empty map is never a mystery.
+    // Player dots come from the running server's REST API; bases come from the world save, so
+    // bases can be present while nobody (or nothing) is online.
+    private string _mapPlayersStatusText = string.Empty;
+    public string MapPlayersStatusText { get => _mapPlayersStatusText; private set => SetField(ref _mapPlayersStatusText, value); }
+
+    // Base coordinates arrive with the Players page's own explorer read, so the map does not need
+    // a second request; the Refresh Bases button still re-reads on demand.
+    private void ApplyBaseLocations(PlayerGuildSnapshotDto snapshot)
+    {
+        _lastBaseLocations = snapshot.BaseLocations;
+        // v0.7.100.0: the same explorer read carries where every player last was and who is online.
+        _lastPlayerLocations = snapshot.PlayerLocations;
+        _lastExplorerPlayers = snapshot.Players;
+        _lastPalLocations = snapshot.PalLocations;
+        _lastPalSummary = snapshot.PalSummary;
+        _lastPalsSemanticAvailable = snapshot.SemanticAvailable;
+        MapBasesStatusText = snapshot.BaseLocations.Count > 0
+            ? $"{snapshot.BaseLocations.Count} base(s) located from decoded Level.sav.json."
+            : snapshot.SemanticAvailable
+                ? "The decoded world save lists no base coordinates."
+                : "No base coordinates: guild and base data need decoded Level.sav.json (Palworld Save Tools).";
+        RebuildPlayerMapPoints(_lastPlayersForMap);
+    }
+    public ICommand RefreshMapBasesCommand { get; private set; } = null!;
+    public ICommand SelectMapPlayerCommand { get; private set; } = null!;
+
+    private async Task RefreshMapBasesAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { MapBasesStatusText = ex.Message; return; }
+
+        MapBasesStatusText = "Reading base locations from the decoded world save…";
+        try
+        {
+            var snapshot = await _api.GetPlayerGuildExplorerAsync(profile, BearerToken);
+            ApplyBaseLocations(snapshot);
+        }
+        catch (Exception ex) { MapBasesStatusText = $"Base locations unavailable: {ex.Message}"; }
+    }
+
+    // Clicking a player dot selects that player, so the existing Teleport To Me / Teleport To Player
+    // commands (which act on SelectedPlayerRecord) work straight from the map. Palworld's vanilla
+    // RCON has no "teleport to coordinates" command, so map clicks can only target a player.
+    private void SelectMapPlayer(string? playerId)
+    {
+        if (string.IsNullOrWhiteSpace(playerId)) return;
+        static string Norm(string value) => new(value.Where(char.IsLetterOrDigit).Select(char.ToUpperInvariant).ToArray());
+        var wanted = Norm(playerId);
+        // v0.7.100.0: clicking a marker (or a name in the list) also zooms in on it.
+        var marker = PlayerMapPoints.FirstOrDefault(p => Norm(p.PlayerId) == wanted);
+        if (marker is not null) ZoomToMapPoint(marker.UnzoomedX, marker.UnzoomedY);
+        var match = PlayerRecords.FirstOrDefault(p => Norm(p.PlayerId) == wanted);
+        if (match is not null) SelectedPlayerRecord = match;
+        else MapBasesStatusText = "That player is not in the loaded player list yet. Refresh Players, then click again.";
     }
 
     private static double? TryParseCoordinate(string value) =>
@@ -5578,6 +6109,165 @@ public sealed class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
+    // ---- v0.7.114.0: named user accounts --------------------------------------------------------------------
+    // Signing in trades a username and password for a session token, which then goes in the tab's Bearer token
+    // exactly like a pasted token (and is remembered, encrypted, the same way). The password is never stored.
+    private string _signInUsername = string.Empty;
+    private string _signInPassword = string.Empty;
+    private string _signInStatusText = string.Empty;
+    private string _newUserUsername = string.Empty;
+    private string _newUserDisplayName = string.Empty;
+    private string _newUserPassword = string.Empty;
+    private string _newUserRole = "Operator";
+    private string _newUserScope = string.Empty;
+    private string _userResetPassword = string.Empty;
+    private string _userAccountsState = string.Empty;
+    private UserAccountDto? _selectedUserAccount;
+    public string SignInUsername { get => _signInUsername; set => SetField(ref _signInUsername, value ?? string.Empty); }
+    public string SignInPassword { get => _signInPassword; set => SetField(ref _signInPassword, value ?? string.Empty); }
+    public string SignInStatusText { get => _signInStatusText; set => SetField(ref _signInStatusText, value ?? string.Empty); }
+    public string SignedInText => CurrentPrincipal is { } p
+        ? $"Signed in as {p.Name} ({p.Role}){(p.ExpiresUtc is { } until ? $" until {until.ToLocalTime():g}" : string.Empty)}."
+        : "Not signed in with a named account (a pasted token or the local sidecar decides what you can do).";
+    public string NewUserUsername { get => _newUserUsername; set => SetField(ref _newUserUsername, value ?? string.Empty); }
+    public string NewUserDisplayName { get => _newUserDisplayName; set => SetField(ref _newUserDisplayName, value ?? string.Empty); }
+    public string NewUserPassword { get => _newUserPassword; set => SetField(ref _newUserPassword, value ?? string.Empty); }
+    public string NewUserRole { get => _newUserRole; set => SetField(ref _newUserRole, value ?? "Operator"); }
+    public string NewUserScope { get => _newUserScope; set => SetField(ref _newUserScope, value ?? string.Empty); }
+    public string UserResetPassword { get => _userResetPassword; set => SetField(ref _userResetPassword, value ?? string.Empty); }
+    public string UserAccountsState { get => _userAccountsState; set => SetField(ref _userAccountsState, value ?? string.Empty); }
+    public UserAccountDto? SelectedUserAccount { get => _selectedUserAccount; set => SetField(ref _selectedUserAccount, value); }
+    public ObservableCollection<UserAccountDto> UserAccounts { get; } = [];
+    public ICommand SignInCommand { get; private set; } = null!;
+    public ICommand SignOutCommand { get; private set; } = null!;
+    public ICommand CreateUserCommand { get; private set; } = null!;
+    public ICommand ResetUserPasswordCommand { get; private set; } = null!;
+    public ICommand ToggleUserEnabledCommand { get; private set; } = null!;
+    public ICommand DeleteUserCommand { get; private set; } = null!;
+
+    private void InitializeUserAccountCommands()
+    {
+        SignInCommand = new AsyncCommand(SignInAsync, () => !IsBusy);
+        SignOutCommand = new AsyncCommand(SignOutAsync, () => !IsBusy);
+        CreateUserCommand = new AsyncCommand(CreateUserAsync, () => !IsBusy);
+        ResetUserPasswordCommand = new AsyncCommand(ResetUserPasswordAsync, () => !IsBusy);
+        ToggleUserEnabledCommand = new AsyncCommand(ToggleUserEnabledAsync, () => !IsBusy);
+        DeleteUserCommand = new AsyncCommand(DeleteUserAsync, () => !IsBusy);
+    }
+
+    private void ApplyCurrentPrincipal(MystTiqPrincipalDto? principal)
+    {
+        CurrentPrincipal = principal;
+        RaisePropertyChanged(nameof(CanOperate));
+        RaisePropertyChanged(nameof(CanManageAdmin));
+        RaisePropertyChanged(nameof(CanManagePrincipals));
+        RaisePropertyChanged(nameof(RoleHiddenNotice));
+        RaisePropertyChanged(nameof(HasRoleHiddenNotice));
+        RaisePropertyChanged(nameof(SignedInText));
+        // v0.8.19.0: the Ribbon follows the role too.
+        RebuildRibbonGroups();
+        // v0.8.23.0: and so does every command, wherever its button is.
+        RaiseCommandRoleGatesChanged();
+    }
+
+    private async Task SignInAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { SignInStatusText = ex.Message; return; }
+        if (string.IsNullOrWhiteSpace(SignInUsername) || string.IsNullOrEmpty(SignInPassword)) { SignInStatusText = "Enter a username and password."; return; }
+        IsBusy = true;
+        try
+        {
+            var result = await _api.LoginAsync(profile, SignInUsername.Trim(), SignInPassword);
+            SignInPassword = string.Empty;
+            if (!result.Success || string.IsNullOrEmpty(result.Token)) { SignInStatusText = result.Message; return; }
+            BearerToken = result.Token;
+            SignInStatusText = result.Message;
+        }
+        catch (Exception ex) { SignInStatusText = ex.Message; return; }
+        finally { IsBusy = false; }
+        // Connect with the new token: this is what saves it (encrypted) and loads who is signed in.
+        await RefreshAsync(silent: false);
+    }
+
+    private async Task SignOutAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { SignInStatusText = ex.Message; return; }
+        IsBusy = true;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(BearerToken)) await _api.LogoutAsync(profile, BearerToken);
+            _credentialStore.Delete(profile.Id);
+            BearerToken = string.Empty;
+            ApplyCurrentPrincipal(null);
+            ManagementApiConnected = false;
+            ConnectionState = "Signed out";
+            SignInStatusText = "Signed out. The session token was ended on the server and forgotten here.";
+        }
+        catch (Exception ex) { SignInStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task RefreshUserAccountsAsync()
+    {
+        if (SelectedProfile is null || !CanManagePrincipals) { UserAccounts.Clear(); return; }
+        var selectedId = SelectedUserAccount?.Id;
+        var users = await _api.GetUsersAsync(SelectedProfile, BearerToken);
+        UserAccounts.Clear();
+        foreach (var user in users) UserAccounts.Add(user);
+        SelectedUserAccount = UserAccounts.FirstOrDefault(u => u.Id == selectedId);
+        UserAccountsState = $"{UserAccounts.Count} user account(s).";
+    }
+
+    private async Task RunUserAccountActionAsync(Func<Task<UserAccountResultDto>> action)
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var result = await action();
+            UserAccountsState = result.Message;
+            if (result.Success) await RefreshUserAccountsAsync();
+            if (result.Success) UserAccountsState = result.Message;
+        }
+        catch (Exception ex) { UserAccountsState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private Task CreateUserAsync() => RunUserAccountActionAsync(async () =>
+    {
+        var result = await _api.CreateUserAsync(SelectedProfile!, NewUserUsername.Trim(), NewUserDisplayName.Trim(), NewUserRole, NewUserPassword,
+            string.IsNullOrWhiteSpace(NewUserScope) ? null : NewUserScope.Trim(), BearerToken);
+        if (result.Success) { NewUserUsername = string.Empty; NewUserDisplayName = string.Empty; NewUserPassword = string.Empty; }
+        return result;
+    });
+
+    private Task ResetUserPasswordAsync()
+    {
+        if (SelectedUserAccount is not { } user) { UserAccountsState = "Select an account first."; return Task.CompletedTask; }
+        return RunUserAccountActionAsync(async () =>
+        {
+            var result = await _api.SetUserPasswordAsync(SelectedProfile!, user.Id, UserResetPassword, BearerToken);
+            if (result.Success) UserResetPassword = string.Empty;
+            return result;
+        });
+    }
+
+    private Task ToggleUserEnabledAsync()
+    {
+        if (SelectedUserAccount is not { } user) { UserAccountsState = "Select an account first."; return Task.CompletedTask; }
+        return RunUserAccountActionAsync(() => _api.UpdateUserAsync(SelectedProfile!, user.Id, user.DisplayName, user.Role, user.ScopedServerProfileId, !user.Enabled, BearerToken));
+    }
+
+    private Task DeleteUserAsync()
+    {
+        if (SelectedUserAccount is not { } user) { UserAccountsState = "Select an account first."; return Task.CompletedTask; }
+        return RunUserAccountActionAsync(() => _api.DeleteUserAsync(SelectedProfile!, user.Id, BearerToken));
+    }
+
     private async Task RefreshSecurityAsync()
     {
         if (SelectedProfile is null) return;
@@ -5585,9 +6275,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         try
         {
             var who = await _api.WhoAmIAsync(SelectedProfile, BearerToken);
-            CurrentPrincipal = who;
-            RaisePropertyChanged(nameof(CanManageAdmin));
-            RaisePropertyChanged(nameof(CanManagePrincipals));
+            ApplyCurrentPrincipal(who);
+            await RefreshUserAccountsAsync();
 
             var principals = await _api.GetPrincipalsAsync(SelectedProfile, BearerToken);
             var selectedId = SelectedPrincipal?.Id;
@@ -5638,6 +6327,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             AlertRules = await _api.GetAlertRulesAsync(SelectedProfile, BearerToken);
             DiskSpacePrediction = await _api.GetDiskSpacePredictionAsync(SelectedProfile, BearerToken);
+            NotificationDelivery = await _api.GetNotificationDeliveryAsync(SelectedProfile, BearerToken);
             AlertCenterState = "Alert rules and disk-space prediction loaded.";
         }
         catch (Exception ex) { AlertCenterState = ex.Message; }
@@ -5657,6 +6347,46 @@ public sealed class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
+    private async Task MuteAlertsAsync(int minutes)
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            AlertRules = await _api.MuteAlertsAsync(SelectedProfile, minutes, BearerToken);
+            AlertCenterState = minutes <= 0 ? "Alerts unmuted." : AlertRules.MuteStatusText;
+        }
+        catch (Exception ex) { AlertCenterState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task PauseDeliveryAsync(int minutes)
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            NotificationDelivery = await _api.PauseNotificationDeliveryAsync(SelectedProfile, minutes, BearerToken);
+            AlertCenterState = minutes <= 0 ? "Outside delivery resumed." : "Outside delivery paused: " + NotificationDelivery.StatusText;
+        }
+        catch (Exception ex) { AlertCenterState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task SendTestNotificationAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var result = await _api.SendTestNotificationAsync(SelectedProfile, BearerToken);
+            NotificationDelivery = result.Delivery;
+            AlertCenterState = result.Message;
+        }
+        catch (Exception ex) { AlertCenterState = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
     private async Task RefreshDiscordBotConfigAsync()
     {
         if (SelectedProfile is null) return;
@@ -5669,7 +6399,10 @@ public sealed class MainWindowViewModel : ViewModelBase
                 Enabled = view.Enabled,
                 GuildId = view.GuildId,
                 OwnerDiscordUserId = view.OwnerDiscordUserId,
-                RoleMappings = view.RoleMappings
+                RoleMappings = view.RoleMappings,
+                StatusChannelId = view.StatusChannelId,
+                EventsChannelId = view.EventsChannelId,
+                ShowPresence = view.ShowPresence
             };
             DiscordBotTokenConfigured = view.TokenConfigured;
             DiscordBotConnectionState = view.ConnectionState;
@@ -5684,6 +6417,16 @@ public sealed class MainWindowViewModel : ViewModelBase
     private async Task SaveDiscordBotConfigAsync()
     {
         if (SelectedProfile is null) return;
+        // v0.7.95.0: catch a mistyped channel id here with a plain reason instead of sending it.
+        foreach (var (label, value) in new[] { ("Status channel", DiscordBotConfig.StatusChannelId), ("Events channel", DiscordBotConfig.EventsChannelId) })
+        {
+            if (!string.IsNullOrWhiteSpace(value) && !MystTiq.Core.Models.DiscordSnowflake.TryParse(value, out _))
+            {
+                DiscordBotState = $"{label} ID must be the 17-20 digit number Discord shows (enable Developer Mode, right-click the channel, Copy Channel ID), or leave it blank to turn that feature off.";
+                return;
+            }
+        }
+
         IsBusy = true;
         try
         {
@@ -5710,6 +6453,484 @@ public sealed class MainWindowViewModel : ViewModelBase
         if (SelectedRoleMapping is null) return;
         DiscordRoleMappings.Remove(SelectedRoleMapping);
         SelectedRoleMapping = null;
+    }
+
+    // ---- v0.7.94.0: Starter Kits -----------------------------------------------------------------
+    // Edit kits locally (name plus one entry per line), one explicit Save persists them all. Delivery
+    // needs PalDefender (vanilla Palworld has no give command), so the card shows the provider's real
+    // status and a Test button rather than assuming it works.
+    private bool _isKitsExpanded;
+    private string _kitStatusText = "Open this card to load starter kits.";
+    private string _kitProviderText = string.Empty;
+    private KitDefinitionDto? _selectedKit;
+    private string _kitNameText = string.Empty;
+    private string _kitEntriesText = string.Empty;
+    private bool _kitAutoGiftEnabled;
+    private KitDefinitionDto? _kitAutoGiftKit;
+    private string _kitAutoGiftNote = string.Empty;
+    private bool _loadingKitEditor;
+    private AsyncCommand[] _kitCommands = [];
+
+    public ObservableCollection<KitDefinitionDto> Kits { get; } = [];
+    public ObservableCollection<KitClaimDto> KitClaims { get; } = [];
+    public bool IsKitsExpanded { get => _isKitsExpanded; private set => SetField(ref _isKitsExpanded, value); }
+    public string KitStatusText { get => _kitStatusText; private set => SetField(ref _kitStatusText, value); }
+    public string KitProviderText { get => _kitProviderText; private set => SetField(ref _kitProviderText, value); }
+    public string KitAutoGiftNote { get => _kitAutoGiftNote; private set => SetField(ref _kitAutoGiftNote, value); }
+    public bool KitAutoGiftEnabled { get => _kitAutoGiftEnabled; set => SetField(ref _kitAutoGiftEnabled, value); }
+    public KitDefinitionDto? KitAutoGiftKit { get => _kitAutoGiftKit; set => SetField(ref _kitAutoGiftKit, value); }
+    public bool HasSelectedKit => _selectedKit is not null;
+    public KitDefinitionDto? SelectedKit
+    {
+        get => _selectedKit;
+        set
+        {
+            if (!SetField(ref _selectedKit, value)) return;
+            _loadingKitEditor = true;
+            KitNameText = value?.Name ?? string.Empty;
+            KitEntriesText = value is null ? string.Empty : KitEntryText.Format(value.Entries.Select(e => new KitTextEntry(e.Type, e.Id, e.Amount)));
+            _loadingKitEditor = false;
+            RaisePropertyChanged(nameof(HasSelectedKit));
+            RaiseKitCommandStates();
+        }
+    }
+    public string KitNameText
+    {
+        get => _kitNameText;
+        set
+        {
+            if (!SetField(ref _kitNameText, value ?? string.Empty) || _loadingKitEditor || _selectedKit is null) return;
+            _selectedKit.Name = _kitNameText;
+        }
+    }
+    // Live-synced into the selected kit whenever the text parses; a bad line just leaves the last good
+    // entries in place and says which line to fix, and Save refuses until it parses.
+    public string KitEntriesText
+    {
+        get => _kitEntriesText;
+        set
+        {
+            if (!SetField(ref _kitEntriesText, value ?? string.Empty) || _loadingKitEditor || _selectedKit is null) return;
+            if (KitEntryText.TryParse(_kitEntriesText, out var parsed, out var error))
+            {
+                _selectedKit.Entries = parsed.Select(e => new KitEntryDto { Type = e.Type, Id = e.Id, Amount = e.Amount }).ToList();
+                KitStatusText = "Unsaved kit changes. Press Save Kits to keep them.";
+            }
+            else KitStatusText = error;
+        }
+    }
+    public ICommand ToggleKitsCommand { get; private set; } = null!;
+    public ICommand RefreshKitsCommand { get; private set; } = null!;
+    public ICommand NewKitCommand { get; private set; } = null!;
+    public ICommand DeleteKitCommand { get; private set; } = null!;
+    public ICommand SaveKitsCommand { get; private set; } = null!;
+    public ICommand TestKitProviderCommand { get; private set; } = null!;
+    public ICommand GiveSelectedKitCommand { get; private set; } = null!;
+    public ICommand ResetKitClaimCommand { get; private set; } = null!;
+
+    private void InitializeKits()
+    {
+        var refresh = new AsyncCommand(RefreshKitsAsync, () => !IsBusy);
+        var save = new AsyncCommand(SaveKitsAsync, () => !IsBusy);
+        var test = new AsyncCommand(TestKitProviderAsync, () => !IsBusy);
+        var give = new AsyncCommand(GiveSelectedKitAsync, () => !IsBusy && SelectedKit is not null && SelectedPlayerRecord?.Online == true);
+        var reset = new AsyncCommand(ResetKitClaimAsync, () => !IsBusy && SelectedPlayerRecord is not null);
+        RefreshKitsCommand = refresh;
+        SaveKitsCommand = save;
+        TestKitProviderCommand = test;
+        GiveSelectedKitCommand = give;
+        ResetKitClaimCommand = reset;
+        NewKitCommand = new RelayCommand(NewKit);
+        DeleteKitCommand = new RelayCommand(DeleteSelectedKit);
+        ToggleKitsCommand = new RelayCommand(() =>
+        {
+            IsKitsExpanded = !IsKitsExpanded;
+            if (IsKitsExpanded) Dispatcher.UIThread.Post(async () => await RefreshKitsAsync());
+        });
+        _kitCommands = [refresh, save, test, give, reset];
+    }
+
+    private void RaiseKitCommandStates()
+    {
+        foreach (var command in _kitCommands) command.RaiseCanExecuteChanged();
+    }
+
+    private void ApplyKitConfig(KitConfigDto config, KitProviderStatusDto? provider, IEnumerable<KitClaimDto>? claims)
+    {
+        var keepId = SelectedKit?.Id;
+        Kits.Clear();
+        foreach (var kit in config.Kits) Kits.Add(kit);
+        SelectedKit = Kits.FirstOrDefault(k => k.Id == keepId) ?? Kits.FirstOrDefault();
+        KitAutoGiftEnabled = config.AutoGiftEnabled;
+        KitAutoGiftKit = Kits.FirstOrDefault(k => k.Id.Equals(config.AutoGiftKitId, StringComparison.OrdinalIgnoreCase));
+        KitAutoGiftNote = config.AutoGiftEnabled && config.AutoGiftEnabledAtUtc is { } since
+            ? $"Auto-gift has been on since {since.ToLocalTime():g}. Only players MystTiq first saw after that are gifted, once each."
+            : "Auto-gift is off. When on, only players MystTiq first sees after you turn it on are gifted, once each. Existing players are never gifted.";
+        if (provider is not null)
+            KitProviderText = (provider.CanDeliver ? "Ready: " : "Cannot deliver: ") + provider.Detail;
+        if (claims is not null)
+        {
+            KitClaims.Clear();
+            foreach (var claim in claims) KitClaims.Add(claim);
+        }
+    }
+
+    private async Task RefreshKitsAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            var snapshot = await _api.GetKitsAsync(SelectedProfile, BearerToken);
+            ApplyKitConfig(snapshot.Config, snapshot.Provider, snapshot.Claims);
+            KitStatusText = $"{Kits.Count} kit(s) loaded, {KitClaims.Count} recent claim(s).";
+        }
+        catch (Exception ex) { KitStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private void NewKit()
+    {
+        var kit = new KitDefinitionDto
+        {
+            Id = "kit-" + Guid.NewGuid().ToString("N")[..8],
+            Name = "New kit",
+            Entries = [new KitEntryDto { Type = "Item", Id = "PalSphere", Amount = 10 }]
+        };
+        Kits.Add(kit);
+        SelectedKit = kit;
+        KitStatusText = "New kit added. Edit it, then press Save Kits.";
+    }
+
+    private void DeleteSelectedKit()
+    {
+        if (SelectedKit is not { } kit) return;
+        if (ReferenceEquals(KitAutoGiftKit, kit)) { KitAutoGiftKit = null; KitAutoGiftEnabled = false; }
+        Kits.Remove(kit);
+        SelectedKit = Kits.FirstOrDefault();
+        KitStatusText = "Kit removed. Press Save Kits to keep that.";
+    }
+
+    private async Task SaveKitsAsync()
+    {
+        if (SelectedProfile is null) return;
+        if (!KitEntryText.TryParse(KitEntriesText, out _, out var parseError)) { KitStatusText = parseError; return; }
+        IsBusy = true;
+        try
+        {
+            var request = new KitConfigDto
+            {
+                AutoGiftEnabled = KitAutoGiftEnabled && KitAutoGiftKit is not null,
+                AutoGiftKitId = KitAutoGiftKit?.Id ?? string.Empty,
+                Kits = [.. Kits]
+            };
+            var result = await _api.SaveKitsAsync(SelectedProfile, request, BearerToken);
+            if (!result.Success)
+            {
+                KitStatusText = result.Errors.Count > 0 ? string.Join(" ", result.Errors) : (string.IsNullOrWhiteSpace(result.Message) ? "The kits were not saved." : result.Message);
+                return;
+            }
+
+            ApplyKitConfig(result.Config, null, null);
+            KitStatusText = "Kits saved.";
+        }
+        catch (Exception ex) { KitStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task TestKitProviderAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true; KitStatusText = "Asking the server's PalDefender (version command over RCON)…";
+        try
+        {
+            var result = await _api.TestKitProviderAsync(SelectedProfile, BearerToken);
+            KitStatusText = result.Success
+                ? $"The server answered: {(string.IsNullOrWhiteSpace(result.Response) ? "(no text)" : result.Response)}"
+                : result.Message;
+        }
+        catch (Exception ex) { KitStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // ---- v0.7.113.0: Teleport Points (Map page) ----------------------------------------------------------
+    // Points are edited as text, one per line ("spawn -358 270", optional height), the same way kits are.
+    private bool _teleportEnabled;
+    private string _teleportCommandPrefix = "!tp";
+    private decimal _teleportCooldownSeconds = 60;
+    private string _teleportPointsText = string.Empty;
+    private string _teleportStatusText = "Teleport points not loaded yet.";
+    private string _teleportProviderText = string.Empty;
+    private string _teleportChatSourceText = string.Empty;
+    private string _teleportSendPointName = string.Empty;
+    public bool TeleportEnabled { get => _teleportEnabled; set => SetField(ref _teleportEnabled, value); }
+    public string TeleportCommandPrefix { get => _teleportCommandPrefix; set => SetField(ref _teleportCommandPrefix, value ?? string.Empty); }
+    public decimal TeleportCooldownSeconds { get => _teleportCooldownSeconds; set => SetField(ref _teleportCooldownSeconds, value); }
+    public string TeleportPointsText { get => _teleportPointsText; set => SetField(ref _teleportPointsText, value ?? string.Empty); }
+    public string TeleportStatusText { get => _teleportStatusText; set => SetField(ref _teleportStatusText, value ?? string.Empty); }
+    public string TeleportProviderText { get => _teleportProviderText; set => SetField(ref _teleportProviderText, value ?? string.Empty); }
+    public string TeleportChatSourceText { get => _teleportChatSourceText; set => SetField(ref _teleportChatSourceText, value ?? string.Empty); }
+    public string TeleportSendPointName { get => _teleportSendPointName; set => SetField(ref _teleportSendPointName, value ?? string.Empty); }
+    public ObservableCollection<TeleportUseDto> TeleportRecentUses { get; } = [];
+    public ICommand RefreshTeleportCommand { get; private set; } = null!;
+    public ICommand SaveTeleportCommand { get; private set; } = null!;
+    public ICommand CaptureTeleportPositionCommand { get; private set; } = null!;
+    public ICommand SendPlayerToTeleportPointCommand { get; private set; } = null!;
+
+    private void InitializeTeleportCommands()
+    {
+        RefreshTeleportCommand = new AsyncCommand(RefreshTeleportAsync, () => !IsBusy);
+        SaveTeleportCommand = new AsyncCommand(SaveTeleportAsync, () => !IsBusy);
+        CaptureTeleportPositionCommand = new AsyncCommand(CaptureTeleportPositionAsync, () => !IsBusy);
+        SendPlayerToTeleportPointCommand = new AsyncCommand(SendPlayerToTeleportPointAsync, () => !IsBusy);
+    }
+
+    private void ApplyTeleportSnapshot(TeleportSnapshotDto snapshot)
+    {
+        TeleportEnabled = snapshot.Config.Enabled;
+        TeleportCommandPrefix = snapshot.Config.CommandPrefix;
+        TeleportCooldownSeconds = snapshot.Config.CooldownSeconds;
+        TeleportPointsText = TeleportPointText.Format(snapshot.Config.Points.Select(p => new TeleportPointEntry(p.Name, p.X, p.Y, p.Z)));
+        TeleportProviderText = snapshot.Provider.Detail;
+        TeleportChatSourceText = snapshot.ChatSource;
+        TeleportRecentUses.Clear();
+        foreach (var use in snapshot.RecentUses.Take(20)) TeleportRecentUses.Add(use);
+    }
+
+    private async Task RefreshTeleportAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true;
+        try
+        {
+            ApplyTeleportSnapshot(await _api.GetTeleportAsync(SelectedProfile, BearerToken));
+            TeleportStatusText = TeleportEnabled ? $"Players can type {TeleportCommandPrefix} <name> in chat." : "Teleporting by chat command is off.";
+        }
+        catch (Exception ex) { TeleportStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task SaveTeleportAsync()
+    {
+        if (SelectedProfile is null) return;
+        if (!TeleportPointText.TryParse(TeleportPointsText, out var parsed, out var error)) { TeleportStatusText = error; return; }
+        IsBusy = true;
+        try
+        {
+            var config = new TeleportConfigDto
+            {
+                Enabled = TeleportEnabled,
+                CommandPrefix = TeleportCommandPrefix.Trim(),
+                CooldownSeconds = (int)TeleportCooldownSeconds,
+                Points = parsed.Select(p => new TeleportPointDto { Name = p.Name, X = p.X, Y = p.Y, Z = p.Z }).ToList()
+            };
+            var result = await _api.SaveTeleportAsync(SelectedProfile, config, BearerToken);
+            TeleportStatusText = result.Success ? result.Message : string.Join(" ", result.Errors.DefaultIfEmpty(result.Message));
+            if (result.Success) ApplyTeleportSnapshot(await _api.GetTeleportAsync(SelectedProfile, BearerToken));
+        }
+        catch (Exception ex) { TeleportStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // Asks PalDefender where the selected online player is and adds that spot as a new line to name and save.
+    private async Task CaptureTeleportPositionAsync()
+    {
+        if (SelectedProfile is null) return;
+        if (SelectedPlayerRecord is not { Online: true } player) { TeleportStatusText = "Select an online player first (click a green dot or a name). Their current position becomes the point."; return; }
+        IsBusy = true;
+        try
+        {
+            var result = await _api.CaptureTeleportPositionAsync(SelectedProfile, player.PlayerId, BearerToken);
+            if (!result.Success || result.X is not { } x || result.Y is not { } y) { TeleportStatusText = result.Message; return; }
+            var line = TeleportPointText.Format([new TeleportPointEntry("newpoint", x, y, result.Z)]);
+            TeleportPointsText = string.IsNullOrWhiteSpace(TeleportPointsText) ? line : TeleportPointsText.TrimEnd() + "\n" + line;
+            TeleportStatusText = $"{result.Message} Added as \"newpoint\": rename it, then Save.";
+        }
+        catch (Exception ex) { TeleportStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task SendPlayerToTeleportPointAsync()
+    {
+        if (SelectedProfile is null) return;
+        if (SelectedPlayerRecord is not { Online: true } player) { TeleportStatusText = "Select an online player first."; return; }
+        if (string.IsNullOrWhiteSpace(TeleportSendPointName)) { TeleportStatusText = "Type the name of a saved point to send them to."; return; }
+        IsBusy = true;
+        try
+        {
+            var result = await _api.SendToTeleportPointAsync(SelectedProfile, TeleportSendPointName.Trim(), player.PlayerId, BearerToken);
+            TeleportStatusText = result.Message;
+        }
+        catch (Exception ex) { TeleportStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    // ---- v0.8.3.0: Give Item picker -------------------------------------------------------------------------
+    // Search the item and Pal ids this server knows (world save, kits, earlier gives) and add one as a line to the
+    // Give box or the selected kit, instead of typing internal ids from memory. Typing by hand still works.
+    public const int MaximumShownGameIds = 300;
+    private readonly List<GameIdCatalogEntryDto> _gameIdCatalog = [];
+    private string _gameIdFilterText = string.Empty;
+    private string _gameIdAmountText = "1";
+    private string _gameIdCatalogStatus = "Press Load IDs to list the item and Pal ids this world knows.";
+    private string _gameIdCatalogDetail = string.Empty;
+    private GameIdCatalogEntryDto? _selectedGameId;
+    private AsyncCommand? _loadGameIdsCommand;
+    private RelayCommand? _addGameIdToGiveCommand;
+    private RelayCommand? _addGameIdToKitCommand;
+
+    public ObservableCollection<GameIdCatalogEntryDto> FilteredGameIds { get; } = [];
+    public string GameIdCatalogStatus { get => _gameIdCatalogStatus; private set => SetField(ref _gameIdCatalogStatus, value); }
+    public string GameIdFilterText
+    {
+        get => _gameIdFilterText;
+        set { if (SetField(ref _gameIdFilterText, value ?? string.Empty)) ApplyGameIdFilter(); }
+    }
+    public string GameIdAmountText { get => _gameIdAmountText; set => SetField(ref _gameIdAmountText, value ?? string.Empty); }
+    public string GameIdAmountLabel => SelectedGameId?.IsPal == true ? "Level" : "Amount";
+    public GameIdCatalogEntryDto? SelectedGameId
+    {
+        get => _selectedGameId;
+        set
+        {
+            var wasPal = _selectedGameId?.IsPal == true;
+            if (!SetField(ref _selectedGameId, value)) return;
+            RaisePropertyChanged(nameof(GameIdAmountLabel));
+            // Switching between items (counts) and Pals (levels) resets a value that would not make sense for the other.
+            if (value is not null && value.IsPal != wasPal) GameIdAmountText = "1";
+            _addGameIdToGiveCommand?.RaiseCanExecuteChanged();
+            _addGameIdToKitCommand?.RaiseCanExecuteChanged();
+        }
+    }
+    public ICommand LoadGameIdsCommand { get; private set; } = null!;
+    public ICommand AddGameIdToGiveCommand { get; private set; } = null!;
+    public ICommand AddGameIdToKitCommand { get; private set; } = null!;
+
+    private void InitializeGameIdPicker()
+    {
+        _loadGameIdsCommand = new AsyncCommand(LoadGameIdsAsync, () => !IsBusy);
+        _addGameIdToGiveCommand = new RelayCommand(() => AddSelectedGameId(toKit: false), () => SelectedGameId is not null);
+        _addGameIdToKitCommand = new RelayCommand(() => AddSelectedGameId(toKit: true), () => SelectedGameId is not null);
+        LoadGameIdsCommand = _loadGameIdsCommand;
+        AddGameIdToGiveCommand = _addGameIdToGiveCommand;
+        AddGameIdToKitCommand = _addGameIdToKitCommand;
+    }
+
+    private async Task LoadGameIdsAsync()
+    {
+        if (SelectedProfile is null) return;
+        IsBusy = true; GameIdCatalogStatus = "Reading the item and Pal ids from the world save…";
+        try
+        {
+            var catalog = await _api.GetGameIdCatalogAsync(SelectedProfile, BearerToken);
+            _gameIdCatalog.Clear();
+            _gameIdCatalog.AddRange(catalog.Entries);
+            ApplyGameIdFilter();
+            // v0.8.13.0: say where the names come from, or why there are none.
+            _gameIdCatalogDetail = string.IsNullOrWhiteSpace(catalog.NamesDetail) ? catalog.Detail : $"{catalog.Detail} {catalog.NamesDetail}";
+            GameIdCatalogStatus = _gameIdCatalogDetail;
+        }
+        catch (Exception ex) { GameIdCatalogStatus = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private void ClearGameIdCatalog()
+    {
+        _gameIdCatalog.Clear();
+        FilteredGameIds.Clear();
+        SelectedGameId = null;
+        GameIdCatalogStatus = "Press Load IDs to list the item and Pal ids this world knows.";
+    }
+
+    private void ApplyGameIdFilter()
+    {
+        var keep = SelectedGameId;
+        // v0.8.13.0: the display name is searched too ("pal sphere", "lamball").
+        var matches = _gameIdCatalog.Where(e => GameIdSearch.Matches(e.Id, e.Name, GameIdFilterText)).ToList();
+        FilteredGameIds.Clear();
+        foreach (var entry in matches.Take(MaximumShownGameIds)) FilteredGameIds.Add(entry);
+        SelectedGameId = keep is not null && FilteredGameIds.Contains(keep) ? keep : null;
+        // v0.8.13.0: back to the catalogue's own line once the search is narrow enough (it used to keep the "first 300" note).
+        if (_gameIdCatalog.Count > 0)
+            GameIdCatalogStatus = matches.Count > MaximumShownGameIds
+                ? $"Showing the first {MaximumShownGameIds} of {matches.Count} matches. Type more of the name to narrow it down."
+                : _gameIdCatalogDetail;
+    }
+
+    private void AddSelectedGameId(bool toKit)
+    {
+        if (SelectedGameId is not { } entry) return;
+        var type = entry.IsPal ? "Pal" : "Item";
+        if (!KitEntryText.TryParseAmount(type, GameIdAmountText, out var amount, out var error)) { GameIdCatalogStatus = error; return; }
+        var line = new KitTextEntry(type, entry.Id, amount);
+        if (toKit)
+        {
+            if (SelectedKit is null) { GameIdCatalogStatus = "Select or create a kit under Starter Kits first."; return; }
+            KitEntriesText = KitEntryText.Append(KitEntriesText, line);
+            GameIdCatalogStatus = $"Added {KitEntryText.Format([line])} to kit '{SelectedKit.Name}'. Press Save Kits to keep it.";
+        }
+        else
+        {
+            GiveItemsText = KitEntryText.Append(GiveItemsText, line);
+            GameIdCatalogStatus = $"Added {KitEntryText.Format([line])} to the Give box.";
+        }
+    }
+
+    // v0.7.112.0: items/Pals to give the selected online player, in the kit editor's line format.
+    private string _giveItemsText = string.Empty;
+    public string GiveItemsText
+    {
+        get => _giveItemsText;
+        set { if (SetField(ref _giveItemsText, value ?? string.Empty)) (GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged(); }
+    }
+
+    private async Task GiveItemsToSelectedPlayerAsync()
+    {
+        if (SelectedProfile is null || SelectedPlayerRecord is not { Online: true } player) return;
+        if (!KitEntryText.TryParse(GiveItemsText, out var parsed, out var error)) { PlayerAdminStatusText = error; return; }
+        if (parsed.Count == 0) { PlayerAdminStatusText = "Enter at least one item or Pal to give."; return; }
+        IsBusy = true; PlayerAdminStatusText = $"Giving {parsed.Count} entr{(parsed.Count == 1 ? "y" : "ies")} to {player.PlayerName}…";
+        try
+        {
+            var entries = parsed.Select(e => new KitEntryDto { Type = e.Type, Id = e.Id, Amount = e.Amount }).ToList();
+            var result = await _api.GiveItemsAsync(SelectedProfile, player.PlayerId, entries, BearerToken);
+            PlayerAdminStatusText = result.Success
+                ? $"{result.Message}{(string.IsNullOrWhiteSpace(result.Response) ? string.Empty : " Server: " + result.Response)}"
+                : result.Message;
+        }
+        catch (Exception ex) { PlayerAdminStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task GiveSelectedKitAsync()
+    {
+        if (SelectedProfile is null || SelectedKit is not { } kit || SelectedPlayerRecord is not { } player) return;
+        IsBusy = true; KitStatusText = $"Giving '{kit.Name}' to {player.PlayerName}…";
+        try
+        {
+            var result = await _api.GiveKitAsync(SelectedProfile, kit.Id, player.PlayerId, BearerToken);
+            KitStatusText = result.Success
+                ? $"{result.Message}{(string.IsNullOrWhiteSpace(result.Response) ? string.Empty : " Server: " + result.Response)}"
+                : result.Message + (result.Message.Contains("no longer exists", StringComparison.OrdinalIgnoreCase) ? " Press Save Kits first, then try again." : string.Empty);
+        }
+        catch (Exception ex) { KitStatusText = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    private async Task ResetKitClaimAsync()
+    {
+        if (SelectedProfile is null || SelectedPlayerRecord is not { } player) return;
+        IsBusy = true;
+        try
+        {
+            await _api.ForgetKitClaimsAsync(SelectedProfile, player.PlayerId, BearerToken);
+            KitStatusText = $"Cleared {player.PlayerName}'s kit claims, so auto-gift can give them the kit again if they qualify.";
+            var snapshot = await _api.GetKitsAsync(SelectedProfile, BearerToken);
+            KitClaims.Clear();
+            foreach (var claim in snapshot.Claims) KitClaims.Add(claim);
+        }
+        catch (Exception ex) { KitStatusText = ex.Message; }
+        finally { IsBusy = false; }
     }
 
     private async Task RefreshWhitelistAsync()
@@ -5980,6 +7201,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void ApplyCrashAnalysis(CrashAnalysisSnapshotDto report)
     {
         CrashFindings.Clear(); foreach (var finding in report.Findings) CrashFindings.Add(finding);
+        SelectedCrashFinding = CrashFindings.FirstOrDefault();
         CrashIsolationPlan.Clear(); foreach (var step in report.IsolationPlan) CrashIsolationPlan.Add(step);
         CrashAnalyzerState = $"{report.Summary} Scanned {report.FilesScanned} file(s) and {report.LinesScanned} line(s).";
     }
@@ -6463,7 +7685,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private async Task FixDiagnosticAsync(DiagnosticFindingDto? finding)
     {
-        if (finding is null || !finding.CanFix) return;
+        if (finding is null || !finding.CanFix || !finding.FixConfirmed) return;
         ConnectionProfile profile;
         try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
         catch (Exception ex) { DiagnosticsReportDetail = ex.Message; return; }
@@ -6800,7 +8022,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         ("WorkSpeedRate", "Work Speed", "Controls how quickly base tasks are completed.", 0.1, 10, 0.1, "x", "Items & Work"),
         ("MonsterFarmActionSpeedRate", "Ranch Action Speed", "Controls how quickly ranch-type Pals produce.", 0.1, 20, 0.5, "x", "Items & Work"),
         ("ItemWeightRate", "Item Weight", "Controls carried-item weight.", 0.1, 10, 0.1, "x", "Items & Work"),
-        ("ItemCorruptionMultiplier", "Item Corruption Rate", "Controls how quickly items degrade.", 0.1, 10, 0.1, "x", "Items & Work"),
+        // v0.7.102.0: minimum lowered from 0.1 to 0 (step 0.05). Real servers run below 0.1 (the Relaxed preset
+        // uses 0.25, and a hand-edited 0.05 was the value that exposed the phantom-change bug).
+        ("ItemCorruptionMultiplier", "Item Corruption Rate", "Controls how quickly items degrade.", 0, 10, 0.05, "x", "Items & Work"),
         ("EquipmentDurabilityDamageRate", "Equipment Durability Loss", "Controls how quickly equipment durability drops.", 0.1, 5, 0.05, "x", "Items & Work")
     ];
     private static readonly (string Name, string Title, string Description)[] SimpleToggleDefinitions =
@@ -8287,6 +9511,256 @@ public sealed class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
+    // ---- v0.7.93.0: Nexus Mods catalog -----------------------------------------------------------
+    // Browse trending / latest added / latest updated Palworld mods, look one up by id or page URL,
+    // list its files, and install one. The user's own API key stays on this machine (memory only
+    // unless they explicitly press Save, then DPAPI-encrypted via CredentialStore) and is never sent
+    // to the MystTiq management server. Direct download links are Premium-only on Nexus, so free
+    // accounts get Open on Nexus plus a paste-an-nxm://-link path. Every download still goes through
+    // the existing validated ZIP install (InstallModZipAsync), never straight into the server folder.
+    private const string NexusKeyCredentialId = "nexusmods-api-key";
+    private const long NexusMaxDownloadBytes = 750L * 1024 * 1024;
+    private readonly INexusModsClient _nexus;
+    private string _nexusApiKey = string.Empty;
+    private string _nexusApiKeyInput = string.Empty;
+    private string _nexusAccountText = "Not connected.";
+    private bool _nexusIsPremium;
+    private string _nexusStatusText = string.Empty;
+    private string _nexusRateText = string.Empty;
+    private string _nexusNxmLinkText = string.Empty;
+    private string _nexusLookupText = string.Empty;
+    private NexusModDto? _selectedNexusMod;
+    private NexusFileDto? _selectedNexusFile;
+    private AsyncCommand[] _nexusCommands = [];
+    private RelayCommand<string>? _nexusListCommand;
+
+    public ObservableCollection<NexusModDto> NexusMods { get; } = [];
+    public ObservableCollection<NexusFileDto> NexusFiles { get; } = [];
+    public string NexusApiKeyInput { get => _nexusApiKeyInput; set => SetField(ref _nexusApiKeyInput, value); }
+    public string NexusAccountText { get => _nexusAccountText; private set => SetField(ref _nexusAccountText, value); }
+    public bool NexusIsPremium { get => _nexusIsPremium; private set => SetField(ref _nexusIsPremium, value); }
+    public string NexusStatusText { get => _nexusStatusText; private set => SetField(ref _nexusStatusText, value); }
+    public string NexusRateText { get => _nexusRateText; private set => SetField(ref _nexusRateText, value); }
+    public string NexusNxmLinkText { get => _nexusNxmLinkText; set => SetField(ref _nexusNxmLinkText, value); }
+    public string NexusLookupText { get => _nexusLookupText; set => SetField(ref _nexusLookupText, value); }
+    public NexusModDto? SelectedNexusMod
+    {
+        get => _selectedNexusMod;
+        set { if (SetField(ref _selectedNexusMod, value)) { NexusFiles.Clear(); SelectedNexusFile = null; } }
+    }
+    public NexusFileDto? SelectedNexusFile
+    {
+        get => _selectedNexusFile;
+        set { if (SetField(ref _selectedNexusFile, value)) RaiseNexusCommandStates(); }
+    }
+    public ICommand NexusConnectCommand { get; private set; } = null!;
+    public ICommand NexusSaveKeyCommand { get; private set; } = null!;
+    public ICommand NexusForgetKeyCommand { get; private set; } = null!;
+    public ICommand NexusLoadListCommand { get; private set; } = null!;
+    public ICommand NexusLookupCommand { get; private set; } = null!;
+    public ICommand NexusShowFilesCommand { get; private set; } = null!;
+    public ICommand NexusInstallFileCommand { get; private set; } = null!;
+    public ICommand NexusInstallFromNxmCommand { get; private set; } = null!;
+    public ICommand NexusOpenPageCommand { get; private set; } = null!;
+
+    private void InitializeNexusMods()
+    {
+        _nexusApiKey = _credentialStore.TryLoad(NexusKeyCredentialId) ?? string.Empty;
+        if (_nexusApiKey.Length > 0) NexusAccountText = "A saved key was found. Press Connect to verify it.";
+
+        var connect = new AsyncCommand(NexusConnectAsync, () => !IsBusy);
+        var list = new RelayCommand<string>(kind => _ = NexusLoadListAsync(kind), _ => !IsBusy);
+        _nexusListCommand = list;
+        var lookup = new AsyncCommand(NexusLookupAsync, () => !IsBusy);
+        var files = new AsyncCommand(NexusShowFilesAsync, () => !IsBusy && SelectedNexusMod is not null);
+        var install = new AsyncCommand(NexusInstallSelectedFileAsync, () => !IsBusy && SelectedNexusMod is not null && SelectedNexusFile is not null);
+        var nxm = new AsyncCommand(NexusInstallFromNxmAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(NexusNxmLinkText));
+        NexusConnectCommand = connect;
+        NexusLoadListCommand = list;
+        NexusLookupCommand = lookup;
+        NexusShowFilesCommand = files;
+        NexusInstallFileCommand = install;
+        NexusInstallFromNxmCommand = nxm;
+        NexusSaveKeyCommand = new RelayCommand(NexusSaveKey);
+        NexusForgetKeyCommand = new RelayCommand(NexusForgetKey);
+        NexusOpenPageCommand = new RelayCommand(NexusOpenPage);
+        _nexusCommands = [connect, files, install, nxm, lookup];
+    }
+
+    private void RaiseNexusCommandStates()
+    {
+        foreach (var command in _nexusCommands) command.RaiseCanExecuteChanged();
+        _nexusListCommand?.RaiseCanExecuteChanged();
+    }
+
+    // Uses the key typed into the box if there is one, otherwise the one already held in memory
+    // (loaded from the encrypted store, or verified earlier this session).
+    private string CurrentNexusKey() => string.IsNullOrWhiteSpace(NexusApiKeyInput) ? _nexusApiKey : NexusApiKeyInput.Trim();
+
+    private void ReportNexusRate<T>(NexusCallResult<T> result)
+    {
+        if (result.HourlyRemaining is null && result.DailyRemaining is null) return;
+        NexusRateText = $"Nexus requests left: {result.HourlyRemaining?.ToString() ?? "?"} this hour, {result.DailyRemaining?.ToString() ?? "?"} today.";
+    }
+
+    private async Task NexusConnectAsync()
+    {
+        var key = CurrentNexusKey();
+        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Paste your Nexus Mods API key first (nexusmods.com > your account > API keys)."; return; }
+        IsBusy = true; NexusStatusText = "Checking the key with Nexus Mods…";
+        try
+        {
+            var result = await _nexus.ValidateAsync(key);
+            ReportNexusRate(result);
+            if (!result.Ok || result.Value is null) { NexusStatusText = result.Error ?? "Nexus did not confirm the key."; return; }
+            _nexusApiKey = key;
+            NexusApiKeyInput = string.Empty;
+            NexusIsPremium = result.Value.IsPremium;
+            NexusAccountText = $"Connected as {result.Value.Name}{(result.Value.IsPremium ? " (Premium: direct downloads available)" : " (free account: use Open on Nexus or an nxm:// link to download)")}.";
+            NexusStatusText = "Connected. Load a list below, or look up a mod by id or page URL.";
+        }
+        finally { IsBusy = false; }
+    }
+
+    private void NexusSaveKey()
+    {
+        var key = CurrentNexusKey();
+        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "There is no key to save yet."; return; }
+        if (!OperatingSystem.IsWindows()) { NexusStatusText = "Saving the key is only supported on Windows; it stays in memory for this session."; _nexusApiKey = key; return; }
+        _credentialStore.Save(NexusKeyCredentialId, key);
+        _nexusApiKey = key;
+        NexusApiKeyInput = string.Empty;
+        NexusStatusText = "Key saved on this PC, encrypted for your Windows account only. It is never sent to the MystTiq server.";
+    }
+
+    private void NexusForgetKey()
+    {
+        _credentialStore.Delete(NexusKeyCredentialId);
+        _nexusApiKey = string.Empty;
+        NexusApiKeyInput = string.Empty;
+        NexusIsPremium = false;
+        NexusAccountText = "Not connected.";
+        NexusMods.Clear(); NexusFiles.Clear(); SelectedNexusMod = null;
+        NexusStatusText = "The saved key was removed and this session's copy cleared.";
+    }
+
+    private async Task NexusLoadListAsync(string? kind)
+    {
+        var key = CurrentNexusKey();
+        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
+        IsBusy = true; NexusStatusText = "Loading from Nexus Mods…";
+        try
+        {
+            var result = await _nexus.GetListAsync(key, kind ?? "trending");
+            ReportNexusRate(result);
+            if (!result.Ok || result.Value is null) { NexusStatusText = result.Error ?? "Nexus returned nothing."; return; }
+            NexusMods.Clear();
+            foreach (var mod in result.Value) NexusMods.Add(mod);
+            SelectedNexusMod = null;
+            NexusStatusText = $"{result.Value.Count} mod(s). Nexus's public API only lists 10 per category and has no catalog search; use the lookup box for any other mod.";
+        }
+        finally { IsBusy = false; }
+    }
+
+    private async Task NexusLookupAsync()
+    {
+        if (!NexusModsLinks.TryParseModReference(NexusLookupText, out var modId))
+        { NexusStatusText = "Enter a mod id or a nexusmods.com/palworld/mods/... page URL."; return; }
+        var key = CurrentNexusKey();
+        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
+        IsBusy = true; NexusStatusText = $"Looking up mod {modId}…";
+        try
+        {
+            var result = await _nexus.GetModAsync(key, modId);
+            ReportNexusRate(result);
+            if (!result.Ok || result.Value is null) { NexusStatusText = result.Error ?? "Nexus returned nothing."; return; }
+            NexusMods.Clear();
+            NexusMods.Add(result.Value);
+            SelectedNexusMod = result.Value;
+            NexusStatusText = $"Found {result.Value.DisplayName}. Press Show Files to see what can be installed.";
+        }
+        finally { IsBusy = false; }
+    }
+
+    private async Task NexusShowFilesAsync()
+    {
+        if (SelectedNexusMod is not { } mod) return;
+        var key = CurrentNexusKey();
+        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
+        IsBusy = true; NexusStatusText = $"Loading files for {mod.DisplayName}…";
+        try
+        {
+            var result = await _nexus.GetFilesAsync(key, mod.ModId);
+            ReportNexusRate(result);
+            if (!result.Ok || result.Value is null) { NexusStatusText = result.Error ?? "Nexus returned nothing."; return; }
+            NexusFiles.Clear();
+            foreach (var file in result.Value.Where(f => !string.Equals(f.CategoryName, "OLD_VERSION", StringComparison.OrdinalIgnoreCase)))
+                NexusFiles.Add(file);
+            SelectedNexusFile = NexusFiles.FirstOrDefault(f => f.IsPrimary) ?? NexusFiles.FirstOrDefault();
+            NexusStatusText = NexusFiles.Count == 0 ? "That mod has no current files." : $"{NexusFiles.Count} file(s). Only .zip archives can be installed by MystTiq.";
+        }
+        finally { IsBusy = false; }
+    }
+
+    private Task NexusInstallSelectedFileAsync() =>
+        SelectedNexusMod is { } mod && SelectedNexusFile is { } file
+            ? NexusDownloadAndInstallAsync(mod.ModId, file.FileId, file.FileName ?? $"nexus-{mod.ModId}-{file.FileId}.zip", null, null)
+            : Task.CompletedTask;
+
+    private Task NexusInstallFromNxmAsync()
+    {
+        if (!NexusModsLinks.TryParseNxm(NexusNxmLinkText, out var link, out var error) || link is null)
+        { NexusStatusText = error; return Task.CompletedTask; }
+        return NexusDownloadAndInstallAsync(link.ModId, link.FileId, $"nexus-{link.ModId}-{link.FileId}.zip", link.Key, link.Expires);
+    }
+
+    private async Task NexusDownloadAndInstallAsync(int modId, int fileId, string fileName, string? nxmKey, long? nxmExpires)
+    {
+        var key = CurrentNexusKey();
+        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
+        var temp = Path.Combine(Path.GetTempPath(), "MystTiq-nexus-" + Guid.NewGuid().ToString("N") + ".download");
+        IsBusy = true; NexusStatusText = "Asking Nexus for a download link…";
+        try
+        {
+            var link = await _nexus.GetDownloadLinkAsync(key, modId, fileId, nxmKey, nxmExpires);
+            ReportNexusRate(link);
+            if (!link.Ok || link.Value is null) { NexusStatusText = link.Error ?? "Nexus gave no download link."; return; }
+
+            var progress = new Progress<string>(text => NexusStatusText = text);
+            var failure = await _nexus.DownloadToFileAsync(link.Value, temp, NexusMaxDownloadBytes, progress);
+            if (failure is not null) { NexusStatusText = failure; return; }
+
+            var header = new byte[8];
+            await using (var probe = File.OpenRead(temp)) { _ = await probe.ReadAsync(header); }
+            var kind = NexusModsLinks.DescribeArchiveKind(header);
+            if (kind != "zip")
+            {
+                NexusStatusText = kind is "7z" or "rar"
+                    ? $"That file is a .{kind} archive. MystTiq installs .zip only: extract it, re-zip it, then use Install MOD ZIP."
+                    : "That download is not a ZIP archive, so MystTiq will not install it.";
+                return;
+            }
+
+            NexusStatusText = "Downloaded. Installing through the validated ZIP install…";
+            IsBusy = false; // InstallModZipAsync manages the busy flag itself
+            await using var stream = File.OpenRead(temp);
+            await InstallModZipAsync(stream, fileName);
+            NexusStatusText = string.IsNullOrWhiteSpace(ModSummary) ? "Install finished." : ModSummary;
+        }
+        finally
+        {
+            IsBusy = false;
+            try { if (File.Exists(temp)) File.Delete(temp); } catch { /* best-effort temp cleanup */ }
+        }
+    }
+
+    private void NexusOpenPage()
+    {
+        if (SelectedNexusMod is not { } mod) { NexusStatusText = "Select a mod first."; return; }
+        try { Process.Start(new ProcessStartInfo(NexusModsLinks.ModPageUrl(mod.ModId)) { UseShellExecute = true }); }
+        catch (Exception ex) { NexusStatusText = $"Could not open the browser: {ex.Message}"; }
+    }
+
     private async Task DeleteSelectedModAsync()
     {
         if (SelectedMod is null) return; var selected = SelectedMod;
@@ -8904,6 +10378,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(IsUpdateCenterPage));
         RaisePropertyChanged(nameof(IsBasesPage));
         RaisePropertyChanged(nameof(IsGuildsPage));
+        RaisePropertyChanged(nameof(IsMapPage));
         RaisePropertyChanged(nameof(IsConsolePage));
         RaisePropertyChanged(nameof(IsActivityAuditPage));
         RaisePropertyChanged(nameof(IsNotificationsPage));
@@ -8911,6 +10386,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(IsSecurityPage));
         RaisePropertyChanged(nameof(IsAlertCenterPage));
         RaisePropertyChanged(nameof(IsFleetPage));
+        RaisePropertyChanged(nameof(IsHostPage));
+        RaisePropertyChanged(nameof(IsV5HostCategory));
         RaisePropertyChanged(nameof(IsModDashboardPage));
         RaisePropertyChanged(nameof(IsModLibraryPage));
         RaisePropertyChanged(nameof(IsUe4ssPage));
@@ -8931,15 +10408,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(IsV5ModsCategory));
         RaisePropertyChanged(nameof(IsV5ToolsCategory));
         RaisePropertyChanged(nameof(IsV5SystemCategory));
-        RaisePropertyChanged(nameof(IsHomePageArtDark));
-        RaisePropertyChanged(nameof(IsHomePageArtLight));
-        RaisePropertyChanged(nameof(IsWorldPageArtDark));
-        RaisePropertyChanged(nameof(IsWorldPageArtLight));
+        RaisePropertyChanged(nameof(PageArtwork));
+        RaisePropertyChanged(nameof(SetupArtwork));
     }
 }
 
-internal sealed class RelayCommand : ICommand
+// v0.8.23.0: a command the signed-in role may not use cannot run (see MainWindowViewModel.CommandRoles.cs).
+internal interface IRoleGatedCommand
 {
+    Func<bool>? RoleGate { get; set; }
+    void RaiseCanExecuteChanged();
+}
+
+internal sealed class RelayCommand : ICommand, IRoleGatedCommand
+{
+    public Func<bool>? RoleGate { get; set; }
     private readonly Action _execute;
     private readonly Func<bool>? _canExecute;
 
@@ -8949,14 +10432,15 @@ internal sealed class RelayCommand : ICommand
         _canExecute = canExecute;
     }
 
-    public bool CanExecute(object? parameter) => _canExecute?.Invoke() ?? true;
+    public bool CanExecute(object? parameter) => (RoleGate?.Invoke() ?? true) && (_canExecute?.Invoke() ?? true);
     public void Execute(object? parameter) => _execute();
     public event EventHandler? CanExecuteChanged;
     public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }
 
-internal sealed class RelayCommand<T> : ICommand
+internal sealed class RelayCommand<T> : ICommand, IRoleGatedCommand
 {
+    public Func<bool>? RoleGate { get; set; }
     private readonly Action<T?> _execute;
     private readonly Func<T?, bool>? _canExecute;
 
@@ -8966,7 +10450,7 @@ internal sealed class RelayCommand<T> : ICommand
         _canExecute = canExecute;
     }
 
-    public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter is T typed ? typed : default) ?? true;
+    public bool CanExecute(object? parameter) => (RoleGate?.Invoke() ?? true) && (_canExecute?.Invoke(parameter is T typed ? typed : default) ?? true);
 
     public void Execute(object? parameter)
     {
@@ -8980,8 +10464,9 @@ internal sealed class RelayCommand<T> : ICommand
     public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }
 
-internal sealed class AsyncCommand : ICommand
+internal sealed class AsyncCommand : ICommand, IRoleGatedCommand
 {
+    public Func<bool>? RoleGate { get; set; }
     private readonly Func<Task> _execute;
     private readonly Func<bool>? _canExecute;
     private bool _running;
@@ -8992,7 +10477,7 @@ internal sealed class AsyncCommand : ICommand
         _canExecute = canExecute;
     }
 
-    public bool CanExecute(object? parameter) => !_running && (_canExecute?.Invoke() ?? true);
+    public bool CanExecute(object? parameter) => !_running && (RoleGate?.Invoke() ?? true) && (_canExecute?.Invoke() ?? true);
     public event EventHandler? CanExecuteChanged;
 
     public async void Execute(object? parameter)

@@ -373,13 +373,18 @@ public sealed class HeadlessComponentUpdateService
     // Shared helpers
     // ------------------------------------------------------------------
 
-    private static ComponentVersionInfo Compare(string group, string component, string installed, string latest, string source, DateTimeOffset now, string detail, bool updateIsInformationalOnly = false)
+    // Public so the logic harness can test the wording.
+    public static ComponentVersionInfo Compare(string group, string component, string installed, string latest, string source, DateTimeOffset now, string detail, bool updateIsInformationalOnly = false)
     {
         var status = "Unknown";
         if (Version.TryParse(NormalizeForVersionParse(installed), out var installedVersion) &&
             Version.TryParse(NormalizeForVersionParse(latest), out var latestVersion))
         {
             status = installedVersion >= latestVersion ? "UpToDate" : "UpdateAvailable";
+            // v0.7.102.0: "Up to date" alone hid that this install is AHEAD of the latest published release
+            // (0.7.x running while the newest public release is 0.2.16.4), which reads as a mistake.
+            if (installedVersion > latestVersion)
+                detail += $" This install ({installed}) is newer than the latest published release ({latest}), so it is a local or unreleased build; there is nothing newer to update to.";
         }
         else if (string.Equals(installed, latest, StringComparison.OrdinalIgnoreCase))
         {

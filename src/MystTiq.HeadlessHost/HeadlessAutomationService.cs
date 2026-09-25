@@ -28,6 +28,8 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
     private readonly HeadlessAlertCenterService? alertCenter;
     private readonly HeadlessMonitoringService monitoring;
     private readonly HeadlessAntiCheatService? antiCheat;
+    private readonly HeadlessCrashReportWatcher? crashReports;
+    private readonly HeadlessResourcePolicyService? resourcePolicy;
 
     private readonly object gate = new();
     private readonly string rulesPath;
@@ -52,7 +54,9 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
         HeadlessActivityLogService activity,
         HeadlessAlertCenterService? alertCenter,
         HeadlessMonitoringService monitoring,
-        HeadlessAntiCheatService? antiCheat)
+        HeadlessAntiCheatService? antiCheat,
+        HeadlessCrashReportWatcher? crashReports = null,
+        HeadlessResourcePolicyService? resourcePolicy = null)
     {
         this.paths = paths;
         this.configuration = configuration;
@@ -67,6 +71,8 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
         this.alertCenter = alertCenter;
         this.monitoring = monitoring;
         this.antiCheat = antiCheat;
+        this.crashReports = crashReports;
+        this.resourcePolicy = resourcePolicy;
 
         var stateRoot = Path.Combine(paths.ManagerRuntimeRoot, "automation");
         Directory.CreateDirectory(stateRoot);
@@ -115,6 +121,18 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
             {
                 try { await alertCenter.EvaluateThrottledAsync(token); }
                 catch (Exception ex) { activity.Record("Warning", "Alerts", "Alert evaluation failed", ex.Message); }
+            }
+            // v0.8.9.0: a new Unreal crash report with a new critical finding is announced.
+            if (crashReports is not null)
+            {
+                try { await crashReports.CheckAsync(DateTimeOffset.UtcNow, token); }
+                catch (Exception ex) when (ex is not OperationCanceledException) { activity.Record("Warning", "Crash Analyzer", "Crash report check failed", ex.Message); }
+            }
+            // v0.8.17.0: the server's priority and eco mode, kept on the game process through restarts.
+            if (resourcePolicy is not null)
+            {
+                try { await resourcePolicy.ApplyAsync(token); }
+                catch (Exception ex) when (ex is not OperationCanceledException) { activity.Record("Warning", "Performance", "Priority and eco mode could not be applied", ex.Message); }
             }
             if (antiCheat is not null)
             {

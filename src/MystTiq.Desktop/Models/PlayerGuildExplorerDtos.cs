@@ -54,8 +54,63 @@ public sealed class BaseExplorerItemDto
     public string Evidence { get; init; } = string.Empty;
 }
 
+// v0.7.92.0: a base's decoded world coordinates (Level.sav.json BaseCampSaveData
+// spawn_transform.translation), attributed to its owning guild when one claims it.
+public sealed class BaseLocationDto
+{
+    [JsonPropertyName("baseId")] public string BaseId { get; init; } = string.Empty;
+    [JsonPropertyName("guildId")] public string GuildId { get; init; } = string.Empty;
+    [JsonPropertyName("guildName")] public string GuildName { get; init; } = string.Empty;
+    [JsonPropertyName("x")] public double X { get; init; }
+    [JsonPropertyName("y")] public double Y { get; init; }
+}
+
+// v0.7.100.0: where a player character last was, from the decoded save. Drawn on the map for players
+// who are not online; online players use their live position instead.
+public sealed class PlayerLocationDto
+{
+    [JsonPropertyName("playerId")] public string PlayerId { get; init; } = string.Empty;
+    [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
+    [JsonPropertyName("x")] public double X { get; init; }
+    [JsonPropertyName("y")] public double Y { get; init; }
+    [JsonPropertyName("z")] public double Z { get; init; }
+}
+
+// v0.8.11.0: an owned Pal out in the world (working at a base, or in its owner's party), at the last position the
+// save recorded. Palbox Pals are only counted (PalSummaryDto), since their saved spot is not where they are.
+public sealed class PalLocationDto
+{
+    [JsonPropertyName("instanceId")] public string InstanceId { get; init; } = string.Empty;
+    [JsonPropertyName("species")] public string Species { get; init; } = string.Empty;
+    [JsonPropertyName("isAlpha")] public bool IsAlpha { get; init; }
+    [JsonPropertyName("level")] public int Level { get; init; }
+    [JsonPropertyName("nickName")] public string NickName { get; init; } = string.Empty;
+    [JsonPropertyName("ownerPlayerId")] public string OwnerPlayerId { get; init; } = string.Empty;
+    [JsonPropertyName("ownerName")] public string OwnerName { get; init; } = string.Empty;
+    [JsonPropertyName("placement")] public string Placement { get; init; } = string.Empty;
+    [JsonPropertyName("baseId")] public string BaseId { get; init; } = string.Empty;
+    [JsonPropertyName("guildName")] public string GuildName { get; init; } = string.Empty;
+    [JsonPropertyName("x")] public double X { get; init; }
+    [JsonPropertyName("y")] public double Y { get; init; }
+    // v0.8.13.0: the species' display name ("Cattiva") when the game's names are available, else empty.
+    [JsonPropertyName("speciesName")] public string SpeciesName { get; init; } = string.Empty;
+}
+
+public sealed class PalSummaryDto
+{
+    [JsonPropertyName("totalPals")] public int TotalPals { get; init; }
+    [JsonPropertyName("onMap")] public int OnMap { get; init; }
+    [JsonPropertyName("inPalbox")] public int InPalbox { get; init; }
+    [JsonPropertyName("withoutPosition")] public int WithoutPosition { get; init; }
+    [JsonPropertyName("unplaced")] public int Unplaced { get; init; }
+}
+
 public sealed class PlayerGuildSnapshotDto
 {
+    [JsonPropertyName("palLocations")] public IReadOnlyList<PalLocationDto> PalLocations { get; init; } = [];
+    [JsonPropertyName("palSummary")] public PalSummaryDto? PalSummary { get; init; }
+    [JsonPropertyName("playerLocations")] public IReadOnlyList<PlayerLocationDto> PlayerLocations { get; init; } = [];
+    [JsonPropertyName("baseLocations")] public IReadOnlyList<BaseLocationDto> BaseLocations { get; init; } = [];
     [JsonPropertyName("available")] public bool Available { get; init; }
     [JsonPropertyName("semanticAvailable")] public bool SemanticAvailable { get; init; }
     [JsonPropertyName("semanticSource")] public string SemanticSource { get; init; } = string.Empty;

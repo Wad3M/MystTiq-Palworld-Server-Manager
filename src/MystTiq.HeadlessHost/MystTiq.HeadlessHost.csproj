@@ -17,6 +17,12 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <!-- v0.8.13.0: the read-only game-name extractor, run with the user's Python (see HeadlessGameNameService). Kept as a
+       file next to the executable, including in single-file publishes. -->
+  <ItemGroup>
+    <None Include="Tools\extract_game_names.py" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.11" />
     <PackageReference Include="Discord.Net.WebSocket" Version="3.20.1" />

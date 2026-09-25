@@ -1,0 +1,362 @@
+[
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-home-light.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 1862360
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-world-light.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 2005629
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-server-dark.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 1878069
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-server-light.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 2086241
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-backups-dark.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 1893579
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-backups-light.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 2253773
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-mods-dark.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 1889006
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-mods-light.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 2108196
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-tools-dark.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 2063938
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-tools-light.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 2215633
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-system-dark.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 1575771
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-system-light.png",
+    "dimensions": [
+      2171,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 1997346
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-configuration.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1336875
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-console.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1464457
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-workspace.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1438574
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-inspector.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1602515
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-players.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1459770
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-bases.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1717709
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-guilds.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1334145
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-map.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1665231
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-backup-sphere.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1942876
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-mod_library.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1921709
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-ue4ss.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1717925
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-update_center.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1282125
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-server_doctor.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1596307
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-crash_analyzer.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1393350
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-save_tools.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1837852
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-diagnostics.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1286091
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-settings.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1648339
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-notifications.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1235603
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-activity_audit.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1464062
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-automation.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 2042684
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-alert_center.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1438445
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-security.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1479500
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-fleet.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1404199
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-dashboard.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1363071
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-server_setup.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1842913
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-mod_dashboard.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "bytes": 1727851
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-home-dark.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 1863022
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-world-dark.png",
+    "dimensions": [
+      2172,
+      724
+    ],
+    "mode": "RGB",
+    "bytes": 1802635
+  }
+]

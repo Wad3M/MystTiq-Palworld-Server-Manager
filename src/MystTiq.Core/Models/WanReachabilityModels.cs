@@ -8,4 +8,5 @@ namespace MystTiq.Core.Models;
 public enum UpnpMappingState { Unknown, Mapped, NotMapped, RouterUnreachable, Unsupported }
 public sealed record WanReachabilityCheck(string Test,DiagnosticState State,string Details,string Recommendation="");
 public sealed record UpnpRepairResult(bool Success,bool Changed,string Message);
-public sealed record WanReachabilityReport(DateTimeOffset CheckedAt,string? PublicIPv4,int GamePort,UpnpMappingState UpnpState,string? RouterDescription,IReadOnlyList<WanReachabilityCheck> Checks);
+// v0.8.12.0: RouterWanIPv4 is the router's own internet-side address (UPnP), optional so every other construction is unchanged.
+public sealed record WanReachabilityReport(DateTimeOffset CheckedAt,string? PublicIPv4,int GamePort,UpnpMappingState UpnpState,string? RouterDescription,IReadOnlyList<WanReachabilityCheck> Checks,string? RouterWanIPv4=null);

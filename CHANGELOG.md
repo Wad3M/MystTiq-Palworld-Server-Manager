@@ -1,3 +1,549 @@
+## v0.8.25.0 — Every Colour Follows the Mode (accepted baseline)
+
+- The decorative colours left out of the theme catalogue by v0.8.16.0 are resources now: 92 colours (glows, borders,
+  surfaces, text, the history charts' background and grid) and 21 whole shadow values, derived per mode by role. Dark
+  is unchanged; Light turns dark surfaces light and darkens bright borders and text; High contrast has white borders
+  and text and no glows; Midnight deepens surfaces. The three keyed gradients no mode reached (warning glass,
+  restore) are derived too, and the charts draw in the theme's accents.
+- Windows contrast themes: with one on, High contrast uses its colours (window, text, highlight, grey text, link,
+  button face and text) and Follow the system switches to it; a light one (Desert) gets the light palette and day art.
+  Changes while MystTiq is open are applied when Windows reports them.
+- Fixed: success buttons had white text at under 2:1 on the Light palettes; the base button text is a resource, so a
+  contrast theme's buttons are readable.
+- The HOST tab has its own page art and navigation icon (the user's; it used the System ones since v0.8.17.0).
+- Set as the accepted baseline (user, 2026-09-25).
+- Checked: ArtworkHarness 542 (19 new), renders of a dark and a light contrast theme and of the HOST tab.
+## v0.8.24.0 — Processor Cores
+
+- The HOST tab's priority card pins a server to chosen processor cores ("0-3, 6"; empty = every core), checked against
+  the machine (at most 64, one Windows processor group). Applied like priority: only where it differs, logged once;
+  clearing the list gives every core back only where MystTiq pinned. Windows: the affinity mask; Linux:
+  sched_setaffinity on every thread.
+- Priority, eco mode and cores are applied as soon as a start or restart through MystTiq succeeds (API, automation,
+  Discord bot, mod safe start), not up to 15 s later. This replaces the planned systemd Nice=, which would also slow the
+  MystTiq service itself and needed a reinstall.
+- Crash signatures: no new real crash reports since 2026-09-16; the clone's five are kinds already covered.
+- Checked: logic harness (3 scenarios), Windows smoke 6/6 on the real stand-in process, Linux VM (every thread).
+## v0.8.23.0 — Every Button Follows the Role
+
+- Every command that needs more than Viewer is disabled below its role, wherever its button is (pages, context menus,
+  the Ribbon); before, only the Ribbon and a few page buttons were, and the server refused the rest. 112 commands and
+  10 code-behind world-edit/mod handlers, e.g. mod enable/disable/delete, backup delete/restore/verify, whitelist and
+  alert settings, player/base/guild edits.
+- The role list is derived from the code (scripts/Testing/Get-MystTiqCommandRoles.ps1 follows each command to the
+  routes it calls) and the gate fails if the table and the code disagree. Local token-less use keeps every command.
+- Checked: ArtworkHarness (every gated command and 245 page controls, local and every role); remote sign-in 42/42 from
+  Windows and 42/42 from Linux.
+## v0.8.22.0 — Signing In, Tested From Linux Too
+
+- Fixed: the window controls (minimize, maximize, close), the settings button and the tab close button showed empty
+  boxes on Linux and Windows 10. They were Segoe Fluent Icons glyphs, a font only Windows 11 has; they are drawn
+  (PathIcon) now. Found by the Desktop's first run on Linux.
+- The remote sign-in test (isolated instance on the Linux VM) now covers an Owner account, the v0.8.19.0 Ribbon gating
+  on every page of the signed-in window (disabled, with the role in the tooltip), the role-bound page buttons, and
+  the server agreeing (Operator, Admin and Owner routes). The same harness is published for linux-x64 and run on the
+  VM, so the Desktop itself signs in from Linux (headless, with its home in /tmp; the VM user's settings are checked
+  untouched).
+- Checked: 38/38 from Windows and 38/38 from Linux; renders inspected on both.
+## v0.8.21.0 — Linux: Back to Full Speed After Eco Mode
+
+- On Linux the MystTiq service can raise the Palworld server's priority again after eco mode (a player joins): the
+  systemd unit service-install writes now sets LimitNICE=-11 (the server inherits it). No capability is added and
+  NoNewPrivileges stays. Existing services keep their old unit until service-install is run again; the HOST tab and
+  the refusal message say so. New `service-unit` command: prints the unit without installing anything.
+- Tests no longer write to the real fleet folder: 19 older smokes used the default FleetRoot (ProgramData), adding
+  audit lines to the real activity log and, since v0.8.20.0, host history readings. New `--fleet-root` option (validated,
+  never written back); every smoke passes it and the gate checks that.
+- Checked: logic harness (the unit), systemd-analyze verify on the Linux VM (5/5, installs nothing), Windows fleet-root
+  smoke (3/3).
+## v0.8.20.0 — Host History
+
+- The HOST tab charts the machine's processor, memory and busiest adapter's upload over the last hour, 24 hours or
+  7 days, with averages and peaks (peaks from every reading). One reading a minute, kept 7 days in the fleet folder,
+  so it survives restarts. A reading without a value is a gap, not a zero.
+- Checked: logic harness, Windows smoke (4/4), the Linux VM (4/4), ArtworkHarness 513.
+## v0.8.19.0 — Every Route Declares Its Role
+
+- Security fix (remote/multi-user use): 105 of 185 routes had no role, so any signed-in principal -- a Viewer, or an
+  account limited to another server -- could run RCON commands, kick/ban, rewrite PalWorldSettings.ini or change mods.
+  Now secure by default: each server's route group needs Viewer to read and Admin to change unless a route declares a
+  lower role (the everyday Operator tasks do), always scoped to its server; fleet-level reads need Viewer. The gate fails
+  on a new unguarded route. Kick/ban/teleport are Admin now. Local token-less use is unchanged.
+- The Ribbon follows the signed-in role (disabled, with the role needed in the tooltip), as do the kick, ban, unban,
+  teleport, RCON and save-now buttons.
+- Checked: a smoke with authentication on (Viewer/Operator/Admin/another server's Admin), the multi-user smoke 11/11,
+  the logic harness, ArtworkHarness 508.
+## v0.8.18.0 — Bandwidth
+
+- Per-server bandwidth limits on the HOST tab: the game's own (default) or a limit per player (0.25-100 Mbit/s) and
+  network updates per second (10-120). The game's real defaults, read from its pak: 64 Mbit/s per player, 60 updates on
+  Windows, 20 on Linux (the common "MaxClientRate=100000" advice cuts that to 0.8 Mbit/s).
+- Written into the server's Engine.ini just before every start (every start path, both platforms), because the engine
+  rewrites that file on exit; only three keys change and the original is kept. Saving while running waits for a
+  restart and says so. An upload estimate warns when a full server could fill the connection and suggests a limit.
+- Checked: logic harness, Windows smoke with supervisor restarts (8/8), the Linux start path on the VM (8/8),
+  ArtworkHarness 502.
+## v0.8.17.0 — The HOST Tab, Process Priority and Eco Mode
+
+- A new HOST tab: the server's machine (processor, memory, uptime), its disks (free space, which holds the install,
+  saves and backups, nearly-full warning) and its network adapters' traffic; readings refresh while open.
+- Per-server process priority (default leaves it alone; below normal to high) and eco mode (off, on, or when no one is
+  online after 1-240 minutes): Windows efficiency mode (EcoQoS) plus below normal; on Linux niceness on every thread.
+  Applied to every server process at once and on every 15-second tick, so it survives restarts and crashes. Eco when
+  empty never starts on an unknown player count. Reading is Viewer, changing is Admin.
+- Checked: logic harness (rules and service), Windows smoke on the real process (9/9), the Linux VM (10/10; raising
+  niceness again needs root or CAP_SYS_NICE, and says so), ArtworkHarness 492.
+## v0.8.16.0 — Theme Modes and Density
+
+- The Light mode checkbox is a Mode picker (per tab): Dark, Light, Midnight (true black), High contrast (white text and
+  borders on black, brighter status colours) and Follow the system (Windows / the Linux desktop, live). Tabs saved as
+  Dark or Light are unchanged; anything unknown is Dark.
+- Density (every tab, remembered): Compact takes cards to padding 7 and buttons/boxes to 26 high; class-specific styles
+  such as the Ribbon keep their size. Card borders are a theme resource now.
+- Checked by the ArtworkHarness (473): contrast ratios per mode, true black, following the system both ways, density.
+
+## v0.8.15.0 — A Real Remote Sign-In
+
+- The Desktop's own code signs in over pinned TLS to an isolated MystTiq on the Linux test VM (remote access switched on
+  the documented way) as Viewer, Operator and Admin: role, cards, server allow/refuse, wrong pin and password, and
+  sign-out (session ended on the server) all checked, 19/19.
+- Fixed: a 401/403 refusal (role, server scope, expired sign-in) was parsed as the route's result, so a refused save
+  looked saved. It is now thrown with its status and a plain message; the sign-in route's own 401 result is unchanged.
+
+## v0.8.14.0 — Cards Follow the Signed-In Role
+
+- One Desktop role rule (RoleAccess) mirroring the server: cards a signed-in role cannot use are hidden, cards it can only
+  read are read-only, and a notice says so. Local token-less use keeps everything.
+- Fixed: Fleet Actions was gated at Admin although the server allows Operators.
+- Checked by the ArtworkHarness for local, Viewer, Operator, Admin and Owner (every gated card, the notice).
+
+## v0.8.13.0 — Game Names, and an Image on Every Ribbon Button
+
+- Item and Pal display names read from the server's own game pak by MystTiq's read-only extractor script (the user's
+  Python and its Oodle module), cached per pak: the Give Item picker shows and searches names and lists the game's
+  other items and Pals (marked "not yet seen on this server"); the map shows species names. Without Python/ooz it
+  works on ids and says why.
+- The user's last ten Ribbon images: every one of the 50 Ribbon labels now has an image.
+- Verified on Windows (real pak) and the Linux VM (8/8; the VM's ooz is incomplete, so the honest fallback was checked).
+
+## v0.8.12.0 — Second-NAT Check, and UPnP That Works
+
+- The WAN reachability check detects a second NAT (carrier-grade NAT or double NAT) from the router's UPnP WAN address;
+  without it, the route out is weak evidence (a private next hop is "cannot tell", never a warning). An always-present
+  "Outside-in test" entry says no check here can prove outside reachability.
+- UPnP fixed on Linux (control URLs parsed as file:// URIs) and on multi-interface Windows (the search now goes out from
+  every LAN interface): this server finds its router over UPnP for the first time. Result on the real network: no second
+  NAT (the router holds the public address); an earlier draft's double-NAT warning was wrong and was corrected.
+- Verified on Windows and on the Linux VM (Test-v0.8.12.0-LinuxIsolated.ps1, also covering v0.8.9.0 and v0.8.11.0).
+
+## v0.8.11.0 — Pal Positions on the Map
+
+- Owned Pals working at bases or in players' parties are drawn on the Palpagos map (violet, clustered with a count; a
+  cluster beside a base is a badge on its corner). Palbox Pals are counted but not drawn, since their saved spot is where
+  each was last let out; unset positions and wild Pals are not in it either, and the map says so.
+- Explorer snapshot gains palLocations and palSummary. Map name labels now step around the Pal markers.
+- Checked with 2 harness scenarios, a route smoke, and the real world on the clone profile (11 on the map, 65 in a Palbox).
+
+## v0.8.10.0 — Ribbon Icon Originals
+
+- All 30 Ribbon images replaced by the user's "originals" packages (full framed 1254 px tiles, nine batch 3 redesigns),
+  resized to 512 px; shipped and original SHA-256 recorded in docs/ribbon-icons/images/README.md.
+- Quick Actions' Backup and Doctor (every page) now show the Create and Run Doctor images.
+- Still without an image: Refresh and its page variants, Start, Restart, Stop, Console, Force Stop, Verify Files,
+  Install Missing, Run Analysis, Preview Plan.
+
+## v0.8.9.0 — Crash Reports in the Crash Analyzer
+
+- The Crash Analyzer now reads Unreal's crash reports (Pal\Saved\Crashes\UECC-*\CrashContext.runtime-xml) as timestamped
+  evidence; it only read logs before. A new "Engine stopped on an invalid array size" signature comes from a real report.
+- New crash reports are watched: a new critical finding from a new report sends an alert (old reports are recorded silently
+  on upgrade; mute, the crash-alert switch and a recent crash-recovery alert are respected).
+- Checked with 3 harness scenarios, a route smoke, and read-only copies of the server's three real crash reports.
+## v0.8.8.0 — Ribbon Image Icons
+
+- The user's three icon batches (30 full-colour illustrated tiles) on the Ribbon across 13 pages: Export, Save, Import,
+  Pause, Clear, Run Doctor, Kill Processes, Enable/Disable All, Validate, Export CSV and more. Embedded unchanged (hashes
+  recorded in docs/ribbon-icons/images); an image icon takes precedence over a vector icon and the glyph.
+- Checked on every page that has them, in dark and light. Only Run Analysis and Preview Plan still use a text glyph.
+## v0.8.7.0 — The Dashboard in Every Language
+
+- Every fixed Dashboard label, button and tooltip, and its number templates (Stored / online / known player(s) ...),
+  in German and Spanish, via the new `{services:TrFormat key, Path=...}` (translated template + live value). English is
+  unchanged; the Dashboard's status values are still English.
+- Fixed: at 950x650 "MEMORY" split mid-word (English too); the CPU/MEMORY card now sizes its label columns to their
+  text, and German/Spanish use shorter words where space is narrow. A new check fails on any split or cut-off label.
+## v0.8.6.0 — The Ribbon in Every Language
+
+- All 50 Ribbon button labels and 26 group titles are translated (German, Spanish), including the overflow menu; the
+  icons still match the English label, which stays the button's identity. English is unchanged.
+- Fixed: on the UE4SS and Doctor pages the last Ribbon buttons could be cut off under the page header, even in English;
+  the layout now estimates each button from its shown text, so they move to the overflow menu instead.
+- Checked on every page, in all three languages, at 950x650 and 1440x880.
+## v0.8.5.0 — Display Language (first slice)
+
+- Settings → Appearance → Language: English, Deutsch, Español. Applies at once and is remembered on this computer.
+- Translated so far: the 7 category tabs, the 26 navigation items and every page's title and subtitle; the rest stays
+  English for now. English is unchanged and is the fallback for anything a translation lacks.
+- Strings live in `Assets/i18n/<code>.json`; adding a language is one file, and the gate fails on any missing key.
+- Checked with headless renders of German and Spanish (live switch, tabs fitting at 950x650, back to English) and in the live app.
+## v0.8.4.0 — Pause Discord, Email & Webhooks
+
+- Alert Center can pause outside delivery (Discord, email, webhooks) for 1 h to 7 days (capped at 30 days, host clock);
+  every alert and notification still appears on the Notifications page, and each skipped send is in the Activity log.
+  Not queued: nothing from the pause is sent afterwards. Unlike Mute Alerts, nothing is silenced inside MystTiq.
+- "Send Test Notification" goes through the normal path and says where it went.
+- New routes `GET /notifications/delivery`, `POST /notifications/delivery/pause` and `POST /notifications/test` (Admin).
+- Checked with a real webhook receiver in the logic harness and a route smoke, and in the live app.
+## v0.8.3.0 — Give Item Picker
+
+- A "Find an item or Pal" search under Player Administration: lists the item and Pal ids that occur in the server's own
+  world save (so they match the installed game version), plus Starter Kit ids and ids given before, with where each comes
+  from; Add to Give / Add to Selected Kit writes the line, Pals by level. Typing ids by hand still works.
+- New read-only route `GET /api/v1/players/give/catalog` (Operator); the save is streamed and cached until it changes.
+- Checked with 5 logic-harness scenarios, a route smoke (19 MB save in 0.3 s), the real world (read only) and the live app.
+## v0.8.2.0 — Service Mode Fixes
+
+- First release on the accepted baseline, v0.8.1.0 (set 2026-09-23).
+- Service mode (`service-run`, used by the installed Windows service or systemd unit) now waits for the server's
+  configured game port instead of always UDP 8211, so servers on other ports no longer "fail to start" and stop the service.
+- The embedded management API no longer runs a second crash-recovery loop for the profile the service already
+  supervises; the service supervisor uses that profile's crash alerts, mute rules and persisted recovery state.
+- After a give-up and an OS-triggered service restart, the server is announced back up once ready and the DOWN notice is
+  unpinned; a new DOWN notice unpins the previous one.
+- New stand-in PalServer (`scripts/Testing/FakePalServer`) and an end-to-end service-mode smoke on the published build.
+## v0.8.1.0 — Ribbon Icons
+
+- The user's Palworld-inspired vector Ribbon icons for Refresh, Start, Restart, Stop, Backup, Console, Doctor,
+  Verify Files, Install Missing and Force Stop, drawn to the package spec (24px, 1.8 rounded stroke) in the same
+  theme colours; the other "Refresh …" buttons and "Restart Server" use the matching icons, everything else keeps
+  its glyph.
+- The supplied package is kept under `docs/ribbon-icons/`; a gate contract checks the path data against it.
+- Checked with 42 new rendering checks (dark and light), the full gate and the live app.
+## v0.8.0.0 — Artwork Refresh
+
+- The user's updated graphics from the v0.7.110.1 artwork build, merged into the current code: 26 distinct
+  navigation icons, and day/night artwork for all seven categories in the page header, workspace and setup wizard.
+- The artwork header now has its own space beside the Ribbon, so small windows no longer let it cover the
+  category tabs or commands. Seven retired images removed.
+- All v0.7.111.0–v0.7.115.0 work kept (3-way merge, zero conflicts). Checked with the artwork build's 149 offline
+  rendering checks run against the merged code, the full gate, and live screenshots. Closes deficiency item 6.
+## v0.7.115.0 — Deficiency Fixes
+
+- Map labels are laid out as real text boxes next to their own markers, so they no longer overlap; player
+  names, which had never actually rendered, now show; marker dots sit exactly on their point.
+- Crash recovery remembers its restart window, its give-up and the pinned "server is DOWN" notice across a
+  MystTiq restart, so the notice can still unpin and a given-up server is not restarted again.
+- "Server is back up" now waits for the game port (ready), not just a process; a restart that never becomes
+  ready counts as a failed restart.
+- Operation history is reloaded after a restart; an operation cut off mid-run is marked Interrupted.
+- The release checklist no longer names an old version; the full gate no longer fails on its own build
+  folders (the long-standing "known residue") and skips, instead of crashing on, a missing baseline archive.
+- Checked with 4 new logic-harness scenarios, a rewritten map-label scenario, a live smoke that restarts the
+  real backend mid-crash-cycle, and before/after map screenshots. Item 6 (icons/header art) deferred.
+## v0.7.114.0 — Multi-User Login
+
+- Named user accounts: the Owner creates people on the Security page (role, optional single server,
+  password); they sign in from Settings. A role change applies at once; disabling or a password reset signs
+  them out everywhere; sessions last 12 hours.
+- Passwords stored only as salted PBKDF2 hashes, session tokens only as hashes; 5 wrong passwords lock an
+  account for 15 minutes. The audit log now names who made each API call. The Desktop loads your role on
+  connect, so role-gated controls are right on every page.
+- Existing tokens keep working. Needs authentication on (remote access). Checked with 3 new logic-harness
+  scenarios and an 11-check live smoke with authentication really on.
+## v0.7.113.0 — Teleport Points
+
+- Players can teleport from anywhere to a named point by typing a chat command (`!tp spawn`, or `!tp` to list
+  them). Set up on the Map page's new Teleport Points card, with a cooldown, "Capture Selected Player's
+  Position" and "Send selected player to" a point.
+- A chat command because the game's own fast travel cannot be opened up from the server (only on/off and
+  base-camps-only exist; fast travel from anywhere is a client-side mod). Needs PalDefender, RCON and the
+  Palworld REST API; only a player online under exactly that name and id can trigger it.
+- Checked with 5 new logic-harness scenarios and a live smoke where a PalDefender chat line produced exactly
+  the right teleport over RCON (and an impostor line produced nothing). Not yet checked with a real player.
+## v0.7.112.0 — Give Item
+
+- Give Item on the Players page works: a "Give items or Pals" box on Player Administration (same format as
+  Starter Kits) and a live right-click entry, replacing the disabled "BACKEND REQUIRED" stub.
+- Delivered through PalDefender over RCON like Starter Kits, only to an online player, with a plain reason when
+  PalDefender or RCON is missing. Ids that are not plain Palworld ids are refused before anything is sent. A
+  one-off give is not a kit claim.
+- Checked with a new logic-harness scenario and a live route smoke of every refusal; an item arriving in a real
+  player's inventory is not yet verified (no player online).
+## v0.7.111.0 — Alert Mute and Crash Alert Settings
+
+- Crash Alerts settings on the Alert Center page, per server profile: switch crash-recovery alerts off, or
+  keep them without the "server is back up" notices.
+- Mute Alerts: silence every alert for one server for 1 hour, 8 hours, 24 hours or 7 days. A mute always ends
+  by itself (capped at 30 days); anything still wrong alerts when it ends. Crash recovery itself keeps working
+  while muted, and skipped crash alerts are written to the Activity log.
+- Checked with 3 new logic-harness scenarios, a live smoke with a real crash while muted, and in the Desktop.
+## v0.7.110.0 — Crash Recovery: Watching After a Give-Up
+
+- When automatic crash recovery gives up, MystTiq now keeps watching (api-run/Desktop sidecar only; the
+  OS-service `service-run` mode's own recovery contract is untouched) instead of pinning a "server is DOWN"
+  notice with no way to ever unpin it.
+- The moment the server is running again — started by you, not the loop — the pinned notice unpins itself and
+  a plain "server is back up" notice arrives. Crash-detect-and-restart monitoring genuinely resumes afterward.
+- Checked with two logic-harness scenarios and a new live smoke against the real Windows lifecycle service,
+  including a real process the OS itself recognizes as PalServer.
+
+A GitHub release for 0.7.x and contacting Nexus Mods before any public release are now v0.8.x roadmap items.
+## v0.7.109.0 — Map: Spreading Out Exactly-Coincident Markers
+
+- Markers at (or extremely near) the exact same screen position now fan out a few pixels around that point
+  instead of stacking invisibly on top of each other — the one residual gap v0.7.106.0's own doc named.
+- The first marker in a coincident group stays exactly on its real position; anything with real separation is
+  completely untouched, using a much tighter radius than the existing label-collision fix.
+- Checked with a new logic-harness scenario and live on the real Map page: a cluster of offline players that
+  was a single ring now shows as 4 distinct rings, while a nearby base stayed exactly where it was.
+## v0.7.108.0 — Alert Center: Configurable Reminder Interval
+
+- The reminder interval added in v0.7.107.0 was an environment-variable-only live-testing knob; it's now a
+  real "Reminder every (minutes, 0 = off)" field on the Alert Center page, saved by the existing Save Rules
+  button, applying to every rule.
+- Defaults to 1440 (24 hours), same as before; a rules file saved before this version loads with that same
+  default rather than turning reminders off. The environment variable still overrides it for live testing.
+- Checked with a new logic-harness scenario (including the upgrade-from-an-old-rules-file case) and a new live
+  smoke that deliberately proves the setting itself, not just the env var, drives the cadence.
+## v0.7.107.0 — Alert Center: Reminder Re-alerts
+
+- A condition that is still true after 24 hours now gets a follow-up "Still active: ..." notice, repeated
+  every 24 hours until it clears — before, a long-running condition alerted once and then said nothing else.
+- The reminder is never pinned, even for a Critical; only the original alert is (and it still unpins itself on
+  recovery, from v0.7.104.0). Reminders would otherwise grow the pinned count without bound.
+- Recovering stops the reminders immediately.
+- Checked with two new logic-harness scenarios and a new live smoke (interval shortened for testing).
+## v0.7.106.0 — Map: De-overlapping Marker Labels
+
+- Markers standing close together on the Map page (players sharing a base, a base near the spawn plateau) had
+  their name labels draw directly on top of each other. Labels whose text would collide now stagger into a
+  readable column; the dot itself is never moved, only its label.
+- Reacts to zoom: markers that spread apart on zooming in naturally un-stagger back to normal once there's
+  enough real screen distance between them.
+- Checked live on the clone's real Map page: a base and a nearby offline player's overlapping labels now draw
+  as two clean, separate lines. One known limit: two dots at the exact same screen position still render as a
+  single visible dot; this only fixes the label text.
+## v0.7.105.0 — Doctor: Confirm Before Fix
+
+- Every Doctor Fix button (Create Nightly Backup Rule, Create Backup Folder, Install / Repair Server Files) now
+  needs an explicit "Confirmed" checkbox ticked first, with a tooltip naming exactly what the fix does. The
+  button stays disabled until it's ticked. Before, clicking the button ran the fix immediately.
+- Same pattern Backup Restore already uses, applied per finding since more than one Doctor finding can offer a
+  fix at once.
+- Checked with a new logic-harness scenario and on the running app.
+## v0.7.104.0 — Alert Center: A Pinned Alert Unpins Itself
+
+- A pinned Critical alert (Low disk space by default) now unpins itself the moment its condition clears,
+  alongside the existing "Resolved: ..." notice. Before, it stayed pinned forever even after the Resolved notice
+  had already arrived — a gap named in v0.7.102.0.
+- Switching the rule off while an alert is still pinned unpins it too, without fabricating a Resolved notice for
+  that path (nothing was actually fixed; the rule was just turned off). Before, this left the alert stuck pinned
+  with no follow-up at all.
+- Nothing else about alerting changed: one alert per episode, silence while the condition holds, no re-alert
+  inside the cooldown.
+- Checked on two isolated sidecars (recovery, and switching off mid-episode) and on the final published binary.
+  Not verified: the same gap on the crash-recovery "server is DOWN, automatic recovery gave up" pinned notice,
+  which is a separate mechanism and out of scope for this version.
+## v0.7.103.0 — Doctor: Scheduled Backups and a One-Click Fix
+
+- New Doctor finding "Scheduled backups": warns when no automation rule creates backups, when they are all off, when
+  none runs at least weekly, or when the scheduled rule last failed (with the reason); passes when a healthy schedule
+  exists.
+- With no backup rule at all it offers "Create Nightly Backup Rule" (a backup every day at 03:00 UTC). Two clicks at
+  once still create one rule, it never duplicates an existing rule, it needs the Admin role, and it says what it
+  created and where to change it. Nothing is created until the button is pressed.
+- The Doctor's fix buttons are labelled by what they do instead of "Fix Automatically".
+- Checked on a real sidecar (including simultaneous clicks) and on the running app. Not verified: the Admin-role
+  refusal with a real Operator token.
+## v0.7.102.0 — Deficiency Fixes From Walking the Running App
+
+- Fixed a data risk: Configuration showed a phantom "1 unsaved change" for a setting the file holds outside its
+  slider's range (Item Corruption Rate 0.05 under a 0.1 minimum), and Save would have overwritten it. Sliders no
+  longer write back a clamped or snapped echo of an existing value; a genuine drag is still recorded. Item
+  Corruption Rate now ranges 0 to 10.
+- Alert Center: conditions are episodes. One alert when a condition starts, one "Resolved" notice when it clears,
+  remembered across restarts. Before, a persistent condition re-alerted every cooldown as a pinned Critical (83
+  unread, five identical "Low disk space").
+- The Doctor and Alert Center use one disk rule (Critical under 2 GiB or at or under the configured percentage,
+  Warning under 5 GiB), so they no longer disagree about the same disk.
+- Diagnostics Center shows a stopped server as "NOT RUNNING" instead of "Network: ERROR" (a crash is still an
+  error), and Restart Server there needs a running server.
+- Backups retention boxes show two-digit values; Update Center says when the install is newer than the latest
+  published release; Automation says when nothing is scheduled.
+- Checked live on a real sidecar and on the running app. Existing stale notifications are not deleted.
+## v0.7.101.0 — Crash Alerts: Tell the Admin When the Server Crashes
+
+- The crash-recovery loop restarted a crashed server but only wrote to the console. It now sends notifications:
+  a critical alert on a crash (when the restart happens, the likely cause from the logs, the first thing to try,
+  any mod the evidence names), a "server is back up" notice, a warning for a failed restart saying how many
+  attempts remain, and a pinned critical "server is DOWN, automatic recovery gave up" when it stops trying.
+- A crash that leaves no new evidence says so instead of blaming a stale log line. The log analysis runs at the
+  moment of the crash and is recorded, so the Crash Analyzer shows the same finding.
+- Alerts use the normal notification pipeline (Notifications page and any configured Discord/email/webhook
+  routes). Restart behaviour and limits are unchanged; an alert failure can never stop a restart.
+- Verified end to end on a real sidecar with a seeded crash. Not verified: delivery to Discord/email/webhooks,
+  the Notifications page rendering, a real Palworld crash, or the OS-service supervisor (no alerts there).
+## v0.7.100.0 — Map: Zoom, Click-to-Zoom, and Last-Known Player Positions
+
+- Scroll to zoom toward the cursor (up to 10x) without scrolling the page; drag to pan; zoom readout and Reset View.
+- Click a marker or a name (players and bases, on the map and in both lists) to zoom in on it.
+- Offline players are now on the map as hollow grey rings at the last position the save recorded; online players
+  stay solid green dots at their live position. Lists mark each player online or offline with in-game
+  coordinates, and a switch hides offline players. With the server stopped you can see where everyone last was.
+- On the real world all five players' last positions are within a few map units of the game's start plateau,
+  which also confirms the v0.7.96.0 calibration.
+- Last known is approximate (the game's last recorded location for the character) and labelled that way.
+- Backend: the explorer route returns `playerLocations` read from the decoded save; a read failure degrades to
+  none without touching the guild and base data.
+- Checked live on the running app. Not verified: solid green online dots (nobody was online). Labels of
+  players standing together still overlap.
+## v0.7.99.0 — Dedicated Map Page Under World
+
+- New Map page in the World group (after Guilds), with its own icon. The live map was a card on the Players
+  page, which is why it was hard to find; it moved here and Players now has an Open Map button.
+- Map first: the map is on the left and fits the window; presets, the real-world-positions switch, the players
+  list (click a name to select; Teleport To Me / To Player) and a Guild bases list are beside it.
+- Lists and tooltips show in-game map coordinates, e.g. "MystTik (248, -495)".
+- Fixed: every map marker was drawn in the top-left corner since the markers were first built. They now land on
+  their real position.
+- Fixed: markers were about 9 map units east of their point (the shape was centred in the label under it).
+- With both fixed, the Default Server's bases show on the start peninsula and the southern island, as the
+  v0.7.96.0 calibration predicted.
+- First version verified by looking at the running app (window capture and synthetic clicks): the Map page, the
+  v0.7.98.0 Doctor findings and the v0.7.97.0 Crash Analyzer page were checked on screen.
+- Not verified on screen: player dots (no player was online) and the Crash Analyzer detail pane with data.
+## v0.7.98.0 — Doctor: Disk, Backups, Admin Password, Memory and Recent Crashes
+
+- The Doctor did not check the things that end a server's life. It now does, through the same report the
+  Doctor page and the Dashboard badge already read.
+- Disk space on every platform (it was Linux-only): Fail under 2 GiB free, Warning under 5 GiB, and a Warning
+  when the next backup would not fit.
+- Backup freshness, judged against the world rather than the clock (how long the world's latest changes have
+  gone unprotected). A world with no backup warns.
+- Admin access: warns when the REST API or RCON is on and the AdminPassword is empty, very common or under 8
+  characters. The password is never shown in the report.
+- Memory: warns on a small machine or little free memory.
+- Recent crashes: a new critical Crash Analyzer finding now reaches the Doctor and the Dashboard badge; running
+  the analysis again marks it reviewed and clears it.
+- Real finding on the Default Server while testing: its newest backup was 12 days old and the world changed
+  6.4 days after it (confirmed against the files).
+- 5 new logic-harness scenarios and a live route smoke.
+- Not verified: how the Doctor page renders (no GUI automation), and the Linux code paths.
+## v0.7.97.0 — Crash Analyzer: Known Causes, Fixes, and No More Repeats
+
+- The headless Crash Analyzer was a keyword counter. Findings now come from a catalog of 12 known failure
+  signatures, each with a plain-language cause and concrete fixes.
+- Fixed false findings: the old out-of-memory needle also matched "room" and "zoom", and any line that merely
+  mentioned UE4SS was flagged (130 lines on a healthy server's real log). Matching is now word-anchored.
+- Understands MystTiq's own "process exited with code ..." lines (access violation, stack overflow, missing DLL,
+  fatal failure, Linux 137/139/134); exit code 0 and -1 mean nothing.
+- Names installed mods that appear in the evidence (a lead, not proof) and puts them first in the isolation plan.
+- Findings are marked NEW or already reported, so re-running on the same logs does not re-raise old lines.
+  First and last seen come from log timestamps.
+- Crash Analyzer page shows the selected finding's cause, what to try, mods, timing and evidence.
+- Fixed stale data: another server's crash findings are cleared on a tab switch.
+- New live route smoke and 7 logic-harness scenarios; reports saved by older builds still load.
+- Not verified: page rendering (no GUI automation), and the fix text against a real Palworld crash.
+## v0.7.96.0 — Live Map: Players and Bases Work Out of the Box
+
+- Reported: maps were supplied but player and base positions were not visible. The World Map is now open by
+  default, starts on the bundled Palpagos map on a first run, and shows real positions and guild bases by
+  default (the checkbox remains as an off switch, no longer "experimental").
+- Fixed the world-to-image conversion: the bundled image is the expanded map including Feybreak, but the old
+  mapping assumed the pre-expansion frame. Calibrated against the documented default start location and a
+  real world's base, 53 character positions and travel trail. Accurate to a few pixels of the image.
+- Bases load with the Players page read and draw while the server is stopped (they come from the world save).
+- New status line explains what is drawn (nobody online, no reported position, N bases shown).
+- Logic harness: 3 new map scenarios; the two dependency-free map files are compiled straight into it.
+- Not verified: how the card renders on screen (no GUI automation here).
+## v0.7.95.0 — Discord Bot: Live Status, Join/Leave Feed, Autocomplete, More Commands
+
+- First of the "enhancements to features we already have". Reading the bot first showed per-role permission
+  mapping already exists, so it was not rebuilt; the real gaps were that the bot never posted on its own,
+  kick/ban needed a hand-typed player id, and there was no save/backup/unban.
+- Live status message in a chosen channel (one self-updating embed, survives restarts), bot presence
+  ("Watching N players online"), and an optional events feed (joins, leaves, server online/stopped/crashed)
+  that never mistakes a restart for everyone leaving.
+- Kick/Ban autocomplete from the players online now; new `/mysttiq-save`, `/mysttiq-backup` (Operator) and
+  `/mysttiq-unban` (Admin).
+- Safety: all bot replies/posts send no mentions, so a player named `@everyone` cannot ping the guild
+  (also fixes existing replies); names are markdown-escaped; channel ids are validated as snowflakes.
+- Old bot configs still load; new fields default sensibly.
+- Not verified against real Discord (no bot token here). 6 new logic-harness scenarios cover the pure logic.
+- Touches `MystTiq.Core`, `MystTiq.HeadlessHost`, `MystTiq.Desktop`.
+
+Full detail: [`release-notes/v0.7.95.0.md`](release-notes/v0.7.95.0.md),
+[`docs/architecture/v0.7.95.0-discord-bot-live-features.md`](docs/architecture/v0.7.95.0-discord-bot-live-features.md).
+
+## v0.7.94.0 — Starter Kits
+
+- Third and last of the "real gaps" from the competitive feature review. New collapsed Starter Kits card
+  on the Players page: build named item/Pal loadouts, give one to a selected online player, or auto-gift
+  it to new players.
+- Delivery needs PalDefender (vanilla Palworld has no give command): `giveitems`/`givepal` over RCON.
+  The card shows the real provider status and has a Test PalDefender button; nothing pretends to work.
+- Auto-gift only gifts players MystTiq first sees after it is switched on, once each, so enabling it never
+  mass-gifts existing players. Failed deliveries retry at most 3 times and are never recorded as claimed.
+- Strict id validation doubles as the guard for text sent over RCON; a reply that reads as an error counts
+  as a failed delivery.
+- Not verified live: PalDefender's actual reply (needs the Default Server running with a player online).
+- Touches `MystTiq.Core`, `MystTiq.HeadlessHost`, `MystTiq.Desktop`; 9 new logic-harness scenarios.
+
+Full detail: [`release-notes/v0.7.94.0.md`](release-notes/v0.7.94.0.md),
+[`docs/architecture/v0.7.94.0-starter-kits.md`](docs/architecture/v0.7.94.0-starter-kits.md).
+
+## v0.7.93.0 — Nexus Mods Catalog
+
+- Second of the "real gaps" from the competitive feature review. New collapsed Nexus Mods Catalog
+  card on the MOD Library page: connect with your own Nexus API key, browse Trending / Latest Added /
+  Latest Updated Palworld mods, look one up by id or page URL, list its files, and install a ZIP through
+  the existing validated ZIP install.
+- Honest about Nexus's rules (read from its API spec and policy first): the public API has no search and
+  lists only 10 per category, and only Premium accounts get direct download links. Free accounts use
+  Open on Nexus or paste the nxm:// link (Install From Link). Nothing bypasses Premium.
+- The API key stays on the PC and is never sent to the MystTiq server; Save Key stores it
+  DPAPI-encrypted, Forget Key removes it. Downloads are limited to https Nexus hosts, capped at 750 MB,
+  ZIP-sniffed, and installed through the server's existing extraction limits.
+- Not verified end to end (no Nexus key available): the first real Connect / list / install is the true
+  test. Nexus's policy asks public apps to contact them with a test build before release.
+- Touches `MystTiq.Core` and `MystTiq.Desktop`; 5 new logic-harness scenarios.
+
+Full detail: [`release-notes/v0.7.93.0.md`](release-notes/v0.7.93.0.md),
+[`docs/architecture/v0.7.93.0-nexus-mods-catalog.md`](docs/architecture/v0.7.93.0-nexus-mods-catalog.md).
+
+## v0.7.92.0 — World Map: Guild Base Markers and Click-to-Select
+
+- First of the "real gaps" from the competitive feature review. The live World Map now plots guild
+  bases (amber squares, labelled with the guild) from the base coordinates in the decoded
+  `Level.sav.json`; verified live against the real world (both "MystTik" bases returned with the
+  coordinates stored in the save).
+- Markers show in the experimental real-world-position mode only: bases are save coordinates and
+  players are REST fields, and only the calibrated formula treats them as one coordinate space.
+- Click a player dot to select that player for Teleport To Me / Teleport To Player (new action row
+  under the map). Vanilla RCON has no teleport-to-coordinates command, so click-anywhere teleport is
+  not offered.
+- New Refresh Bases button; bases load once when first shown, never on the status poll; tab switches
+  clear them so one server's bases never appear on another's map.
+- Touches `MystTiq.HeadlessHost` and `MystTiq.Desktop`.
+
+Full detail: [`release-notes/v0.7.92.0.md`](release-notes/v0.7.92.0.md),
+[`docs/architecture/v0.7.92.0-world-map-base-markers.md`](docs/architecture/v0.7.92.0-world-map-base-markers.md).
+
+## v0.7.91.0 — Crash-Risk Configuration Detection
+
+- Follow-up to a competitive feature review against other Palworld server managers: Doctor now
+  flags `BuildObjectDeteriorationDamageRate = 0` -- a community-reported cause of long-running
+  server instability (disables cleanup of decayed base structures, letting entity counts grow
+  unbounded). Two of MystTiq's own bundled QoL presets set this value to exactly 0.
+- Scoped narrowly to this one well-evidenced, non-default setting; `bEnableInvaderEnemy` was
+  deliberately left out since it's vanilla-default-enabled and its risk is player/base-count
+  dependent, not universal -- flagging it unconditionally would be a wall of false positives.
+- No Desktop UI changes -- the finding appears automatically via the existing generic
+  `DiagnosticFindings` binding. Touches `MystTiq.HeadlessHost` only.
+
+Full detail: [`release-notes/v0.7.91.0.md`](release-notes/v0.7.91.0.md),
+[`docs/architecture/v0.7.91.0-crash-risk-config-detection.md`](docs/architecture/v0.7.91.0-crash-risk-config-detection.md).
+
 ## v0.7.90.0 — Install With Extras (UE4SS)
 
 - Direct live feedback: "we should add that as part of the install, option to install just the

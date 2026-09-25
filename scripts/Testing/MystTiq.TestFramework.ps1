@@ -29,24 +29,28 @@ function Add-MystTiqCheck {
         [Parameter(Mandatory)][bool]$Passed,
         [string]$Details = '',
         [ValidateSet('Critical','High','Medium','Low','Info')]
-        [string]$Severity = 'High'
+        [string]$Severity = 'High',
+        # v0.7.115.0: a check that could not run here (e.g. a baseline archive that only exists on the release
+        # machine). Shown as SKIP with its reason and counted separately; it neither passes nor fails the gate.
+        [switch]$Skipped
     )
 
     $result = [pscustomobject]@{
         Area     = $Area
         Check    = $Name
-        Passed   = $Passed
+        Passed   = ($Passed -or $Skipped)
+        Skipped  = [bool]$Skipped
         Severity = $Severity
         Details  = $Details
     }
 
     $Context.Checks.Add($result)
 
-    $tag = if ($Passed) { 'PASS' } else { 'FAIL' }
-    $color = if ($Passed) { 'Green' } else { 'Red' }
+    $tag = if ($Skipped) { 'SKIP' } elseif ($Passed) { 'PASS' } else { 'FAIL' }
+    $color = if ($Skipped) { 'Yellow' } elseif ($Passed) { 'Green' } else { 'Red' }
     Write-Host ("[{0}] [{1}] {2} :: {3}" -f $tag, $Severity, $Area, $Name) -ForegroundColor $color
 
-    if (-not $Passed -and $Details) {
+    if (($Skipped -or -not $Passed) -and $Details) {
         Write-Host ("       {0}" -f $Details) -ForegroundColor DarkYellow
     }
 
@@ -264,7 +268,9 @@ function Complete-MystTiqTestContext {
     Write-Host ''
     Write-Host ("================ MystTiq v{0} {1} Summary ================" -f `
         $Context.Version, $Context.Suite) -ForegroundColor Cyan
-    Write-Host ("Passed: {0} / {1}" -f $passedCount, $Context.Checks.Count)
+    $skipped = @($Context.Checks | Where-Object { $_.PSObject.Properties['Skipped'] -and $_.Skipped })
+    Write-Host ("Passed: {0} / {1}" -f ($passedCount - $skipped.Count), ($Context.Checks.Count - $skipped.Count))
+    if ($skipped.Count -gt 0) { Write-Host ("Skipped: {0} (could not run here; see SKIP lines)" -f $skipped.Count) -ForegroundColor Yellow }
     Write-Host ("Failed: {0}" -f $failed.Count)
     Write-Host ("Critical failures: {0}" -f $criticalFailures.Count)
 

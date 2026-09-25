@@ -55,15 +55,29 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required HeadlessWorldCloneService WorldClone { get; init; }
     public required WanReachabilityService WanReachability { get; init; }
     public required HeadlessFleetCrashRecoveryService CrashRecovery { get; init; }
+    // v0.8.2.0: exposed so service-run's own supervisor (which owns this profile's crash recovery in service mode)
+    // sends the same alerts and keeps the same persisted recovery state.
+    public required CrashAlertObserver CrashAlerts { get; init; }
+    public required SupervisorRecoveryStateStore RecoveryState { get; init; }
     public required HeadlessPalEditService PalEdit { get; init; }
     public required HeadlessPlayerDeletionService PlayerDeletion { get; init; }
     public required HeadlessPlayerCopyService PlayerCopy { get; init; }
     public required HeadlessDiscordBotService DiscordBot { get; init; }
     public required HeadlessAntiCheatService AntiCheat { get; init; }
     public required HeadlessWhitelistService Whitelist { get; init; }
+    public required HeadlessKitService Kits { get; init; }
+    public required HeadlessGameIdCatalogService GameIds { get; init; }
+    public required HeadlessTeleportService Teleport { get; init; }
     public required HeadlessTemporaryBanService TemporaryBans { get; init; }
     public required HeadlessComponentUpdateService ComponentUpdates { get; init; }
     public required HeadlessModSafeStartService ModSafeStart { get; init; }
+    // v0.8.17.0: process priority and eco mode for this server, and the machine's own readings (one monitor for the fleet).
+    public required HeadlessResourcePolicyService ResourcePolicy { get; init; }
+    public required HeadlessHostMonitor HostMonitor { get; init; }
+    // v0.8.20.0: the machine's history (one instance for the fleet).
+    public required HeadlessHostHistoryService HostHistory { get; init; }
+    // v0.8.18.0: bandwidth (the server's Engine.ini network limits).
+    public required HeadlessNetworkPolicyService NetworkPolicy { get; init; }
 
     public async ValueTask DisposeAsync()
     {

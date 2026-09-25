@@ -52,17 +52,24 @@ public sealed class HeadlessNotificationService
     // General-purpose notification creation -- the entire integration surface the Alert Center
     // and the automation SendNotification action need. No parallel notification pipeline.
     public HeadlessNotificationSnapshot Create(string severity, string title, string message, bool pinned = false)
+        => Create(severity, title, message, pinned, out _);
+
+    // Same as above, plus the created notification's id -- v0.7.104.0: the Alert Center needs it to
+    // unpin the alert once its episode ends (see AlertEpisodeTracker.SetAlertNotificationId).
+    public HeadlessNotificationSnapshot Create(string severity, string title, string message, bool pinned, out string id)
     {
         HeadlessNotificationSnapshot snapshot;
+        var item = New(severity, title, message, pinned);
         lock (gate)
         {
             var items = Load();
-            items.Add(New(severity, title, message, pinned));
+            items.Add(item);
             Save(items);
             activity.Record("Information", "Notifications", "Created notification", $"severity={severity}; title={title}");
             snapshot = GetSnapshotUnsafe();
         }
         routing?.Dispatch(severity, title, message);
+        id = item.Id;
         return snapshot;
     }
 

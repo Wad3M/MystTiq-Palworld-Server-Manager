@@ -1,0 +1,23 @@
+# v0.8.5.0 Changed Files
+
+- `Directory.Build.props` and `src/PalworldManager/app.manifest`: version bump to 0.8.5.0.
+- `src/MystTiq.Desktop/Services/Localizer.cs` (new):
+  - `Localizer` and `LocalizedStrings`;
+  - the `{services:Tr}` markup extension (`TrExtension`);
+  - `LocalLanguagePreferenceStore`.
+- `src/MystTiq.Desktop/Assets/i18n/en.json`, `de.json` and `es.json` (new): 89 keys each.
+- `src/MystTiq.Desktop/MainWindow.axaml`:
+  - the 7 category tabs and 26 navigation items now use `{services:Tr}`;
+  - the Language picker is added to Settings → Appearance.
+- `src/MystTiq.Desktop/ViewModels/MainWindowViewModel.cs`:
+  - `PageTitle` and `PageSubtitle` now come from the translations;
+  - `UiLanguages` and `SelectedUiLanguage` are new;
+  - the saved language is applied on start, and headers re-raise on language change.
+- `scripts/Testing/MystTiq.ArtworkHarness/Program.cs`: the display-language checks.
+- `scripts/Test-v0.8.5.0-Logic.ps1` (new).
+- New docs:
+  - `docs/architecture/v0.8.5.0-display-language.md`;
+  - `release-notes/v0.8.5.0.md`;
+  - `release-notes/APPLY_v0.8.5.0_CHANGED_FILES.md`;
+  - `release-notes/BUILD_TEST_PLAN_v0.8.5.0.md`.
+- Updated: `CHANGELOG.md`, `README.md`, `docs/index.html` and `docs/roadmap/PRODUCT_ROADMAP.md`.

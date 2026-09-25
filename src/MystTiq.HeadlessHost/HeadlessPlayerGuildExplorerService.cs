@@ -13,13 +13,16 @@ public sealed class HeadlessPlayerGuildExplorerService
 
     private readonly IServerPathProfile paths;
     private readonly HeadlessMonitoringService monitoring;
+    private readonly HeadlessGameNameService? gameNames;
 
     public HeadlessPlayerGuildExplorerService(
         IServerPathProfile paths,
-        HeadlessMonitoringService monitoring)
+        HeadlessMonitoringService monitoring,
+        HeadlessGameNameService? gameNames = null)
     {
         this.paths = paths;
         this.monitoring = monitoring;
+        this.gameNames = gameNames;
     }
 
     public async Task<HeadlessPlayerGuildSnapshot> ExploreAsync(
@@ -39,7 +42,8 @@ public sealed class HeadlessPlayerGuildExplorerService
                 [],
                 [],
                 DateTimeOffset.UtcNow,
-                "No active Palworld world containing Level.sav was discovered.");
+                "No active Palworld world containing Level.sav was discovered.",
+                []);
         }
 
         var playerSaves = DiscoverPlayerSaves(world);
@@ -48,12 +52,19 @@ public sealed class HeadlessPlayerGuildExplorerService
         var semanticWarnings = new List<string>();
         var semanticAvailable = false;
         var semanticSource = "Player save filenames only";
+        IReadOnlyDictionary<string, (double X, double Y)> baseCoordinates =
+            new Dictionary<string, (double X, double Y)>();
+        IReadOnlyList<SavedPlayerLocation> playerLocations = [];
+        var palLocations = SavedPalLocations.Empty;
 
         if (semanticPath is not null)
         {
             try
             {
                 var parsed = ParseGuilds(semanticPath);
+                baseCoordinates = parsed.BaseCoordinates;
+                playerLocations = parsed.PlayerLocations;
+                palLocations = parsed.PalLocations;
                 guildRecords.AddRange(parsed.Guilds);
                 semanticWarnings.AddRange(parsed.Warnings);
                 semanticAvailable = parsed.AuthoritativeRootCount > 0;
@@ -202,6 +213,41 @@ public sealed class HeadlessPlayerGuildExplorerService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+        // v0.7.92.0: every base with a decoded coordinate, attributed to its owning guild when one
+        // lists it. A coordinate-bearing base no guild claims is still returned (blank guild) so the
+        // map can show it as unowned rather than silently dropping it.
+        var baseLocations = new List<HeadlessBaseLocation>();
+        var claimedBaseIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var guild in guilds)
+        {
+            foreach (var baseId in guild.BaseIds)
+            {
+                if (!baseCoordinates.TryGetValue(baseId, out var point)) continue;
+                claimedBaseIds.Add(baseId);
+                baseLocations.Add(new HeadlessBaseLocation(baseId, guild.GuildId, guild.GuildName, point.X, point.Y));
+            }
+        }
+
+        foreach (var (baseId, point) in baseCoordinates)
+        {
+            if (claimedBaseIds.Contains(baseId)) continue;
+            baseLocations.Add(new HeadlessBaseLocation(baseId, string.Empty, "Unowned", point.X, point.Y));
+        }
+
+        // v0.8.11.0: owned Pals that are out in the world, named by owner and base here so the map needs no lookups.
+        var names = palLocations.OnMap.Count > 0 && gameNames is not null ? gameNames.Get().Catalog : GameNameCatalog.Empty;
+        var guildByBase = baseLocations.GroupBy(b => b.BaseId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().GuildName, StringComparer.OrdinalIgnoreCase);
+        var pals = palLocations.OnMap.Select(pal => new HeadlessPalLocation(
+                pal.InstanceId, pal.Species, pal.IsAlpha, pal.Level, pal.NickName, pal.OwnerPlayerId,
+                playerById.GetValueOrDefault(pal.OwnerPlayerId)?.PlayerName ?? string.Empty,
+                pal.Placement, pal.BaseId, guildByBase.GetValueOrDefault(pal.BaseId) ?? string.Empty, pal.X, pal.Y,
+                // v0.8.13.0: the species' display name when the game's names are available.
+                names.PalName(pal.Species) ?? string.Empty))
+            .ToArray();
+        var palSummary = new HeadlessPalSummary(palLocations.TotalPals, pals.Length, palLocations.InPalbox,
+            palLocations.WithoutPosition, palLocations.Unplaced);
+
         return new HeadlessPlayerGuildSnapshot(
             true,
             semanticAvailable,
@@ -213,7 +259,11 @@ public sealed class HeadlessPlayerGuildExplorerService
             abandonedBaseIds,
             semanticWarnings.Distinct().Take(100).ToArray(),
             DateTimeOffset.UtcNow,
-            detail);
+            detail,
+            baseLocations,
+            playerLocations,
+            pals,
+            palSummary);
     }
 
     private string? ResolveActiveWorld()
@@ -306,11 +356,13 @@ public sealed class HeadlessPlayerGuildExplorerService
             });
 
         var roots = new List<JsonElement>();
-        FindAuthoritativeRoots(document.RootElement, roots, 0);
+        var baseCampRoots = new List<JsonElement>();
+        FindAuthoritativeRoots(document.RootElement, roots, baseCampRoots, 0);
 
         var guilds = new Dictionary<string, SemanticGuildRecord>(
             StringComparer.OrdinalIgnoreCase);
         var warnings = new List<string>();
+        var baseCoordinates = ReadBaseCoordinates(baseCampRoots);
 
         foreach (var root in roots)
         {
@@ -396,15 +448,36 @@ public sealed class HeadlessPlayerGuildExplorerService
             }
         }
 
+        // v0.7.100.0: last-known player positions, for the offline dots on the map. A problem reading
+        // them must never cost the guild and base data, so it degrades to "none".
+        IReadOnlyList<SavedPlayerLocation> playerLocations = [];
+        try { playerLocations = SavePlayerLocationReader.Read(document.RootElement); }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
+        {
+            warnings.Add($"Player last-known positions could not be read: {ex.Message}");
+        }
+
+        // v0.8.11.0: owned Pals' positions, with the same "degrade to none" rule.
+        var palLocations = SavedPalLocations.Empty;
+        try { palLocations = SavePalLocationReader.Read(document.RootElement); }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
+        {
+            warnings.Add($"Pal positions could not be read: {ex.Message}");
+        }
+
         return new SemanticParseResult(
             roots.Count,
             guilds.Values.ToArray(),
-            warnings);
+            warnings,
+            baseCoordinates,
+            playerLocations,
+            palLocations);
     }
 
     private static void FindAuthoritativeRoots(
         JsonElement element,
         List<JsonElement> roots,
+        List<JsonElement> baseCampRoots,
         int depth)
     {
         if (depth > 80)
@@ -414,20 +487,75 @@ public sealed class HeadlessPlayerGuildExplorerService
         {
             foreach (var property in element.EnumerateObject())
             {
-                if (NormalizeKey(property.Name) == "groupsavedatamap")
+                var key = NormalizeKey(property.Name);
+                if (key == "groupsavedatamap")
                 {
                     roots.Add(property.Value);
                     continue;
                 }
 
-                FindAuthoritativeRoots(property.Value, roots, depth + 1);
+                if (key == "basecampsavedata")
+                {
+                    baseCampRoots.Add(property.Value);
+                    continue;
+                }
+
+                FindAuthoritativeRoots(property.Value, roots, baseCampRoots, depth + 1);
             }
         }
         else if (element.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in element.EnumerateArray())
-                FindAuthoritativeRoots(item, roots, depth + 1);
+                FindAuthoritativeRoots(item, roots, baseCampRoots, depth + 1);
         }
+    }
+
+    // v0.7.92.0: base world coordinates for the live map. BaseCampSaveData entries are keyed by base
+    // id; each carries its own spawn_transform.translation (the same Unreal world units the REST
+    // player list reports as location_x/location_y). Read from the decoded Level JSON already being
+    // parsed for guilds, so there is no extra decode step and no new dependency.
+    private static IReadOnlyDictionary<string, (double X, double Y)> ReadBaseCoordinates(
+        IReadOnlyList<JsonElement> baseCampRoots)
+    {
+        var result = new Dictionary<string, (double X, double Y)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var root in baseCampRoots)
+        {
+            if (!TryGetMapEntries(root, out var entries)) continue;
+            foreach (var entry in entries.EnumerateArray())
+            {
+                var baseId = NormalizeId(ReadDirectScalar(entry, "key"));
+                if (!LooksLikeId(baseId)) continue;
+                if (!TryGetDirectProperty(entry, "value", out var baseStruct)) continue;
+                if (!TryFindNestedProperty(baseStruct, "spawn_transform", 0, out var transform)) continue;
+                if (!TryFindNestedProperty(transform, "translation", 0, out var translation)) continue;
+                if (!double.TryParse(ReadDirectScalar(translation, "x"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x)) continue;
+                if (!double.TryParse(ReadDirectScalar(translation, "y"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y)) continue;
+                result[baseId] = (x, y);
+            }
+        }
+
+        return result;
+    }
+
+    private static bool TryFindNestedProperty(JsonElement element, string name, int depth, out JsonElement found)
+    {
+        found = default;
+        if (depth > 8 || element.ValueKind != JsonValueKind.Object) return false;
+        foreach (var property in element.EnumerateObject())
+        {
+            if (property.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+                found = property.Value;
+                return true;
+            }
+        }
+
+        foreach (var property in element.EnumerateObject())
+        {
+            if (TryFindNestedProperty(property.Value, name, depth + 1, out found)) return true;
+        }
+
+        return false;
     }
 
     private static bool TryGetMapEntries(
@@ -667,8 +795,37 @@ public sealed class HeadlessPlayerGuildExplorerService
     private sealed record SemanticParseResult(
         int AuthoritativeRootCount,
         IReadOnlyList<SemanticGuildRecord> Guilds,
-        IReadOnlyList<string> Warnings);
+        IReadOnlyList<string> Warnings,
+        IReadOnlyDictionary<string, (double X, double Y)> BaseCoordinates,
+        IReadOnlyList<SavedPlayerLocation> PlayerLocations,
+        SavedPalLocations PalLocations);
 }
+
+// v0.8.11.0: an owned Pal out in the world (working at a base, or in its owner's party), from the save.
+public sealed record HeadlessPalLocation(
+    string InstanceId,
+    string Species,
+    bool IsAlpha,
+    int Level,
+    string NickName,
+    string OwnerPlayerId,
+    string OwnerName,
+    string Placement,
+    string BaseId,
+    string GuildName,
+    double X,
+    double Y,
+    string SpeciesName = "");
+
+// v0.8.11.0: what the save holds, so the map can say what it does not draw (Palbox Pals, unset positions).
+public sealed record HeadlessPalSummary(int TotalPals, int OnMap, int InPalbox, int WithoutPosition, int Unplaced);
+
+public sealed record HeadlessBaseLocation(
+    string BaseId,
+    string GuildId,
+    string GuildName,
+    double X,
+    double Y);
 
 public sealed record HeadlessPlayerExplorerItem(
     string PlayerId,
@@ -706,4 +863,10 @@ public sealed record HeadlessPlayerGuildSnapshot(
     IReadOnlyList<string> AbandonedBaseIds,
     IReadOnlyList<string> Warnings,
     DateTimeOffset ObservedAt,
-    string Detail);
+    string Detail,
+    IReadOnlyList<HeadlessBaseLocation> BaseLocations,
+    // v0.7.100.0: optional, so every other construction (the unavailable cases) is unchanged.
+    IReadOnlyList<SavedPlayerLocation>? PlayerLocations = null,
+    // v0.8.11.0: optional for the same reason.
+    IReadOnlyList<HeadlessPalLocation>? PalLocations = null,
+    HeadlessPalSummary? PalSummary = null);

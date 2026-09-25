@@ -30,38 +30,34 @@ This is the active release checklist for MystTiq Palworld Server Manager. Histor
 
 ## Current release state
 
-- **Accepted source baseline:** v0.4.17.4
-- **Current development candidate:** v0.4.18.2 — Workspace + Diagnostics + Settings Closeout
-- **Next revision after promotion:** stop before v0.5.0.0
+v0.7.115.0: this section used to name a fixed version ("current candidate v0.4.18.2") and went stale for
+three release lines. It now names none. The current candidate is always `<VersionPrefix>` in
+`Directory.Build.props`, which `Validate-Release.ps1` checks against `app.manifest`, `README.md`,
+`docs/index.html` and the release notes on every run.
+
 - **Shared GUI:** Avalonia desktop for Windows and Linux
 - **Headless service:** Windows and Linux through shared Core/platform abstractions
-- **Promotion status:** pending complete source and installed-tree gates
 
-## Source and version
+## Source and version (for the current `<VersionPrefix>`, written below as `<ver>`)
 
-- [ ] `Directory.Build.props` contains `0.4.18.2`.
-- [ ] Windows `app.manifest` is synchronized to `0.4.18.2`.
+- [ ] `Directory.Build.props` and Windows `app.manifest` carry `<ver>`.
 - [ ] `MystTiq.Core` targets plain `net10.0` and has no WPF dependency.
 - [ ] `MystTiq.HeadlessHost` targets plain `net10.0` and references the shared core.
 - [ ] `MystTiq.Desktop` remains the shared Avalonia Windows/Linux GUI.
-- [ ] `README.md`, `CHANGELOG.md`, roadmap and release notes identify v0.4.18.2 as the current candidate and v0.4.17.4 as the baseline.
-- [ ] `scripts\Test-v0.4.18.2-Logic.ps1` exists and `Build.ps1 LogicTests` resolves the current version dynamically.
-- [ ] `SOURCE_MANIFEST_SHA256.txt` is regenerated after final changes.
+- [ ] `README.md` (banner and table row), `docs/index.html`, `CHANGELOG.md`, the roadmap and
+      `release-notes/v<ver>.md`, `APPLY_v<ver>_CHANGED_FILES.md` and `BUILD_TEST_PLAN_v<ver>.md` identify `<ver>`.
+- [ ] `scripts\Test-v<ver>-Logic.ps1` exists.
 
 ## Required local build/test sequence
 
 ```powershell
-cd C:\GameServers\MystTiqPalLinux
-
-Get-ChildItem . -Recurse -Filter *.ps1 | Unblock-File
-
 .\Build.ps1 Clean
-.\Build.ps1 Validate
+.\scripts\Validate-Release.ps1 -Strict          # after Clean: hygiene included, must be 0 errors / 0 warnings
 
-.\scripts\Test-v0.4.18.2-Logic.ps1 `
-    -ProjectRoot . `
-    -RunBuild `
-    -ExportJson
+.\scripts\Test-v<ver>-Logic.ps1 -ProjectRoot . -RunBuild
+# The gate validates with -AllowBuildOutputs (it builds and publishes first). When the previous checkpoint
+# archive is not on this machine, its frozen-baseline check is reported as SKIP; pass -FrozenBaselineZip to
+# point at a copy.
 ```
 
 Equivalent version-aware wrapper:

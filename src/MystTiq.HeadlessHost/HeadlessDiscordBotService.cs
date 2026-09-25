@@ -19,10 +19,15 @@ namespace MystTiq.HeadlessHost;
 // game-control logic here, only Discord transport plus role-mapped authorization.
 public sealed class HeadlessDiscordBotService : IAsyncDisposable
 {
-    private static readonly string[] SupportedCommands =
-        ["mysttiq-status", "mysttiq-players", "mysttiq-start", "mysttiq-stop", "mysttiq-restart", "mysttiq-broadcast", "mysttiq-kick", "mysttiq-ban"];
+    // v0.7.95.0: how often the live loop wakes to update the status message, presence and join/leave feed.
+    // Discord allows far more, but a minute is plenty for status and keeps the bot a good API citizen.
+    private static readonly TimeSpan LiveTickInterval = TimeSpan.FromSeconds(45);
+    // The status message is otherwise only re-edited when its content changes; this forces an occasional
+    // refresh so its "last checked" time never looks stale on a quiet server.
+    private static readonly TimeSpan StatusForceRefresh = TimeSpan.FromMinutes(5);
 
     private readonly HeadlessActivityLogService activity;
+    private readonly HeadlessBackupService backups;
     private readonly IServerLifecycleService lifecycle;
     private readonly PalworldRconService rcon;
     private readonly PlayerModerationCoordinator playerModeration;
@@ -50,8 +55,10 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
         ServerProfileId profileId,
         IReadOnlyList<string> launchArguments,
         TimeSpan startupTimeout,
-        TimeSpan stopTimeout)
+        TimeSpan stopTimeout,
+        HeadlessBackupService backups)
     {
+        this.backups = backups;
         this.activity = activity;
         this.lifecycle = lifecycle;
         this.rcon = rcon;
@@ -82,8 +89,21 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
                 config.GuildId,
                 config.OwnerDiscordUserId,
                 config.RoleMappings,
-                connectionState);
+                connectionState,
+                config.StatusChannelId,
+                config.EventsChannelId,
+                config.ShowPresence);
         }
+    }
+
+    // The channel ids must be real snowflakes when present; blank clears the feature.
+    public static string? ValidateChannelIds(DiscordBotConfiguration candidate)
+    {
+        if (!string.IsNullOrWhiteSpace(candidate.StatusChannelId) && !DiscordSnowflake.TryParse(candidate.StatusChannelId, out _))
+            return "The status channel id must be the 17-20 digit number Discord shows for the channel (enable Developer Mode, right-click the channel, Copy Channel ID).";
+        if (!string.IsNullOrWhiteSpace(candidate.EventsChannelId) && !DiscordSnowflake.TryParse(candidate.EventsChannelId, out _))
+            return "The events channel id must be the 17-20 digit number Discord shows for the channel (enable Developer Mode, right-click the channel, Copy Channel ID).";
+        return null;
     }
 
     // A saved BotToken of null/empty keeps whatever token is already stored -- the Desktop form
@@ -93,7 +113,17 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
         lock (gate)
         {
             var effectiveToken = string.IsNullOrWhiteSpace(updated.BotToken) ? config.BotToken : updated.BotToken;
-            config = updated with { BotToken = effectiveToken };
+            var statusChannel = string.IsNullOrWhiteSpace(updated.StatusChannelId) ? null : updated.StatusChannelId.Trim();
+            // The bot's one status message lives in one channel: keep its id across saves (the form never
+            // sends it), but drop it when the channel changes so a fresh message is posted in the new one.
+            var statusMessage = string.Equals(statusChannel, config.StatusChannelId, StringComparison.Ordinal) ? config.StatusMessageId : null;
+            config = updated with
+            {
+                BotToken = effectiveToken,
+                StatusChannelId = statusChannel,
+                StatusMessageId = statusMessage,
+                EventsChannelId = string.IsNullOrWhiteSpace(updated.EventsChannelId) ? null : updated.EventsChannelId.Trim()
+            };
             Persist();
         }
 
@@ -157,6 +187,7 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
                 lock (gate) connectionState = DiscordBotConnectionState.Connected;
                 await RegisterCommandsAsync(socket, snapshot.GuildId);
                 activity.Record("Information", "Discord Bot", "Connected", $"Discord bot connected as {socket.CurrentUser?.Username}.");
+                StartLiveLoop(socket);
             };
             socket.Disconnected += ex =>
             {
@@ -164,6 +195,7 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
                 return Task.CompletedTask;
             };
             socket.SlashCommandExecuted += OnSlashCommandExecutedAsync;
+            socket.AutocompleteExecuted += OnAutocompleteAsync;
 
             await socket.LoginAsync(TokenType.Bot, snapshot.BotToken);
             await socket.StartAsync();
@@ -178,6 +210,8 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
 
     private async Task DisconnectAsync()
     {
+        try { liveLoop?.Cancel(); } catch { /* already disposed */ }
+        liveLoop = null;
         var current = client;
         client = null;
         if (current is null) return;
@@ -201,12 +235,18 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
             new SlashCommandBuilder().WithName("mysttiq-restart").WithDescription("Restart the Palworld server.").Build(),
             new SlashCommandBuilder().WithName("mysttiq-broadcast").WithDescription("Broadcast a message to all online players.")
                 .AddOption("message", ApplicationCommandOptionType.String, "The message to broadcast.", isRequired: true).Build(),
+            new SlashCommandBuilder().WithName("mysttiq-save").WithDescription("Save the world now.").Build(),
+            new SlashCommandBuilder().WithName("mysttiq-backup").WithDescription("Create a manual backup of the world.").Build(),
+            // v0.7.95.0: the player option now autocompletes from the players online right now (name shown,
+            // player id sent), so nobody has to copy a raw id. A typed id still works for offline players.
             new SlashCommandBuilder().WithName("mysttiq-kick").WithDescription("Kick a player.")
-                .AddOption("player", ApplicationCommandOptionType.String, "Player ID.", isRequired: true)
+                .AddOption(new SlashCommandOptionBuilder().WithName("player").WithType(ApplicationCommandOptionType.String).WithDescription("Online player (start typing a name) or a player ID.").WithRequired(true).WithAutocomplete(true))
                 .AddOption("reason", ApplicationCommandOptionType.String, "Reason.", isRequired: false).Build(),
             new SlashCommandBuilder().WithName("mysttiq-ban").WithDescription("Ban a player.")
-                .AddOption("player", ApplicationCommandOptionType.String, "Player ID.", isRequired: true)
-                .AddOption("reason", ApplicationCommandOptionType.String, "Reason.", isRequired: false).Build()
+                .AddOption(new SlashCommandOptionBuilder().WithName("player").WithType(ApplicationCommandOptionType.String).WithDescription("Online player (start typing a name) or a player ID.").WithRequired(true).WithAutocomplete(true))
+                .AddOption("reason", ApplicationCommandOptionType.String, "Reason.", isRequired: false).Build(),
+            new SlashCommandBuilder().WithName("mysttiq-unban").WithDescription("Unban a player by player ID.")
+                .AddOption("player", ApplicationCommandOptionType.String, "Player ID to unban.", isRequired: true).Build()
         };
         await guild.BulkOverwriteApplicationCommandAsync(commands);
     }
@@ -214,7 +254,7 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
     private async Task OnSlashCommandExecutedAsync(SocketSlashCommand command)
     {
         var name = command.Data.Name;
-        if (!SupportedCommands.Contains(name)) return;
+        if (!DiscordBotFormatting.SupportedCommands.Contains(name)) return;
 
         try
         {
@@ -226,7 +266,7 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
 
             DiscordBotConfiguration snapshot;
             lock (gate) snapshot = config;
-            var required = RequiredRole(name);
+            var required = DiscordBotFormatting.RequiredRole(name);
             var granted = ResolveRole(guildUser, snapshot);
             if (granted is null || granted < required)
             {
@@ -237,7 +277,9 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
 
             var reply = await ExecuteAsync(name, command, CancellationToken.None);
             activity.Record("Information", "Discord Bot", $"Command: /{name}", reply, $"discord:{guildUser.Username}");
-            await command.RespondAsync(reply);
+            // Replies can contain player names and broadcast text, which players and callers choose, so
+            // mentions are switched off: a name like @everyone must never ping the guild.
+            await command.RespondAsync(reply, allowedMentions: AllowedMentions.None);
         }
         catch (Exception ex)
         {
@@ -261,7 +303,17 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
             {
                 var snapshot = await monitoring.GetPlayersAsync(cancellationToken);
                 if (!snapshot.Available) return "Player list is currently unavailable.";
-                return snapshot.Players.Count == 0 ? "No players online." : "Online: " + string.Join(", ", snapshot.Players.Select(p => p.Name));
+                return snapshot.Players.Count == 0 ? "No players online." : "Online: " + string.Join(", ", snapshot.Players.Select(p => DiscordBotFormatting.EscapeMarkdown(p.Name)));
+            }
+            case "mysttiq-save":
+            {
+                var result = await rcon.ExecuteAsync("Save", cancellationToken);
+                return result.Success ? "World save requested." : result.Message;
+            }
+            case "mysttiq-backup":
+            {
+                var result = await backups.CreateAsync(BackupClass.Manual, cancellationToken);
+                return result.Success ? $"Backup created. {result.Message}" : $"Backup failed: {result.Message}";
             }
             case "mysttiq-start":
                 return await RunLifecycleAsync("server-start-discord", ["lifecycle", "world-mutation"], cancellationToken,
@@ -280,10 +332,11 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
             }
             case "mysttiq-kick":
             case "mysttiq-ban":
+            case "mysttiq-unban":
             {
                 var playerId = GetStringOption(command, "player") ?? string.Empty;
                 var reason = GetStringOption(command, "reason");
-                var action = name == "mysttiq-kick" ? "kick" : "ban";
+                var action = name switch { "mysttiq-kick" => "kick", "mysttiq-ban" => "ban", _ => "unban" };
                 var result = await playerModeration.ExecuteAsync(action, playerId, reason, cancellationToken);
                 return result.Message;
             }
@@ -317,16 +370,199 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
         finally { handle.Dispose(); }
     }
 
+    // ---- v0.7.95.0: autocomplete ---------------------------------------------------------------
+
+    // Only callers who could actually run the command are shown player names, so the suggestion list is
+    // not a way for an unprivileged guild member to read who is online through the kick/ban prompt.
+    private async Task OnAutocompleteAsync(SocketAutocompleteInteraction interaction)
+    {
+        try
+        {
+            var name = interaction.Data.CommandName;
+            if (name is not ("mysttiq-kick" or "mysttiq-ban")) return;
+            if (interaction.User is not SocketGuildUser guildUser) return;
+
+            DiscordBotConfiguration snapshot;
+            lock (gate) snapshot = config;
+            var granted = ResolveRole(guildUser, snapshot);
+            if (granted is null || granted < DiscordBotFormatting.RequiredRole(name))
+            {
+                await interaction.RespondAsync(Array.Empty<AutocompleteResult>());
+                return;
+            }
+
+            var players = await monitoring.GetPlayersAsync(CancellationToken.None);
+            var suggestions = players.Available
+                ? DiscordBotFormatting.SuggestPlayers(players.Players, interaction.Data.Current.Value?.ToString())
+                : [];
+            await interaction.RespondAsync(suggestions.Select(s => new AutocompleteResult(s.Name, s.Value)).ToList());
+        }
+        catch (Exception ex) { activity.Record("Warning", "Discord Bot", "Autocomplete failed", ex.Message); }
+    }
+
+    // ---- v0.7.95.0: live status, presence and join/leave feed --------------------------------------
+
+    private CancellationTokenSource? liveLoop;
+
+    private sealed class LiveState
+    {
+        public string? PreviousStateKey;
+        public IReadOnlyDictionary<string, string>? PreviousPlayers;
+        public string? LastStatusKey;
+        public DateTimeOffset LastStatusEdit = DateTimeOffset.MinValue;
+        public string? LastPresence;
+        public string? LastError;
+    }
+
+    private void StartLiveLoop(DiscordSocketClient socket)
+    {
+        try { liveLoop?.Cancel(); } catch { /* previous loop already gone */ }
+        var cts = new CancellationTokenSource();
+        liveLoop = cts;
+        _ = Task.Run(() => RunLiveLoopAsync(socket, cts.Token));
+    }
+
+    private async Task RunLiveLoopAsync(DiscordSocketClient socket, CancellationToken cancellationToken)
+    {
+        var state = new LiveState();
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try { await LiveTickAsync(socket, state, cancellationToken); }
+            catch (OperationCanceledException) { return; }
+            catch (Exception ex) { ReportLiveProblem(state, ex.Message); }
+
+            try { await Task.Delay(LiveTickInterval, cancellationToken); }
+            catch (OperationCanceledException) { return; }
+        }
+    }
+
+    private async Task LiveTickAsync(DiscordSocketClient socket, LiveState state, CancellationToken cancellationToken)
+    {
+        DiscordBotConfiguration cfg;
+        lock (gate) cfg = config;
+        var hasStatus = DiscordSnowflake.TryParse(cfg.StatusChannelId, out var statusChannelId);
+        var hasEvents = DiscordSnowflake.TryParse(cfg.EventsChannelId, out var eventsChannelId);
+        if (!hasStatus && !hasEvents && !cfg.ShowPresence && state.LastPresence is null) return;
+
+        var status = await lifecycle.GetStatusAsync(cancellationToken);
+        var players = await monitoring.GetPlayersAsync(cancellationToken);
+        var stateKey = DiscordBotFormatting.StateKey(status.Phase, status.Ready);
+        var names = players.Available
+            ? players.Players.Select(p => string.IsNullOrWhiteSpace(p.Name) ? p.PlayerId : p.Name).ToList()
+            : [];
+
+        var lines = new List<string>();
+        var transition = DiscordBotFormatting.DescribeTransition(state.PreviousStateKey, stateKey);
+        if (transition is not null) lines.Add(transition);
+        if (stateKey != "Online") state.PreviousPlayers = null; // a stop or restart resets the baseline, so it is never read as everyone leaving
+        else if (players.Available)
+        {
+            var diff = DiscordBotFormatting.DiffPresence(state.PreviousPlayers, players.Players);
+            lines.AddRange(DiscordBotFormatting.PresenceLines(diff));
+            state.PreviousPlayers = diff.Current;
+        }
+
+        state.PreviousStateKey = stateKey;
+
+        if (cfg.ShowPresence)
+        {
+            var presence = DiscordBotFormatting.PresenceText(stateKey, names.Count, players.Available);
+            if (presence != state.LastPresence)
+            {
+                await socket.SetGameAsync(presence, type: ActivityType.Watching);
+                state.LastPresence = presence;
+            }
+        }
+        else if (state.LastPresence is not null)
+        {
+            await socket.SetGameAsync(null);
+            state.LastPresence = null;
+        }
+
+        if (hasEvents && lines.Count > 0)
+            await PostEventsAsync(socket, eventsChannelId, lines, state);
+        if (hasStatus)
+            await UpdateStatusMessageAsync(socket, statusChannelId, cfg, DiscordBotFormatting.BuildStatus(status.Phase, status.Ready, players.Available, names), state);
+    }
+
+    private async Task UpdateStatusMessageAsync(DiscordSocketClient socket, ulong channelId, DiscordBotConfiguration cfg, DiscordStatusView view, LiveState state)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (state.LastStatusKey == view.ChangeKey && now - state.LastStatusEdit < StatusForceRefresh) return;
+
+        if (socket.GetChannel(channelId) is not IMessageChannel channel)
+        {
+            ReportLiveProblem(state, $"The status channel ({channelId}) was not found, or is not a text channel this bot can see.");
+            return;
+        }
+
+        var embed = new EmbedBuilder()
+            .WithTitle(view.Headline)
+            .WithDescription($"{view.Body}\n\nLast checked <t:{now.ToUnixTimeSeconds()}:R>")
+            .WithColor(view.StateKey switch
+            {
+                "Online" => Color.Green,
+                "Starting" => Color.Gold,
+                "Stopping" => Color.Orange,
+                "Offline" or "Crashed" => Color.Red,
+                _ => Color.LightGrey
+            })
+            .Build();
+
+        IUserMessage? message = null;
+        if (ulong.TryParse(cfg.StatusMessageId, out var messageId))
+            message = await channel.GetMessageAsync(messageId) as IUserMessage;
+
+        if (message is null)
+        {
+            message = await channel.SendMessageAsync(embed: embed, allowedMentions: AllowedMentions.None);
+            PersistStatusMessageId(cfg.StatusChannelId, message.Id.ToString());
+        }
+        else
+        {
+            await message.ModifyAsync(m => m.Embed = embed);
+        }
+
+        state.LastStatusKey = view.ChangeKey;
+        state.LastStatusEdit = now;
+        state.LastError = null;
+    }
+
+    private async Task PostEventsAsync(DiscordSocketClient socket, ulong channelId, IReadOnlyList<string> lines, LiveState state)
+    {
+        if (socket.GetChannel(channelId) is not IMessageChannel channel)
+        {
+            ReportLiveProblem(state, $"The events channel ({channelId}) was not found, or is not a text channel this bot can see.");
+            return;
+        }
+
+        const int MaximumLines = 15;
+        var text = string.Join('\n', lines.Take(MaximumLines)) + (lines.Count > MaximumLines ? $"\n…and {lines.Count - MaximumLines} more." : string.Empty);
+        await channel.SendMessageAsync(text, allowedMentions: AllowedMentions.None);
+    }
+
+    private void PersistStatusMessageId(string? channelIdText, string messageId)
+    {
+        lock (gate)
+        {
+            // Only if the channel was not changed while this tick was running.
+            if (!string.Equals(config.StatusChannelId, channelIdText, StringComparison.Ordinal)) return;
+            config = config with { StatusMessageId = messageId };
+            Persist();
+        }
+    }
+
+    // A Discord-side problem (missing channel, missing permission) is logged once per distinct message,
+    // not once per tick, so a misconfigured channel cannot flood the activity log.
+    private void ReportLiveProblem(LiveState state, string message)
+    {
+        if (string.Equals(state.LastError, message, StringComparison.Ordinal)) return;
+        state.LastError = message;
+        activity.Record("Warning", "Discord Bot", "Live update problem", message);
+    }
+
     private static string? GetStringOption(SocketSlashCommand command, string name) =>
         command.Data.Options?.FirstOrDefault(o => o.Name == name)?.Value as string;
-
-    private static MystTiqRole RequiredRole(string commandName) => commandName switch
-    {
-        "mysttiq-status" or "mysttiq-players" => MystTiqRole.Viewer,
-        "mysttiq-start" or "mysttiq-stop" or "mysttiq-restart" or "mysttiq-broadcast" => MystTiqRole.Operator,
-        "mysttiq-kick" or "mysttiq-ban" => MystTiqRole.Admin,
-        _ => MystTiqRole.Owner
-    };
 
     private static MystTiqRole? ResolveRole(SocketGuildUser user, DiscordBotConfiguration cfg)
     {

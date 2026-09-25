@@ -11,7 +11,7 @@ using MystTiq.HeadlessHost;
 var knownCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
     "probe", "status", "install-plan", "start", "stop", "restart",
-    "service-status", "service-install", "service-uninstall", "service-run",
+    "service-status", "service-install", "service-uninstall", "service-run", "service-unit",
     "config-show", "config-validate", "config-write-default", "config-migrate",
     "api-token-create", "api-tls-create", "api-remote-enable", "api-remote-disable", "api-run", "production-doctor",
     "help", "--help", "-h"
@@ -197,8 +197,11 @@ var effectiveDefaultServerProfile = defaultServerProfile with
     BackupRoot = runtimeConfiguration.BackupRoot,
     RuntimeRoot = runtimeConfiguration.RuntimeRoot
 };
+// v0.8.21.0: --fleet-root keeps the fleet's shared state (activity log, host history, fleet
+// settings) out of the real fleet folder, so test runs of api-run touch nothing real.
 var effectiveHeadlessConfiguration = headlessConfiguration with
 {
+    FleetRoot = GetOption("--fleet-root") ?? headlessConfiguration.FleetRoot,
     Api = headlessConfiguration.Api with
     {
         BindAddress = desktopSidecar ? "127.0.0.1" : GetOption("--bind-address") ?? headlessConfiguration.Api.BindAddress,
@@ -631,6 +634,7 @@ switch (command.ToLowerInvariant())
     case "service-install":
     case "service-uninstall":
     case "service-run":
+    case "service-unit":
     {
         var supervisorOptions = new HeadlessSupervisorOptions(
             TimeSpan.FromSeconds(GetIntOption("--service-poll-seconds", headlessConfiguration.Lifecycle.ServicePollSeconds)),
@@ -644,8 +648,11 @@ switch (command.ToLowerInvariant())
 
         if (OperatingSystem.IsWindows())
         {
-            var sessionInspector = new WindowsServerSessionInspector(platform.GuardedPorts);
-            var lifecycle = new WindowsServerLifecycleService(platform, paths, sessionInspector);
+            // v0.8.2.0: built by the same per-profile factory the embedded API host uses, so readiness follows this
+            // server's configured game port. It used to be `new WindowsServerLifecycleService(platform, paths, ...)`
+            // with no port, i.e. always UDP 8211: a server on any other port was reported as failing to start
+            // ("UDP 8211 was not confirmed before the startup timeout") and service-run shut itself down.
+            var lifecycle = WindowsServiceRunLifecycleFactory(effectiveDefaultServerProfile, paths);
             var serviceManager = new WindowsServiceManager(new ServerProfileId(defaultServerProfile.Id));
 
             // v0.6.3.0: mirrors the Linux ServiceRunLifecycleFactory below exactly -- crash-recovery
@@ -663,6 +670,13 @@ switch (command.ToLowerInvariant())
                 return new WindowsServerLifecycleService(platform, profilePaths, profileSessionInspector, expectedGamePort: configuredGamePort);
             }
 #pragma warning restore CA1416
+
+            // v0.8.21.0: the systemd unit is a Linux file.
+            if (command.Equals("service-unit", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.Error.WriteLine("service-unit prints the Linux systemd unit; on Windows, MystTiq installs a Windows service (service-install).");
+                return (int)HeadlessExitCode.UnsupportedPlatform;
+            }
 
             if (command.Equals("service-status", StringComparison.OrdinalIgnoreCase))
             {
@@ -743,13 +757,18 @@ switch (command.ToLowerInvariant())
             using var scmStopRegistration = scmHost.Services.GetRequiredService<IHostApplicationLifetime>()
                 .ApplicationStopping.Register(() => cancellation.Cancel());
 
-            var supervisor = new HeadlessSupervisor(lifecycle, supervisorOptions, serverArguments);
-            LocalManagementApiHost? apiHost = null;
+            // v0.8.2.0: this supervisor is the ONLY crash supervisor for its profile (the API host is told to leave it
+            // alone), and it gets that profile's crash alerts and persisted recovery state from the host.
+            LocalManagementApiHost? apiHost = headlessConfiguration.Api.Enabled
+                ? LocalManagementApiHost.Create(effectiveHeadlessConfiguration, WindowsServiceRunLifecycleFactory, new WindowsSystemServiceStatusProvider(serviceManager), configurationPath)
+                : null;
+            var supervisorParts = apiHost?.TakeOverCrashRecovery(effectiveDefaultServerProfile.Id);
+            var supervisor = new HeadlessSupervisor(lifecycle, supervisorOptions, serverArguments,
+                supervisorParts?.Observer, supervisorParts?.State ?? SupervisorRecoveryStateStore.ForProfile(paths));
             try
             {
-                if (headlessConfiguration.Api.Enabled)
+                if (apiHost is not null)
                 {
-                    apiHost = LocalManagementApiHost.Create(effectiveHeadlessConfiguration, WindowsServiceRunLifecycleFactory, new WindowsSystemServiceStatusProvider(serviceManager), configurationPath);
                     await apiHost.StartAsync(cancellation.Token);
                     Console.WriteLine(
                         $"MystTiq local management API listening on http://{headlessConfiguration.Api.BindAddress}:{headlessConfiguration.Api.Port}");
@@ -780,8 +799,9 @@ switch (command.ToLowerInvariant())
         }
 
         {
-            var sessionInspector = new LinuxServerSessionInspector(platform.GuardedPorts);
-            var lifecycle = new LinuxServerLifecycleService(platform, paths, sessionInspector);
+            // v0.8.2.0: the same per-profile factory as the embedded API host, so readiness follows the configured
+            // game port (it was always UDP 8211 here; see the matching Windows branch above).
+            var lifecycle = ServiceRunLifecycleFactory(effectiveDefaultServerProfile, paths);
             var serviceManager = new LinuxSystemdServiceManager(paths, new ServerProfileId(defaultServerProfile.Id));
 
             // v0.6.2.0: the systemd auto-recovery supervisor loop (HeadlessSupervisor below) stays
@@ -799,6 +819,17 @@ switch (command.ToLowerInvariant())
 #pragma warning disable CA1416 // The [SupportedOSPlatform("linux")] attribute above (and this whole "service-run" case's own OperatingSystem.IsLinux() guard) already make this Linux-only; the platform-compat analyzer just doesn't trace guard attributes through local functions.
                 return new LinuxServerLifecycleService(platform, profilePaths, profileSessionInspector, expectedGamePort: configuredGamePort);
 #pragma warning restore CA1416
+            }
+
+            // v0.8.21.0: print the unit service-install would write, without installing anything (read-only).
+            if (command.Equals("service-unit", StringComparison.OrdinalIgnoreCase))
+            {
+                var unitUser = GetOption("--service-user")
+                    ?? Environment.GetEnvironmentVariable("SUDO_USER")
+                    ?? Environment.GetEnvironmentVariable("USER")
+                    ?? "mystroth";
+                Console.Write(LinuxSystemdServiceManager.BuildUnitText(unitUser, configurationPath, new ServerProfileId(defaultServerProfile.Id)));
+                return 0;
             }
 
             if (command.Equals("service-status", StringComparison.OrdinalIgnoreCase))
@@ -879,7 +910,14 @@ switch (command.ToLowerInvariant())
                 }
             }
 
-            var supervisor = new HeadlessSupervisor(lifecycle, supervisorOptions, serverArguments);
+            // v0.8.2.0: the only crash supervisor for its profile, with that profile's alerts and persisted recovery
+            // state (see the matching Windows branch).
+            LocalManagementApiHost? apiHost = headlessConfiguration.Api.Enabled
+                ? LocalManagementApiHost.Create(effectiveHeadlessConfiguration, ServiceRunLifecycleFactory, new LinuxManagementServiceStatusProvider(serviceManager), configurationPath, serviceManager)
+                : null;
+            var supervisorParts = apiHost?.TakeOverCrashRecovery(effectiveDefaultServerProfile.Id);
+            var supervisor = new HeadlessSupervisor(lifecycle, supervisorOptions, serverArguments,
+                supervisorParts?.Observer, supervisorParts?.State ?? SupervisorRecoveryStateStore.ForProfile(paths));
 
             using var termRegistration = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
             {
@@ -892,12 +930,10 @@ switch (command.ToLowerInvariant())
                 cancellation.Cancel();
             });
 
-            LocalManagementApiHost? apiHost = null;
             try
             {
-                if (headlessConfiguration.Api.Enabled)
+                if (apiHost is not null)
                 {
-                    apiHost = LocalManagementApiHost.Create(effectiveHeadlessConfiguration, ServiceRunLifecycleFactory, new LinuxManagementServiceStatusProvider(serviceManager), configurationPath, serviceManager);
                     await apiHost.StartAsync(cancellation.Token);
                     Console.WriteLine(
                         $"MystTiq local management API listening on http://{headlessConfiguration.Api.BindAddress}:{headlessConfiguration.Api.Port}");
@@ -1021,6 +1057,7 @@ static void PrintHelp()
     Console.WriteLine("  service-status Show MystTiq systemd installation/runtime state (Linux).");
     Console.WriteLine("  service-install Install/enable MystTiq under systemd (requires sudo).");
     Console.WriteLine("  service-uninstall Stop/disable/remove MystTiq systemd unit (requires sudo).");
+    Console.WriteLine("  service-unit   Print the systemd unit service-install would write (installs nothing; Linux).");
     Console.WriteLine("  service-run    Long-running supervisor used by systemd.");
     Console.WriteLine("  api-run        Run the management API without systemd.");
     Console.WriteLine("  config-show    Print the effective headless configuration.");
@@ -1048,6 +1085,7 @@ static void PrintHelp()
     Console.WriteLine("  --steamcmd <path>                Override SteamCMD executable.");
     Console.WriteLine("  --backup-root <path>             Override backup root.");
     Console.WriteLine("  --runtime-root <path>            Override MystTiq lifecycle/log state root.");
+    Console.WriteLine("  --fleet-root <path>              Override the fleet's shared state root (activity log, host history).");
     Console.WriteLine("  --startup-timeout-seconds <n>    Startup verification timeout (default 90).");
     Console.WriteLine("  --stop-timeout-seconds <n>       Graceful SIGTERM timeout (default 30).");
     Console.WriteLine("  --service-user <user>             User account for the installed systemd service.");

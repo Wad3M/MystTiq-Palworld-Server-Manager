@@ -1,5 +1,10 @@
 [CmdletBinding()]
-param([switch]$Strict)
+# v0.7.115.0: -AllowBuildOutputs skips ONLY the hygiene check for build output (bin, obj, artifacts, publish and
+# anything inside them). The logic gates validate mid-run, after they themselves have built, published and
+# written reports, so without it strict validation could never pass inside a gate: that was the "known
+# residue" failure every gate carried since v0.7.10x. The release pipeline still runs this without the
+# switch after Clean, which is where build output genuinely must be absent.
+param([switch]$Strict, [switch]$AllowBuildOutputs)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -23,10 +28,17 @@ if ($version -notmatch '^\d+\.\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') { Add-Issue E
 @('Directory.Build.props','Build.ps1','README.md','CONTRIBUTING.md','CHANGELOG.md','LICENSE','RELEASE_CHECKLIST.md','PalworldServerManager.slnx','scripts\Build.ps1','scripts\Build-Release.ps1','scripts\Build-Installer.ps1','scripts\Build-Checksums.ps1','scripts\Validate-Release.ps1','scripts\Package-Portable.ps1','installer\MystTiqPalworldServer.iss','src\PalworldManager\PalworldManager.csproj','src\PalworldManager\MainWindow.xaml','src\MystTiq.Core\MystTiq.Core.csproj','src\MystTiq.HeadlessHost\MystTiq.HeadlessHost.csproj','scripts\Build-LinuxHeadless.ps1','docs\linux\TESTED_ENVIRONMENT.md','docs\roadmap\WINDOWS_BACKPORT_REGISTRY.md') | ForEach-Object { Test-RequiredPath $_ File }
 Test-RequiredPath 'release-notes' Directory
 
+$buildOutputNames = @('bin','obj','artifacts','publish')
 $blockedDirectoryNames = @('.git','.vs','bin','obj','artifacts','publish','Backups','Logs')
-Get-ChildItem $root -Directory -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -in $blockedDirectoryNames } | ForEach-Object { Add-Issue Error 'Repository hygiene' "Generated/private directory found: $($_.FullName.Substring($root.Length + 1))" }
+if ($AllowBuildOutputs) { $blockedDirectoryNames = @($blockedDirectoryNames | Where-Object { $_ -notin $buildOutputNames }) }
+function Test-InsideBuildOutput([string]$fullName) {
+    if (-not $AllowBuildOutputs) { return $false }
+    $parts = $fullName.Substring($root.Length + 1).Split([IO.Path]::DirectorySeparatorChar)
+    return @($parts | Where-Object { $_ -in $buildOutputNames }).Count -gt 0
+}
+Get-ChildItem $root -Directory -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -in $blockedDirectoryNames -and -not (Test-InsideBuildOutput $_.FullName) } | ForEach-Object { Add-Issue Error 'Repository hygiene' "Generated/private directory found: $($_.FullName.Substring($root.Length + 1))" }
 $blockedExtensions = @('.sav','.bak','.tmp','.dmp','.pfx','.snk')
-Get-ChildItem $root -File -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Extension.ToLowerInvariant() -in $blockedExtensions } | ForEach-Object { Add-Issue Error 'Repository hygiene' "Blocked runtime or signing file found: $($_.FullName.Substring($root.Length + 1))" }
+Get-ChildItem $root -File -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Extension.ToLowerInvariant() -in $blockedExtensions -and -not (Test-InsideBuildOutput $_.FullName) } | ForEach-Object { Add-Issue Error 'Repository hygiene' "Blocked runtime or signing file found: $($_.FullName.Substring($root.Length + 1))" }
 
 foreach ($pattern in @('APPLY_*.md','BUILD_TEST_PLAN_*.md','COMPILE_HOTFIX_*.md','RELEASE_NOTES_*.md')) {
     Get-ChildItem $root -File -Filter $pattern -ErrorAction SilentlyContinue | ForEach-Object { Add-Issue Error 'Release-note organization' "Move root note into release-notes: $($_.Name)" }
@@ -54,6 +66,10 @@ $activeFiles = Get-ChildItem $root -File -Recurse -Include *.cs,*.xaml,*.csproj,
     -not ($relativePath -like 'scripts\Test-v*-RuntimeSmoke.ps1') -and
     -not ($relativePath -like 'scripts\Test-v*-RouteSmoke.ps1') -and
     -not ($relativePath -like 'scripts\Test-v*-LinuxAcceptance.sh') -and
+    # v0.8.12.0: the isolated Linux check names the earlier versions whose features it re-checks.
+    -not ($relativePath -like 'scripts\Test-v*-LinuxIsolated.ps1') -and
+    # v0.8.15.0: so does the remote sign-in test (its '-RemoteSignIn' suffix reads like a pre-release tag).
+    -not ($relativePath -like 'scripts\Test-v*-RemoteSignIn.ps1') -and
     -not ($relativePath -like 'scripts\Test-v*-ProductionReadiness.sh')
 }
 $versionParts = $version.Split('.')

@@ -10,23 +10,80 @@ namespace MystTiq.Desktop.Services;
 // no app restart, no ResourceDictionary swap, no per-page code.
 public static class ThemeApplier
 {
+    // v0.8.16.0: whether the operating system is set to light. A property so the headless harness can stand in for the
+    // platform; the real app asks Avalonia's platform settings (Windows' app mode, the Linux desktop's color scheme).
+    public static Func<bool> SystemPrefersLight { get; set; } = () =>
+        Application.Current?.PlatformSettings?.GetColorValues().ThemeVariant == Avalonia.Platform.PlatformThemeVariant.Light;
+
+    // The mode last applied (normalized), for the System mode's live follow.
+    public static string CurrentMode { get; private set; } = "Dark";
+
+    // v0.8.25.0: the Windows contrast theme's colours when one is on, else null (a property so the headless harness can
+    // stand in for Windows), and the one in use after the last Apply.
+    public static Func<SystemContrastPalette?> SystemContrast { get; set; } = SystemContrastPalette.ReadFromSystem;
+    public static SystemContrastPalette? CurrentContrast { get; private set; }
+
+    // The palette a mode is shown with (Light or Dark), a Windows contrast theme included: the art and the Light check
+    // follow it too, so a light contrast theme (Desert) gets the day art.
+    public static string ResolveVariant(string? mode)
+    {
+        var normalized = ThemeCatalog.NormalizeMode(mode);
+        var contrast = normalized is "HighContrast" or "System" ? SystemContrast() : null;
+        return contrast is not null ? (contrast.IsLight ? "Light" : "Dark") : ThemeCatalog.BaseVariant(normalized, SystemPrefersLight());
+    }
+
+    // v0.8.16.0: "variant" is now a mode (ThemeCatalog.Modes): Dark and Light as before, or Midnight, HighContrast or
+    // System, each resolved to the Dark or Light palette plus that mode's own overrides.
     public static void Apply(string accentTheme, string variant)
     {
         if (Application.Current is not { } app) return;
         if (!ThemeCatalog.AccentThemes.Contains(accentTheme)) accentTheme = ThemeCatalog.AccentThemes[0];
-        if (!ThemeCatalog.Variants.Contains(variant)) variant = ThemeCatalog.Variants[0];
+        var mode = ThemeCatalog.NormalizeMode(variant);
+        CurrentMode = mode;
+        // v0.8.25.0: a Windows contrast theme wins in High contrast and in Follow the system: its colours replace
+        // MystTiq's own high-contrast palette, and its window colour decides the base palette (Desert is light).
+        var contrast = mode is "HighContrast" or "System" ? SystemContrast() : null;
+        if (contrast is not null) mode = "HighContrast";
+        CurrentContrast = contrast;
+        variant = contrast is not null ? (contrast.IsLight ? "Light" : "Dark") : ThemeCatalog.BaseVariant(mode, SystemPrefersLight());
+        var highContrast = mode == "HighContrast";
+        var midnight = mode == "Midnight";
+        // High contrast's own surfaces: black and dark greys, or the contrast theme's window colour stepped toward its text.
+        Color HcSurface(double step, string ownHex) => contrast?.Shade(step) ?? (ownHex == "#000000" ? Colors.Black : Color.Parse(ownHex));
 
-        foreach (var (key, byVariant) in ThemeCatalog.Structural)
-            app.Resources[key] = byVariant[variant];
+        Color S(string key) => contrast is not null && contrast.Structural.TryGetValue(key, out var sc) ? sc
+            : ThemeCatalog.ModeStructural.TryGetValue(mode, out var o) && o.TryGetValue(key, out var c) ? c : ThemeCatalog.Structural[key][variant];
+        // Status colours keep their meaning; on a light contrast theme they come from the Light palette so they stay readable.
+        Color Sem(string key) => contrast is { IsLight: true } ? ThemeCatalog.Semantic[key]["Light"]
+            : ThemeCatalog.ModeSemantic.TryGetValue(mode, out var o) && o.TryGetValue(key, out var c) ? c : ThemeCatalog.Semantic[key][variant];
+        // High contrast lifts the five accent hues so they read on black; the other modes keep them. A contrast theme's
+        // accents are its own: the highlight for blue (selection, primary), its link colour for the others.
+        Color Acc(string key) => contrast is not null ? (key == "Blue" ? contrast.Highlight : contrast.Hotlight)
+            : highContrast ? ThemeColorMath.Lighten(ThemeCatalog.Accent[key][accentTheme][variant], 0.3) : ThemeCatalog.Accent[key][accentTheme][variant];
+        Color Stop(string key) => ModeStop(key, ThemeCatalog.GradientStops[key][accentTheme][variant], mode, contrast);
+        Color Derived(string name) => name switch
+        {
+            "Blue" or "Cyan" or "Violet" or "Magenta" or "Orange" => Acc(name),
+            "Green" or "Amber" or "Red" => Sem(name),
+            "Purple" => Acc("Violet"),
+            "DarkGreen" => ThemeColorMath.Darken(Sem("Green"), 0.32),
+            "Neutral" => ThemeColorMath.Blend(S("Border"), S("Muted"), 0.5),
+            _ => Acc("Blue"),
+        };
 
-        foreach (var (key, byVariant) in ThemeCatalog.Semantic)
-            app.Resources[key] = byVariant[variant];
+        foreach (var key in ThemeCatalog.Structural.Keys)
+            app.Resources[key] = S(key);
 
-        foreach (var (key, byTheme) in ThemeCatalog.Accent)
-            app.Resources[key] = byTheme[accentTheme][variant];
+        foreach (var key in ThemeCatalog.Semantic.Keys)
+            app.Resources[key] = Sem(key);
 
-        foreach (var (key, byTheme) in ThemeCatalog.GradientStops)
-            app.Resources[key] = byTheme[accentTheme][variant];
+        foreach (var key in ThemeCatalog.Accent.Keys)
+            app.Resources[key] = Acc(key);
+
+        foreach (var key in ThemeCatalog.GradientStops.Keys)
+            app.Resources[key] = Stop(key);
+
+        app.Resources["CardBorderBrush"] = new SolidColorBrush(contrast?.WindowText ?? ThemeCatalog.CardBorder(mode));
 
         // v0.7.55.0: Central Theme System Completion. Computes, rather than hand-authors, the
         // border/glow/card-gradient resources for every page-accent and status-glow color in
@@ -37,10 +94,22 @@ public static class ThemeApplier
         // keys DesignSystem.axaml's <Styles.Resources> already declares statically (CardGreenGradient
         // etc.) -- Application-level resources already proven to win over StyleInclude-declared ones
         // for every other resource this method overwrites, so no XAML reference needs to change.
-        var structuralBorder = ThemeCatalog.Structural["Border"][variant];
+        var structuralBorder = S("Border");
+        var pageBase = S("Bg1");
+        app.Resources["PageArtReadabilityGradient"] = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0.5, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(1, 0.5, RelativeUnit.Relative),
+            GradientStops = new GradientStops
+            {
+                new GradientStop(ThemeColorMath.WithAlpha(pageBase, 0xE8), 0),
+                new GradientStop(ThemeColorMath.WithAlpha(pageBase, 0xC0), 0.45),
+                new GradientStop(ThemeColorMath.WithAlpha(pageBase, 0x18), 1)
+            }
+        };
         foreach (var name in ThemeCatalog.DerivedColorNames)
         {
-            var baseColor = ThemeCatalog.ResolveDerivedBaseColor(name, accentTheme, variant);
+            var baseColor = Derived(name);
 
             app.Resources[$"{name}AccentBorderBrush"] = new SolidColorBrush(ThemeColorMath.Blend(baseColor, structuralBorder, 0.55));
             // A bright, lightened version of the same base color -- distinct purpose from the muted
@@ -57,7 +126,7 @@ public static class ThemeApplier
                 new BoxShadow { OffsetX = 0, OffsetY = 0, Blur = 24, Spread = 2, Color = ThemeColorMath.WithAlpha(baseColor, 0x5A) },
                 [new BoxShadow { OffsetX = 0, OffsetY = 9, Blur = 24, Spread = 0, Color = Color.FromArgb(0x58, 0, 0, 0) }]);
 
-            app.Resources[$"Card{name}Gradient"] = BuildCardGradient(baseColor, variant);
+            app.Resources[$"Card{name}Gradient"] = highContrast ? new SolidColorBrush(HcSurface(0, "#000000")) : BuildCardGradient(baseColor, variant, deep: midnight);
 
             // v0.7.56.0: Central Theme System Completion, Remaining Decorative Gradients. GraphFill
             // is the lowest-risk of the ~240 colors deferred from v0.7.48.0 -- a translucent alpha
@@ -71,16 +140,19 @@ public static class ThemeApplier
 
         // Page-accent-tinted "context" cards (ribbonGroup.contextXxx and prototypeActions).
         foreach (var name in new[] { "Blue", "Violet", "Amber", "Magenta", "Orange" })
-            app.Resources[$"Context{name}Gradient"] = BuildContextGradient(ThemeCatalog.ResolveDerivedBaseColor(name, accentTheme, variant), variant);
+            app.Resources[$"Context{name}Gradient"] = BuildContextGradient(Derived(name), variant);
 
         // Generic (non-page-accent) glass sheen family -- GlassOptionHoverGradient/PrimaryGlass*
         // read as the same "general interactive" blue highlight v0.7.48.0 already unified onto
         // BlueAccentHighlightBrush elsewhere, just not yet converted; Success/Danger tie to the
         // matching Semantic color.
-        var blueBase = ThemeCatalog.Accent["Blue"][accentTheme][variant];
-        var greenBase = ThemeCatalog.Semantic["Green"][variant];
-        var redBase = ThemeCatalog.Semantic["Red"][variant];
-        app.Resources["GlassOptionHoverGradient"] = BuildGlassSheen(blueBase, variant, bright: false);
+        var blueBase = Acc("Blue");
+        var greenBase = Sem("Green");
+        var redBase = Sem("Red");
+        // v0.8.16.0: this sheen is also the sidebar's background, so Midnight builds it from a much darker blue and high
+        // contrast makes it a flat dark grey (still distinct from the black page, so hover shows).
+        app.Resources["GlassOptionHoverGradient"] = highContrast ? new SolidColorBrush(HcSurface(0.12, "#1E1E1E"))
+            : BuildGlassSheen(midnight ? ThemeColorMath.Darken(blueBase, 0.6) : blueBase, variant, bright: false);
         app.Resources["PrimaryGlassGradient"] = BuildGlassSheen(blueBase, variant, bright: false);
         app.Resources["PrimaryGlassHoverGradient"] = BuildGlassSheen(blueBase, variant, bright: true);
         app.Resources["SuccessGlassGradient"] = BuildGlassSheen(greenBase, variant, bright: false);
@@ -90,20 +162,23 @@ public static class ThemeApplier
 
         // Structural (not page-accent-tinted) glass surfaces: the nav sidebar's selected/hover
         // states and the Dashboard's atmosphere-image overlay.
-        app.Resources["NavGlassSurfaceGradient"] = BuildNavGlass(variant, NavGlassKind.Surface);
-        app.Resources["NavSelectedGlassGradient"] = BuildNavGlass(variant, NavGlassKind.Selected);
-        app.Resources["NavHoverGlassGradient"] = BuildNavGlass(variant, NavGlassKind.Hover);
-        app.Resources["NavSelectedHoverGlassGradient"] = BuildNavGlass(variant, NavGlassKind.SelectedHover);
-        app.Resources["DashboardGlassGradient"] = BuildNavGlass(variant, NavGlassKind.Dashboard);
+        // High contrast builds the nav glass from a dark grey instead of its white border, or the sidebar would wash out.
+        var navBorder = highContrast ? (contrast?.GrayText ?? Color.Parse("#404040")) : S("Border");
+        var navBg2 = S("Bg2");
+        app.Resources["NavGlassSurfaceGradient"] = BuildNavGlass(variant, NavGlassKind.Surface, navBorder, navBg2);
+        app.Resources["NavSelectedGlassGradient"] = BuildNavGlass(variant, NavGlassKind.Selected, navBorder, navBg2);
+        app.Resources["NavHoverGlassGradient"] = BuildNavGlass(variant, NavGlassKind.Hover, navBorder, navBg2);
+        app.Resources["NavSelectedHoverGlassGradient"] = BuildNavGlass(variant, NavGlassKind.SelectedHover, navBorder, navBg2);
+        app.Resources["DashboardGlassGradient"] = BuildNavGlass(variant, NavGlassKind.Dashboard, navBorder, navBg2);
 
         // Backups page's three accent cards (Protection=Green, Storage=Blue, Retention=Orange) plus
         // its corner-badge context gradient (Amber) -- near-opaque tinted glass, same structural
         // family as Card{Name}Gradient above, just with its own base-color mapping since "Backup"
         // itself has no single identity color.
-        app.Resources["BackupProtectionGradient"] = BuildCardGradient(greenBase, variant);
-        app.Resources["BackupStorageGradient"] = BuildCardGradient(blueBase, variant);
-        app.Resources["BackupRetentionGradient"] = BuildCardGradient(ThemeCatalog.Accent["Orange"][accentTheme][variant], variant);
-        app.Resources["BackupContextGradient"] = BuildContextGradient(ThemeCatalog.Semantic["Amber"][variant], variant);
+        app.Resources["BackupProtectionGradient"] = BuildCardGradient(greenBase, variant, deep: midnight || highContrast);
+        app.Resources["BackupStorageGradient"] = BuildCardGradient(blueBase, variant, deep: midnight || highContrast);
+        app.Resources["BackupRetentionGradient"] = BuildCardGradient(Acc("Orange"), variant, deep: midnight || highContrast);
+        app.Resources["BackupContextGradient"] = BuildContextGradient(Sem("Amber"), variant);
 
         // v0.7.78.0: requested directly ("accent theme should tint everything, not just selection
         // elements") -- ButtonGradient/Hover/Pressed and the base CardGradient were confirmed the
@@ -120,35 +195,26 @@ public static class ThemeApplier
         // noticeably darker/more saturated than the rest of the Light chrome, especially under
         // Violet/Crimson-leaning accent themes. Light mode now blends toward a lightened copy of
         // blueBase instead, so the result stays a pale tint rather than dragging brightness down.
-        const double neutralTintAmount = 0.16;
+        // High contrast keeps its surfaces pure black and grey: no tint.
+        var neutralTintAmount = highContrast ? 0.0 : 0.16;
         var neutralTintTarget = variant == "Light" ? ThemeColorMath.Lighten(blueBase, 0.55) : blueBase;
         Color Tint(Color original) => ThemeColorMath.WithAlpha(ThemeColorMath.Blend(original, neutralTintTarget, neutralTintAmount), original.A);
 
-        app.Resources["ButtonGradientStop0"] = Tint(ThemeCatalog.GradientStops["ButtonGradientStop0"][accentTheme][variant]);
-        app.Resources["ButtonGradientStop1"] = Tint(ThemeCatalog.GradientStops["ButtonGradientStop1"][accentTheme][variant]);
-        app.Resources["ButtonGradientStop2"] = Tint(ThemeCatalog.GradientStops["ButtonGradientStop2"][accentTheme][variant]);
-        app.Resources["ButtonGradientHoverStop0"] = Tint(ThemeCatalog.GradientStops["ButtonGradientHoverStop0"][accentTheme][variant]);
-        app.Resources["ButtonGradientHoverStop1"] = Tint(ThemeCatalog.GradientStops["ButtonGradientHoverStop1"][accentTheme][variant]);
-        app.Resources["ButtonGradientHoverStop2"] = Tint(ThemeCatalog.GradientStops["ButtonGradientHoverStop2"][accentTheme][variant]);
-        app.Resources["ButtonGradientPressedStop0"] = Tint(ThemeCatalog.GradientStops["ButtonGradientPressedStop0"][accentTheme][variant]);
-        app.Resources["ButtonGradientPressedStop1"] = Tint(ThemeCatalog.GradientStops["ButtonGradientPressedStop1"][accentTheme][variant]);
-        app.Resources["ButtonGradientPressedStop2"] = Tint(ThemeCatalog.GradientStops["ButtonGradientPressedStop2"][accentTheme][variant]);
-
-        app.Resources["CardGradientStop0"] = Tint(ThemeCatalog.GradientStops["CardGradientStop0"][accentTheme][variant]);
-        app.Resources["CardGradientStop1"] = Tint(ThemeCatalog.GradientStops["CardGradientStop1"][accentTheme][variant]);
-        app.Resources["CardGradientStop2"] = Tint(ThemeCatalog.GradientStops["CardGradientStop2"][accentTheme][variant]);
-        app.Resources["CardGradientStop3"] = Tint(ThemeCatalog.GradientStops["CardGradientStop3"][accentTheme][variant]);
+        foreach (var key in new[] { "ButtonGradientStop0", "ButtonGradientStop1", "ButtonGradientStop2", "ButtonGradientHoverStop0", "ButtonGradientHoverStop1",
+                     "ButtonGradientHoverStop2", "ButtonGradientPressedStop0", "ButtonGradientPressedStop1", "ButtonGradientPressedStop2",
+                     "CardGradientStop0", "CardGradientStop1", "CardGradientStop2", "CardGradientStop3" })
+            app.Resources[key] = Tint(Stop(key));
 
         // Generic list-row states (dataRow) -- previously hardcoded Background/BorderBrush literals
         // directly on the Style selector rather than a named gradient resource; DesignSystem.axaml's
         // Border.dataRow styles now bind through these instead.
         var isDark = variant != "Light";
-        var rowBg2 = ThemeCatalog.Structural["Bg2"][variant];
+        var rowBg2 = S("Bg2");
         app.Resources["DataRowBg"] = new SolidColorBrush(ThemeColorMath.WithAlpha(rowBg2, isDark ? (byte)0x60 : (byte)0x20));
         app.Resources["DataRowBorderBrush"] = new SolidColorBrush(ThemeColorMath.Blend(blueBase, structuralBorder, 0.65));
         app.Resources["DataRowHoverBg"] = new SolidColorBrush(ThemeColorMath.WithAlpha(ThemeColorMath.Blend(blueBase, rowBg2, 0.75), isDark ? (byte)0xA0 : (byte)0x40));
         app.Resources["DataRowHoverBorderBrush"] = new SolidColorBrush(ThemeColorMath.Blend(blueBase, structuralBorder, 0.3));
-        var amberBase = ThemeCatalog.Semantic["Amber"][variant];
+        var amberBase = Sem("Amber");
         app.Resources["DataRowSelectedBg"] = new SolidColorBrush(ThemeColorMath.WithAlpha(ThemeColorMath.Blend(amberBase, rowBg2, 0.78), isDark ? (byte)0xB0 : (byte)0x50));
         app.Resources["DataRowSelectedBorderBrush"] = new SolidColorBrush(amberBase);
         app.Resources["DataRowSelectedGlowShadow"] = new BoxShadows(
@@ -169,9 +235,9 @@ public static class ThemeApplier
         // Button/Success/Warning's own Hover pairs, rather than hand-picking 24 new literals
         // (4 themes x 2 variants x 3 stops) this project's own history says is unreliable without
         // being able to see the rendered result.
-        var tabStop0 = ThemeCatalog.GradientStops["ServerTabGradientStop0"][accentTheme][variant];
-        var tabStop1 = ThemeCatalog.GradientStops["ServerTabGradientStop1"][accentTheme][variant];
-        var tabStop2 = ThemeCatalog.GradientStops["ServerTabGradientStop2"][accentTheme][variant];
+        var tabStop0 = Stop("ServerTabGradientStop0");
+        var tabStop1 = Stop("ServerTabGradientStop1");
+        var tabStop2 = Stop("ServerTabGradientStop2");
         app.Resources["ServerTabHoverGradient"] = new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
@@ -184,7 +250,62 @@ public static class ThemeApplier
             }
         };
 
+        // v0.8.25.0: the last three keyed gradients no mode reached (their Dark literals stayed in every mode):
+        // WarningGlassGradient like its Primary/Success/Danger glass siblings, the Restore pair as card surfaces of the
+        // orange accent (the hover one brighter, as the other hover pairs).
+        app.Resources["WarningGlassGradient"] = BuildGlassSheen(amberBase, variant, bright: false);
+        app.Resources["RestoreGradient"] = highContrast ? new SolidColorBrush(HcSurface(0, "#000000")) : BuildCardGradient(Acc("Orange"), variant, deep: midnight);
+        app.Resources["RestoreGradientHover"] = highContrast ? new SolidColorBrush(HcSurface(0.12, "#1E1E1E")) : BuildCardGradient(ThemeColorMath.Lighten(Acc("Orange"), 0.15), variant, deep: midnight);
+
+        // v0.8.25.0: the decorative colours that were literals in the styles (glows, shadows, fixed borders).
+        DecorativePalette.Apply(app.Resources, mode, variant, S);
+        // Button text: white on MystTiq's coloured buttons; a Windows contrast theme's button text on its button face.
+        app.Resources["ButtonForegroundBrush"] = new SolidColorBrush(contrast?.ButtonText ?? Colors.White);
+        // The success button is pale green on the light palettes (Light, and a light contrast theme): dark text there.
+        // White on it read at under 2:1 in Light (found by the v0.8.25.0 contrast-theme render).
+        app.Resources["SuccessButtonForegroundBrush"] = new SolidColorBrush(variant == "Light" ? contrast?.ButtonText ?? S("Text") : Colors.White);
+
         app.RequestedThemeVariant = variant == "Light" ? ThemeVariant.Light : ThemeVariant.Dark;
+    }
+
+    // v0.8.16.0: Midnight takes the chrome surfaces (command bar, sidebar, status bar, cards, tabs, buttons) toward black,
+    // keeping their alpha. High contrast makes them black, with buttons a step of grey so hover and press still show. The
+    // accent-coloured stops (primary, success, warning, danger, the selected tab and category) are left as they are.
+    private static readonly string[] SurfaceStopPrefixes =
+        ["CommandSurfaceGradient", "NavSurfaceGradient", "StatusSurfaceGradient", "CardGradient", "ServerTabGradient", "ButtonGradient"];
+
+    public static Color ModeStop(string key, Color color, string mode, SystemContrastPalette? contrast = null)
+    {
+        if (!SurfaceStopPrefixes.Any(key.StartsWith)) return color;
+        return ThemeCatalog.NormalizeMode(mode) switch
+        {
+            "Midnight" => ThemeColorMath.WithAlpha(ThemeColorMath.Darken(color, 0.7), color.A),
+            // v0.8.25.0: a Windows contrast theme's button face, stepped toward its text on hover and press.
+            "HighContrast" when contrast is not null && key.StartsWith("ButtonGradientHover", StringComparison.Ordinal) => ThemeColorMath.Blend(contrast.ButtonFace, contrast.ButtonText, 0.16),
+            "HighContrast" when contrast is not null && key.StartsWith("ButtonGradientPressed", StringComparison.Ordinal) => ThemeColorMath.Blend(contrast.ButtonFace, contrast.ButtonText, 0.28),
+            "HighContrast" when contrast is not null && key.StartsWith("ButtonGradient", StringComparison.Ordinal) => contrast.ButtonFace,
+            "HighContrast" when contrast is not null => contrast.Window,
+            "HighContrast" when key.StartsWith("ButtonGradientHover", StringComparison.Ordinal) => Color.Parse("#FF2A2A2A"),
+            "HighContrast" when key.StartsWith("ButtonGradientPressed", StringComparison.Ordinal) => Color.Parse("#FF3C3C3C"),
+            "HighContrast" when key.StartsWith("ButtonGradient", StringComparison.Ordinal) => Color.Parse("#FF101010"),
+            "HighContrast" => Colors.Black,
+            _ => color,
+        };
+    }
+
+    // v0.8.16.0: density, for every tab. DesignSystem.axaml's base Button/TextBox/ComboBox/card/list-row styles read these
+    // resources, so a class-specific style (the Ribbon's big buttons, section toggles) keeps its own size either way.
+    public static string CurrentDensity { get; private set; } = "Comfortable";
+
+    public static void ApplyDensity(string? density)
+    {
+        CurrentDensity = ThemeCatalog.NormalizeDensity(density);
+        if (Application.Current is not { } app) return;
+        var compact = CurrentDensity == "Compact";
+        app.Resources["ControlMinHeight"] = compact ? 26d : 31d;
+        app.Resources["CardPadding"] = compact ? new Thickness(7) : new Thickness(11);
+        app.Resources["InputPadding"] = compact ? new Thickness(7, 2) : new Thickness(9, 4);
+        app.Resources["ListItemPadding"] = compact ? new Thickness(4, 1) : new Thickness(4, 3);
     }
 
     private enum NavGlassKind { Surface, Selected, Hover, SelectedHover, Dashboard }
@@ -193,12 +314,13 @@ public static class ThemeApplier
     // black for a dark glass tint, toward white for a light one) but tinted by the family's own
     // base color instead of a neutral gray -- the same "glass card, colored" look every one of
     // these gradients already has, just computed instead of hand-picked per combination.
-    private static LinearGradientBrush BuildCardGradient(Color baseColor, string variant)
+    // v0.8.16.0: deep (Midnight, and the Backups cards in high contrast) takes each stop further toward black.
+    private static LinearGradientBrush BuildCardGradient(Color baseColor, string variant, bool deep = false)
     {
         var isDark = variant != "Light";
-        var stop0 = isDark ? ThemeColorMath.Darken(baseColor, 0.55) : ThemeColorMath.Lighten(baseColor, 0.80);
-        var stop1 = isDark ? ThemeColorMath.Darken(baseColor, 0.70) : ThemeColorMath.Lighten(baseColor, 0.87);
-        var stop2 = isDark ? ThemeColorMath.Darken(baseColor, 0.88) : ThemeColorMath.Lighten(baseColor, 0.94);
+        var stop0 = isDark ? ThemeColorMath.Darken(baseColor, deep ? 0.78 : 0.55) : ThemeColorMath.Lighten(baseColor, 0.80);
+        var stop1 = isDark ? ThemeColorMath.Darken(baseColor, deep ? 0.88 : 0.70) : ThemeColorMath.Lighten(baseColor, 0.87);
+        var stop2 = isDark ? ThemeColorMath.Darken(baseColor, deep ? 0.96 : 0.88) : ThemeColorMath.Lighten(baseColor, 0.94);
         var alpha = isDark ? (byte)0xF0 : (byte)0xF5;
         return new LinearGradientBrush
         {
@@ -294,11 +416,9 @@ public static class ThemeApplier
     // since these represent "this nav row/panel" chrome, not a page identity. Dark keeps close to
     // the existing near-black selected look; Light uses a much lighter, more translucent version
     // of the same structure so selection/hover still reads as a visible lift, not a dark smear.
-    private static LinearGradientBrush BuildNavGlass(string variant, NavGlassKind kind)
+    private static LinearGradientBrush BuildNavGlass(string variant, NavGlassKind kind, Color border, Color bg2)
     {
         var isDark = variant != "Light";
-        var border = ThemeCatalog.Structural["Border"][variant];
-        var bg2 = ThemeCatalog.Structural["Bg2"][variant];
         var lip = isDark ? ThemeColorMath.Lighten(border, 0.35) : ThemeColorMath.Lighten(border, 0.55);
         var deep = isDark ? ThemeColorMath.Darken(bg2, 0.6) : ThemeColorMath.Lighten(bg2, 0.6);
 

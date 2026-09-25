@@ -46,3 +46,13 @@ Desktop.ini
 
 # Installer output
 installer/Output/
+
+# MystTiq v0.8.25.0: local and third-party files kept out of the repository
+.claude/
+*.obj
+UE4SS-*.zip
+/worldtree.webp
+/palpagos.webp
+/SOURCE_MANIFEST_SHA256.txt
+/DELETE_THESE_*.txt
+/CHANGED_FILES_v*.txt

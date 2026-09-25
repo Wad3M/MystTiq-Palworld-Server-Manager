@@ -185,7 +185,17 @@ public sealed class LinuxSystemdServiceManager : ILinuxServiceManager
         }
     }
 
-    private string BuildUnit(string serviceUser, string configurationPath) =>
+    private string BuildUnit(string serviceUser, string configurationPath) => BuildUnitText(serviceUser, configurationPath, profileId);
+
+    // v0.8.21.0: public and static, so `mysttiq-server service-unit` can print exactly what service-install would write
+    // (and the logic harness can check it on any OS). LimitNICE=-11 lets the service lower the Palworld server's
+    // niceness again, down to High: Linux checks the target process's RLIMIT_NICE, and the server inherits the service's
+    // limits. Without it, eco mode or below-normal priority (v0.8.17.0) could not be undone by an unprivileged service.
+    // No capability is added, and NoNewPrivileges stays.
+    public static string BuildUnitText(string serviceUser, string configurationPath, ServerProfileId profileId)
+    {
+        var isDefault = profileId.Value.Equals(HeadlessConfiguration.DefaultServerProfileId, StringComparison.OrdinalIgnoreCase);
+        return
         "[Unit]\n" +
         "Description=MystTiq Palworld Headless Server Manager\n" +
         "Documentation=https://github.com/Wad3M/MystTiq-Palworld-Server-Manager\n" +
@@ -205,9 +215,12 @@ public sealed class LinuxSystemdServiceManager : ILinuxServiceManager
         "TimeoutStopSec=60\n" +
         "KillMode=process\n" +
         "NoNewPrivileges=true\n" +
+        "# MystTiq v0.8.21.0: lets MystTiq raise the Palworld server's priority again after eco mode (HOST tab).\n" +
+        "LimitNICE=-11\n" +
         "\n" +
         "[Install]\n" +
         "WantedBy=multi-user.target\n";
+    }
 
     private static string QuoteSystemdArgument(string value)
     {

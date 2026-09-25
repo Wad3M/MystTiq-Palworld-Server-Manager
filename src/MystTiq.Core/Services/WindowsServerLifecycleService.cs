@@ -123,6 +123,8 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
                 $"UDP port {expectedGamePort} is already in use by another process on this machine. Stop whatever's using it, or change this server's configured port, before starting -- launching anyway would leave PalServer running but unable to bind its game port, indistinguishable from a hang.");
 
         Directory.CreateDirectory(paths.ManagerRuntimeRoot);
+        // v0.8.18.0: the server's bandwidth policy goes into Engine.ini just before it starts (never blocks the start).
+        var networkLine = EngineNetworkSettings.ApplyBeforeStart(paths);
         var now = DateTimeOffset.UtcNow;
         stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Starting, null, now, false, "Headless host requested PalServer startup."));
         try
@@ -150,6 +152,7 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
             AppendLifecycleConsoleLine($"Launching: {paths.ServerExecutable}");
             AppendLifecycleConsoleLine($"Working directory: {paths.ServerRoot}");
             AppendLifecycleConsoleLine("Arguments: " + string.Join(" ", startInfo.ArgumentList));
+            if (networkLine is not null) AppendLifecycleConsoleLine(networkLine);
             AppendLifecycleConsoleLine($"PalServer bootstrap PID {ownedProcess.Id} created; waiting for UDP {expectedGamePort} readiness.");
             // v0.7.83.0 bugfix: reported live -- this previously ran for a fixed startupTimeout+30s
             // window, then stopped for good. On a host where new console allocations are hosted by

@@ -45,6 +45,19 @@ public sealed class NotificationChannelConfiguration
 
 public sealed record NotificationTemplate(string Id, string TitleFormat, string MessageFormat, string DefaultSeverity);
 
+// v0.8.4.0: pausing outside delivery (Discord, email, webhooks) while notifications still appear on the Notifications
+// page. The v0.7.111.0 alert mute silences alerts entirely; this is the lighter option the roadmap asked for: keep the
+// record in MystTiq, stop the pings. Stored apart from channels.json so saving the channel list (which replaces it
+// whole) can never clear or set a pause by accident.
+public sealed record NotificationDeliveryState(DateTimeOffset? PausedUntilUtc, IReadOnlyList<string> ExternalChannels, string Detail);
+public sealed record NotificationDeliveryPauseRequest(int Minutes);
+public sealed record NotificationDeliveryPause(DateTimeOffset? PausedUntilUtc);
+
+public static class NotificationDeliveryPolicy
+{
+    public static bool IsPaused(DateTimeOffset? pausedUntilUtc, DateTimeOffset now) => pausedUntilUtc is { } until && until > now;
+}
+
 public sealed class HeadlessNotificationRoutingService
 {
     private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
@@ -53,6 +66,8 @@ public sealed class HeadlessNotificationRoutingService
     private readonly object gate = new();
     private readonly string channelsPath;
     private readonly string templatesPath;
+    private readonly string deliveryPath;
+    private DateTimeOffset? deliveryPausedUntilUtc;
     private NotificationChannelConfiguration channels;
     private List<NotificationTemplate> templates;
 
@@ -63,7 +78,9 @@ public sealed class HeadlessNotificationRoutingService
         Directory.CreateDirectory(root);
         channelsPath = Path.Combine(root, "channels.json");
         templatesPath = Path.Combine(root, "templates.json");
+        deliveryPath = Path.Combine(root, "delivery.json");
         channels = LoadChannels();
+        deliveryPausedUntilUtc = LoadDeliveryPause();
         templates = LoadTemplates();
     }
 
@@ -103,6 +120,35 @@ public sealed class HeadlessNotificationRoutingService
         return result;
     }
 
+    public NotificationDeliveryState GetDeliveryState()
+    {
+        List<string> external;
+        DateTimeOffset? until;
+        lock (gate)
+        {
+            external = channels.Channels.Where(c => c.Enabled && c.Channel != NotificationChannel.Desktop).Select(c => c.Channel.ToString()).ToList();
+            until = NotificationDeliveryPolicy.IsPaused(deliveryPausedUntilUtc, DateTimeOffset.UtcNow) ? deliveryPausedUntilUtc : null;
+        }
+        var routes = external.Count == 0 ? "no outside channel is switched on" : string.Join(", ", external);
+        var detail = until is { } u
+            ? $"Outside delivery is paused until {u:yyyy-MM-dd HH:mm} UTC: notifications still appear on the Notifications page, but nothing is sent to {routes}. Notifications from the pause are not sent afterwards."
+            : $"Outside delivery is on ({routes}).";
+        return new(until, external, detail);
+    }
+
+    // v0.8.4.0: minutes <= 0 resumes; the end time is set on the host's clock and capped like the alert mute.
+    public NotificationDeliveryState PauseDelivery(int minutes)
+    {
+        lock (gate)
+        {
+            deliveryPausedUntilUtc = AlertMutePolicy.MuteUntil(minutes, DateTimeOffset.UtcNow);
+            Persist(deliveryPath, new NotificationDeliveryPause(deliveryPausedUntilUtc));
+        }
+        activity.Record("Information", "Notifications", minutes <= 0 ? "Outside delivery resumed" : "Outside delivery paused",
+            minutes <= 0 ? "Discord, email and webhook delivery is on again." : $"Until {deliveryPausedUntilUtc:yyyy-MM-dd HH:mm} UTC.");
+        return GetDeliveryState();
+    }
+
     // Fire-and-forget from HeadlessNotificationService.Create -- a routing failure must never
     // block or fail the underlying (already-persisted) Desktop notification.
     public void Dispatch(string severity, string title, string message)
@@ -110,6 +156,15 @@ public sealed class HeadlessNotificationRoutingService
         List<NotificationChannelConfig> enabled;
         lock (gate) enabled = channels.Channels.Where(c => c.Enabled && c.Channel != NotificationChannel.Desktop).ToList();
         if (enabled.Count == 0) return;
+        DateTimeOffset? pausedUntil;
+        lock (gate) pausedUntil = deliveryPausedUntilUtc;
+        if (NotificationDeliveryPolicy.IsPaused(pausedUntil, DateTimeOffset.UtcNow))
+        {
+            // Kept on the Notifications page by the caller; only the outside send is skipped, and the Activity log says so.
+            activity.Record("Information", "Notifications", "Not sent outside (delivery paused)",
+                $"{title} -> {string.Join(", ", enabled.Select(c => c.Channel))}");
+            return;
+        }
         _ = Task.Run(() => DispatchAsync(enabled, severity, title, message));
     }
 
@@ -226,6 +281,12 @@ public sealed class HeadlessNotificationRoutingService
     {
         try { return File.Exists(channelsPath) ? JsonSerializer.Deserialize<NotificationChannelConfiguration>(File.ReadAllText(channelsPath)) ?? new() : new(); }
         catch { return new(); }
+    }
+
+    private DateTimeOffset? LoadDeliveryPause()
+    {
+        try { return File.Exists(deliveryPath) ? JsonSerializer.Deserialize<NotificationDeliveryPause>(File.ReadAllText(deliveryPath))?.PausedUntilUtc : null; }
+        catch { return null; }
     }
 
     private List<NotificationTemplate> LoadTemplates()

@@ -29,7 +29,7 @@ public sealed class WanReachabilityService(INetworkDiagnosticsPlatformService pl
    checks.Add(new("Public IP Address",DiagnosticState.Skipped,$"Could not detect public IP: {ex.Message}.","Check your internet connection, or find it via your router's WAN status page."));
   }
 
-  UpnpMappingState upnpState;string? routerDescription=null;
+  UpnpMappingState upnpState;string? routerDescription=null;string? routerWanIp=null;var routerRefusedWan=false;
   try
   {
    var igd=await DiscoverAsync(token);
@@ -41,6 +41,15 @@ public sealed class WanReachabilityService(INetworkDiagnosticsPlatformService pl
    else
    {
     routerDescription=igd.Value.FriendlyName;
+    // v0.8.12.0: the router's own internet-side address, for the second-NAT check below. A router that will not say
+    // is not an error; the check then reports it could not tell.
+    // The real router answers this intermittently (UPnP error 501 on some tries), so a refusal is asked once more.
+    try
+    {
+     (routerWanIp,routerRefusedWan)=await GetExternalIpAsync(igd.Value,token);
+     if(routerRefusedWan){await Task.Delay(500,token);(routerWanIp,routerRefusedWan)=await GetExternalIpAsync(igd.Value,token);}
+    }
+    catch(Exception ex) when(ex is not OperationCanceledException){routerWanIp=null;}
     var entry=await GetSpecificPortMappingEntryAsync(igd.Value,gamePort,"UDP",token);
     if(entry is null)
     {
@@ -60,7 +69,60 @@ public sealed class WanReachabilityService(INetworkDiagnosticsPlatformService pl
    checks.Add(new("Router UPnP Discovery",DiagnosticState.Warning,$"UPnP inspection unavailable: {ex.Message}.","Forward the port manually in your router's admin page."));
   }
 
-  return new(DateTimeOffset.UtcNow,publicIp,gamePort,upnpState,routerDescription,checks);
+  // v0.8.12.0: a forward on the router only helps when no second NAT sits between it and the internet (NatTopology).
+  // The router's own WAN address decides it; without UPnP, the first hops of the route out are the (weaker) evidence.
+  var secondNat=NatTopology.Classify(publicIp,routerWanIp);
+  if(secondNat.State==DiagnosticState.Skipped)
+  {
+   try{secondNat=NatTopology.ClassifyRoute(await TraceFirstHopsAsync(token),routerRefusedWan)??secondNat;}
+   catch(Exception ex) when(ex is not OperationCanceledException){}
+  }
+  checks.Add(secondNat);
+  // v0.8.12.0: say plainly what no check here can prove.
+  checks.Add(new(OutsideInTestName,DiagnosticState.Skipped,
+   "MystTiq cannot send a real Palworld packet from outside your network, so it cannot prove the server is reachable from the internet. The checks above find the usual blockers.",
+   (publicIp is null?$"Ask a friend outside your network to join your public address on port {gamePort}.":$"Ask a friend outside your network to join {publicIp}:{gamePort}.")+" Port-checker websites mostly test TCP; Palworld uses UDP, so their answer is not reliable here."));
+
+  return new(DateTimeOffset.UtcNow,publicIp,gamePort,upnpState,routerDescription,checks,routerWanIp);
+ }
+
+ public const string OutsideInTestName="Outside-in test";
+
+ // v0.8.12.0: only an http(s) URL counts as absolute. On Linux "/ctl/IPConn" parses as an absolute file:// URI, which made
+ // every UPnP call fail there with "The 'file' scheme is not supported" (seen on the test VM). Pure, for the harness.
+ public static Uri ResolveControlUrl(Uri location,string controlUrlText)=>
+  Uri.TryCreate(controlUrlText,UriKind.Absolute,out var abs)&&(abs.Scheme==Uri.UriSchemeHttp||abs.Scheme==Uri.UriSchemeHttps)
+   ?abs:new Uri(new Uri($"{location.Scheme}://{location.Authority}"),controlUrlText);
+
+ // v0.8.12.0: the first few hops toward a public anycast address, like tracert -d -h 4 (ICMP echo with a rising TTL).
+ // A hop that does not answer is null. Stops at the target.
+ // Linux (checked on the test VM): an unprivileged process can only ping through the system ping tool, which takes the
+ // default payload only (a custom one throws PlatformNotSupportedException), and a hop answers as TimeExceeded there
+ // where Windows says TtlExpired.
+ private static async Task<IReadOnlyList<string?>> TraceFirstHopsAsync(CancellationToken token,int maxHops=4)
+ {
+  var target=IPAddress.Parse("1.1.1.1");
+  var hops=new List<string?>();
+  using var ping=new System.Net.NetworkInformation.Ping();
+  for(var ttl=1;ttl<=maxHops;ttl++)
+  {
+   token.ThrowIfCancellationRequested();
+   var reply=await ping.SendPingAsync(target,TimeSpan.FromSeconds(1),null,new System.Net.NetworkInformation.PingOptions(ttl,true),token);
+   var answered=reply.Status is System.Net.NetworkInformation.IPStatus.TtlExpired or System.Net.NetworkInformation.IPStatus.TimeExceeded or System.Net.NetworkInformation.IPStatus.Success;
+   hops.Add(answered&&reply.Address is not null&&!reply.Address.Equals(IPAddress.Any)?reply.Address.ToString():null);
+   if(reply.Status==System.Net.NetworkInformation.IPStatus.Success)break;
+  }
+  return hops;
+ }
+
+ // v0.8.12.0: UPnP IGD GetExternalIPAddress -- the address the router itself holds on its internet side.
+ // Refused: the router answered with a SOAP fault (e.g. 501) instead of an address.
+ private static async Task<(string? Address,bool Refused)> GetExternalIpAsync(IgdEndpoint igd,CancellationToken token)
+ {
+  var(success,xml)=await SoapCallAsync(igd,"GetExternalIPAddress",Soap(igd.ServiceType,"GetExternalIPAddress"),token);
+  if(!success)return(null,true);
+  var value=XDocument.Parse(xml).Descendants().FirstOrDefault(e=>e.Name.LocalName=="NewExternalIPAddress")?.Value?.Trim();
+  return(string.IsNullOrEmpty(value)?null:value,false);
  }
 
  public async Task<UpnpRepairResult> RepairUpnpMappingAsync(int gamePort,CancellationToken token=default)
@@ -101,12 +163,58 @@ public sealed class WanReachabilityService(INetworkDiagnosticsPlatformService pl
   return null;
  }
 
+ // v0.8.12.0: the search goes out from every LAN interface that has a gateway, in parallel, and the first router to
+ // answer wins. An unbound socket sent it out one interface of Windows' choosing: on this project's own server (a
+ // second interface on the same subnet, the Hyper-V switch for the test VM) the router never heard it, so UPnP had
+ // always looked "unsupported" there. Bound to either LAN interface, the same router answers at once.
  private static async Task<Uri?> SsdpSearchAsync(string deviceType,CancellationToken token)
  {
   var request=Encoding.ASCII.GetBytes("M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: "+deviceType+"\r\n\r\n");
-  using var udp=new UdpClient(0){EnableBroadcast=true};
+  var searches=SearchInterfaces().Select(s=>SsdpSearchFromAsync(request,s.Local,s.Gateways,token)).ToList();
+  while(searches.Count>0)
+  {
+   var done=await Task.WhenAny(searches);searches.Remove(done);
+   var location=await done;
+   if(location is not null)return location;
+  }
+  return null;
+ }
+
+ // Each up, non-loopback interface's IPv4 address with its IPv4 gateways; the unbound socket alone when there is none.
+ private static IReadOnlyList<(IPAddress Local,IReadOnlyList<IPAddress> Gateways)> SearchInterfaces()
+ {
+  var result=new List<(IPAddress,IReadOnlyList<IPAddress>)>();
+  try
+  {
+   foreach(var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+   {
+    if(nic.OperationalStatus!=System.Net.NetworkInformation.OperationalStatus.Up||nic.NetworkInterfaceType==System.Net.NetworkInformation.NetworkInterfaceType.Loopback)continue;
+    var props=nic.GetIPProperties();
+    var gateways=props.GatewayAddresses.Select(g=>g.Address).Where(a=>a.AddressFamily==AddressFamily.InterNetwork&&!a.Equals(IPAddress.Any)).ToArray();
+    if(gateways.Length==0)continue;
+    foreach(var address in props.UnicastAddresses.Select(u=>u.Address).Where(a=>a.AddressFamily==AddressFamily.InterNetwork))
+     result.Add((address,gateways));
+   }
+  }
+  catch(System.Net.NetworkInformation.NetworkInformationException){}
+  if(result.Count==0)result.Add((IPAddress.Any,Array.Empty<IPAddress>()));
+  return result;
+ }
+
+ private static async Task<Uri?> SsdpSearchFromAsync(byte[] request,IPAddress local,IReadOnlyList<IPAddress> gateways,CancellationToken token)
+ {
+  using var udp=new UdpClient(new IPEndPoint(local,0)){EnableBroadcast=true};
+  if(!local.Equals(IPAddress.Any))
+  {
+   try{udp.Client.SetSocketOption(SocketOptionLevel.IP,SocketOptionName.MulticastInterface,local.GetAddressBytes());}catch(SocketException){}
+  }
   var target=new IPEndPoint(IPAddress.Parse("239.255.255.250"),1900);
-  await udp.SendAsync(request,request.Length,target);
+  try{await udp.SendAsync(request,request.Length,target);}catch(SocketException){}
+  // The same search straight to the gateway too, for routers that answer that sooner.
+  foreach(var gateway in gateways)
+  {
+   try{await udp.SendAsync(request,request.Length,new IPEndPoint(gateway,1900));}catch(SocketException){}
+  }
   using var cts=CancellationTokenSource.CreateLinkedTokenSource(token);cts.CancelAfter(TimeSpan.FromSeconds(3));
   try
   {
@@ -119,6 +227,7 @@ public sealed class WanReachabilityService(INetworkDiagnosticsPlatformService pl
    }
   }
   catch(OperationCanceledException){}
+  catch(SocketException){}
   return null;
  }
 
@@ -134,7 +243,7 @@ public sealed class WanReachabilityService(INetworkDiagnosticsPlatformService pl
    var service=doc.Descendants(ns+"service").FirstOrDefault(s=>(string?)s.Element(ns+"serviceType")==serviceType);
    var controlUrlText=(string?)service?.Element(ns+"controlURL");
    if(string.IsNullOrWhiteSpace(controlUrlText))continue;
-   var controlUrl=Uri.TryCreate(controlUrlText,UriKind.Absolute,out var abs)?abs:new Uri(new Uri($"{location.Scheme}://{location.Authority}"),controlUrlText);
+   var controlUrl=ResolveControlUrl(location,controlUrlText);
    return new IgdEndpoint(controlUrl,serviceType,friendlyName);
   }
   return null;

@@ -40,7 +40,7 @@ $log=Join-Path $temp 'headless.log'
 $err=Join-Path $temp 'headless.err.log'
 $proc=$null
 try{
-    $args=@('api-run','--desktop-sidecar','--config',$config,'--bind-address','127.0.0.1','--api-port',"$Port",'--server-root',$missingServer,'--steamcmd',$steamCmd,'--backup-root',$backupRoot,'--runtime-root',$runtime)
+    $args=@('api-run','--desktop-sidecar','--config', $config, '--fleet-root', (Join-Path $temp 'fleet'),'--bind-address','127.0.0.1','--api-port',"$Port",'--server-root',$missingServer,'--steamcmd',$steamCmd,'--backup-root',$backupRoot,'--runtime-root',$runtime)
     $proc=Start-Process -FilePath $exe -ArgumentList $args -WorkingDirectory (Split-Path $exe -Parent) -PassThru -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $err -Environment @{MYSTTIQ_ENABLE_FAILURE_INJECTION='1'}
     $base="http://127.0.0.1:$Port"
     $ready=$false

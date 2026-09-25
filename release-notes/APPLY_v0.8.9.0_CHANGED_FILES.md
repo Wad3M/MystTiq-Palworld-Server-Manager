@@ -1,0 +1,21 @@
+# v0.8.9.0 Changed Files
+
+- `Directory.Build.props`, `src/PalworldManager/app.manifest`: version bump to 0.8.9.0.
+- `src/MystTiq.Core/Services/UnrealCrashReport.cs` (new): `UnrealCrashReport` and `UnrealCrashReportParser`.
+- `src/MystTiq.Core/Services/CrashSignatureCatalog.cs`: new `engine-array-size` signature, placed before `ue-fatal`.
+- `src/MystTiq.HeadlessHost/HeadlessCrashAndSaveToolsService.cs`:
+  - adds `CrashReportsRoot`, `ReadCrashReports` and `CrashReportsRead`;
+  - report lines are included in the analysis;
+  - the analysis runs under a lock.
+- `src/MystTiq.HeadlessHost/HeadlessCrashReportWatcher.cs` (new).
+- `src/MystTiq.HeadlessHost/CrashAlerts.cs`: adds `LastCrashDetectedUtc`.
+- `src/MystTiq.HeadlessHost/HeadlessAutomationService.cs`: the watcher runs on the automation tick.
+- `src/MystTiq.HeadlessHost/LocalManagementApiHost.cs`: creates a watcher for each profile.
+- `scripts/Testing/MystTiq.LogicHarness/Program.cs`: 3 new "Crash reports" scenarios.
+- New scripts: `scripts/Test-v0.8.9.0-RouteSmoke.ps1`, `scripts/Test-v0.8.9.0-Logic.ps1`.
+- New docs:
+  - `docs/architecture/v0.8.9.0-crash-reports.md`
+  - `release-notes/v0.8.9.0.md`
+  - `release-notes/APPLY_v0.8.9.0_CHANGED_FILES.md`
+  - `release-notes/BUILD_TEST_PLAN_v0.8.9.0.md`
+- Updated docs: `CHANGELOG.md`, `README.md`, `docs/index.html`, `docs/roadmap/PRODUCT_ROADMAP.md`.

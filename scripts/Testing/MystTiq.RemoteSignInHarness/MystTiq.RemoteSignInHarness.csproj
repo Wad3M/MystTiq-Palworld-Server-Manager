@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- v0.8.15.0: signs the real Desktop (ViewModel, window, API client with certificate pinning) in to a real remote
+       MystTiq instance as each role, in a headless window with every local store isolated. Run by
+       the remote sign-in test script (scripts/Test-v*-RemoteSignIn.ps1) against an isolated instance on the Linux test VM. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../src/MystTiq.Desktop/MystTiq.Desktop.csproj" />
+    <PackageReference Include="Avalonia.Headless" Version="11.3.20" />
+  </ItemGroup>
+</Project>

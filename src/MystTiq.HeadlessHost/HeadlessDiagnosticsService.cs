@@ -1,3 +1,4 @@
+using MystTiq.Core.Automation;
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
@@ -31,6 +32,11 @@ public sealed class HeadlessDiagnosticsService
     private readonly PalworldSettingsConfigurationService palworldConfiguration;
     private readonly HeadlessPlayerRegistryService playerRegistry;
     private readonly HeadlessPlayerGuildExplorerService playerGuildExplorer;
+    private readonly HeadlessBackupService? backups;
+    private readonly HeadlessCrashAndSaveToolsService? crashTools;
+    private readonly Func<double?>? lowDiskPercent;
+    private readonly HeadlessAutomationService? automation;
+    private readonly object backupRuleGate = new();
 
     public HeadlessDiagnosticsService(
         HeadlessDoctorService doctor,
@@ -40,8 +46,16 @@ public sealed class HeadlessDiagnosticsService
         HeadlessServerDistributionService serverDistribution,
         PalworldSettingsConfigurationService palworldConfiguration,
         HeadlessPlayerRegistryService playerRegistry,
-        HeadlessPlayerGuildExplorerService playerGuildExplorer)
+        HeadlessPlayerGuildExplorerService playerGuildExplorer,
+        HeadlessBackupService? backups = null,
+        HeadlessCrashAndSaveToolsService? crashTools = null,
+        Func<double?>? lowDiskPercent = null,
+        HeadlessAutomationService? automation = null)
     {
+        this.automation = automation;
+        this.lowDiskPercent = lowDiskPercent;
+        this.backups = backups;
+        this.crashTools = crashTools;
         this.doctor = doctor;
         this.environment = environment;
         this.lifecycle = lifecycle;
@@ -122,6 +136,11 @@ public sealed class HeadlessDiagnosticsService
         }
 
         findings.AddRange(BuildConfigurationFindings());
+        findings.AddRange(BuildCrashRiskFindings());
+        findings.AddRange(BuildResourceFindings());
+        findings.AddRange(BuildBackupFindings());
+        findings.AddRange(BuildSecurityFindings());
+        findings.AddRange(BuildRecentCrashFindings());
         findings.AddRange(await BuildIdentityFindingsAsync(cancellationToken));
 
         return BuildReport(findings, status.Ready);
@@ -269,6 +288,220 @@ public sealed class HeadlessDiagnosticsService
         ];
     }
 
+    // v0.7.91.0 "Crash-Risk Configuration Detection": direct follow-up to a competitive feature
+    // review against other Palworld server managers -- multiple independent community sources
+    // flag BuildObjectDeteriorationDamageRate = 0 as a known cause of long-running server
+    // instability: it disables automatic cleanup of decayed base structures, letting entity/object
+    // counts grow unbounded over time. Confirmed live: two of MystTiq's own bundled QoL presets
+    // (PalworldConfigPresets, MainWindowViewModel.cs) set this exact value to 0 -- a real,
+    // self-inflicted risk worth surfacing in Doctor rather than only in the preset picker's own
+    // text. Scoped to just this one well-evidenced, non-default value rather than also flagging
+    // things like bEnableInvaderEnemy, which is a vanilla-default-enabled setting community
+    // sources describe as a risk only at higher player/base counts, not universally -- flagging a
+    // default-on setting unconditionally would be a wall of false positives for ordinary servers.
+    private IReadOnlyList<DiagnosticFinding> BuildCrashRiskFindings()
+    {
+        var snapshot = palworldConfiguration.Load();
+        var observedAt = DateTimeOffset.UtcNow;
+        if (!snapshot.Exists)
+        {
+            return
+            [
+                new DiagnosticFinding(
+                    Id: "configuration-crash-risk",
+                    Category: "Configuration",
+                    Component: "Crash-Risk Settings",
+                    State: DiagnosticState.Skipped,
+                    Location: palworldConfiguration.ConfigurationPath,
+                    Evidence: snapshot.Detail,
+                    Recommendation: "PalWorldSettings.ini was not found; crash-risk checking requires it to exist.",
+                    ActionKind: null,
+                    ActionSupported: false,
+                    UnavailableReason: null,
+                    ObservedAt: observedAt,
+                    Duration: TimeSpan.Zero)
+            ];
+        }
+
+        var decayRate = GetDouble(snapshot, "BuildObjectDeteriorationDamageRate");
+        var isKnownRisk = decayRate == 0;
+        var state = isKnownRisk ? DiagnosticState.Warning : DiagnosticState.Pass;
+        var evidence = isKnownRisk
+            ? "BuildObjectDeteriorationDamageRate is set to 0, disabling automatic cleanup of decayed base structures."
+            : decayRate.HasValue
+                ? $"BuildObjectDeteriorationDamageRate is {decayRate.Value:0.##}x; structure decay cleanup is active."
+                : "BuildObjectDeteriorationDamageRate was not set to a readable numeric value.";
+        var recommendation = isKnownRisk
+            ? "A value of 0 is a community-reported cause of long-running server instability, since structures and their objects never clean up, letting entity counts grow unbounded. If base decay was disabled specifically to protect builds, consider a small non-zero value (e.g. 0.5-1.0) instead of 0 -- MystTiq's own QoL/Relaxed presets currently set this to 0."
+            : "No action needed.";
+
+        return
+        [
+            new DiagnosticFinding(
+                Id: "configuration-crash-risk",
+                Category: "Configuration",
+                Component: "Crash-Risk Settings",
+                State: state,
+                Location: palworldConfiguration.ConfigurationPath,
+                Evidence: evidence,
+                Recommendation: recommendation,
+                ActionKind: null,
+                ActionSupported: false,
+                UnavailableReason: "No automatic fix is available for this finding yet.",
+                ObservedAt: observedAt,
+                Duration: TimeSpan.Zero)
+        ];
+    }
+
+    // ---- v0.7.98.0: resource, backup, security and stability findings (rules in DoctorHealthRules) ----
+
+    private static DiagnosticFinding RuleFinding(string id, string category, string component, string location, DoctorRuleResult result) =>
+        new(id, category, component, result.State, location, result.Evidence, result.Recommendation,
+            ActionKind: null, ActionSupported: false, UnavailableReason: "No automatic fix is available for this finding yet.",
+            ObservedAt: DateTimeOffset.UtcNow, Duration: TimeSpan.Zero);
+
+    // The drive whose mount point is the longest prefix of the path, so a folder on D: or a second
+    // mount is measured on its own drive. Null when it cannot be determined (for example a network path).
+    private static DriveInfo? ResolveDrive(string path)
+    {
+        try
+        {
+            var full = Path.GetFullPath(path);
+            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            DriveInfo? best = null;
+            foreach (var drive in DriveInfo.GetDrives())
+            {
+                if (!drive.IsReady) continue;
+                var root = drive.RootDirectory.FullName;
+                if (full.StartsWith(root, comparison) && (best is null || root.Length > best.RootDirectory.FullName.Length)) best = drive;
+            }
+            return best;
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or NotSupportedException) { return null; }
+    }
+
+    private long LargestBackupBytes()
+    {
+        try { return backups?.GetInventory().Items.Select(i => i.SizeBytes).DefaultIfEmpty(0).Max() ?? 0; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return 0; }
+    }
+
+    // Newest Level.sav that is not one of Palworld's own rolling backups, or null if there is no world yet.
+    private DateTimeOffset? WorldLastWriteAt()
+    {
+        try
+        {
+            if (!Directory.Exists(paths.SaveRoot)) return null;
+            var root = Path.GetFullPath(paths.SaveRoot);
+            DateTimeOffset? newest = null;
+            foreach (var file in Directory.EnumerateFiles(root, "Level.sav", SearchOption.AllDirectories))
+            {
+                var relative = Path.GetRelativePath(root, file);
+                if (relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(s => s.Equals("backup", StringComparison.OrdinalIgnoreCase))) continue;
+                var written = new DateTimeOffset(File.GetLastWriteTimeUtc(file), TimeSpan.Zero);
+                if (newest is null || written > newest) newest = written;
+            }
+            return newest;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+    }
+
+    private IReadOnlyList<DiagnosticFinding> BuildResourceFindings()
+    {
+        var findings = new List<DiagnosticFinding>();
+        var largestBackup = LargestBackupBytes();
+        var serverDrive = ResolveDrive(paths.ServerRoot);
+        var backupDrive = ResolveDrive(paths.BackupRoot);
+
+        if (serverDrive is not null && backupDrive is not null && serverDrive.RootDirectory.FullName == backupDrive.RootDirectory.FullName)
+        {
+            findings.Add(RuleFinding("resources-disk-space-server-and-backups", "Resources", "Disk space (server and backups)", serverDrive.Name,
+                DoctorHealthRules.DiskSpace($"the server and its backups ({serverDrive.Name})", serverDrive.AvailableFreeSpace, serverDrive.TotalSize, largestBackup, lowDiskPercent?.Invoke())));
+        }
+        else
+        {
+            // The Linux Doctor already checks the server drive, so only add it elsewhere.
+            if (serverDrive is not null && !OperatingSystem.IsLinux())
+                findings.Add(RuleFinding("resources-disk-space-server", "Resources", "Disk space (server)", serverDrive.Name,
+                    DoctorHealthRules.DiskSpace($"the server ({serverDrive.Name})", serverDrive.AvailableFreeSpace, serverDrive.TotalSize, 0, lowDiskPercent?.Invoke())));
+            if (backupDrive is not null)
+                findings.Add(RuleFinding("resources-disk-space-backups", "Resources", "Disk space (backups)", backupDrive.Name,
+                    DoctorHealthRules.DiskSpace($"the backups ({backupDrive.Name})", backupDrive.AvailableFreeSpace, backupDrive.TotalSize, largestBackup, lowDiskPercent?.Invoke())));
+        }
+
+        var memory = GC.GetGCMemoryInfo();
+        var total = memory.TotalAvailableMemoryBytes;
+        // MemoryLoadBytes is from the last collection and reads 0 before the first one; treat that as
+        // "unknown, assume free" rather than raising a false warning.
+        var available = memory.MemoryLoadBytes > 0 ? total - memory.MemoryLoadBytes : total;
+        findings.Add(RuleFinding("resources-memory", "Resources", "Memory", "This machine", DoctorHealthRules.Memory(total, available)));
+        return findings;
+    }
+
+    private IReadOnlyList<DiagnosticFinding> BuildBackupFindings()
+    {
+        if (backups is null) return [];
+        try
+        {
+            var inventory = backups.GetInventory();
+            var latest = inventory.Items.OrderByDescending(i => i.CreatedAt).FirstOrDefault();
+            var result = DoctorHealthRules.BackupFreshness(inventory.Items.Count, latest?.CreatedAt, WorldLastWriteAt(), DateTimeOffset.UtcNow);
+            var findings = new List<DiagnosticFinding> { RuleFinding("backups-freshness", "Backups", "Backup freshness", inventory.RootPath, result) };
+            findings.AddRange(BuildScheduledBackupFindings());
+            return findings;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [RuleFinding("backups-freshness", "Backups", "Backup freshness", paths.BackupRoot,
+                new DoctorRuleResult(DiagnosticState.Skipped, $"Backups could not be read: {ex.Message}", "Check that the backup folder is readable."))];
+        }
+    }
+
+    // v0.7.103.0: is anything scheduled to make the NEXT backup happen? Offers a one-click nightly rule only when no
+    // backup rule exists at all.
+    private IReadOnlyList<BackupScheduleRule> ReadBackupScheduleRules()
+    {
+        if (automation is null) return [];
+        var latestRun = automation.ListRuns(200)
+            .GroupBy(r => r.RuleId.Value, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.DueUtc).First(), StringComparer.OrdinalIgnoreCase);
+        return automation.ListRules()
+            .Where(r => r.Action.Kind == AutomationActionKind.CreateBackup)
+            .Select(r =>
+            {
+                latestRun.TryGetValue(r.Id.Value, out var run);
+                return new BackupScheduleRule(r.Name, r.Enabled, r.Trigger.Kind, r.Trigger.Interval, r.Trigger.DaysOfWeek,
+                    r.Trigger.TimeOfDayUtc, run?.State.ToString(), run?.Detail);
+            })
+            .ToArray();
+    }
+
+    private IReadOnlyList<DiagnosticFinding> BuildScheduledBackupFindings()
+    {
+        if (automation is null) return [];
+        var verdict = DoctorHealthRules.ScheduledBackups(ReadBackupScheduleRules());
+        var finding = RuleFinding("backups-schedule", "Backups", "Scheduled backups", "Automation", verdict.Result);
+        return [verdict.CanCreateRule
+            ? finding with { ActionKind = "create-backup-rule", ActionSupported = true, UnavailableReason = null }
+            : finding];
+    }
+
+    private IReadOnlyList<DiagnosticFinding> BuildSecurityFindings()
+    {
+        var snapshot = palworldConfiguration.Load();
+        var result = !snapshot.Exists
+            ? new DoctorRuleResult(DiagnosticState.Skipped, snapshot.Detail, "PalWorldSettings.ini was not found; the admin password check needs it.")
+            : DoctorHealthRules.AdminSecurity(Get(snapshot, "AdminPassword"), GetBool(snapshot, "RESTAPIEnabled") ?? false, GetBool(snapshot, "RCONEnabled") ?? false);
+        return [RuleFinding("security-admin-access", "Security", "Admin access", palworldConfiguration.ConfigurationPath, result)];
+    }
+
+    private IReadOnlyList<DiagnosticFinding> BuildRecentCrashFindings()
+    {
+        if (crashTools is null) return [];
+        var latest = crashTools.History(1).FirstOrDefault();
+        return [RuleFinding("stability-recent-crashes", "Stability", "Recent crashes", "Crash Analyzer", DoctorHealthRules.RecentCrashes(latest, DateTimeOffset.UtcNow))];
+    }
+
     private static bool? GetBool(PalworldConfigurationSnapshot snapshot, string name)
     {
         var value = Get(snapshot, name);
@@ -279,6 +512,12 @@ public sealed class HeadlessDiagnosticsService
     {
         var value = Get(snapshot, name);
         return int.TryParse(value?.Trim().Trim('"'), out var parsed) && parsed is > 0 and <= 65535 ? parsed : null;
+    }
+
+    private static double? GetDouble(PalworldConfigurationSnapshot snapshot, string name)
+    {
+        var value = Get(snapshot, name);
+        return double.TryParse(value?.Trim().Trim('"'), out var parsed) ? parsed : null;
     }
 
     private static string? Get(PalworldConfigurationSnapshot snapshot, string name) =>
@@ -294,7 +533,9 @@ public sealed class HeadlessDiagnosticsService
         return report.Findings.FirstOrDefault(f => f.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
     }
 
-    public async Task<HeadlessDiagnosticFixResult> FixAsync(string id, CancellationToken cancellationToken)
+    // canAdminister: creating an automation rule is an Admin action everywhere else, while the fix route itself only
+    // needs Operator, so the route says whether the caller is an admin.
+    public async Task<HeadlessDiagnosticFixResult> FixAsync(string id, CancellationToken cancellationToken, bool canAdminister = true)
     {
         var report = await GetUnifiedReportAsync(cancellationToken);
         var finding = report.Findings.FirstOrDefault(f => f.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
@@ -312,6 +553,23 @@ public sealed class HeadlessDiagnosticsService
                 catch (Exception ex)
                 {
                     return HeadlessDiagnosticFixResult.Failure($"Could not create backup directory: {ex.Message}");
+                }
+
+            case "create-backup-rule":
+                if (!canAdminister)
+                    return HeadlessDiagnosticFixResult.Failure("Creating an automation rule needs the Admin role. Ask an admin, or add the schedule yourself in Automation.");
+                if (automation is null)
+                    return HeadlessDiagnosticFixResult.Failure("Automation is not available on this server.");
+                lock (backupRuleGate)
+                {
+                    // Re-checked under a lock so two clicks (or two clients) can never create two rules.
+                    var existing = ReadBackupScheduleRules();
+                    if (existing.Count > 0)
+                        return new HeadlessDiagnosticFixResult(true, $"A backup rule already exists (\"{existing[0].Name}\"), so nothing was created.");
+                    var rule = automation.CreateRule("Nightly backup (added by Doctor)",
+                        new AutomationTrigger { Kind = AutomationTriggerKind.DailyTime, TimeOfDayUtc = new TimeOnly(3, 0), DaysOfWeek = AutomationDayOfWeekMask.All },
+                        new AutomationCondition(), new AutomationAction { Kind = AutomationActionKind.CreateBackup });
+                    return new HeadlessDiagnosticFixResult(true, $"Created the rule \"{rule.Name}\": a backup every day at 03:00 UTC. You can change or delete it in Automation.");
                 }
 
             case "install-distribution":

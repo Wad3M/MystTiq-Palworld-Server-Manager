@@ -8,7 +8,8 @@ namespace MystTiq.Core.Models;
 // on that raw int by hardcoded position; inserting Unknown first would have silently relabeled
 // every existing Pass/Warning/Fail/Starting/Skipped result already shipped in that feature.
 public enum DiagnosticState { Pass, Warning, Fail, Starting, Skipped, Unknown }
-public enum NetworkHealthState { Unknown, Starting, Healthy, Warning, Error }
+// NotRunning (v0.7.102.0) is appended, not inserted, so the numbers the Desktop already reads keep their meaning.
+public enum NetworkHealthState { Unknown, Starting, Healthy, Warning, Error, NotRunning }
 public sealed record NetworkEndpointInfo(string Protocol,string LocalAddress,int LocalPort,int? OwningProcessId,string? ProcessName=null,string? ExecutablePath=null);
 public sealed record FirewallRuleInfo(string Name,bool Enabled,string Direction,string Action,string Protocol,int LocalPort,string Profiles,bool ManagedByMystTiq=false);
 public sealed record NetworkDiagnosticCheck(string Test,DiagnosticState State,string Details,string Recommendation="");

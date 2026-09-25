@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using MystTiq.Desktop.Models;
+using MystTiq.Desktop.Services;
 
 namespace MystTiq.Desktop.Controls;
 
@@ -22,6 +23,9 @@ public sealed class ResourceHistoryChart : Control
         get => GetValue(ItemsSourceProperty);
         set => SetValue(ItemsSourceProperty, value);
     }
+
+    // v0.8.25.0: its colours are theme resources, so a theme change redraws it.
+    public ResourceHistoryChart() => ResourcesChanged += (_, _) => InvalidateVisual();
 
     static ResourceHistoryChart()
     {
@@ -56,15 +60,16 @@ public sealed class ResourceHistoryChart : Control
         const double inset = 2;
         var plot = new Rect(inset, inset, Math.Max(1, width - inset * 2), Math.Max(1, height - inset * 2));
 
-        var gridPen = new Pen(new SolidColorBrush(Color.Parse("#183047")), 1);
-        var cpuPen = new Pen(new SolidColorBrush(Color.Parse("#54B8FF")), 2);
-        var memoryPen = new Pen(new SolidColorBrush(Color.Parse("#B58BFF")), 2);
+        // v0.8.25.0: themed: the background and grid as decorative colours, the series in the theme's own accents.
+        var gridPen = new Pen(new SolidColorBrush(DecorativePalette.Resolve(this, "DecoBorder_183047", "#183047")), 1);
+        var cpuPen = new Pen(new SolidColorBrush(DecorativePalette.Resolve(this, "Blue", "#54B8FF")), 2);
+        var memoryPen = new Pen(new SolidColorBrush(DecorativePalette.Resolve(this, "Violet", "#B58BFF")), 2);
         // v0.7.15.0: real in-game FPS series (Palworld's own /v1/api/metrics, same data v0.7.9.0
         // already showed live). Drawn only across consecutive samples that both actually have a
         // value -- ServerFps is null (not 0) whenever the REST API was disabled for that sample, so
         // a plain line-through-zero would misleadingly read as a real performance crash.
-        var fpsPen = new Pen(new SolidColorBrush(Color.Parse("#63DF7B")), 2);
-        var background = new SolidColorBrush(Color.Parse("#08111A"));
+        var fpsPen = new Pen(new SolidColorBrush(DecorativePalette.Resolve(this, "Green", "#63DF7B")), 2);
+        var background = new SolidColorBrush(DecorativePalette.Resolve(this, "DecoBackground_08111A", "#08111A"));
         context.FillRectangle(background, new Rect(0, 0, width, height));
 
         for (var i = 1; i <= 3; i++)

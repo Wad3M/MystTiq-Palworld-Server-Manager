@@ -25,6 +25,10 @@ public sealed class LocalMapPreferencesStore
     // same config root, rather than duplicating the cross-platform resolution logic below.
     public static string GetLocalConfigRoot() => GetConfigRoot();
 
+    // True once any map background choice has been saved, including choosing "no background".
+    // Distinguishes a first run from a deliberate Clear Background.
+    public bool HasSavedPreference => File.Exists(StoragePath);
+
     public string? LoadBackgroundImagePath()
     {
         try

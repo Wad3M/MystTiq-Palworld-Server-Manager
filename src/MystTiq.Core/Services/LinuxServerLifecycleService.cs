@@ -516,10 +516,13 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         // generation forever under its stale handle. Rotating once, here, at the one point a brand
         // new file handle is about to be opened, is the only place on this detached-process
         // architecture where rotation is both safe and effective.
+        // v0.8.18.0: the server's bandwidth policy goes into Engine.ini just before it starts (never blocks the start).
+        var networkLine = EngineNetworkSettings.ApplyBeforeStart(paths);
         try
         {
             ConsoleLogRotation.RotateIfNeeded(consoleLog);
             File.AppendAllText(consoleLog, $"===== MystTiq PalServer detached console session starting {DateTimeOffset.Now:O} =====" + Environment.NewLine);
+            if (networkLine is not null) File.AppendAllText(consoleLog, $"[MYSTTIQ] {networkLine}" + Environment.NewLine);
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }

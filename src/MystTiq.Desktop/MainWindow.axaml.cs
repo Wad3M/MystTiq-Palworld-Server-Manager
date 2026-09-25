@@ -74,10 +74,10 @@ public sealed partial class MainWindow : Window
         {
             if (!first) flyout.Items.Add(new Separator());
             first = false;
-            flyout.Items.Add(new MenuItem { Header = group.Title, IsEnabled = false });
+            flyout.Items.Add(new MenuItem { Header = group.DisplayTitle, IsEnabled = false });
             foreach (var action in group.Actions)
             {
-                var item = new MenuItem { Header = action.Label };
+                var item = new MenuItem { Header = action.DisplayLabel };
                 item.Click += (_, _) => InvokeRibbonAction(action);
                 flyout.Items.Add(item);
             }
@@ -205,10 +205,14 @@ public sealed partial class MainWindow : Window
         UpdateMaximizeGlyph();
     }
 
+    // v0.8.22.0: drawn, not font glyphs (see the window controls in MainWindow.axaml).
+    private static readonly Avalonia.Media.Geometry MaximizeIcon = Avalonia.Media.Geometry.Parse("M0,0 H10 V10 H0 Z M1,1 V9 H9 V1 Z");
+    private static readonly Avalonia.Media.Geometry RestoreIcon = Avalonia.Media.Geometry.Parse("M2,0 H10 V8 H8 V7 H9 V1 H3 V2 H2 Z M0,2 H8 V10 H0 Z M1,3 V9 H7 V3 Z");
+
     private void UpdateMaximizeGlyph()
     {
         if (MaximizeGlyph is not null)
-            MaximizeGlyph.Text = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
+            MaximizeGlyph.Data = WindowState == WindowState.Maximized ? RestoreIcon : MaximizeIcon;
     }
 
     // v0.7.11.0: previously always cancelled the close and hid to tray, regardless of whether
@@ -766,6 +770,46 @@ public sealed partial class MainWindow : Window
         await using var stream = await file.OpenWriteAsync(); stream.SetLength(0);
         using var writer = new StreamWriter(stream); await writer.WriteAsync(vm.ExportWorldValidationReport());
     }
+
+    // v0.7.100.0: wheel zoom and drag pan on the Map page. Positions are taken relative to the map
+    // surface, so they are already in the map's own 0..480 units whatever size the page draws it at.
+    // A press on a marker is handled by the marker's own button and never reaches these handlers, so
+    // dragging only starts on the map itself.
+    private bool _mapDragging;
+    private Point _mapDragLast;
+
+    private void MapSurface_OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || sender is not Visual surface) return;
+        var position = e.GetPosition(surface);
+        vm.ZoomMapAt(position.X, position.Y, e.Delta.Y);
+        e.Handled = true; // the page must not scroll while the wheel is zooming the map
+    }
+
+    private void MapSurface_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Visual surface || sender is not IInputElement input) return;
+        if (!e.GetCurrentPoint(surface).Properties.IsLeftButtonPressed) return;
+        _mapDragging = true;
+        _mapDragLast = e.GetPosition(surface);
+        e.Pointer.Capture(input);
+    }
+
+    private void MapSurface_OnPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_mapDragging || DataContext is not MainWindowViewModel vm || sender is not Visual surface) return;
+        var position = e.GetPosition(surface);
+        vm.PanMapBy(position.X - _mapDragLast.X, position.Y - _mapDragLast.Y);
+        _mapDragLast = position;
+    }
+
+    private void MapSurface_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _mapDragging = false;
+        e.Pointer.Capture(null);
+    }
+
+    private void MapSurface_OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e) => _mapDragging = false;
 
     private async void BrowseMapBackground_Click(object? sender, RoutedEventArgs e)
     {

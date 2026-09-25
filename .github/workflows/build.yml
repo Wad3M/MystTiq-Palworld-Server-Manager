@@ -21,3 +21,21 @@ jobs:
         run: dotnet restore src/PalworldManager/PalworldManager.csproj
       - name: Build
         run: dotnet build src/PalworldManager/PalworldManager.csproj -c Release -r win-x64 --self-contained true --no-restore
+      # v0.8.25.0: the product itself -- the headless service and the Avalonia desktop (the legacy WPF app above is the
+      # parity reference only).
+      - name: Build the headless service and the desktop (Windows)
+        run: |
+          dotnet build src/MystTiq.HeadlessHost/MystTiq.HeadlessHost.csproj -c Release
+          dotnet build src/MystTiq.Desktop/MystTiq.Desktop.csproj -c Release
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Build the headless service and the desktop (Linux)
+        run: |
+          dotnet build src/MystTiq.HeadlessHost/MystTiq.HeadlessHost.csproj -c Release
+          dotnet build src/MystTiq.Desktop/MystTiq.Desktop.csproj -c Release

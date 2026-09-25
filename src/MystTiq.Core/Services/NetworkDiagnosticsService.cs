@@ -11,7 +11,14 @@ public sealed class NetworkDiagnosticsService
   var checks=new List<NetworkDiagnosticCheck>();var(port,used,invalid)=ResolveGamePort(args);
   checks.Add(new("Configured Game Port",invalid?DiagnosticState.Fail:used?DiagnosticState.Warning:DiagnosticState.Pass,invalid?"Invalid or conflicting -port configuration.":used?$"Configured value unavailable; defaulting to UDP {port}.":$"Effective game port is UDP {port}.",invalid?"Correct launch arguments.":""));
   var proc=runtime.Processes.FirstOrDefault(p=>p.ProcessId==runtime.NativeProcessId)??runtime.Processes.FirstOrDefault();
-  if(proc is null){checks.Add(new("PalServer Process",DiagnosticState.Fail,"Palworld server process is not running.","Start Palworld Server."));return Make(runtime,port,used,null,null,null,null,checks,NetworkHealthState.Error,"Start Palworld Server");}
+  if(proc is null)
+  {
+   // v0.7.102.0: a server that was stopped on purpose is not a network error. Only a crash is.
+   var crashed=runtime.CrashDetected||runtime.Phase==ServerLifecyclePhase.Crashed;
+   if(crashed){checks.Add(new("PalServer Process",DiagnosticState.Fail,"Palworld server process is not running: it crashed.","Start Palworld Server, then review the Crash Analyzer."));return Make(runtime,port,used,null,null,null,null,checks,NetworkHealthState.Error,"Start Palworld Server");}
+   checks.Add(new("PalServer Process",DiagnosticState.Skipped,"Palworld server is stopped, so there is nothing to check on the network yet.","Start Palworld Server."));
+   return Make(runtime,port,used,null,null,null,null,checks,NetworkHealthState.NotRunning,"Start Palworld Server");
+  }
   DateTimeOffset? started=null;try{using var p=System.Diagnostics.Process.GetProcessById(proc.ProcessId);started=p.StartTime.ToUniversalTime();}catch{}
   checks.Add(new("PalServer Process",DiagnosticState.Pass,$"Running: {proc.ProcessName}, PID {proc.ProcessId}."));
   if(OperatingSystem.IsWindows())try{var fw=await platform.GetInboundFirewallRulesAsync(port,"UDP",token);if(fw.Count==0)checks.Add(new("Windows Firewall",DiagnosticState.Fail,$"No suitable inbound UDP Allow rule exists for {port}.","Add / Repair Firewall Rule."));else{var block=fw.Any(r=>r.Enabled&&r.Action.Equals("Block",StringComparison.OrdinalIgnoreCase));var allow=fw.Any(r=>r.Enabled&&r.Action.Equals("Allow",StringComparison.OrdinalIgnoreCase));checks.Add(new("Windows Firewall",block?DiagnosticState.Fail:allow?DiagnosticState.Pass:DiagnosticState.Warning,string.Join("; ",fw.Select(r=>$"{r.Name} [{r.Action}, Enabled={r.Enabled}, Profiles={r.Profiles}]")),block?"Review blocking rule.":allow?"":"Enable or repair the rule."));}}catch(Exception ex){checks.Add(new("Windows Firewall",DiagnosticState.Warning,$"Inspection unavailable: {ex.Message}","Run elevated for firewall diagnostics."));}

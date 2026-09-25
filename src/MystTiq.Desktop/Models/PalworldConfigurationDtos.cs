@@ -120,11 +120,29 @@ public sealed class PalworldSimpleSettingItem : INotifyPropertyChanged
         get => Parse(Setting.Value, Parse(Setting.DefaultValue, Minimum));
         set
         {
-            var clamped = Math.Clamp(value, Minimum, Maximum);
-            var stepped = Step > 0 ? Math.Round(clamped / Step) * Step : clamped;
-            Setting.Value = stepped.ToString("0.######", CultureInfo.InvariantCulture);
+            // v0.7.102.0: an Avalonia Slider clamps its Value into [Minimum, Maximum] and snaps it to the
+            // tick when it is bound, then writes the result straight back through this setter. For a value
+            // the file already holds that is outside the range or between two ticks (a hand-edited 0.05
+            // under a 0.1 minimum, a 1.23 on a 0.1 step) that echo is not the user moving the slider, but
+            // it used to overwrite the setting: opening Configuration showed a phantom "unsaved change",
+            // and Save Changes would have replaced the real value. A write that is only the slider's
+            // coerced echo of the current value is ignored; a genuine drag always differs from it.
+            var current = Parse(Setting.Value, Parse(Setting.DefaultValue, Minimum));
+            if (IsCoercionEcho(value, current)) return;
+            Setting.Value = Snap(value).ToString("0.######", CultureInfo.InvariantCulture);
         }
     }
+
+    private double Snap(double value)
+    {
+        var clamped = Math.Clamp(value, Minimum, Maximum);
+        return Step > 0 ? Math.Round(clamped / Step) * Step : clamped;
+    }
+
+    // True when `written` is exactly what the slider would produce from `current` by clamping and
+    // snapping alone, and it differs from `current`: the signature of a load-time echo.
+    public bool IsCoercionEcho(double written, double current) =>
+        Math.Abs(written - current) > 1e-9 && Math.Abs(written - Snap(current)) < 1e-9;
     public string ValueText => $"{SliderValue:0.##} {Unit}".TrimEnd();
     public string DefaultComparisonText
     {

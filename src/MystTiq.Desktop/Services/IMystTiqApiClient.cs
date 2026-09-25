@@ -112,6 +112,14 @@ public interface IMystTiqApiClient
     Task<HeadlessCreatePrincipalResultDto> CreatePrincipalAsync(ConnectionProfile profile, HeadlessCreatePrincipalRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task RevokePrincipalAsync(ConnectionProfile profile, string id, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<MystTiqPrincipalDto> WhoAmIAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<UserLoginResultDto> LoginAsync(ConnectionProfile profile, string username, string password, CancellationToken cancellationToken = default);
+    Task LogoutAsync(ConnectionProfile profile, string? bearerToken, CancellationToken cancellationToken = default);
+    Task<UserAccountResultDto> ChangeOwnPasswordAsync(ConnectionProfile profile, string currentPassword, string newPassword, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UserAccountDto>> GetUsersAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<UserAccountResultDto> CreateUserAsync(ConnectionProfile profile, string username, string displayName, string role, string password, string? scopedServerProfileId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<UserAccountResultDto> UpdateUserAsync(ConnectionProfile profile, string id, string displayName, string role, string? scopedServerProfileId, bool enabled, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<UserAccountResultDto> SetUserPasswordAsync(ConnectionProfile profile, string id, string password, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<UserAccountResultDto> DeleteUserAsync(ConnectionProfile profile, string id, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     // v0.6.3.0 character/account migration.
     Task<CharacterMigrationPreviewDto> PreviewCharacterMigrationAsync(ConnectionProfile profile, CharacterMigrationPreviewRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
@@ -126,6 +134,10 @@ public interface IMystTiqApiClient
 
     Task<AlertRuleSetDto> GetAlertRulesAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<AlertRuleSetDto> SaveAlertRulesAsync(ConnectionProfile profile, AlertRuleSetDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<NotificationDeliveryStateDto> GetNotificationDeliveryAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<NotificationDeliveryStateDto> PauseNotificationDeliveryAsync(ConnectionProfile profile, int minutes, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<NotificationTestResultDto> SendTestNotificationAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<AlertRuleSetDto> MuteAlertsAsync(ConnectionProfile profile, int minutes, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<DiskSpacePredictionDto> GetDiskSpacePredictionAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     Task<BackupClassificationEntryDto> SetBackupClassAsync(ConnectionProfile profile, string fileName, BackupSetClassRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
@@ -161,6 +173,25 @@ public interface IMystTiqApiClient
     // config GET+PUT convention.
     Task<WhitelistConfigDto> GetWhitelistAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<WhitelistConfigDto> SaveWhitelistAsync(ConnectionProfile profile, WhitelistConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v0.8.17.0: the HOST tab, and this server's process priority and eco mode.
+    Task<HostPageSnapshotDto> GetHostAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ResourcePolicySaveResultDto> SaveResourcePolicyAsync(ConnectionProfile profile, ResourcePolicyDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v0.8.20.0: the machine's history.
+    Task<HostHistoryDto> GetHostHistoryAsync(ConnectionProfile profile, double hours, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v0.8.18.0: bandwidth.
+    Task<NetworkPolicySaveResultDto> SaveNetworkPolicyAsync(ConnectionProfile profile, NetworkPolicyDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v0.7.94.0: starter kits
+    Task<KitSnapshotDto> GetKitsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<KitSaveResultDto> SaveKitsAsync(ConnectionProfile profile, KitConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<KitCommandResultDto> TestKitProviderAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<GameIdCatalogDto> GetGameIdCatalogAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<TeleportSnapshotDto> GetTeleportAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<TeleportSaveResultDto> SaveTeleportAsync(ConnectionProfile profile, TeleportConfigDto config, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<TeleportActionResultDto> SendToTeleportPointAsync(ConnectionProfile profile, string pointName, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<TeleportCaptureResultDto> CaptureTeleportPositionAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<KitGiveResultDto> GiveItemsAsync(ConnectionProfile profile, string playerId, IReadOnlyList<KitEntryDto> entries, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<KitGiveResultDto> GiveKitAsync(ConnectionProfile profile, string kitId, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task ForgetKitClaimsAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<TemporaryBanConfigDto> GetTemporaryBansAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<PlayerAdminActionResultDto> CreateTemporaryBanAsync(ConnectionProfile profile, string playerId, string playerName, string reason, double durationHours, string? bearerToken = null, CancellationToken cancellationToken = default);
 

@@ -22,9 +22,68 @@ public sealed class OperationCoordinator : IOperationCoordinator
     private readonly Dictionary<OperationId, OperationRecord> records = [];
     private readonly List<OperationId> order = [];
 
+    // v0.7.115.0: how many journals are read back at start-up (newest first).
+    public const int MaximumReloadedOperations = 500;
+    public const string InterruptedState = "Interrupted";
+
     public OperationCoordinator(IServerPathProfile paths)
     {
         this.paths = paths;
+        Reload();
+    }
+
+    // v0.7.115.0 (deficiency report): journals were written but never read back, so the operation history
+    // came up empty after every MystTiq restart, and an operation that was running when MystTiq stopped
+    // stayed "Running" on disk forever with nothing to say otherwise. Now the newest journals are loaded at
+    // start-up, and any still marked Running is closed as Failed with an "Interrupted" stage: MystTiq
+    // cannot know how far it got, so it says so instead of guessing. Resource locks are not restored (the
+    // process that held them is gone).
+    private void Reload()
+    {
+        var root = Path.Combine(paths.ManagerRuntimeRoot, "operations", "journals");
+        if (!Directory.Exists(root)) return;
+        var loaded = new List<OperationRecord>();
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(root, "operation-*.json", SearchOption.AllDirectories)
+                         .Select(f => new FileInfo(f)).OrderByDescending(f => f.LastWriteTimeUtc).Take(MaximumReloadedOperations))
+            {
+                try
+                {
+                    var record = JsonSerializer.Deserialize<OperationRecord>(File.ReadAllText(file.FullName));
+                    if (record is null) continue;
+                    // The journal's own location wins over whatever path it recorded (the runtime root may have moved).
+                    loaded.Add(new OperationRecord
+                    {
+                        OperationId = record.OperationId, ServerProfileId = record.ServerProfileId, Kind = record.Kind,
+                        Source = record.Source, ResourceKeys = record.ResourceKeys, Phase = record.Phase,
+                        CreatedUtc = record.CreatedUtc, UpdatedUtc = record.UpdatedUtc, SafetyBackup = record.SafetyBackup,
+                        RolledBack = record.RolledBack, Stages = record.Stages ?? [], JournalPath = file.FullName
+                    });
+                }
+                catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or InvalidOperationException) { /* one bad journal must not hide the rest */ }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return; }
+
+        var now = DateTimeOffset.UtcNow;
+        lock (gate)
+        {
+            foreach (var record in loaded.OrderBy(r => r.CreatedUtc))
+            {
+                if (records.ContainsKey(record.OperationId)) continue;
+                if (record.Phase is OperationPhase.Running or OperationPhase.Queued)
+                {
+                    record.Phase = OperationPhase.Failed;
+                    record.UpdatedUtc = now;
+                    record.Stages.Add(new OperationStage(InterruptedState,
+                        "MystTiq stopped while this operation was still running, so its outcome is unknown. Check the result (and any safety backup) before trying again.", now));
+                    Persist(record);
+                }
+                records[record.OperationId] = record;
+                order.Add(record.OperationId);
+            }
+        }
     }
 
     public Task<OperationHandle> BeginAsync(ServerProfileId profile, string kind, string source, IReadOnlyList<string> resourceKeys, CancellationToken cancellationToken)

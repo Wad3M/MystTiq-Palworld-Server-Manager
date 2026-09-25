@@ -45,8 +45,8 @@ public static class ThemeCatalog
         ["ListRowAltBg"] = new() { ["Dark"] = Color.Parse("#0C1826"), ["Light"] = Color.Parse("#EBF0F7") },
         ["ListRowHoverBg"] = new() { ["Dark"] = Color.Parse("#1B3247"), ["Light"] = Color.Parse("#D7E4F0") },
         ["ListRowSelectedBg"] = new() { ["Dark"] = Color.Parse("#24425C"), ["Light"] = Color.Parse("#C7DAEA") },
-        // v0.7.55.0: the semi-transparent scrim behind the Dashboard's full-bleed atmosphere image
-        // (dashboard-atmosphere-v3.png) -- dims the art without hiding it. Dark keeps today's exact
+        // v0.7.55.0: the semi-transparent scrim behind the full-bleed workspace artwork (since v0.8.0.0 the
+        // page's category art from ArtworkCatalog; originally dashboard-atmosphere-v3.png) -- dims the art without hiding it. Dark keeps today's exact
         // value; Light uses the same alpha over the Light Bg0 tone instead of the dark one, since a
         // dark scrim over a light background would otherwise read as a stray dark patch.
         ["Bg0Scrim"] = new() { ["Dark"] = Color.Parse("#3A07111D"), ["Light"] = Color.Parse("#3AD7E4F4") },
@@ -218,6 +218,64 @@ public static class ThemeCatalog
     // decoration, not a distinct-enough identity marker for telling servers apart at a glance.
     public static readonly string[] TabIdentityColorNames =
         ["Blue", "Cyan", "Violet", "Magenta", "Orange", "Green", "Amber", "Red", "Purple", "DarkGreen"];
+
+    // v0.8.16.0: the mode a tab picks, kept in ConnectionProfile.ThemeVariant so a tab saved as "Dark" or "Light" reads
+    // exactly as before. Dark and Light are the two hand-tuned palettes above. Midnight (true black, for OLED screens) and
+    // High contrast are built on Dark with the overrides below; System follows the operating system's light/dark setting
+    // and changes with it.
+    public static readonly string[] Modes = ["Dark", "Light", "Midnight", "HighContrast", "System"];
+    public static readonly string[] ModeLabels = ["Dark", "Light", "Midnight (true black)", "High contrast", "Follow the system"];
+
+    // Anything unknown (a hand-edited profile, a mode from a newer version) is Dark, as a missing value always was.
+    public static string NormalizeMode(string? mode) =>
+        Modes.FirstOrDefault(m => string.Equals(m, mode?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "Dark";
+
+    // The hand-tuned palette a mode is built on.
+    public static string BaseVariant(string? mode, bool systemPrefersLight) => NormalizeMode(mode) switch
+    {
+        "Light" => "Light",
+        "System" => systemPrefersLight ? "Light" : "Dark",
+        _ => "Dark",
+    };
+
+    // Structural colors a mode replaces on top of its base palette. Midnight keeps Dark's look on true black: the
+    // backgrounds are #000000 and the page art is dimmed almost to black. High contrast is white text and borders on
+    // black, with the art hidden behind an almost opaque scrim.
+    public static readonly Dictionary<string, Dictionary<string, Color>> ModeStructural = new()
+    {
+        ["Midnight"] = Palette(
+            ("Bg0", "#000000"), ("Bg1", "#000000"), ("Bg2", "#05070A"), ("Card", "#F205080C"), ("CardStrong", "#F407090E"),
+            ("Border", "#2C4357"), ("BorderSoft", "#16212C"), ("Muted", "#93A6B8"), ("Text", "#F4F8FC"),
+            ("InputFieldBg", "#020304"), ("ScrollTrackBg", "#000000"), ("ListRowAltBg", "#05080B"),
+            ("ListRowHoverBg", "#122030"), ("ListRowSelectedBg", "#1B3043"), ("Bg0Scrim", "#C8000000")),
+        ["HighContrast"] = Palette(
+            ("Bg0", "#000000"), ("Bg1", "#000000"), ("Bg2", "#000000"), ("Card", "#FF000000"), ("CardStrong", "#FF000000"),
+            ("Border", "#FFFFFF"), ("BorderSoft", "#C8C8C8"), ("Muted", "#E8E8E8"), ("Text", "#FFFFFF"),
+            ("InputFieldBg", "#000000"), ("ScrollTrackBg", "#000000"), ("ListRowAltBg", "#111111"),
+            ("ListRowHoverBg", "#2A2A2A"), ("ListRowSelectedBg", "#0A3D7A"), ("Bg0Scrim", "#F5000000")),
+    };
+
+    // High contrast brightens the status colors so they read on black at a glance.
+    public static readonly Dictionary<string, Dictionary<string, Color>> ModeSemantic = new()
+    {
+        ["HighContrast"] = Palette(("Green", "#66FF8C"), ("Amber", "#FFD84D"), ("Red", "#FF7A7A")),
+    };
+
+    // The border every card draws (it was a fixed #426784 in DesignSystem.axaml, and still is outside these two modes).
+    public static Color CardBorder(string mode) => NormalizeMode(mode) switch
+    {
+        "Midnight" => Color.Parse("#2C4357"),
+        "HighContrast" => Colors.White,
+        _ => Color.Parse("#426784"),
+    };
+
+    // Density applies to every tab: how much room cards, buttons, boxes and list rows take.
+    public static readonly string[] Densities = ["Comfortable", "Compact"];
+    public static string NormalizeDensity(string? density) =>
+        Densities.FirstOrDefault(d => string.Equals(d, density?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "Comfortable";
+
+    private static Dictionary<string, Color> Palette(params (string Key, string Hex)[] entries) =>
+        entries.ToDictionary(e => e.Key, e => Color.Parse(e.Hex));
 
     public static Color ResolveDerivedBaseColor(string name, string accentTheme, string variant) => name switch
     {

@@ -16,6 +16,25 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
+  <!-- v0.7.96.0: two dependency-free Desktop files compiled straight in, so the map conversion and
+       the map status text get real numeric tests without referencing the Avalonia project. -->
+  <ItemGroup>
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Services\PalworldMapCoordinates.cs" Link="Desktop\PalworldMapCoordinates.cs" />
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Services\MapContentsText.cs" Link="Desktop\MapContentsText.cs" />
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Services\MapViewport.cs" Link="Desktop\MapViewport.cs" />
+    <!-- v0.7.106.0: map marker label de-overlap, same reasoning. WorldMapDtos.cs itself is not compiled
+         here (unlike PalworldConfigurationDtos.cs), since it uses Avalonia.Thickness and this harness has
+         no reference for that; MapLabelLayout itself has no such dependency. -->
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Services\MapLabelLayout.cs" Link="Desktop\MapLabelLayout.cs" />
+    <!-- v0.8.11.0: the Pals layer's clustering and text, same reasoning. -->
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Services\PalMapLayout.cs" Link="Desktop\PalMapLayout.cs" />
+    <!-- v0.8.14.0: the Desktop's role rule (which cards a signed-in role sees), same reasoning. -->
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Services\RoleAccess.cs" Link="Desktop\RoleAccess.cs" />
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Models\PalworldConfigurationDtos.cs" Link="Desktop\PalworldConfigurationDtos.cs" />
+    <!-- v0.7.105.0: DiagnosticFindingDto's new FixConfirmed change-notification logic, same reasoning. -->
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Models\DiagnosticFindingDtos.cs" Link="Desktop\DiagnosticFindingDtos.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\MystTiq.Core\MystTiq.Core.csproj" />
     <ProjectReference Include="..\..\..\src\MystTiq.HeadlessHost\MystTiq.HeadlessHost.csproj" />

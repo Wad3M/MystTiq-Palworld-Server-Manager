@@ -30,10 +30,27 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
     private readonly WebApplication app;
     private readonly IReadOnlyDictionary<ServerProfileId, ServerProfileHost> profiles;
 
+    // v0.8.2.0: profiles whose crash recovery is run by the caller (service-run's own supervisor), not by this host.
+    private readonly HashSet<ServerProfileId> externallySupervised = [];
+
     private LocalManagementApiHost(WebApplication app, IReadOnlyDictionary<ServerProfileId, ServerProfileHost> profiles)
     {
         this.app = app;
         this.profiles = profiles;
+    }
+
+    // v0.8.2.0: service-run supervises its profile itself (it must exit on give-up for the OS service manager), and
+    // this host also started a HeadlessFleetCrashRecoveryService for every profile, so in service mode the same
+    // server had two crash supervisors. Call before StartAsync: this host then leaves that profile's crash recovery
+    // alone, and the caller's supervisor gets the profile's own alert observer (crash alerts, mute settings) and
+    // persisted recovery state, so service mode alerts and remembers exactly like the Desktop's backend.
+    public (ISupervisorObserver Observer, SupervisorRecoveryStateStore State) TakeOverCrashRecovery(string profileId)
+    {
+        var id = new ServerProfileId(profileId);
+        if (!profiles.TryGetValue(id, out var profile))
+            throw new InvalidOperationException($"No server profile '{profileId}' is configured.");
+        externallySupervised.Add(id);
+        return (profile.CrashAlerts, profile.RecoveryState);
     }
 
     public static LocalManagementApiHost Create(
@@ -87,6 +104,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         var fleetActivity = new HeadlessActivityLogService(fleetPaths);
         var operations = new OperationCoordinator(fleetPaths);
         var rbac = new HeadlessRbacService(fleetPaths);
+        // v0.7.114.0: named user accounts (username + password -> session token); see HeadlessUserAccountService.
+        var userAccounts = new HeadlessUserAccountService(fleetPaths, fleetActivity);
         var authAbuseGuard = new HeadlessAuthAbuseGuardService(fleetActivity);
         var fleetConfigurationApi = new HeadlessFleetConfigurationService(effectiveConfigurationPath);
 
@@ -103,13 +122,20 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             configuration.Lifecycle.MaximumRecoveryAttempts,
             TimeSpan.FromSeconds(configuration.Lifecycle.RecoveryWindowSeconds));
 
+        // v0.8.17.0: the machine's own readings for the HOST tab; the same machine for every profile.
+        var hostMonitor = new HeadlessHostMonitor();
+        // v0.8.20.0: the machine's history, one reading a minute, kept in the fleet folder for 7 days.
+        var hostHistory = new HeadlessHostHistoryService(Path.Combine(configuration.FleetRoot, "host"), hostMonitor);
+
         // One full service graph per configured server profile.
         var profiles = new Dictionary<ServerProfileId, ServerProfileHost>();
         foreach (var serverConfig in configuration.Servers)
         {
             var profileId = new ServerProfileId(serverConfig.Id);
             var paths = ServerPathProfile.ForCurrentPlatform(HeadlessConfigurationService.ToRuntimeConfiguration(serverConfig));
-            var lifecycle = lifecycleFactory(serverConfig, paths);
+            // v0.8.24.0: starts apply the resource policy at once (see PolicyApplyingLifecycle).
+            var policyLifecycle = new PolicyApplyingLifecycle(lifecycleFactory(serverConfig, paths));
+            IServerLifecycleService lifecycle = policyLifecycle;
             var monitoring = new HeadlessMonitoringService(paths, lifecycle);
             var activity = new HeadlessActivityLogService(paths);
             var notificationRouting = new HeadlessNotificationRoutingService(paths, activity);
@@ -126,7 +152,9 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var consoleCaptureProxy = new HeadlessConsoleCaptureProxyService(paths);
             var worldExplorer = new HeadlessWorldExplorerService(paths);
             var worldTransactions = new HeadlessWorldTransactionService(paths, lifecycle, backups, activity, worldExplorer, operations, profileId);
-            var playerGuildExplorer = new HeadlessPlayerGuildExplorerService(paths, monitoring);
+            // v0.8.13.0: item and Pal display names from this server's own game pak, shared by the explorer and the Give Item picker.
+            var gameNames = new HeadlessGameNameService(paths);
+            var playerGuildExplorer = new HeadlessPlayerGuildExplorerService(paths, monitoring, gameNames);
             var saveCodec = new HeadlessSaveCodecService(crashAndSaveTools);
             var guildOwnership = new HeadlessGuildOwnershipService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var baseOwnership = new HeadlessBaseOwnershipService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
@@ -139,24 +167,54 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var networkPlatform = NetworkDiagnosticsPlatformService.ForCurrentPlatform();
             var networkDiagnostics = new NetworkDiagnosticsService(networkPlatform, paths.ConfigRoot);
             var wanReachability = new WanReachabilityService(networkPlatform);
-            var crashRecovery = new HeadlessFleetCrashRecoveryService(lifecycle, crashRecoveryOptions, serverConfig.LaunchArguments);
+            // v0.7.111.0: created before the crash observer, which reads this profile's alert rules (crash
+            // alerts on/off and the mute) from it.
+            var historicalMetrics = new HeadlessHistoricalMetricsService(paths);
+            var alertCenter = new HeadlessAlertCenterService(paths, historicalMetrics, notifications, modManagement);
+            // v0.7.115.0: crash recovery's own state (restart window, give-up, pinned DOWN notice) survives a
+            // MystTiq restart. Shared by the supervisor loop and the alert observer of this one profile.
+            var recoveryState = SupervisorRecoveryStateStore.ForProfile(paths);
+            // v0.7.101.0: crash recovery tells the admin what happened, through the notification pipeline.
+            var crashAlerts = new CrashAlertObserver(
+                string.IsNullOrWhiteSpace(serverConfig.Name) ? serverConfig.Id : serverConfig.Name,
+                notifications, crashAndSaveTools,
+                async token => (await modManagement.GetInventoryAsync(token)).Mods.SelectMany(m => new[] { m.Name, m.Package }).ToArray(),
+                alertCenter.GetRules, activity, recoveryState);
+            var crashRecovery = new HeadlessFleetCrashRecoveryService(lifecycle, crashRecoveryOptions, serverConfig.LaunchArguments, crashAlerts, recoveryState);
             var palworldConfiguration = new PalworldSettingsConfigurationService(paths);
+            // v0.8.18.0: bandwidth (Engine.ini network limits, written before every start by the lifecycle itself).
+            var networkPolicy = new HeadlessNetworkPolicyService(paths, lifecycle, palworldConfiguration, activity);
             var rcon = new PalworldRconService(palworldConfiguration);
             var rconModeration = new RconPlayerModerationProvider(rcon, activity);
             var playerModeration = new PlayerModerationCoordinator([playerAdmin, rconModeration]);
             var whitelist = new HeadlessWhitelistService(paths, activity, playerModeration);
+            var kits = new HeadlessKitService(paths, activity, playerRegistry, new RconKitCommandRunner(paths, rcon));
+            // v0.8.3.0: the Give Item picker's item/Pal ids (world save, kits, earlier gives).
+            var gameIds = new HeadlessGameIdCatalogService(paths, kits, gameNames);
+            // v0.7.113.0: chat-command teleport points, through the same PalDefender-over-RCON runner as kits.
+            var teleport = new HeadlessTeleportService(paths, activity, new RconKitCommandRunner(paths, rcon), new PalDefenderChatLogSource(paths), monitoring.GetPlayersAsync);
             var temporaryBans = new HeadlessTemporaryBanService(paths, activity, playerModeration);
             var discordBot = new HeadlessDiscordBotService(
                 paths, activity, lifecycle, rcon, playerModeration, monitoring, operations, profileId,
                 serverConfig.LaunchArguments,
                 TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds),
-                TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds));
+                TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds),
+                backups);
             var environmentChecklist = new HeadlessEnvironmentChecklistService(paths);
-            var historicalMetrics = new HeadlessHistoricalMetricsService(paths);
-            var alertCenter = new HeadlessAlertCenterService(paths, historicalMetrics, notifications, modManagement);
             var antiCheat = new HeadlessAntiCheatService(paths, notifications, activity, playerModeration, palEdit);
-            var automation = new HeadlessAutomationService(paths, configuration, serverConfig, lifecycle, backups, notifications, notificationRouting, rcon, operations, activity, alertCenter, monitoring, antiCheat);
-            var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer);
+            // v0.8.9.0: watches Pal\Saved\Crashes for new Unreal crash reports (see HeadlessCrashReportWatcher).
+            var crashReports = new HeadlessCrashReportWatcher(paths, string.IsNullOrWhiteSpace(serverConfig.Name) ? serverConfig.Id : serverConfig.Name,
+                crashAndSaveTools, notifications,
+                async token => (await modManagement.GetInventoryAsync(token)).Mods.SelectMany(m => new[] { m.Name, m.Package }).ToArray(),
+                alertCenter.GetRules, () => crashAlerts.LastCrashDetectedUtc, activity);
+            // v0.8.17.0: process priority and eco mode; "who is online" for automatic eco mode comes from the same live
+            // player read as the dashboard, and is unknown (never guessed as empty) when that read is unavailable.
+            var resourcePolicy = new HeadlessResourcePolicyService(paths, lifecycle,
+                async token => { var players = await monitoring.GetPlayersAsync(token); return players.Available ? players.OnlineCount : null; },
+                activity);
+            policyLifecycle.AfterStart = async token => await resourcePolicy.ApplyAsync(token);
+            var automation = new HeadlessAutomationService(paths, configuration, serverConfig, lifecycle, backups, notifications, notificationRouting, rcon, operations, activity, alertCenter, monitoring, antiCheat, crashReports, resourcePolicy);
+            var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer, backups, crashAndSaveTools, () => alertCenter.LowDiskCriticalPercent(), automation);
             var worldClone = new HeadlessWorldCloneService(paths, lifecycle, serverConfig, fleetConfigurationApi, palworldConfiguration, activity);
             var componentUpdates = new HeadlessComponentUpdateService(paths, modManagement);
             var modSafeStart = new HeadlessModSafeStartService(
@@ -204,15 +262,24 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 WorldClone = worldClone,
                 WanReachability = wanReachability,
                 CrashRecovery = crashRecovery,
+                CrashAlerts = crashAlerts,
+                RecoveryState = recoveryState,
                 PalEdit = palEdit,
                 PlayerDeletion = playerDeletion,
                 PlayerCopy = playerCopy,
                 DiscordBot = discordBot,
                 AntiCheat = antiCheat,
                 Whitelist = whitelist,
+                Kits = kits,
+                GameIds = gameIds,
+                Teleport = teleport,
                 TemporaryBans = temporaryBans,
                 ComponentUpdates = componentUpdates,
-                ModSafeStart = modSafeStart
+                ModSafeStart = modSafeStart,
+                ResourcePolicy = resourcePolicy,
+                HostMonitor = hostMonitor,
+                HostHistory = hostHistory,
+                NetworkPolicy = networkPolicy
             };
         }
 
@@ -231,9 +298,12 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 !path.Contains("/activity/tail", StringComparison.OrdinalIgnoreCase) &&
                 !path.Contains("/history", StringComparison.OrdinalIgnoreCase))
             {
+                // v0.7.114.0: the audit line names who did it (a signed-in user's display name, a token
+                // principal's name, or the shared token) instead of every call reading "local-management-api".
                 fleetActivity.Record(context.Response.StatusCode >= 400 ? "Warning" : "Information", "API",
                     $"{context.Request.Method} {path}",
-                    $"HTTP {context.Response.StatusCode} in {(DateTimeOffset.UtcNow - started).TotalMilliseconds:F0} ms");
+                    $"HTTP {context.Response.StatusCode} in {(DateTimeOffset.UtcNow - started).TotalMilliseconds:F0} ms",
+                    (context.Items[RbacEndpointExtensions.PrincipalItemKey] as MystTiqPrincipal)?.Name);
             }
         });
 
@@ -257,6 +327,14 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 return;
             }
 
+            // v0.7.114.0: signing in is the one call that cannot carry a token yet. The route itself feeds
+            // failures into the same per-IP guard checked just above.
+            if (string.Equals(context.Request.Path.Value, "/api/v1/auth/login", StringComparison.OrdinalIgnoreCase))
+            {
+                await next();
+                return;
+            }
+
             var header = context.Request.Headers["Authorization"].ToString();
             const string prefix = "Bearer ";
             if (!header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
@@ -275,7 +353,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 return;
             }
 
-            var principal = rbac.Authenticate(supplied);
+            var principal = rbac.Authenticate(supplied) ?? userAccounts.Authenticate(supplied);
             if (principal is null)
             {
                 authAbuseGuard.RecordFailure(remoteIp);
@@ -305,14 +383,14 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 return Results.BadRequest(new { message = "Port must be between 1 and 65535." });
             var result = await portAvailability.CheckAsync(port, string.IsNullOrWhiteSpace(protocol) ? "UDP" : protocol, token);
             return Results.Ok(result);
-        });
+        }).RequireRole(MystTiqRole.Viewer);
 
         // v0.7.48.0: UE4SS Release Catalog -- fleet-level like port-check above, since this is a
         // read-only GitHub query with no per-profile context (which server root/UE4SS install it
         // targets is decided later, by the install action a future version adds, not by this list).
         var ue4ssReleaseCatalog = new HeadlessUe4ssReleaseCatalogService();
         app.MapGet("/api/v1/ue4ss/releases", async (CancellationToken token) =>
-            Results.Ok(await ue4ssReleaseCatalog.GetCatalogAsync(token)));
+            Results.Ok(await ue4ssReleaseCatalog.GetCatalogAsync(token))).RequireRole(MystTiqRole.Viewer);
 
         app.MapGet("/healthz", () => Results.Ok(new
         {
@@ -327,10 +405,10 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             serverProfileIds = profiles.Keys.Select(id => id.Value).OrderBy(v => v, StringComparer.OrdinalIgnoreCase).ToArray()
         }));
 
-        app.MapGet("/api/v1/service", async (CancellationToken token) => Results.Ok(await serviceStatusProvider.GetStatusAsync(token)));
+        app.MapGet("/api/v1/service", async (CancellationToken token) => Results.Ok(await serviceStatusProvider.GetStatusAsync(token))).RequireRole(MystTiqRole.Viewer);
 
         app.MapGet("/api/v1/security/principals", () =>
-            Results.Ok(rbac.ListPrincipals().Select(p => new MystTiqPrincipalDto(p.Id, p.Name, p.Role, p.ExpiresUtc, p.IsExpired, p.ScopedServerProfileId))));
+            Results.Ok(rbac.ListPrincipals().Select(p => new MystTiqPrincipalDto(p.Id, p.Name, p.Role, p.ExpiresUtc, p.IsExpired, p.ScopedServerProfileId)))).RequireRole(MystTiqRole.Viewer);
         app.MapPost("/api/v1/security/principals", (HeadlessCreatePrincipalRequest request) =>
         {
             var (principal, token) = rbac.CreatePrincipal(request.Name, request.Role, request.ExpiresUtc, request.ScopedServerProfileId);
@@ -338,6 +416,53 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         }).RequireRole(MystTiqRole.Owner);
         app.MapDelete("/api/v1/security/principals/{id}", (string id) =>
             rbac.RevokePrincipal(id) ? Results.Ok() : Results.NotFound()).RequireRole(MystTiqRole.Owner);
+        // v0.7.114.0: named user accounts. Sign-in is anonymous (the auth middleware lets exactly this path
+        // through) and counts failures against the same per-IP guard as bad tokens. Managing accounts is Owner.
+        app.MapPost("/api/v1/auth/login", (UserLoginRequest request, HttpContext context) =>
+        {
+            if (!configuration.Api.Authentication.Enabled)
+                return Results.Conflict(new UserLoginResult(false, "Authentication is switched off on this MystTiq, so every connection already has full access. Turn authentication on (remote access) to use named accounts.", null, null, null));
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var result = userAccounts.Login(request.Username, request.Password);
+            if (result.Success) authAbuseGuard.RecordSuccess(remoteIp);
+            else authAbuseGuard.RecordFailure(remoteIp);
+            return result.Success ? Results.Ok(result) : Results.Json(result, statusCode: StatusCodes.Status401Unauthorized);
+        });
+        app.MapPost("/api/v1/auth/logout", (HttpContext context) =>
+        {
+            var header = context.Request.Headers["Authorization"].ToString();
+            var token = header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? header[7..].Trim() : string.Empty;
+            return Results.Ok(new { signedOut = userAccounts.Logout(token) });
+        });
+        app.MapPost("/api/v1/auth/password", (UserOwnPasswordRequest request, HttpContext context) =>
+        {
+            var principal = context.Items[RbacEndpointExtensions.PrincipalItemKey] as MystTiqPrincipal ?? MystTiqPrincipal.LegacyOwner;
+            var result = userAccounts.ChangeOwnPassword(principal, request.CurrentPassword, request.NewPassword);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        });
+        app.MapGet("/api/v1/security/users", () => Results.Ok(userAccounts.List())).RequireRole(MystTiqRole.Owner);
+        app.MapPost("/api/v1/security/users", (UserAccountCreateRequest request, HttpContext context) =>
+        {
+            var result = userAccounts.Create(request, ActorName(context));
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Owner);
+        app.MapPut("/api/v1/security/users/{id}", (string id, UserAccountUpdateRequest request, HttpContext context) =>
+        {
+            var result = userAccounts.Update(id, request, ActorName(context));
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Owner);
+        app.MapPost("/api/v1/security/users/{id}/password", (string id, UserPasswordRequest request, HttpContext context) =>
+        {
+            var result = userAccounts.SetPassword(id, request.Password, ActorName(context));
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Owner);
+        app.MapDelete("/api/v1/security/users/{id}", (string id, HttpContext context) =>
+        {
+            var result = userAccounts.Delete(id, ActorName(context));
+            return result.Success ? Results.Ok(result) : Results.NotFound(result);
+        }).RequireRole(MystTiqRole.Owner);
+        static string ActorName(HttpContext context) => (context.Items[RbacEndpointExtensions.PrincipalItemKey] as MystTiqPrincipal)?.Name ?? "unknown";
+
         app.MapGet("/api/v1/security/whoami", (HttpContext context) =>
         {
             var principal = context.Items[RbacEndpointExtensions.PrincipalItemKey] as MystTiqPrincipal ?? MystTiqPrincipal.LegacyOwner;
@@ -345,12 +470,12 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         });
 
         app.MapGet("/api/v1/operations", (int? max) =>
-            Results.Ok(operations.ListRecent(max ?? 50)));
+            Results.Ok(operations.ListRecent(max ?? 50))).RequireRole(MystTiqRole.Viewer);
         app.MapGet("/api/v1/operations/{id}", (string id) =>
         {
             var record = operations.Find(new OperationId(id));
             return record is null ? Results.NotFound() : Results.Ok(record);
-        });
+        }).RequireRole(MystTiqRole.Viewer);
 
         // Fleet-scope routes: list/add/remove server profiles, and staggered bulk actions across
         // every configured profile. Adding/removing a profile always requires a process restart
@@ -366,7 +491,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 status = await p.Lifecycle.GetStatusAsync(token)
             }));
             return Results.Ok(summaries);
-        });
+        }).RequireRole(MystTiqRole.Viewer);
         app.MapPost("/api/v1/servers", async (HeadlessAddServerProfileRequest request, CancellationToken token) =>
         {
             var result = await fleetConfigurationApi.AddServerAsync(request, token);
@@ -394,9 +519,9 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         // never adds a second profile) keeps working with zero changes.
         foreach (var profileHost in profiles.Values)
         {
-            MapProfileRoutes(app.MapGroup($"/api/v1/servers/{profileHost.Id.Value}"), profileHost, host, operations, configuration, loopback, serviceStatusProvider);
+            MapProfileRoutes(app.MapGroup($"/api/v1/servers/{profileHost.Id.Value}").RequireRoleByDefault(profileHost.Id), profileHost, host, operations, configuration, loopback, serviceStatusProvider);
             if (profileHost.Id.Equals(ServerProfileId.Default))
-                MapProfileRoutes(app.MapGroup("/api/v1"), profileHost, host, operations, configuration, loopback, serviceStatusProvider);
+                MapProfileRoutes(app.MapGroup("/api/v1").RequireRoleByDefault(profileHost.Id), profileHost, host, operations, configuration, loopback, serviceStatusProvider);
         }
 
         return host;
@@ -412,6 +537,35 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         IManagementServiceStatusProvider serviceStatusProvider)
     {
         routes.MapGet("/status", async (CancellationToken token) => Results.Ok(await p.Lifecycle.GetStatusAsync(token)));
+        // v0.8.17.0: the HOST tab -- the machine this server runs on, and this server's processes with their priority and
+        // eco mode. Reading changes nothing; saving the policy applies it at once and on every automation tick after.
+        routes.MapGet("/host", async (CancellationToken token) =>
+        {
+            var hostTask = p.HostMonitor.GetSnapshotAsync(
+                [("install", p.Paths.ServerRoot), ("saves", p.Paths.SaveRoot), ("backups", p.Paths.BackupRoot)], token);
+            var resourcesTask = p.ResourcePolicy.GetSnapshotAsync(token);
+            var bandwidthTask = p.NetworkPolicy.GetSnapshotAsync(token);
+            await Task.WhenAll(hostTask, resourcesTask, bandwidthTask);
+            return Results.Ok(new HeadlessHostPageSnapshot(await hostTask, await resourcesTask, await bandwidthTask));
+        }).RequireRole(MystTiqRole.Viewer, p.Id);
+        // v0.8.18.0: bandwidth. Saving while the server runs waits for the next start (the engine rewrites Engine.ini on exit).
+        // v0.8.20.0: the machine's history for the HOST tab (1 hour to 7 days, at most 600 points).
+        routes.MapGet("/host/history", (double? hours, int? points) => Results.Ok(p.HostHistory.Snapshot(hours ?? 24, points ?? 600)))
+            .RequireRole(MystTiqRole.Viewer, p.Id);
+        routes.MapGet("/network/policy", async (CancellationToken token) => Results.Ok(await p.NetworkPolicy.GetSnapshotAsync(token)))
+            .RequireRole(MystTiqRole.Viewer, p.Id);
+        routes.MapPut("/network/policy", async (ServerNetworkPolicy request, HttpContext context, CancellationToken token) =>
+        {
+            var result = await p.NetworkPolicy.SaveAsync(request, (context.Items[RbacEndpointExtensions.PrincipalItemKey] as MystTiqPrincipal)?.Name, token);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+        routes.MapGet("/resources/policy", () => Results.Ok(p.ResourcePolicy.GetPolicy()))
+            .RequireRole(MystTiqRole.Viewer, p.Id);
+        routes.MapPut("/resources/policy", async (ServerResourcePolicy request, HttpContext context, CancellationToken token) =>
+        {
+            var result = await p.ResourcePolicy.SaveAsync(request, (context.Items[RbacEndpointExtensions.PrincipalItemKey] as MystTiqPrincipal)?.Name, token);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
         routes.MapGet("/status/poll", async (int? lines, CancellationToken token) =>
         {
             var count = Math.Clamp(lines ?? 120, 10, 500);
@@ -432,6 +586,9 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             // v0.7.10.0: whitelist enforcement runs from the same poll cadence the player registry
             // above already uses -- see HeadlessWhitelistService's own comment for why.
             await p.Whitelist.EnforceAsync(players, token);
+            // v0.7.94.0: starter-kit auto-gift, same poll-driven cadence (the registry's Observe above
+            // has already stamped a brand-new player's first-seen time by now).
+            await p.Kits.EnforceAsync(players, token);
             // v0.7.15.0: temporary-ban expiry sweep, same poll-driven cadence.
             await p.TemporaryBans.EnforceAsync(token);
 
@@ -455,14 +612,14 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapGet("/activity/tail", (int? lines) =>
             Results.Ok(p.Activity.GetTail(lines ?? 200)));
         routes.MapGet("/notifications", () => Results.Ok(p.Notifications.GetSnapshot()));
-        routes.MapPost("/notifications/self-test", () => Results.Ok(p.Notifications.CreateSelfTest()));
-        routes.MapPost("/notifications/mark-all-read", () => Results.Ok(p.Notifications.MarkAllRead()));
+        routes.MapPost("/notifications/self-test", () => Results.Ok(p.Notifications.CreateSelfTest())).RequireRole(MystTiqRole.Operator, p.Id);
+        routes.MapPost("/notifications/mark-all-read", () => Results.Ok(p.Notifications.MarkAllRead())).RequireRole(MystTiqRole.Operator, p.Id);
         routes.MapPost("/notifications/{id}/read", (string id, HeadlessNotificationFlagRequest request) =>
-        { try { return Results.Ok(p.Notifications.SetRead(id, request.Value)); } catch (KeyNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); } });
+        { try { return Results.Ok(p.Notifications.SetRead(id, request.Value)); } catch (KeyNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); } }).RequireRole(MystTiqRole.Operator, p.Id);
         routes.MapPost("/notifications/{id}/pin", (string id, HeadlessNotificationFlagRequest request) =>
-        { try { return Results.Ok(p.Notifications.SetPinned(id, request.Value)); } catch (KeyNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); } });
+        { try { return Results.Ok(p.Notifications.SetPinned(id, request.Value)); } catch (KeyNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); } }).RequireRole(MystTiqRole.Operator, p.Id);
         routes.MapDelete("/notifications/{id}", (string id) =>
-        { try { return Results.Ok(p.Notifications.Dismiss(id)); } catch (KeyNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); } });
+        { try { return Results.Ok(p.Notifications.Dismiss(id)); } catch (KeyNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); } }).RequireRole(MystTiqRole.Operator, p.Id);
 
         routes.MapGet("/notifications/channels", () => Results.Ok(p.NotificationRouting.GetChannels()));
         routes.MapPut("/notifications/channels", (NotificationChannelConfiguration request) =>
@@ -470,10 +627,33 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapGet("/notifications/templates", () => Results.Ok(p.NotificationRouting.GetTemplates()));
         routes.MapPut("/notifications/templates", (List<NotificationTemplate> request) =>
             Results.Ok(p.NotificationRouting.SaveTemplates(request))).RequireRole(MystTiqRole.Admin, p.Id);
+        // v0.8.4.0: pause outside delivery (Discord/email/webhooks) while the Notifications page keeps everything, and a
+        // test notification that goes through the normal path, so an admin can check the channels (and the pause).
+        routes.MapGet("/notifications/delivery", () => Results.Ok(p.NotificationRouting.GetDeliveryState()));
+        routes.MapPost("/notifications/delivery/pause", (NotificationDeliveryPauseRequest request) =>
+            Results.Ok(p.NotificationRouting.PauseDelivery(request.Minutes))).RequireRole(MystTiqRole.Admin, p.Id);
+        routes.MapPost("/notifications/test", () =>
+        {
+            var state = p.NotificationRouting.GetDeliveryState();
+            p.Notifications.Create("Information", "Test notification",
+                "Sent from MystTiq to check notification delivery. If this reached Discord, email or a webhook, that channel works.");
+            var outcome = state.PausedUntilUtc is not null
+                ? "Created on the Notifications page only: outside delivery is paused."
+                : state.ExternalChannels.Count == 0
+                    ? "Created on the Notifications page. No outside channel is switched on."
+                    : $"Created, and sent to {string.Join(", ", state.ExternalChannels)} in the background. A failed send is written to the Activity log.";
+            return Results.Ok(new { message = outcome, delivery = state });
+        }).RequireRole(MystTiqRole.Admin, p.Id);
 
         routes.MapGet("/notifications/discord-bot", () => Results.Ok(p.DiscordBot.GetConfigView())).RequireRole(MystTiqRole.Admin, p.Id);
         routes.MapPut("/notifications/discord-bot", async (DiscordBotConfiguration request, CancellationToken token) =>
-            Results.Ok(await p.DiscordBot.SaveConfigAsync(request, token))).RequireRole(MystTiqRole.Admin, p.Id);
+        {
+            // v0.7.95.0: a mistyped channel id is refused with a reason rather than silently saved.
+            var problem = HeadlessDiscordBotService.ValidateChannelIds(request);
+            return problem is not null
+                ? Results.BadRequest(new { message = problem })
+                : Results.Ok(await p.DiscordBot.SaveConfigAsync(request, token));
+        }).RequireRole(MystTiqRole.Admin, p.Id);
 
         routes.MapGet("/rcon/status", () => Results.Ok(p.Rcon.GetStatus()));
         routes.MapGet("/rcon/doctor", async (CancellationToken token) =>
@@ -517,7 +697,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var result = await p.Rcon.ExecuteAsync("Save", token);
             p.Activity.Record(result.Success ? "Information" : "Warning", "World", "Save World Now (RCON)", result.Message);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
-        });
+        }).RequireRole(MystTiqRole.Operator, p.Id);
 
         // v0.7.10.0: whitelist config is read/replaced as a whole, matching the existing
         // /notifications/discord-bot GET+PUT convention (the Desktop mutates a local entry list and
@@ -525,6 +705,58 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapGet("/players/whitelist", () => Results.Ok(p.Whitelist.GetConfig()))
             .RequireRole(MystTiqRole.Operator, p.Id);
         routes.MapPut("/players/whitelist", (WhitelistConfig request) => Results.Ok(p.Whitelist.SaveConfig(request)))
+            .RequireRole(MystTiqRole.Admin, p.Id);
+        // v0.7.94.0: starter kits. Config is read/replaced as a whole (same convention as the whitelist);
+        // giving a kit and testing the provider are explicit Admin actions because they hand out items.
+        routes.MapGet("/players/kits", () => Results.Ok(p.Kits.GetSnapshot()))
+            .RequireRole(MystTiqRole.Operator, p.Id);
+        routes.MapPut("/players/kits", (KitConfig request) =>
+        {
+            var result = p.Kits.SaveConfig(request);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+        routes.MapPost("/players/kits/test-provider", async (CancellationToken token) => Results.Ok(await p.Kits.TestProviderAsync(token)))
+            .RequireRole(MystTiqRole.Admin, p.Id);
+        routes.MapPost("/players/kits/{kitId}/give", async (string kitId, KitGiveRequest request, CancellationToken token) =>
+        {
+            var players = await p.Monitoring.GetPlayersAsync(token);
+            var result = await p.Kits.GiveAsync(kitId, request.PlayerId ?? string.Empty, players, "manual", token);
+            p.Activity.Record(result.Success ? "Information" : "Warning", "Players", "Give Kit (manual)", result.Message);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+        // v0.7.112.0: one-off Give Item / Give Pal for an online player, through the same PalDefender-over-RCON
+        // provider as kits. Admin, same as giving a kit.
+        routes.MapPost("/players/{playerId}/give", async (string playerId, GiveItemsRequest request, CancellationToken token) =>
+        {
+            var players = await p.Monitoring.GetPlayersAsync(token);
+            var result = await p.Kits.GiveEntriesAsync(request.Entries ?? [], playerId, players, token);
+            if (!result.Success) p.Activity.Record("Warning", "Players", "Give Item failed", result.Message);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+        // v0.8.3.0: the item/Pal ids the Give Item picker offers. Read-only, so Operator like reading kits.
+        routes.MapGet("/players/give/catalog", () => Results.Ok(p.GameIds.GetCatalog()))
+            .RequireRole(MystTiqRole.Operator, p.Id);
+        // v0.7.113.0: teleport points players reach by chat command (see HeadlessTeleportService). Reading is
+        // Operator like kits; changing points, sending a player and asking PalDefender for a position are Admin.
+        routes.MapGet("/teleport", () => Results.Ok(p.Teleport.GetSnapshot()))
+            .RequireRole(MystTiqRole.Operator, p.Id);
+        routes.MapPut("/teleport", (TeleportConfig request) =>
+        {
+            var result = p.Teleport.SaveConfig(request);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+        routes.MapPost("/teleport/points/{name}/send", async (string name, TeleportSendRequest request, CancellationToken token) =>
+        {
+            var result = await p.Teleport.SendToPointAsync(name, request.PlayerId ?? string.Empty, token);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+        routes.MapPost("/teleport/capture", async (TeleportCaptureRequest request, CancellationToken token) =>
+        {
+            var result = await p.Teleport.CaptureAsync(request.PlayerId ?? string.Empty, token);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+        routes.MapDelete("/players/kits/claims/{playerId}", (string playerId) =>
+            Results.Ok(new { removed = p.Kits.ForgetClaims(playerId) }))
             .RequireRole(MystTiqRole.Admin, p.Id);
         // v0.7.15.0: temporary bans -- bans immediately via the existing ban path (unchanged), then
         // persists an expiry that HeadlessTemporaryBanService's own /status/poll sweep unbans
@@ -568,8 +800,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapGet("/players/registry", () => Results.Ok(p.PlayerRegistry.Snapshot()));
         routes.MapGet("/players/registry/events", (int? limit) => Results.Ok(p.PlayerRegistry.RecentEvents(limit ?? 200)));
         routes.MapGet("/players/{playerId}/metadata", (string playerId) => Results.Ok(p.PlayerMetadata.Get(playerId)));
-        routes.MapPut("/players/{playerId}/metadata", (string playerId, PlayerNotesRequest request) => Results.Ok(p.PlayerMetadata.SaveNotes(playerId, request.Notes)));
-        routes.MapPost("/players/{playerId}/warnings", (string playerId, PlayerWarningRequest request) => Results.Ok(p.PlayerMetadata.AddWarning(playerId, request.Message)));
+        routes.MapPut("/players/{playerId}/metadata", (string playerId, PlayerNotesRequest request) => Results.Ok(p.PlayerMetadata.SaveNotes(playerId, request.Notes))).RequireRole(MystTiqRole.Operator, p.Id);
+        routes.MapPost("/players/{playerId}/warnings", (string playerId, PlayerWarningRequest request) => Results.Ok(p.PlayerMetadata.AddWarning(playerId, request.Message))).RequireRole(MystTiqRole.Operator, p.Id);
         routes.MapPut("/players/{playerId}/flag", (string playerId, PlayerFlagRequest request) => Results.Ok(p.PlayerMetadata.SetFlag(playerId, request.Flag))).RequireRole(MystTiqRole.Operator, p.Id);
         routes.MapGet("/metrics", async (CancellationToken token) =>
             Results.Ok(await p.Monitoring.GetMetricsAsync(token)));
@@ -588,11 +820,11 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         {
             var finding = await p.Diagnostics.RecheckAsync(id, token);
             return finding is null ? Results.NotFound() : Results.Ok(finding);
-        });
+        }).RequireRole(MystTiqRole.Operator, p.Id);
 
-        routes.MapPost("/diagnostics/{id}/fix", async (string id, CancellationToken token) =>
+        routes.MapPost("/diagnostics/{id}/fix", async (string id, HttpContext http, CancellationToken token) =>
         {
-            var result = await p.Diagnostics.FixAsync(id, token);
+            var result = await p.Diagnostics.FixAsync(id, token, canAdminister: (http.Items[RbacEndpointExtensions.PrincipalItemKey] as MystTiqPrincipal)?.Role >= MystTiqRole.Admin);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         }).RequireRole(MystTiqRole.Operator, p.Id);
 
@@ -669,13 +901,24 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 throw;
             }
             finally { handle.Dispose(); }
-        });
+        }).RequireRole(MystTiqRole.Operator, p.Id);
 
         routes.MapGet("/world/explorer", () =>
             Results.Ok(p.WorldExplorer.Explore()));
 
-        routes.MapPost("/crash-analyzer/analyze", () =>
-            Results.Ok(p.CrashAndSaveTools.Analyze()));
+        // v0.7.97.0: the installed mod names let the analysis say which mods the evidence names.
+        // A failure to read the inventory must never fail the analysis, so it just names no mods.
+        routes.MapPost("/crash-analyzer/analyze", async (CancellationToken token) =>
+        {
+            IReadOnlyCollection<string>? modNames = null;
+            try
+            {
+                var inventory = await p.ModManagement.GetInventoryAsync(token);
+                modNames = inventory.Mods.SelectMany(m => new[] { m.Name, m.Package }).ToArray();
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException) { }
+            return Results.Ok(p.CrashAndSaveTools.Analyze(modNames));
+        }).RequireRole(MystTiqRole.Operator, p.Id);
 
         routes.MapGet("/crash-analyzer/history", (int? maximum) =>
             Results.Ok(p.CrashAndSaveTools.History(maximum ?? 50)));
@@ -684,7 +927,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             Results.Ok(await p.CrashAndSaveTools.DiagnoseSaveToolsAsync(false, token)));
 
         routes.MapPost("/save-tools/self-test", async (CancellationToken token) =>
-            Results.Ok(await p.CrashAndSaveTools.DiagnoseSaveToolsAsync(true, token)));
+            Results.Ok(await p.CrashAndSaveTools.DiagnoseSaveToolsAsync(true, token))).RequireRole(MystTiqRole.Operator, p.Id);
 
         routes.MapGet("/save-tools/files", () =>
             Results.Ok(p.CrashAndSaveTools.BrowseSaves()));
@@ -827,6 +1070,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapGet("/alerts/rules", () => Results.Ok(p.AlertCenter.GetRules()));
         routes.MapPut("/alerts/rules", (AlertRuleSet request) => Results.Ok(p.AlertCenter.SaveRules(request))).RequireRole(MystTiqRole.Admin, p.Id);
         routes.MapGet("/alerts/predictions", () => Results.Ok(p.AlertCenter.GetDiskSpacePrediction()));
+        // v0.7.111.0: mute every alert on this profile for N minutes (0 unmutes), timed on the host's clock.
+        routes.MapPost("/alerts/mute", (AlertMuteRequest request) => Results.Ok(p.AlertCenter.Mute(request.Minutes))).RequireRole(MystTiqRole.Admin, p.Id);
 
         routes.MapGet("/anticheat/rules", () => Results.Ok(p.AntiCheat.GetRules()));
         routes.MapPut("/anticheat/rules", (AntiCheatRuleSet request) => Results.Ok(p.AntiCheat.SaveRules(request))).RequireRole(MystTiqRole.Admin, p.Id);
@@ -1002,7 +1247,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         {
             var result = await p.ServerDistribution.UpdateAsync(validate ?? true, token);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
-        });
+        }).RequireRole(MystTiqRole.Operator, p.Id);
 
         // v0.7.72.0: native console capture (see HeadlessConsoleCaptureProxyService for the full
         // design). Deliberately opt-in and mutation-gated the same way distribution/update is --
@@ -1045,13 +1290,13 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         }).RequireRole(MystTiqRole.Operator, p.Id);
 
         routes.MapPost("/backups/{fileName}/verify", async (string fileName, CancellationToken token) =>
-            Results.Ok(await p.Backups.VerifyAsync(fileName, token)));
+            Results.Ok(await p.Backups.VerifyAsync(fileName, token))).RequireRole(MystTiqRole.Operator, p.Id);
 
         routes.MapPost("/backups/verify-all", async (CancellationToken token) =>
-            Results.Ok(await p.Backups.VerifyAllAsync(token)));
+            Results.Ok(await p.Backups.VerifyAllAsync(token))).RequireRole(MystTiqRole.Operator, p.Id);
 
         routes.MapPost("/backups/retention/preview", (HeadlessBackupRetentionRequest request) =>
-            Results.Ok(p.Backups.PreviewRetention(request)));
+            Results.Ok(p.Backups.PreviewRetention(request))).RequireRole(MystTiqRole.Operator, p.Id);
 
         routes.MapPost("/backups/retention/apply", async (HeadlessBackupRetentionApplyRequest request, CancellationToken token) =>
         {
@@ -1142,10 +1387,13 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await app.StartAsync(cancellationToken);
+        // v0.8.20.0: one host history for the fleet (every profile shares the same instance).
+        if (profiles.Values.FirstOrDefault()?.HostHistory is { } history) await history.StartAsync(cancellationToken);
         foreach (var p in profiles.Values)
         {
             await p.Automation.StartAsync(cancellationToken);
-            await p.CrashRecovery.StartAsync(cancellationToken);
+            if (!externallySupervised.Contains(p.Id)) await p.CrashRecovery.StartAsync(cancellationToken);
+            await p.Teleport.StartAsync(cancellationToken);
         }
     }
 
@@ -1155,9 +1403,11 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
     {
         foreach (var p in profiles.Values)
         {
+            await p.Teleport.StopAsync(cancellationToken);
             await p.CrashRecovery.StopAsync(cancellationToken);
             await p.Automation.StopAsync(cancellationToken);
         }
+        if (profiles.Values.FirstOrDefault()?.HostHistory is { } history) await history.StopAsync(cancellationToken);
         await app.StopAsync(cancellationToken);
     }
 
@@ -1252,6 +1502,8 @@ public sealed record PalworldConfigurationSettingRequest(string Name, string Dis
 
 public sealed record RconCommandRequest(string Command);
 
+public sealed record KitGiveRequest(string? PlayerId);
+public sealed record GiveItemsRequest(IReadOnlyList<KitEntry>? Entries);
 public sealed record ModDescriptionSourceRequest(string SourceUrl);
 public sealed record Ue4ssInstallPreviewRequest(string Source, string TagName);
 public sealed record Ue4ssInstallApplyRequest(string Token);
