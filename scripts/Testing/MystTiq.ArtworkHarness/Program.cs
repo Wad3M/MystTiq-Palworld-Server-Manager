@@ -1,4 +1,4 @@
-﻿// MystTiq v0.9.3.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -301,6 +301,11 @@ Check(Localizer.T(wrongPath) == jaText[MsgKey("A PalServer process is running, b
     $"A service message with a value keeps the value (paths and process ids) [{Localizer.T(wrongPath)}]");
 Check(Localizer.T("TeleportToMe 76561198000000000") == "TeleportToMe 76561198000000000" && Localizer.T("KickPlayer steam_1") == "KickPlayer steam_1",
     "A server command the service reports stays as it is");
+// v0.9.4.0: the health states the service and the Dashboard use, and a value inside a translated label (TrFormat).
+Check(new[] { "STOPPED", "DEGRADED", "STARTING", "READY", "ATTENTION" }.All(w => Localizer.T(w) != w) &&
+      TrFormatExtension.Fill(Localizer.Instance["dashboard.format.health"], "Healthy") == TrFormatExtension.Fill(Localizer.Instance["dashboard.format.health"], jaText[MsgKey("Healthy")]) &&
+      !TrFormatExtension.Fill(Localizer.Instance["dashboard.format.health"], "Healthy").Contains("Healthy", StringComparison.Ordinal),
+    $"Japanese: health states and a value inside a label are translated [{Localizer.T("DEGRADED")} / {TrFormatExtension.Fill(Localizer.Instance["dashboard.format.health"], "Healthy")}]");
 // Every template, in every language: English filled with sample values comes back as that language's text with the
 // same values, so no template is shadowed by a wrong one.
 foreach (var language in Localizer.Languages.Where(l => l.Code != "en"))
@@ -579,6 +584,7 @@ foreach (var role in new string?[] { null, "Viewer", "Operator", "Admin", "Owner
     }
     Check(commandRoles.Count >= 100 && gateWrong.Count == 0, $"{role ?? "local"}: all {commandRoles.Count} role-gated commands run only where the role allows [{string.Join(", ", gateWrong.Take(6))}]");
     var pageWrong = new List<string>(); var pageChecked = new HashSet<Control>();
+    var hintWrong = new List<string>(); var hintSeen = new HashSet<Control>();
     var previousPage = selectedPage.GetValue(vm);
     foreach (var page in Enum.GetValues<NavigationPage>())
     {
@@ -589,12 +595,25 @@ foreach (var role in new string?[] { null, "Viewer", "Operator", "Admin", "Owner
             var command = control switch { Button b => b.Command, MenuItem m => m.Command, _ => null };
             if (command is null || !commandRoles.Contains(command)) continue;
             pageChecked.Add(control);
-            if (rank < RoleAccess.Rank((string)commandRoles[command]!) && control.IsEffectivelyEnabled) pageWrong.Add($"{page}/{(control as ContentControl)?.Content ?? (control as MenuItem)?.Header}");
+            var needs = (string)commandRoles[command]!;
+            if (rank < RoleAccess.Rank(needs) && control.IsEffectivelyEnabled) pageWrong.Add($"{page}/{(control as ContentControl)?.Content ?? (control as MenuItem)?.Header}");
+            // v0.9.4.0: a control disabled for the role says which role it needs (tooltip shown while disabled, and the
+            // accessible help text); one the role may use carries no such hint. The Ribbon has its own tooltip.
+            if (control.Classes.Contains("ribbon")) continue;
+            var hint = RoleHint.Text(needs, role);
+            var roleTip = ToolTip.GetTip(control) as string;
+            var hinted = roleTip is not null && roleTip.StartsWith(hint, StringComparison.Ordinal) && ToolTip.GetShowOnDisabled(control) &&
+                         Avalonia.Automation.AutomationProperties.GetHelpText(control) == hint;
+            if (rank < RoleAccess.Rank(needs) ? !hinted : roleTip?.StartsWith("Needs the ", StringComparison.Ordinal) == true)
+                hintWrong.Add($"{page}/{(control as ContentControl)?.Content ?? (control as MenuItem)?.Header}");
+            else if (rank < RoleAccess.Rank(needs)) hintSeen.Add(control);
         }
     }
     selectedPage.SetValue(vm, previousPage);
     Dispatcher.UIThread.RunJobs();
     Check(pageChecked.Count > 0 && pageWrong.Count == 0, $"{role ?? "local"}: on every page, buttons for commands the role may not use are disabled ({pageChecked.Count} controls checked) [{string.Join(", ", pageWrong.Distinct().Take(8))}]");
+    Check(hintWrong.Count == 0 && (rank >= RoleAccess.Owner || hintSeen.Count > 0),
+        $"{role ?? "local"}: each of them says which role it needs, in its tooltip and accessible help text, and no allowed one does ({hintSeen.Count} hinted) [{string.Join(", ", hintWrong.Distinct().Take(8))}]");
     if (role == "Operator")
     {
         selectedPage.SetValue(vm, NavigationPage.Security);
@@ -951,6 +970,59 @@ Check(kick is not null && !kick.IsEnabled, "an Operator's Kick button is disable
 applyPrincipal.Invoke(vm, [null]);
 Dispatcher.UIThread.RunJobs();
 Check(kick!.IsEnabled || !vm.KickSelectedPlayerCommand.CanExecute(null), "local use: Kick is enabled whenever its command can run");
+
+// v0.9.4.0: the role hint is in the chosen language, and goes away when the role allows the command.
+applyPrincipal.Invoke(vm, [new MystTiqPrincipalDto { Id = "p-viewer", Name = "Viewer user", Role = "Viewer" }]);
+Localizer.Instance.SetLanguage("ja");
+Dispatcher.UIThread.RunJobs();
+var jaKickHint = jaText[MsgKey("Needs the {0} role. You are signed in as {1}.")].Replace("{0}", jaText[MsgKey("Admin")]).Replace("{1}", jaText[MsgKey("Viewer")]);
+Check(!kick.IsEnabled && ToolTip.GetTip(kick) is string jaTip && jaTip.StartsWith(jaKickHint, StringComparison.Ordinal) && ToolTip.GetShowOnDisabled(kick),
+    $"Japanese: a Viewer's disabled Kick button says, in Japanese, that it needs Admin [{ToolTip.GetTip(kick)}]");
+Render("role-hint-viewer-players-ja");
+Localizer.Instance.SetLanguage("en");
+applyPrincipal.Invoke(vm, [new MystTiqPrincipalDto { Id = "p-admin", Name = "Admin user", Role = "Admin" }]);
+Dispatcher.UIThread.RunJobs();
+Check(ToolTip.GetTip(kick) is not string back || !back.StartsWith("Needs the ", StringComparison.Ordinal),
+    "Signing in as Admin removes the hint from Kick (its own tooltip, if any, comes back)");
+applyPrincipal.Invoke(vm, [null]);
+Dispatcher.UIThread.RunJobs();
+
+// v0.9.4.0: accessibility. On every page, every visible control a keyboard or screen-reader user can reach has a name:
+// its text, an explicit accessible name, or a tooltip.
+string? AccessibleName(Control c)
+{
+    if (Avalonia.Automation.AutomationProperties.GetName(c) is { Length: > 0 } name) return name;
+    if (c is ContentControl { Content: string { Length: > 0 } text }) return text;
+    if (c.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.IsEffectivelyVisible && !string.IsNullOrWhiteSpace(t.Text)) is { } inner) return inner.Text;
+    if (c is TextBox { Watermark: string { Length: > 0 } mark }) return mark;
+    return ToolTip.GetTip(c) as string is { Length: > 0 } tipName ? tipName : null;
+}
+var unnamed = new List<string>();
+var unreachable = new List<string>();
+var namedCount = 0;
+foreach (var page in Enum.GetValues<NavigationPage>())
+{
+    selectedPage.SetValue(vm, page);
+    Dispatcher.UIThread.RunJobs();
+    foreach (var control in window.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible &&
+                 c is Button or Avalonia.Controls.Primitives.ToggleButton or ComboBox or TextBox or Slider or NumericUpDown or ListBox))
+    {
+        // A part of another control's template (a number box's arrows, a drop-down's own text box) is named by that control.
+        if (control.TemplatedParent is not null) continue;
+        if (AccessibleName(control) is null)
+        {
+            var near = control.GetVisualAncestors().OfType<Panel>().Take(2).SelectMany(p => p.Children.OfType<TextBlock>()).FirstOrDefault(t => !string.IsNullOrWhiteSpace(t.Text))?.Text;
+            unnamed.Add($"{page}/{control.GetType().Name}{(control.Name is { Length: > 0 } n ? "#" + n : "")} near \"{near}\" ctx={control.DataContext?.GetType().Name}");
+        }
+        else namedCount++;
+        // Keyboard: an enabled control can take focus and is in the Tab order (a list or a number box passes focus to its items
+        // or its own text box, so those are reached through them).
+        if (control is not (ListBox or NumericUpDown) && control.IsEffectivelyEnabled && (!control.Focusable || !Avalonia.Input.KeyboardNavigation.GetIsTabStop(control)))
+            unreachable.Add($"{page}/{control.GetType().Name}{(control.Name is { Length: > 0 } k ? "#" + k : "")} {AccessibleName(control)}");
+    }
+}
+Check(unreachable.Count == 0, $"on every page every enabled control can be reached with Tab [{string.Join(", ", unreachable.Distinct().Take(8))}]");
+Check(unnamed.Count == 0, $"on every page every reachable control has an accessible name ({namedCount} named) [{string.Join(", ", unnamed.Distinct().Take(8))}]");
 
 Console.WriteLine($"PASS {checks} checks. Offline headless rendering only; no live server acceptance.");
 

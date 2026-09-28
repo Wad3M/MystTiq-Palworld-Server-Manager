@@ -1,4 +1,19 @@
-<!-- MystTiq v0.9.3.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
+## v0.9.4.0 — Roles Explained, and Accessibility
+
+- A button or menu item disabled for the signed-in role says which role it needs ("Needs the Admin role. You are signed
+  in as Viewer.", translated): as its tooltip, shown while it is disabled, with its own tooltip after it, and as its
+  accessible help text. `Services/RoleHint.cs` applies it to every Button and MenuItem bound to a role-gated command;
+  gated commands now know their required role and the signed-in role. A role or language change refreshes every hint;
+  the Ribbon keeps its own tooltip; local use is never blocked.
+- About 150 accessible names (`AutomationProperties.Name`) on lists, text boxes, drop-downs, number boxes, sliders and
+  check boxes, mostly from the label they sit under; setting rows are named after the setting. 21 new keys in every
+  language.
+- The health states (STOPPED, DEGRADED, STARTING, TRANSITIONING, UNKNOWN, INCOMPLETE, MISSING) are in the catalog, and
+  `TrFormat` translates a text value inside a label ("Health: Healthy").
+- Checked: the release gate fails on an unnamed control in the XAML. The ArtworkHarness checks every role on every page:
+  each disabled control names its role and no allowed one does. It also checks the hint in Japanese, every control named
+  and reachable with Tab on every page, and the health states in Japanese.
 ## v0.9.3.0 — The Service's Messages in Your Language
 
 - The MystTiq service's own messages are translated as the Desktop shows them, like the Desktop's own. That covers

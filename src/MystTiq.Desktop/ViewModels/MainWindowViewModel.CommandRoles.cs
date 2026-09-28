@@ -1,4 +1,4 @@
-// MystTiq v0.9.3.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -56,12 +56,15 @@ public sealed partial class MainWindowViewModel
     // Called once every command exists (end of the constructor).
     private void InstallCommandRoleGates()
     {
+        RoleHint.Install();
         _roleGatedCommands = [];
         foreach (var (command, role) in BuildCommandRoles())
         {
             if (command is not IRoleGatedCommand gated) continue;
             var minimum = RoleAccess.Rank(role);
             gated.RoleGate = () => RoleAccess.Allows(CurrentPrincipal is not null, CurrentPrincipal?.Role, minimum);
+            gated.RequiredRole = role;
+            gated.SignedInRole = () => CurrentPrincipal?.Role;
             _roleGatedCommands.Add(gated);
         }
     }
@@ -70,5 +73,6 @@ public sealed partial class MainWindowViewModel
     private void RaiseCommandRoleGatesChanged()
     {
         foreach (var command in _roleGatedCommands) command.RaiseCanExecuteChanged();
+        RoleHint.RefreshAll();
     }
 }

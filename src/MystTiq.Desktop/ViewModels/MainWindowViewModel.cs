@@ -1,4 +1,4 @@
-// MystTiq v0.9.3.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -10420,12 +10420,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 internal interface IRoleGatedCommand
 {
     Func<bool>? RoleGate { get; set; }
+    // v0.9.4.0: the role the command needs and the signed-in role, so a control it is disabled on can say why (RoleHint).
+    string? RequiredRole { get; set; }
+    Func<string?>? SignedInRole { get; set; }
     void RaiseCanExecuteChanged();
 }
 
 internal sealed class RelayCommand : ICommand, IRoleGatedCommand
 {
     public Func<bool>? RoleGate { get; set; }
+    public string? RequiredRole { get; set; }
+    public Func<string?>? SignedInRole { get; set; }
     private readonly Action _execute;
     private readonly Func<bool>? _canExecute;
 
@@ -10444,6 +10449,8 @@ internal sealed class RelayCommand : ICommand, IRoleGatedCommand
 internal sealed class RelayCommand<T> : ICommand, IRoleGatedCommand
 {
     public Func<bool>? RoleGate { get; set; }
+    public string? RequiredRole { get; set; }
+    public Func<string?>? SignedInRole { get; set; }
     private readonly Action<T?> _execute;
     private readonly Func<T?, bool>? _canExecute;
 
@@ -10470,6 +10477,8 @@ internal sealed class RelayCommand<T> : ICommand, IRoleGatedCommand
 internal sealed class AsyncCommand : ICommand, IRoleGatedCommand
 {
     public Func<bool>? RoleGate { get; set; }
+    public string? RequiredRole { get; set; }
+    public Func<string?>? SignedInRole { get; set; }
     private readonly Func<Task> _execute;
     private readonly Func<bool>? _canExecute;
     private bool _running;

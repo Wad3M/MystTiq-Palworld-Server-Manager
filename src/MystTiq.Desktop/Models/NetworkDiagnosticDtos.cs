@@ -1,4 +1,4 @@
-// MystTiq v0.9.3.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
 namespace MystTiq.Desktop.Models;
 public sealed record NetworkDiagnosticCheckDto(string Test,int State,string Details,string Recommendation)
 {

@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.3.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:services="using:MystTiq.Desktop.Services"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -10,7 +10,7 @@
         Icon="/Assets/PalworldServerManager.ico">
   <StackPanel Margin="22" Spacing="14">
     <TextBlock x:Name="PromptText" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
-    <ComboBox x:Name="GuildCombo" HorizontalAlignment="Stretch"/>
+    <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_guild}" x:Name="GuildCombo" HorizontalAlignment="Stretch"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
       <Button Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
       <Button Classes="primary" Content="{services:Tr ui.next_1ff57a}" Click="Next_OnClick"/>

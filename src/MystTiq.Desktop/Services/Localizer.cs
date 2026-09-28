@@ -1,4 +1,4 @@
-// MystTiq v0.9.3.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
 using System.ComponentModel;
 using System.Text.Json;
 using Avalonia.Data;
@@ -176,7 +176,8 @@ public sealed class TrFormatExtension : MarkupExtension
 
     public static string Fill(string? template, object? value)
     {
-        var text = value?.ToString() ?? string.Empty;
+        // v0.9.4.0: a text value is shown in the language too, like {services:TrText} ("Health: Healthy" → "状態：正常").
+        var text = value is string s ? Localizer.T(s) : value?.ToString() ?? string.Empty;
         if (string.IsNullOrEmpty(template)) return text;
         try { return string.Format(System.Globalization.CultureInfo.CurrentCulture, template, text); }
         catch (FormatException) { return text; }

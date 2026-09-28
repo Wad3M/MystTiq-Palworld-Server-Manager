@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.3.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-28. **Current version: v0.9.3.0. Accepted baseline: v0.8.25.0. Next: v0.9.4.0.**
+Updated 2026-09-28. **Current version: v0.9.4.0. Accepted baseline: v0.8.25.0. Next: v0.9.5.0.**
 
-This is the active plan. Version assignments after v0.9.3.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v0.9.4.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Delivered through v0.8.25.0
 
@@ -46,12 +46,18 @@ This is the active plan. Version assignments after v0.9.3.0 are proposed milesto
 
 **Exit evidence for the review:** each language's sheet returned with corrections applied, reviewed language samples, and a look at every page in each advertised language.
 
-## v0.9.4.0 — roles explained, and accessibility
+## v0.9.4.0 — roles explained, and accessibility (delivered 2026-09-28)
 
-- Every control a role cannot use says which role it needs (tip and accessible name), instead of only being disabled.
-- Check focus order, keyboard navigation, accessible names, contrast and scaling across every page, in every appearance mode.
+- A control the signed-in role cannot use says which role it needs, in its tooltip (shown while disabled) and to screen readers, on every page; the Ribbon already did.
+- Every list, text box, drop-down, number box, slider and check box has an accessible name (about 150 added), and every enabled control can be reached with Tab; the release gate fails on a new unnamed control.
+- The health states and values inside translated labels follow the language.
+- Still open, and needing people: a pass with a real screen reader (Narrator, Orca), and focus order and scaling checked on every page.
 
-**Exit evidence:** a page-by-page checklist of disabled controls and their explanations, and keyboard-only and screen-reader passes over each page.
+## v0.9.5.0 — upgrade and recovery
+
+- Test a fresh setup, an upgrade from the accepted baseline (v0.8.25.0) with its settings, accounts and data kept, backup and restore, and rollback, all on isolated data.
+
+**Exit evidence:** a scripted run from a clean machine state and from a v0.8.25.0 install, with every setting, account and world compared before and after.
 
 ## v0.9.x — integration and release stabilization
 
@@ -64,9 +70,9 @@ These are remaining checks or targeted fixes, not a request to rebuild shipped f
 | Notifications | Observe real Discord and email delivery, pause/resume, recovery and failure handling. `scripts/Test-v0.8.26.0-Alerts.ps1` sends a real test through every switched-on channel and reports failed sends; confirm arrival in each channel |
 | Linux desktop | Window, maximize/restore, clipboard and tray pass on the XFCE test VM (`scripts/Test-v0.8.26.0-LinuxDesktopSession.ps1`, 16/16). Still open: file pickers, scaling and other desktop environments |
 | Linux service priority | Install the new unit in a test environment and verify eco-to-normal priority recovery; unit syntax/headless checks alone are insufficient |
-| Permissions and accessibility | Planned as v0.9.4.0 (above) |
+| Permissions and accessibility | Delivered in v0.9.4.0 (above); a real screen-reader pass remains |
 | Themes | Verify supported modes throughout the app; with a Windows contrast theme on, run `scripts/Test-v0.8.26.0-ContrastTheme.ps1`; document Linux native contrast limitations |
-| Upgrade and recovery | Test fresh setup, upgrade from the accepted baseline, settings/data preservation, backup/restore and rollback on isolated data |
+| Upgrade and recovery | Planned as v0.9.5.0 (above) |
 | Distribution | Build the current desktop with its matching headless sidecar, include the Windows native helper, verify clean-machine launch, source parity, version identity and SHA-256 checksums |
 | Documentation | Keep README, site, release notes and supported-platform claims aligned with observed results; publish known limitations |
 | Crash analysis | Add signatures only from real anonymized reports; do not invent coverage for unseen crashes |
