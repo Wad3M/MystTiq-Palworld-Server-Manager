@@ -1,4 +1,21 @@
-<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.1.0: file reviewed for this release (2026-09-28). -->
+## v0.9.1.0 — Status and Error Messages in 12 Languages
+
+- The status and error messages the app builds in code (server states, progress, results, validation, warnings,
+  drop-down choices, dialogs and file-picker titles; 1,113 messages) are translated as they are shown. The view models
+  keep English, so the app's logic and tests still compare English. `Assets/i18n` holds them as `msg.*` keys.
+- `MessageCatalog` maps each English message to the chosen language: an exact match, or a template with values
+  ("Restarted. '{0}' is now online.") whose values are kept, and translated too when they are themselves a message
+  ("Status: Stopped / Not ready"). A translation may put the values in another order. A message that starts a longer
+  text ("The history could not be read: " + the error) keeps the rest. Multi-line statuses go line by line. Text that
+  matches nothing (names, paths, data) is shown unchanged; English is never touched.
+- 481 bound texts show through `{services:TrText}`; editable fields never do. A String data template translates plain
+  text in drop-downs and lists; dialogs and file pickers use `Localizer.T`. `Update-MystTiqUiText.ps1 -ConvertBindings`
+  converts new bindings, and `-Check` fails on an unconverted one.
+- Kept English on purpose: server names, the in-game restart command, date formats and place names.
+- The ArtworkHarness round-trips every message template in every language and scans every page for untranslated
+  labels and messages in all 11 translations.
+
 ## v0.9.0.0 — The Window in 12 Languages
 
 - Every hard-coded XAML display text (932 places: labels, buttons, tips, menus, accessible names, dialogs, the tray menu)

@@ -1,4 +1,4 @@
-// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 namespace MystTiq.Core.Models;
 
 // v0.7.10.0: named as an explicit deferred roadmap item in Providers/ProviderModels.cs's own

@@ -1,8 +1,9 @@
-// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 using System;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using MystTiq.Desktop.Services;
 
 namespace MystTiq.Desktop.Views;
 
@@ -47,7 +48,7 @@ public sealed partial class TrayReminderToast : Window
     public TrayReminderToast(string message, Window? owner = null) : this()
     {
         this.owner = owner;
-        MessageText.Text = message;
+        MessageText.Text = Localizer.T(message);
         var timer = new DispatcherTimer { Interval = DismissAfter };
         timer.Tick += (_, _) =>
         {

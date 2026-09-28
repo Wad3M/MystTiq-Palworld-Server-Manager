@@ -1,10 +1,11 @@
-// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using MystTiq.Desktop.Models;
+using MystTiq.Desktop.Services;
 using MystTiq.Desktop.ViewModels;
 using System.Diagnostics;
 using System.IO.Compression;
@@ -493,7 +494,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanSave) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export MystTiq diagnostic report",
+            Title = Localizer.T("Export MystTiq diagnostic report"),
             SuggestedFileName = $"MystTiq-Diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.txt",
             DefaultExtension = "txt",
             FileTypeChoices = [new FilePickerFileType("Text report") { Patterns = ["*.txt"] }]
@@ -510,7 +511,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanSave) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Create redacted MystTiq support package",
+            Title = Localizer.T("Create redacted MystTiq support package"),
             SuggestedFileName = $"MystTiq-Support-{DateTime.Now:yyyyMMdd-HHmmss}.zip",
             DefaultExtension = "zip",
             FileTypeChoices = [new FilePickerFileType("ZIP archive") { Patterns = ["*.zip"] }]
@@ -545,7 +546,7 @@ public sealed partial class MainWindow : Window
         if (key == "installDirectory")
         {
             if (!StorageProvider.CanPickFolder) return;
-            var installFolders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Select install directory", AllowMultiple = false });
+            var installFolders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = Localizer.T("Select install directory"), AllowMultiple = false });
             var installFolder = installFolders.FirstOrDefault();
             if (installFolder is not null) vm.NewServerInstallDirectoryEffectivePath = installFolder.Path.LocalPath;
             return;
@@ -554,13 +555,13 @@ public sealed partial class MainWindow : Window
         if (key == "steamcmd")
         {
             if (!StorageProvider.CanOpen) return;
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Select SteamCMD executable", AllowMultiple = false });
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = Localizer.T("Select SteamCMD executable"), AllowMultiple = false });
             var selected = files.FirstOrDefault();
             if (selected is not null) vm.ConfigSteamCmdPath = selected.Path.LocalPath;
             return;
         }
         if (!StorageProvider.CanPickFolder) return;
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = $"Select {key} folder", AllowMultiple = false });
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = Localizer.T($"Select {key} folder"), AllowMultiple = false });
         var folder = folders.FirstOrDefault();
         if (folder is null) return;
         var value = folder.Path.LocalPath;
@@ -610,7 +611,7 @@ public sealed partial class MainWindow : Window
             return;
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Import MystTiq Palworld configuration",
+            Title = Localizer.T("Import MystTiq Palworld configuration"),
             AllowMultiple = false,
             FileTypeFilter = [new FilePickerFileType("MystTiq configuration") { Patterns = ["*.json"] }]
         });
@@ -633,7 +634,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanSave) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export MystTiq console view",
+            Title = Localizer.T("Export MystTiq console view"),
             SuggestedFileName = $"MystTiq-Console-{DateTime.Now:yyyyMMdd-HHmmss}.log",
             DefaultExtension = "log",
             FileTypeChoices = [new FilePickerFileType("Log file") { Patterns = ["*.log", "*.txt"] }]
@@ -650,7 +651,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanSave) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export MystTiq player directory",
+            Title = Localizer.T("Export MystTiq player directory"),
             SuggestedFileName = $"MystTiq-Players-{DateTime.Now:yyyyMMdd-HHmmss}.csv",
             DefaultExtension = "csv",
             FileTypeChoices = [new FilePickerFileType("CSV") { Patterns = ["*.csv"] }]
@@ -673,7 +674,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanSave) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = title,
+            Title = Localizer.T(title),
             SuggestedFileName = $"MystTiq-{suffix}-{DateTime.Now:yyyyMMdd-HHmmss}.csv",
             DefaultExtension = "csv",
             FileTypeChoices = [new FilePickerFileType("CSV") { Patterns = ["*.csv"] }]
@@ -691,7 +692,7 @@ public sealed partial class MainWindow : Window
             return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export MystTiq Palworld configuration",
+            Title = Localizer.T("Export MystTiq Palworld configuration"),
             SuggestedFileName = $"MystTiq-PalworldConfig-{DateTime.Now:yyyyMMdd-HHmmss}.json",
             DefaultExtension = "json",
             FileTypeChoices = [new FilePickerFileType("JSON") { Patterns = ["*.json"] }]
@@ -716,7 +717,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanOpen) return;
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Install MOD ZIP on the managed Palworld server",
+            Title = Localizer.T("Install MOD ZIP on the managed Palworld server"),
             AllowMultiple = false,
             FileTypeFilter = [new FilePickerFileType("ZIP archive") { Patterns = ["*.zip"] }]
         });
@@ -748,7 +749,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanOpen) return;
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Analyze world or player recovery ZIP on the managed server",
+            Title = Localizer.T("Analyze world or player recovery ZIP on the managed server"),
             AllowMultiple = false,
             FileTypeFilter = [new FilePickerFileType("ZIP archive") { Patterns = ["*.zip"] }]
         });
@@ -762,7 +763,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanSave) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export MystTiq world validation report",
+            Title = Localizer.T("Export MystTiq world validation report"),
             SuggestedFileName = $"MystTiq-WorldValidation-{DateTime.Now:yyyyMMdd-HHmmss}.txt",
             DefaultExtension = "txt",
             FileTypeChoices = [new FilePickerFileType("Text report") { Patterns = ["*.txt"] }]
@@ -817,7 +818,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanOpen) return;
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Select a map background image",
+            Title = Localizer.T("Select a map background image"),
             AllowMultiple = false,
             FileTypeFilter = [new FilePickerFileType("Image") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp"] }]
         });
@@ -836,7 +837,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanSave) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = title, SuggestedFileName = $"{prefix}-{DateTime.Now:yyyyMMdd-HHmmss}.txt", DefaultExtension = "txt",
+            Title = Localizer.T(title), SuggestedFileName = $"{prefix}-{DateTime.Now:yyyyMMdd-HHmmss}.txt", DefaultExtension = "txt",
             FileTypeChoices = [new FilePickerFileType("Text file") { Patterns = ["*.txt"] }]
         });
         if (file is null) return;

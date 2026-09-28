@@ -1,4 +1,4 @@
-# MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+# MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 #requires -Version 7.0
 [CmdletBinding()]
 param(
@@ -7,7 +7,11 @@ param(
     [switch]$ConvertXaml,
     # Write the inventory: docs/i18n/UI_TEXT_INVENTORY.md and .csv (every user-visible English text and its state).
     [switch]$Inventory,
-    # List the hard-coded XAML texts left and exit 1 if there are any. The release gate uses this.
+    # v0.9.1.0: show view-model text in the chosen language: simple display bindings ({Binding Path}) on TextBlock, Run,
+    # button content, tips and headers become {services:TrText Path}. Editable fields and data (names, ids, paths,
+    # versions) are left alone.
+    [switch]$ConvertBindings,
+    # List the hard-coded XAML texts and untranslated display bindings left and exit 1 if there are any. The release gate uses this.
     [switch]$Check
 )
 
@@ -19,7 +23,9 @@ param(
 #     gives each distinct text a key ("ui.<words>", the same English text sharing one key), writes it to
 #     Assets/i18n/en.json and puts {services:Tr ui.<words>} in its place. Texts without a letter (arrows, dashes) stay.
 #   - The code (view models, models, services): status and error messages. They are listed here, with their file and
-#     line, but converting them is a separate step (they are assigned in code, often with values filled in).
+#     line. v0.9.1.0: the code keeps English; the messages are msg.* keys in en.json and are translated when shown
+#     (MessageCatalog, through {services:TrText} bindings and Localizer.T). A code text is "Keyed" once its English is a
+#     msg.* text; -ConvertBindings routes simple display bindings through TrText.
 #   - Assets/i18n/en.json: the texts already translatable (navigation, headers, Ribbon, Dashboard).
 # Every language file must have every key English has (the release gate checks), so a new key needs its translations.
 Set-StrictMode -Version Latest
@@ -130,6 +136,8 @@ if ($ConvertXaml) {
 if ($Inventory) {
     # Code texts: string literals in the Desktop's code that read as prose shown to the user (a capital letter, a space
     # or a full stop), with interpolated values shown as {0}, {1}. Log categories, routes and JSON names are not prose.
+    $msgByText = @{}
+    foreach ($k in $english.Keys) { if ($k -like 'msg.*' -and -not $msgByText.ContainsKey($english[$k].Trim())) { $msgByText[$english[$k].Trim()] = $k } }
     foreach ($cs in Get-ChildItem $desktop -Recurse -Filter *.cs | Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }) {
         $text = [IO.File]::ReadAllText($cs.FullName)
         $relative = $cs.FullName.Substring($root.Length + 1).Replace('\', '/')
@@ -140,12 +148,17 @@ if ($Inventory) {
             if ($m.Groups['interp'].Success) { $n = -1; $value = [regex]::Replace($value, '\{[^{}]+\}', { $script:n++; "{$script:n}" }) }
             if ($value -notmatch '^[A-Z\p{Lu}]' -or $value -notmatch '[a-z]{2}' -or ($value -notmatch ' ' -and $value -notmatch '\.$')) { continue }
             if ($value -match '^(https?:|/api/|avares:)|\.(json|axaml|png|exe|log)$|^[A-Z][a-zA-Z]+\.[A-Z]') { continue }
-            $rows.Add([pscustomobject]@{ Kind = 'Code'; State = 'Hard-coded'; Key = ''; English = ($value -replace '\\n', ' ' -replace '\\"', '"'); Where = "${relative}:$(Get-LineNumber $text $m.Index)" })
+            $shown = ($value -replace '\\n', ' ' -replace '\\"', '"')
+            # v0.9.1.0: a message in the catalog (msg.*) is translated when shown ({services:TrText}, Localizer.T).
+            $msgKey = $msgByText[$shown.Trim()]
+            $rows.Add([pscustomobject]@{ Kind = 'Code'; State = $(if ($msgKey) { 'Keyed' } else { 'Hard-coded' }); Key = $(if ($msgKey) { $msgKey } else { '' }); English = $shown; Where = "${relative}:$(Get-LineNumber $text $m.Index)" })
         }
     }
+    $usedKeys = [System.Collections.Generic.HashSet[string]]::new([string[]]@($rows | ForEach-Object Key | Where-Object { $_ }))
     foreach ($k in $english.Keys) {
-        if (@($rows | Where-Object Key -eq $k).Count -eq 0) {
-            $rows.Add([pscustomobject]@{ Kind = 'Code'; State = 'Keyed'; Key = $k; English = $english[$k]; Where = 'set from code (page titles, Ribbon, Dashboard)' })
+        if (-not $usedKeys.Contains($k)) {
+            $where = if ($k -like 'msg.*') { 'message from code, translated when shown' } else { 'set from code (page titles, Ribbon, Dashboard)' }
+            $rows.Add([pscustomobject]@{ Kind = 'Code'; State = 'Keyed'; Key = $k; English = $english[$k]; Where = $where })
         }
     }
     $i18nDocs = Join-Path $root 'docs\i18n'
@@ -161,7 +174,9 @@ if ($Inventory) {
         '| | Places | Distinct texts |', '| --- | ---: | ---: |',
         "| Translatable (a key in ``Assets/i18n/en.json``) | $($keyed.Count) | $(& $distinct $keyed) |",
         "| Hard-coded in XAML (not yet translatable) | $($xamlLeft.Count) | $(& $distinct $xamlLeft) |",
-        "| Hard-coded in code: status and error messages (not yet translatable) | $($codeLeft.Count) | $(& $distinct $codeLeft) |", '',
+        "| In code, not in the message catalog (composed pieces, data, or not yet translated) | $($codeLeft.Count) | $(& $distinct $codeLeft) |", '',
+        'Status and error messages built in code are translated when shown (v0.9.1.0): the code keeps English and the',
+        'message catalog (the `msg.*` keys) maps each message, or message template with values, to the chosen language.', '',
         'Texts from the MystTiq service (server messages, Doctor findings) and from the game (item and Pal names) are not in',
         'this list: they arrive from the server already in English.', ''
     )
@@ -169,9 +184,59 @@ if ($Inventory) {
     Write-Host "Inventory: $($keyed.Count) keyed, $($xamlLeft.Count) hard-coded in XAML, $($codeLeft.Count) in code."
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# v0.9.1.0: display bindings. Which element/attribute pairs show text, and which bound values are data (shown as they are).
+$displayAttr = @{
+    'TextBlock' = @('Text'); 'Run' = @('Text'); 'SelectableTextBlock' = @('Text')
+    'Button' = @('Content'); 'ToggleButton' = @('Content'); 'RepeatButton' = @('Content'); 'CheckBox' = @('Content')
+    'RadioButton' = @('Content'); 'Label' = @('Content'); 'HyperlinkButton' = @('Content')
+    'MenuItem' = @('Header'); 'TabItem' = @('Header'); 'Expander' = @('Header'); 'HeaderedContentControl' = @('Header')
+}
+$dataPath = '(?i)(Name|Names|Id|Ids|Url|Uri|Address|Host|Hostname|Port|Hash|Fingerprint|Token|Key|Line|Lines|Json|Raw|Command|Arguments|Output|Log)$'
+$simpleBinding = [regex]'^\{Binding (?:Path=)?(?<path>[\w.\[\]]+)(?:\s*,\s*Mode=OneWay)?\}$'
+$bindingRows = [System.Collections.Generic.List[object]]::new()
+$bindingsConverted = 0
+foreach ($file in $xamlFiles) {
+    $text = [IO.File]::ReadAllText($file)
+    $relative = $file.Substring($root.Length + 1).Replace('\', '/')
+    $out = [Text.StringBuilder]::new()
+    foreach ($part in Get-OutsideComments $text) {
+        if (-not $part.Code) { [void]$out.Append($part.Text); continue }
+        $new = [regex]::Replace($part.Text, '<(?<tag>[\w:.]+)(?<body>(?:[^<>"]|"[^"]*")*?)(?<end>/?>)', {
+            param($el)
+            $tag = $el.Groups['tag'].Value
+            $attrs = @('ToolTip.Tip') + @($(if ($displayAttr.ContainsKey($tag)) { $displayAttr[$tag] }))
+            $body = [regex]::Replace($el.Groups['body'].Value, '(?<![\w.])(?<attr>[\w.]+)="(?<val>\{Binding[^"]*\})"', {
+                param($a)
+                if ($attrs -notcontains $a.Groups['attr'].Value) { return $a.Value }
+                $sm = $simpleBinding.Match($a.Groups['val'].Value)
+                if (-not $sm.Success) { return $a.Value }
+                $path = $sm.Groups['path'].Value
+                if ($path -match $dataPath) { return $a.Value }
+                $where = "${relative}:$(Get-LineNumber $text ($part.Start + $el.Index)) ($tag.$($a.Groups['attr'].Value) = $path)"
+                if ($ConvertBindings) { $script:bindingsConverted++; return "$($a.Groups['attr'].Value)=`"{services:TrText $path}`"" }
+                $bindingRows.Add([pscustomobject]@{ Where = $where })
+                return $a.Value
+            })
+            "<$tag$body$($el.Groups['end'].Value)"
+        })
+        [void]$out.Append($new)
+    }
+    if ($ConvertBindings -and $out.ToString() -ne $text) {
+        $result = $out.ToString()
+        if ($result -notmatch 'xmlns:services=') {
+            $result = [regex]::Replace($result, '(<(?:Window|UserControl|Application)\b[^>]*?xmlns="https://github.com/avaloniaui")', '$1' + "`n        xmlns:services=`"using:MystTiq.Desktop.Services`"", 1)
+        }
+        [IO.File]::WriteAllText($file, $result, [Text.UTF8Encoding]::new($false))
+    }
+}
+if ($ConvertBindings) { Write-Host "Converted $bindingsConverted display binding(s) to {services:TrText}." }
+
 if ($Check) {
     $left = @($rows | Where-Object { $_.Kind -eq 'XAML' -and $_.State -eq 'Hard-coded' })
     $left | Select-Object -First 20 | ForEach-Object { Write-Host "  hard-coded: $($_.Where): $($_.English)" -ForegroundColor Red }
     Write-Host "Hard-coded XAML texts: $($left.Count)"
-    if ($left.Count -gt 0) { exit 1 }
+    $bindingRows | Select-Object -First 20 | ForEach-Object { Write-Host "  untranslated binding: $($_.Where)" -ForegroundColor Red }
+    Write-Host "Untranslated display bindings: $($bindingRows.Count)"
+    if ($left.Count -gt 0 -or $bindingRows.Count -gt 0) { exit 1 }
 }

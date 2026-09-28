@@ -1,6 +1,7 @@
-// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using MystTiq.Desktop.Services;
 
 namespace MystTiq.Desktop.Views;
 
@@ -19,7 +20,7 @@ public sealed partial class ConfirmDeletePlayerDialog : Window
 
     public ConfirmDeletePlayerDialog(string playerName, IReadOnlyList<string> findings) : this()
     {
-        TitleText.Text = $"Delete {playerName}'s save?";
+        TitleText.Text = Localizer.T($"Delete {playerName}'s save?");
         FindingsList.ItemsSource = findings;
     }
 

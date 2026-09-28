@@ -1,4 +1,4 @@
-﻿// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+﻿// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -255,21 +255,71 @@ titlePicker.SelectedItem = Localizer.Languages[0];
 Dispatcher.UIThread.RunJobs();
 Check(Localizer.Instance.LanguageCode == "en", "Choosing English in the title bar switches back");
 
+// v0.9.1.0: status and error messages built in code are shown in the chosen language. The view models keep English;
+// MessageCatalog translates on the way to the screen ({services:TrText} in XAML, Localizer.T in dialogs).
+string MsgKey(string en) => english.First(kv => kv.Key.StartsWith("msg.", StringComparison.Ordinal) && kv.Value == en).Key;
+Check(english.Count(kv => kv.Key.StartsWith("msg.", StringComparison.Ordinal)) >= 900, "The code's status and error messages are in the catalog (msg.* keys)");
+Localizer.Instance.SetLanguage("en");
+Check(Localizer.T("Stopped / Not ready") == "Stopped / Not ready" && Localizer.Instance.Messages.TemplateCount == 0,
+    "English: messages are shown exactly as the code builds them");
+var jaText = Localizer.Parse(ReadLanguage("ja"));
+Localizer.Instance.SetLanguage("ja");
+Check(Localizer.T("Stopped / Not ready") == jaText[MsgKey("Stopped / Not ready")] && Localizer.T("Stopped / Not ready") != "Stopped / Not ready",
+    "Japanese: a status message is shown in Japanese");
+Check(Localizer.T("Status: Stopped / Not ready") == jaText[MsgKey("Status: {0}")].Replace("{0}", jaText[MsgKey("Stopped / Not ready")]),
+    "A message with a value is matched as a template, and the value is translated too when it is itself a message");
+Check(Localizer.T("Sending Wood:1 for Bob…") == jaText[MsgKey("Sending {0} for {1}…")].Replace("{0}", "Wood:1").Replace("{1}", "Bob") &&
+      jaText[MsgKey("Sending {0} for {1}…")].IndexOf("{1}", StringComparison.Ordinal) < jaText[MsgKey("Sending {0} for {1}…")].IndexOf("{0}", StringComparison.Ordinal),
+    "A translation may put the values in another order");
+Check(Localizer.T("The history could not be read: disk full") == jaText[MsgKey("The history could not be read: ")] + "disk full",
+    "A message that begins a longer text (\"…could not be read: \" + the error) keeps the rest");
+Check(Localizer.T("Stopped / Not ready\nStopped intentionally or awaiting start.") == Localizer.T("Stopped / Not ready") + "\n" + Localizer.T("Stopped intentionally or awaiting start.") &&
+      Localizer.T("Stopped intentionally or awaiting start.") != "Stopped intentionally or awaiting start.",
+    "A multi-line status is translated line by line");
+Check(Localizer.T("Frostbound Frontier") == "Frostbound Frontier" && Localizer.T("") == "" && Localizer.T(null) == "",
+    "Text that is no known message (a server name) is shown unchanged");
+Check(!string.IsNullOrEmpty(vm.ServerState) && !vm.ServerState.Any(c => c >= 0x2E80),
+    "The view model itself keeps English while Japanese is shown (logic compares English)");
+// Every template, in every language: English filled with sample values comes back as that language's text with the
+// same values, so no template is shadowed by a wrong one.
+foreach (var language in Localizer.Languages.Where(l => l.Code != "en"))
+{
+    var translated = Localizer.Parse(ReadLanguage(language.Code));
+    Localizer.Instance.SetLanguage(language.Code);
+    var wrong = new List<string>();
+    foreach (var (key, en) in english.Where(kv => kv.Key.StartsWith("msg.", StringComparison.Ordinal) && System.Text.RegularExpressions.Regex.IsMatch(kv.Value, @"\{\d+\}")))
+    {
+        string Fill(string template) => System.Text.RegularExpressions.Regex.Replace(template, @"\{(\d+)\}", m => $"«v{m.Groups[1].Value}»");
+        var expected = Fill(translated[key]);
+        var actual = Localizer.T(Fill(en));
+        if (actual != expected && actual != Fill(en)) wrong.Add($"{key}: {actual}");
+        else if (actual == Fill(en) && translated[key] != en && en.Count(char.IsLetter) >= 4) wrong.Add($"{key}: (English)");
+    }
+    Check(wrong.Count == 0, $"{language.NativeName}: every message template round-trips [{string.Join(" | ", wrong.Take(4))}]");
+}
+Localizer.Instance.SetLanguage("en");
+Dispatcher.UIThread.RunJobs();
+
 // v0.9.0.0: no page shows a hard-coded English text in another language. Every page is visited in every language and
 // each visible text is compared with the English ui.* texts (translatable XAML texts) whose translation differs.
+// v0.9.1.0: and with the code's messages (msg.* without values), which are now translated when shown.
 window.Width = 1440; window.Height = 880;
 foreach (var language in Localizer.Languages.Where(l => l.Code != "en"))
 {
     var translated = Localizer.Parse(ReadLanguage(language.Code));
-    var englishOnly = english.Where(kv => kv.Key.StartsWith("ui.") && translated[kv.Key] != kv.Value).Select(kv => kv.Value).ToHashSet();
+    var englishOnly = english.Where(kv => (kv.Key.StartsWith("ui.") || (kv.Key.StartsWith("msg.") && !kv.Value.Contains('{'))) && translated[kv.Key].Trim() != kv.Value.Trim())
+        .Select(kv => kv.Value.Trim()).ToHashSet();
     Localizer.Instance.SetLanguage(language.Code);
     var leftovers = new List<string>();
     foreach (var page in Enum.GetValues<NavigationPage>())
     {
         selectedPage.SetValue(vm, page);
         Dispatcher.UIThread.RunJobs();
-        leftovers.AddRange(VisibleTexts().Where(englishOnly.Contains).Select(t => $"{page}: {t}"));
-        leftovers.AddRange(window.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible && b.Content is string s && englishOnly.Contains(s)).Select(b => $"{page}: {b.Content}"));
+        // v0.9.1.0: each leftover names what shows it (the nearest named or typed parent), to find it quickly.
+        leftovers.AddRange(window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible && t.Text is not null && englishOnly.Contains(t.Text))
+            .Select(t => $"{page}: {t.Text} [{string.Join("/", t.GetVisualAncestors().Take(3).Select(a => a is Control { Name: { Length: > 0 } n } ? n : a.GetType().Name))}]"));
+        // A button's own text is drawn by a TextBlock inside it (checked above); its Content keeps the English it was given.
+        leftovers.AddRange(window.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible && b.Content is string s && englishOnly.Contains(Localizer.T(s))).Select(b => $"{page}: {b.Content} [Button]"));
     }
     Check(leftovers.Count == 0, $"{language.NativeName}: no page shows an untranslated English label or button [{string.Join(" | ", leftovers.Distinct().Take(6))}]");
     if (language.Code is "zh-Hans" or "ja" or "ko" or "ru")

@@ -1,6 +1,7 @@
-// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using MystTiq.Desktop.Services;
 
 namespace MystTiq.Desktop.Views;
 
@@ -17,7 +18,7 @@ public sealed partial class ConfirmCloseTabDialog : Window
 
     public ConfirmCloseTabDialog(string serverName) : this()
     {
-        MessageText.Text = $"\"{serverName}\" is currently running. Do you want to stop it before closing this tab, or leave it running in the background?";
+        MessageText.Text = Localizer.T($"\"{serverName}\" is currently running. Do you want to stop it before closing this tab, or leave it running in the background?");
     }
 
     private void Cancel_OnClick(object? sender, RoutedEventArgs e) => Close(ConfirmCloseTabResult.Cancel);

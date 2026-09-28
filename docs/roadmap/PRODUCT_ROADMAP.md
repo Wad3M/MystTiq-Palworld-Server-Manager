@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.1.0: file reviewed for this release (2026-09-28). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-27. **Current version: v0.9.0.0. Accepted baseline: v0.8.25.0. Next: v0.9.1.0.**
+Updated 2026-09-28. **Current version: v0.9.1.0. Accepted baseline: v0.8.25.0. Next: v0.9.2.0.**
 
-This is the active plan. Version assignments after v0.9.0.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v0.9.1.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Delivered through v0.8.25.0
 
@@ -27,13 +27,16 @@ This is the active plan. Version assignments after v0.9.0.0 are proposed milesto
 - The language can be picked in the title bar (right of Settings) as well as in Settings; the Notifications button is a bell.
 - Checked offline in every language: the category tabs fit at 950x650, no Ribbon button is cut off, no Dashboard label splits or is cut off, and no page shows an untranslated English label.
 
-## v0.9.1.0 — status and error messages
+## v0.9.1.0 — status and error messages (delivered 2026-09-28)
 
-- The app's own status values, dialogs, validation and error messages (about 980 texts written in code; listed in the inventory) are translated as they are shown on screen, so the app's logic keeps working with the English values. Values filled into a message (names, numbers) are kept.
-- Then the service's own messages (Doctor findings, operation results), which arrive in English from the server.
+- The app's own status values, progress, results, validation and error messages, drop-down choices, dialogs and file-picker titles (1,113 messages, the `msg.*` keys) are translated as they are shown, so the app's logic keeps working with the English values. A message with values ("Restarted. '{0}' is now online.") is matched as a template; the values (names, numbers, times) are kept, and translated too when they are themselves a message.
+- 481 bound texts show through the catalog (`{services:TrText}`); editable fields never do. Plain text in drop-downs and lists goes through a String data template.
+- Checked offline in every language: every message template round-trips, and no page shows an untranslated label or message. Data stays English: server names, the in-game restart command, date formats and place names.
 
-## v0.9.2.0 — review and remaining language work
+## v0.9.2.0 — the service's messages, review and game names
 
+- The MystTiq service's own messages (Doctor findings, operation results), which arrive in English from the server.
+- Composed messages that are built from several pieces (the map's marker summaries, uptime) as whole sentences.
 - Review each language with native speakers, including plurals, date and number formatting, text expansion and keyboard/accessibility labels.
 - Localize item/Pal display names where supported by the installed game's tables.
 
@@ -79,4 +82,4 @@ Per-accent artwork, a separate night HOST illustration, OS-level traffic shaping
 
 ## Current publication work
 
-Publish v0.9.0.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.
+Publish v0.9.1.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.

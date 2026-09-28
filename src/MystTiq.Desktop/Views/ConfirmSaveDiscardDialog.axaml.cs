@@ -1,6 +1,7 @@
-// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using MystTiq.Desktop.Services;
 
 namespace MystTiq.Desktop.Views;
 
@@ -18,7 +19,7 @@ public sealed partial class ConfirmSaveDiscardDialog : Window
 
     public ConfirmSaveDiscardDialog(string dirtySummary) : this()
     {
-        MessageText.Text = $"{dirtySummary}. Save them before leaving Configuration, or discard them?";
+        MessageText.Text = Localizer.T($"{dirtySummary}. Save them before leaving Configuration, or discard them?");
     }
 
     private void Cancel_OnClick(object? sender, RoutedEventArgs e) => Close(ConfirmSaveDiscardResult.Cancel);

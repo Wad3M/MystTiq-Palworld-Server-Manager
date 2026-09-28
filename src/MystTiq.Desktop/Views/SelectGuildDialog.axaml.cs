@@ -1,6 +1,7 @@
-// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using MystTiq.Desktop.Services;
 
 namespace MystTiq.Desktop.Views;
 
@@ -21,7 +22,7 @@ public sealed partial class SelectGuildDialog : Window
 
     public SelectGuildDialog(string prompt, IReadOnlyList<SelectGuildOption> options) : this()
     {
-        PromptText.Text = prompt;
+        PromptText.Text = Localizer.T(prompt);
         GuildCombo.ItemsSource = options;
         if (options.Count > 0) GuildCombo.SelectedIndex = 0;
     }

@@ -1,4 +1,4 @@
-// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 using System.ComponentModel;
 using System.Text.Json;
 using Avalonia.Data;
@@ -84,11 +84,20 @@ public sealed class Localizer : INotifyPropertyChanged
     {
         english = LoadAsset("en");
         current = english;
+        Messages = MessageCatalog.Build(english, current);
         Strings = new LocalizedStrings(k => this[k]);
     }
 
     // Missing in the chosen language: English. Missing in English too: the key itself, which the gate prevents.
     public string this[string key] => Lookup(current, english, key);
+
+    // v0.9.1.0: status and error messages built in code (view-model text) in the chosen language; see MessageCatalog.
+    public MessageCatalog Messages { get; private set; }
+
+    public string Translate(string? text) => Messages.Translate(text);
+
+    /// <summary>Shorthand for code that sets text directly (dialogs, file-picker titles): the English text translated.</summary>
+    public static string T(string? text) => Instance.Translate(text);
 
     public static string Lookup(IReadOnlyDictionary<string, string> chosen, IReadOnlyDictionary<string, string> fallback, string key) =>
         chosen.TryGetValue(key, out var text) && !string.IsNullOrEmpty(text) ? text
@@ -102,6 +111,7 @@ public sealed class Localizer : INotifyPropertyChanged
         if (language.Code == LanguageCode && current.Count > 0) return;
         current = language.Code == "en" ? english : LoadAsset(language.Code);
         LanguageCode = language.Code;
+        Messages = MessageCatalog.Build(english, current);
         Strings = new LocalizedStrings(k => this[k]);
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Strings)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LanguageCode)));
@@ -178,6 +188,46 @@ public sealed class TrFormatExtension : MarkupExtension
         public object? Convert(IList<object?> values, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
             Fill(values.Count > 0 ? values[0] as string : null,
                 values.Count > 1 && values[1] is not Avalonia.Data.BindingNotification && !ReferenceEquals(values[1], Avalonia.AvaloniaProperty.UnsetValue) ? values[1] : null);
+    }
+}
+
+/// <summary>
+/// v0.9.1.0: {services:TrText Path}: a view-model text shown in the chosen language (Localizer.Translate), live in both
+/// the value and the language. For display only (TextBlock, Run, button content, tips, headers); never an editable
+/// field, whose text must reach the view model unchanged. A value that is not text passes through untouched.
+/// </summary>
+public sealed class TrTextExtension : MarkupExtension
+{
+    public TrTextExtension() { }
+    public TrTextExtension(string path) => Path = path;
+    public string Path { get; set; } = string.Empty;
+
+    public override object ProvideValue(IServiceProvider serviceProvider) => new MultiBinding
+    {
+        Bindings =
+        {
+            new Binding(Path) { Mode = BindingMode.OneWay },
+            new Binding(nameof(Localizer.Strings)) { Source = Localizer.Instance, Mode = BindingMode.OneWay }
+        },
+        Converter = TextConverter.Instance
+    };
+
+    internal sealed class TextConverter : Avalonia.Data.Converters.IMultiValueConverter
+    {
+        public static readonly TextConverter Instance = new();
+
+        public object? Convert(IList<object?> values, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            var value = values.Count > 0 ? values[0] : null;
+            if (value is Avalonia.Data.BindingNotification || ReferenceEquals(value, Avalonia.AvaloniaProperty.UnsetValue)) return Avalonia.AvaloniaProperty.UnsetValue;
+            return value switch
+            {
+                null => null,
+                string text => Localizer.Instance.Translate(text),
+                _ when targetType == typeof(string) => System.Convert.ToString(value, culture),
+                _ => value
+            };
+        }
     }
 }
 

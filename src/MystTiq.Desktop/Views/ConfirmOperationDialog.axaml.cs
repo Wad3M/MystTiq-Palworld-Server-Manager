@@ -1,6 +1,7 @@
-// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using MystTiq.Desktop.Services;
 
 namespace MystTiq.Desktop.Views;
 
@@ -18,9 +19,9 @@ public sealed partial class ConfirmOperationDialog : Window
 
     public ConfirmOperationDialog(string title, IReadOnlyList<string> findings, string confirmLabel, bool danger) : this()
     {
-        TitleText.Text = title;
-        FindingsList.ItemsSource = findings;
-        ConfirmButton.Content = confirmLabel;
+        TitleText.Text = Localizer.T(title);
+        FindingsList.ItemsSource = findings.Select(Localizer.T).ToList();
+        ConfirmButton.Content = Localizer.T(confirmLabel);
         ConfirmButton.Classes.Add(danger ? "danger" : "primary");
     }
 

@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.1.0: file reviewed for this release (2026-09-28). -->
 <Application xmlns="https://github.com/avaloniaui"
         xmlns:services="using:MystTiq.Desktop.Services" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="MystTiq.Desktop.App" RequestedThemeVariant="Dark">
 
@@ -44,6 +44,11 @@
     <FontFamily x:Key="UiDisplayFontFamily">Bahnschrift, Segoe UI Variable Display, Inter</FontFamily>
     <FontFamily x:Key="UiDisplayTextFontFamily">Bahnschrift, Segoe UI Variable Text, Inter</FontFamily>
   </Application.Resources>
+  <!-- v0.9.1.0: plain text shown through a template (drop-down and list items, text content) goes through the message
+       catalog, so choices such as "All Players" follow the display language. Text it does not know shows unchanged. -->
+  <Application.DataTemplates>
+    <DataTemplate DataType="{x:Type x:String}"><TextBlock Text="{services:TrText}"/></DataTemplate>
+  </Application.DataTemplates>
   <Application.Styles>
     <FluentTheme />
     <Style Selector="ListBox"><Setter Property="ToolTip.ShowDelay" Value="300"/></Style>

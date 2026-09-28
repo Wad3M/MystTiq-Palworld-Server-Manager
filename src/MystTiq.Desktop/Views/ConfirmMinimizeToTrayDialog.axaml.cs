@@ -1,6 +1,7 @@
-// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using MystTiq.Desktop.Services;
 
 namespace MystTiq.Desktop.Views;
 
@@ -23,9 +24,9 @@ public sealed partial class ConfirmMinimizeToTrayDialog : Window
 
     public ConfirmMinimizeToTrayDialog(int runningServerCount) : this()
     {
-        MessageText.Text = runningServerCount == 1
+        MessageText.Text = Localizer.T(runningServerCount == 1
             ? "A Palworld server is still running. Closing this window won't stop it -- MystTiq will keep managing it in the background."
-            : $"{runningServerCount} Palworld servers are still running. Closing this window won't stop them -- MystTiq will keep managing them in the background.";
+            : $"{runningServerCount} Palworld servers are still running. Closing this window won't stop them -- MystTiq will keep managing them in the background.");
     }
 
     private void Cancel_OnClick(object? sender, RoutedEventArgs e) => Close(ConfirmMinimizeToTrayResult.Cancel);
