@@ -1,4 +1,4 @@
-// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -16,6 +16,10 @@ namespace MystTiq.Desktop.Services;
 /// "Status: Stopped / Not ready" becomes "ステータス：停止 / 準備未完了". A message whose English ends in a space
 /// ("The history could not be read: ") is the start of a longer text and matches anything that follows it. Text that
 /// matches nothing is shown unchanged, as is everything while English is chosen.
+///
+/// v0.9.2.0: a text the code composes from several sentences (the map's summary, a Pal's tooltip) is translated sentence
+/// by sentence, each sentence its own message. When every sentence is known that wins over a whole-text template, whose
+/// first value would otherwise swallow the sentences before it.
 /// </summary>
 public sealed class MessageCatalog
 {
@@ -72,7 +76,7 @@ public sealed class MessageCatalog
             if (cache.TryGetValue(text, out var hit)) return hit;
         }
 
-        var result = TranslateCore(text, 0) ?? text;
+        var result = TranslateCore(text) ?? text;
         lock (gate)
         {
             if (cache.Count >= CacheLimit) cache.Clear();
@@ -83,12 +87,68 @@ public sealed class MessageCatalog
     }
 
     // null when nothing matched, so a caller can tell "unchanged" from "translated to the same text".
-    private string? TranslateCore(string text, int depth)
+    private string? TranslateCore(string text)
     {
         var trimmed = text.Trim();
         if (trimmed.Length == 0) return null;
-        if (exact.TryGetValue(trimmed, out var direct)) return Reedge(text, trimmed, direct);
+        if (!trimmed.Contains('\n')) return TranslateLine(text);
+        if (TranslateWhole(trimmed, 0) is { } whole) return Reedge(text, trimmed, whole);
 
+        // A multi-line status (a heading and details) is translated line by line, each line whole or sentence by sentence.
+        var lines = trimmed.Split('\n');
+        var changed = false;
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i].TrimEnd('\r');
+            if (TranslateLine(line) is { } translated)
+            {
+                lines[i] = lines[i].EndsWith('\r') ? translated + "\r" : translated;
+                changed = true;
+            }
+        }
+
+        return changed ? Reedge(text, trimmed, string.Join('\n', lines)) : null;
+    }
+
+    // One line: an exact message; else its sentences when every one is a message (so "{0} base(s) shown…" cannot
+    // swallow the sentence before it as its value); else a template for the whole line; else whichever sentences match.
+    private string? TranslateLine(string line)
+    {
+        var trimmed = line.Trim();
+        if (trimmed.Length == 0) return null;
+        if (exact.TryGetValue(trimmed, out var direct)) return Reedge(line, trimmed, direct);
+        var (sentences, complete) = TranslateSentences(trimmed);
+        var result = complete ? sentences : TranslateWhole(trimmed, 0) ?? sentences;
+        return result is null ? null : Reedge(line, trimmed, result);
+    }
+
+    // v0.9.2.0: a text the code builds from several sentences ("3 player(s) online on the map. 2 base(s) shown from the
+    // world save.") is translated sentence by sentence when it does not match whole; each sentence is its own message.
+    private static readonly Regex SentenceBreak = new(@"(?<=[.!?…])(\s+)(?=[\p{Lu}\d""'(…])", RegexOptions.CultureInvariant);
+
+    // (the text with each known sentence translated, or null if none is known; whether every sentence was known).
+    private (string? Text, bool Complete) TranslateSentences(string text)
+    {
+        var parts = SentenceBreak.Split(text);
+        if (parts.Length < 3) return (null, false);
+        var changed = false;
+        var complete = true;
+        var result = new StringBuilder(text.Length);
+        for (var i = 0; i < parts.Length; i++)
+        {
+            // Split keeps the captured whitespace: even entries are sentences, odd ones the spaces between them.
+            if (i % 2 == 1) { result.Append(parts[i]); continue; }
+            if (TranslateWhole(parts[i], 1) is { } sentence) { result.Append(sentence); changed = true; }
+            else { result.Append(parts[i]); complete = false; }
+        }
+
+        return changed ? (result.ToString(), complete) : (null, false);
+    }
+
+    // An exact message or a template, the whole text; a template's values are translated too when each is a message.
+    private string? TranslateWhole(string trimmed, int depth)
+    {
+        if (exact.TryGetValue(trimmed, out var direct)) return direct;
         foreach (var template in templates)
         {
             if (template.Match(trimmed) is not { } values) continue;
@@ -96,29 +156,11 @@ public sealed class MessageCatalog
             {
                 for (var i = 0; i < values.Length; i++)
                 {
-                    if (values[i] is { Length: > 0 } value && TranslateCore(value, depth + 1) is { } inner) values[i] = inner;
+                    if (values[i] is { Length: > 0 } value && value.Trim() is { Length: > 0 } v && TranslateWhole(v, depth + 1) is { } inner) values[i] = Reedge(value, v, inner);
                 }
             }
 
-            return Reedge(text, trimmed, template.Fill(values));
-        }
-
-        // A multi-line status (a heading and details) is translated line by line.
-        if (depth == 0 && trimmed.Contains('\n'))
-        {
-            var lines = trimmed.Split('\n');
-            var changed = false;
-            for (var i = 0; i < lines.Length; i++)
-            {
-                var line = lines[i].TrimEnd('\r');
-                if (TranslateCore(line, depth + 1) is { } translated)
-                {
-                    lines[i] = lines[i].EndsWith('\r') ? translated + "\r" : translated;
-                    changed = true;
-                }
-            }
-
-            if (changed) return Reedge(text, trimmed, string.Join('\n', lines));
+            return template.Fill(values);
         }
 
         return null;

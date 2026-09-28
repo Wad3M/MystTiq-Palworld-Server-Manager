@@ -1,4 +1,4 @@
-// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -902,6 +902,48 @@ try
             File.AppendAllText(pak, "again");
             var noOoz = new HeadlessGameNameService(paths, failing, () => python).Get();
             Assert(!noOoz.Status.Available && noOoz.Status.Detail.Contains("Oodle module (ooz) is not installed"), $"exit code 2 names the missing ooz module: {noOoz.Status.Detail}");
+        }
+        finally { try { Directory.Delete(root, true); } catch (IOException) { } }
+    }, failures);
+
+    // v0.9.2.0: names in the Desktop's display language, one cache per language, English when the game has no table.
+    RunScenario("Game names: each display language gets the game's own names, cached apart; a language the game lacks falls back to English", () =>
+    {
+        var root = Path.Combine(Path.GetTempPath(), "mysttiq-names-lang-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Assert(HeadlessGameNameService.NormalizeLanguage("JA") == "ja" && HeadlessGameNameService.NormalizeLanguage("zh-hans") == "zh-Hans" &&
+                   HeadlessGameNameService.NormalizeLanguage("xx") == "en" && HeadlessGameNameService.NormalizeLanguage(null) == "en" &&
+                   HeadlessGameNameService.Languages.Count == 12, "the 12 display languages are accepted (any case); anything else is English");
+            var python = (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator)
+                .Where(d => !d.Contains("WindowsApps", StringComparison.OrdinalIgnoreCase))
+                .SelectMany(d => new[] { "python.exe", "python3", "python" }.Select(n => { try { return Path.Combine(d.Trim(), n); } catch (ArgumentException) { return ""; } }))
+                .FirstOrDefault(File.Exists);
+            if (python is null) { Console.WriteLine("    (no Python on PATH here: the per-language runs are not exercised)"); return; }
+            var paths = new FakePathProfile(root);
+            var paks = Path.Combine(root, "Pal", "Content", "Paks");
+            Directory.CreateDirectory(paks);
+            File.WriteAllText(Path.Combine(paks, "Pal-TestServer.pak"), "pak");
+            // A stand-in extractor: logs each language it is run for; Japanese and English have tables, Polish does not.
+            var log = Path.Combine(root, "langs.txt");
+            var script = Path.Combine(root, "fake_extract.py");
+            File.WriteAllText(script, "import sys, json\nlang = sys.argv[sys.argv.index('--lang') + 1]\nopen(r'" + log + "', 'a').write(lang + ';')\n" +
+                "names = {'en': ('Pal Sphere', 'Lamball'), 'ja': ('パルスフィア', 'モコロン')}\n" +
+                "if lang not in names: sys.stderr.write('no table'); sys.exit(4)\n" +
+                "print(json.dumps({'version': 1, 'lang': lang, 'items': {'PalSphere': names[lang][0]}, 'pals': {'SheepBall': names[lang][1]}}))\n");
+            var service = new HeadlessGameNameService(paths, script, () => python);
+            var ja = service.Get("ja");
+            var en = service.Get("en");
+            Assert(ja.Catalog.PalName("SheepBall") == "モコロン" && ja.Catalog.Language == "ja" && en.Catalog.PalName("SheepBall") == "Lamball" &&
+                   File.Exists(service.CachePathFor("ja")) && File.Exists(service.CachePathFor("en")) && service.CachePathFor("ja") != service.CachePathFor("en"),
+                "Japanese and English names come from their own tables and are cached in their own files");
+            service.Get("ja"); service.Get("JA");
+            Assert(File.ReadAllText(log) == "ja;en;", $"a language already read is not read again ({File.ReadAllText(log)})");
+            var pl = service.Get("pl");
+            Assert(pl.Catalog.PalName("SheepBall") == "Lamball" && pl.Status.Detail.Contains("Shown in English"),
+                $"a language the installed game has no table for shows English names and says so: {pl.Status.Detail}");
+            Assert(new HeadlessGameNameService(paths, script, () => python).Get("ja").Catalog.ItemName("PalSphere") == "パルスフィア" && File.ReadAllText(log).Count(c => c == ';') == 3,
+                "after a restart each language's cache is used while the pak is unchanged");
         }
         finally { try { Directory.Delete(root, true); } catch (IOException) { } }
     }, failures);

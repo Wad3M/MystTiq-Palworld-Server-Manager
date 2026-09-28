@@ -1,4 +1,4 @@
-// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -334,7 +334,9 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsync("/api/v1/players/kits/test-provider", null, cancellationToken); return await ReadOperationAsync<KitCommandResultDto>(response, cancellationToken); }
     // v0.8.3.0: the Give Item picker's item/Pal ids.
     public async Task<GameIdCatalogDto> GetGameIdCatalogAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
-    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<GameIdCatalogDto>("/api/v1/players/give/catalog", cancellationToken) ?? new(); }
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<GameIdCatalogDto>($"/api/v1/players/give/catalog?lang={DisplayLanguage}", cancellationToken) ?? new(); }
+    // v0.9.2.0: the display language, so the service names items and Pals in it (the game's own names for it).
+    private static string DisplayLanguage => Uri.EscapeDataString(Localizer.Instance.LanguageCode);
     // v0.7.113.0: teleport points.
     public async Task<TeleportSnapshotDto> GetTeleportAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<TeleportSnapshotDto>("/api/v1/teleport", cancellationToken) ?? new(); }
@@ -811,7 +813,7 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     {
         using var client = BuildClient(profile, bearerToken);
         return await client.GetFromJsonAsync<PlayerGuildSnapshotDto>(
-            "/api/v1/world/players-guilds",
+            $"/api/v1/world/players-guilds?lang={DisplayLanguage}",
             cancellationToken)
             ?? throw new InvalidOperationException("MystTiq returned an empty Player & Guild Explorer snapshot.");
     }

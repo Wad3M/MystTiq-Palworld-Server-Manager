@@ -1,4 +1,18 @@
-<!-- MystTiq v0.9.1.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.2.0: file reviewed for this release (2026-09-28). -->
+## v0.9.2.0 — Game Names in Your Language
+
+- Item and Pal names follow the display language: the Give Item picker, kits and the map's Pal markers show the game's
+  own names for the chosen language, read from the installed game (it ships all 12; Japanese is its source language, in
+  the base tables, the others in its localisation folders). `extract_game_names.py --lang ja` reads the base tables.
+- The service keeps one name cache per language (`game-names/<code>.json`) and falls back to English, saying so, when
+  the installed game has no table for a language. `/players/give/catalog` and `/world/players-guilds` take `?lang=`; the
+  Desktop sends its display language and reads the picker again when the language changes (the map refreshes itself).
+- `MessageCatalog` translates a text composed of several sentences sentence by sentence, preferring that over a
+  whole-text template when every sentence is known, so a template's first value cannot swallow the sentences before
+  it. 40 more messages: the map's summary line, Pal tooltips (with coordinates), alpha Pals and the host's uptime.
+- Checked: the logic harness runs a stand-in extractor per language (separate caches, no re-read, English fallback),
+  and the ArtworkHarness checks the composed texts in Japanese.
+
 ## v0.9.1.0 — Status and Error Messages in 12 Languages
 
 - The status and error messages the app builds in code (server states, progress, results, validation, warnings,

@@ -1,11 +1,11 @@
-// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
 using System.Diagnostics;
 using System.Text.Json;
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
 
-// v0.8.13.0: the English display names of items and Pals ("Pal Sphere", "Lamball"), read from this server's own game
+// v0.8.13.0: the display names of items and Pals ("Pal Sphere", "Lamball"), read from this server's own game
 // pak. The pak is Oodle-compressed; the only Oodle decompressor on hand is the "ooz" Python module the PlM/Oodle save
 // tooling already installs (the open-source ooz code is GPL, so it is not built into MystTiq). So MystTiq ships a small
 // read-only extractor script of its own (Tools/extract_game_names.py) and runs it with the user's Python when the pak
@@ -59,7 +59,11 @@ public sealed record GameNameStatus(bool Available, string Detail, int ItemCount
 
 public sealed class HeadlessGameNameService
 {
-    public const string Language = "en";
+    // v0.9.2.0: names in the Desktop's display language. The game ships its name tables for these (its source language,
+    // Japanese, is the base table; the rest are L10N cultures with the same codes as the Desktop's languages). English
+    // is the default and the fallback when a language's table is missing from the installed game.
+    public const string DefaultLanguage = "en";
+    public static readonly IReadOnlyList<string> Languages = ["en", "zh-Hans", "es", "pt-BR", "ru", "de", "fr", "ja", "ko", "it", "pl", "tr"];
     public static readonly TimeSpan ExtractorTimeout = TimeSpan.FromSeconds(60);
     public static readonly TimeSpan RetryAfterFailure = TimeSpan.FromMinutes(10);
 
@@ -67,10 +71,15 @@ public sealed class HeadlessGameNameService
     private readonly string scriptPath;
     private readonly Func<string?> findPython;
     private readonly object gate = new();
-    private (string Pak, long Length, DateTime WriteUtc)? loadedStamp;
-    private GameNameCatalog catalog = GameNameCatalog.Empty;
-    private GameNameStatus status = new(false, "Names have not been read yet.", 0, 0);
-    private (string Pak, long Length, DateTime WriteUtc, DateTimeOffset At)? lastFailure;
+    private readonly Dictionary<string, LanguageState> states = new(StringComparer.Ordinal);
+
+    private sealed class LanguageState
+    {
+        public (string Pak, long Length, DateTime WriteUtc)? LoadedStamp;
+        public GameNameCatalog Catalog = GameNameCatalog.Empty;
+        public GameNameStatus Status = new(false, "Names have not been read yet.", 0, 0);
+        public (string Pak, long Length, DateTime WriteUtc, DateTimeOffset At)? LastFailure;
+    }
 
     public HeadlessGameNameService(IServerPathProfile paths, string? scriptPath = null, Func<string?>? findPython = null)
     {
@@ -79,40 +88,58 @@ public sealed class HeadlessGameNameService
         this.findPython = findPython ?? FindPython;
     }
 
-    public string CachePath => Path.Combine(paths.ManagerRuntimeRoot, "game-names", $"{Language}.json");
+    /// <summary>One of <see cref="Languages"/>, matched ignoring case; anything else is English.</summary>
+    public static string NormalizeLanguage(string? code) =>
+        Languages.FirstOrDefault(l => string.Equals(l, code?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? DefaultLanguage;
 
-    // The names for this server, reading the cache or running the extractor when the pak changed. Never throws.
-    public (GameNameCatalog Catalog, GameNameStatus Status) Get()
+    public string CachePath => CachePathFor(DefaultLanguage);
+    public string CachePathFor(string language) => Path.Combine(paths.ManagerRuntimeRoot, "game-names", $"{NormalizeLanguage(language)}.json");
+
+    // The names for this server in a language, reading the cache or running the extractor when the pak changed. A
+    // language the installed game has no table for falls back to English, and says so. Never throws.
+    public (GameNameCatalog Catalog, GameNameStatus Status) Get(string? language = null)
+    {
+        var code = NormalizeLanguage(language);
+        var (names, state) = GetExact(code);
+        if (code == DefaultLanguage || names.HasNames) return (names, state);
+        var (english, englishState) = GetExact(DefaultLanguage);
+        return english.HasNames
+            ? (english, englishState with { Detail = $"{englishState.Detail} Shown in English: the names in this language could not be read from the game files." })
+            : (names, state);
+    }
+
+    private (GameNameCatalog Catalog, GameNameStatus Status) GetExact(string code)
     {
         lock (gate)
         {
+            if (!states.TryGetValue(code, out var st)) states[code] = st = new LanguageState();
             var pak = FindPak();
             if (pak is null)
-                return Set(null, GameNameCatalog.Empty, Unavailable("no game pak (Pal-*.pak) was found under Pal/Content/Paks"));
+                return Set(st, null, GameNameCatalog.Empty, Unavailable("no game pak (Pal-*.pak) was found under Pal/Content/Paks"));
             var stamp = (pak.FullName, pak.Length, pak.LastWriteTimeUtc);
-            if (loadedStamp == stamp) return (catalog, status);
+            if (st.LoadedStamp == stamp) return (st.Catalog, st.Status);
 
-            if (TryReadCache(stamp) is { } cached)
-                return Set(stamp, cached, Ready(cached, pak.Name));
+            if (TryReadCache(code, stamp) is { } cached)
+                return Set(st, stamp, cached, Ready(cached, pak.Name));
 
-            if (lastFailure is { } failed && (failed.Pak, failed.Length, failed.WriteUtc) == stamp && DateTimeOffset.UtcNow - failed.At < RetryAfterFailure)
-                return (catalog, status);
+            if (st.LastFailure is { } failed && (failed.Pak, failed.Length, failed.WriteUtc) == stamp && DateTimeOffset.UtcNow - failed.At < RetryAfterFailure)
+                return (st.Catalog, st.Status);
 
-            var (built, reason) = RunExtractor(pak.FullName);
+            var (built, reason) = RunExtractor(pak.FullName, code);
             if (built is null)
             {
-                lastFailure = (stamp.FullName, stamp.Length, stamp.LastWriteTimeUtc, DateTimeOffset.UtcNow);
-                return Set(null, GameNameCatalog.Empty, Unavailable(reason));
+                st.LastFailure = (stamp.FullName, stamp.Length, stamp.LastWriteTimeUtc, DateTimeOffset.UtcNow);
+                return Set(st, null, GameNameCatalog.Empty, Unavailable(reason));
             }
-            WriteCache(stamp, built);
-            return Set(stamp, built, Ready(built, pak.Name));
+            WriteCache(code, stamp, built);
+            return Set(st, stamp, built, Ready(built, pak.Name));
         }
     }
 
-    private (GameNameCatalog, GameNameStatus) Set((string, long, DateTime)? stamp, GameNameCatalog value, GameNameStatus state)
+    private static (GameNameCatalog, GameNameStatus) Set(LanguageState st, (string, long, DateTime)? stamp, GameNameCatalog value, GameNameStatus state)
     {
-        loadedStamp = stamp; catalog = value; status = state;
-        return (catalog, status);
+        st.LoadedStamp = stamp; st.Catalog = value; st.Status = state;
+        return (st.Catalog, st.Status);
     }
 
     private static GameNameStatus Ready(GameNameCatalog names, string pakName) =>
@@ -133,12 +160,13 @@ public sealed class HeadlessGameNameService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
     }
 
-    private GameNameCatalog? TryReadCache((string Pak, long Length, DateTime WriteUtc) stamp)
+    private GameNameCatalog? TryReadCache(string code, (string Pak, long Length, DateTime WriteUtc) stamp)
     {
+        var cachePath = CachePathFor(code);
         try
         {
-            if (!File.Exists(CachePath)) return null;
-            using var doc = JsonDocument.Parse(File.ReadAllText(CachePath));
+            if (!File.Exists(cachePath)) return null;
+            using var doc = JsonDocument.Parse(File.ReadAllText(cachePath));
             var root = doc.RootElement;
             if (!root.TryGetProperty("pak", out var pak) || pak.GetString() != stamp.Pak) return null;
             if (!root.TryGetProperty("pakLength", out var length) || length.GetInt64() != stamp.Length) return null;
@@ -149,24 +177,25 @@ public sealed class HeadlessGameNameService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or FormatException) { return null; }
     }
 
-    private void WriteCache((string Pak, long Length, DateTime WriteUtc) stamp, GameNameCatalog names)
+    private void WriteCache(string code, (string Pak, long Length, DateTime WriteUtc) stamp, GameNameCatalog names)
     {
+        var cachePath = CachePathFor(code);
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(CachePath)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
             var body = new Dictionary<string, object>
             {
                 ["pak"] = stamp.Pak, ["pakLength"] = stamp.Length, ["pakWriteUtc"] = stamp.WriteUtc, ["builtUtc"] = DateTime.UtcNow,
                 ["lang"] = names.Language, ["items"] = names.Items, ["pals"] = names.Pals
             };
-            var temp = CachePath + ".tmp";
+            var temp = cachePath + ".tmp";
             File.WriteAllText(temp, JsonSerializer.Serialize(body));
-            File.Move(temp, CachePath, overwrite: true);
+            File.Move(temp, cachePath, overwrite: true);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
-    private (GameNameCatalog? Names, string Reason) RunExtractor(string pak)
+    private (GameNameCatalog? Names, string Reason) RunExtractor(string pak, string code)
     {
         if (!File.Exists(scriptPath)) return (null, "the name extractor is missing from this MystTiq install");
         var python = findPython();
@@ -176,7 +205,7 @@ public sealed class HeadlessGameNameService
             RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true
         };
         start.ArgumentList.Add(scriptPath); start.ArgumentList.Add("--pak"); start.ArgumentList.Add(pak);
-        start.ArgumentList.Add("--lang"); start.ArgumentList.Add(Language);
+        start.ArgumentList.Add("--lang"); start.ArgumentList.Add(code);
         start.Environment["PYTHONIOENCODING"] = "utf-8";
         try
         {
@@ -194,6 +223,7 @@ public sealed class HeadlessGameNameService
             {
                 0 => GameNameCatalog.FromJson(stdout.GetAwaiter().GetResult()) is { HasNames: true } names ? (names, string.Empty) : (null, "the game files gave no names"),
                 2 => (null, "Python's Oodle module (ooz) is not installed"),
+                4 => (null, $"the installed game has no {code} name table"),
                 _ => (null, $"the game files could not be read ({LastLine(error)})")
             };
         }

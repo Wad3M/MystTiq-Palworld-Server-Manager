@@ -1,4 +1,4 @@
-// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -735,7 +735,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         }).RequireRole(MystTiqRole.Admin, p.Id);
         // v0.8.3.0: the item/Pal ids the Give Item picker offers. Read-only, so Operator like reading kits.
-        routes.MapGet("/players/give/catalog", () => Results.Ok(p.GameIds.GetCatalog()))
+        // v0.9.2.0: ?lang= is the Desktop's display language; item and Pal names come in it when the game has it.
+        routes.MapGet("/players/give/catalog", (string? lang) => Results.Ok(p.GameIds.GetCatalog(lang)))
             .RequireRole(MystTiqRole.Operator, p.Id);
         // v0.7.113.0: teleport points players reach by chat command (see HeadlessTeleportService). Reading is
         // Operator like kits; changing points, sending a player and asking PalDefender for a position are Admin.
@@ -957,8 +958,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             return result.Success ? Results.Ok(result) : Results.BadRequest(result);
         }).RequireRole(MystTiqRole.Admin, p.Id);
 
-        routes.MapGet("/world/players-guilds", async (CancellationToken token) =>
-            Results.Ok(await p.PlayerGuildExplorer.ExploreAsync(token)));
+        routes.MapGet("/world/players-guilds", async (string? lang, CancellationToken token) =>
+            Results.Ok(await p.PlayerGuildExplorer.ExploreAsync(token, lang)));
 
         routes.MapPost("/guilds/ownership/preview", async (HeadlessGuildOwnershipPreviewRequest request, CancellationToken token) =>
         {

@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.1.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.2.0: file reviewed for this release (2026-09-28). -->
 # v0.8.8.0 Build and Test Plan
 
 1. Clean, including both harnesses' bin/obj and FakePalServer. Then PUBLISH the desktop build (use `Select-Object -Last`

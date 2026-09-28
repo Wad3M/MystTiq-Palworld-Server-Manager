@@ -1,4 +1,4 @@
-// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -2600,6 +2600,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(PageTitle));
         RaisePropertyChanged(nameof(PageSubtitle));
         RaisePropertyChanged(nameof(SelectedUiLanguage));
+        // v0.9.2.0: item and Pal names come in the display language; a loaded picker is read again (the map refreshes itself).
+        if (_gameIdCatalog.Count > 0 && SelectedProfile is not null && !IsBusy) _ = LoadGameIdsAsync();
     }
 
     public bool ShowGlobalPageHeader => true;

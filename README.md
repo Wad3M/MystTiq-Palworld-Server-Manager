@@ -1,19 +1,19 @@
-<!-- MystTiq v0.9.1.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.2.0: file reviewed for this release (2026-09-28). -->
 <p align="center"><img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq Palworld Server Manager"></p>
 
 # MystTiq Palworld Server Manager
 
 An independent, open-source administration app for Palworld dedicated servers on Windows and Linux. Manage local servers or connect to a remote MystTiq service from the Avalonia desktop.
 
-**Current version: v0.9.1.0 · Accepted baseline: v0.8.25.0 · Next: v0.9.2.0 — native review of the translations · Target: v1.0 stable**
+**Current version: v0.9.2.0 · Accepted baseline: v0.8.25.0 · Next: v0.9.3.0 — the service's own messages translated · Target: v1.0 stable**
 
-[Downloads](https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/releases) · [Release notes](release-notes/v0.9.1.0.md) · [Roadmap](docs/roadmap/PRODUCT_ROADMAP.md) · [Report an issue](https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues) · [Contributing](CONTRIBUTING.md)
+[Downloads](https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/releases) · [Release notes](release-notes/v0.9.2.0.md) · [Roadmap](docs/roadmap/PRODUCT_ROADMAP.md) · [Report an issue](https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues) · [Contributing](CONTRIBUTING.md)
 
 ## Current status
 
-v0.9.1.0 is the current version; v0.8.25.0 is the accepted development baseline. Neither is the v1.0 stability milestone. Availability of downloadable builds is shown on the Releases page. Windows and Linux share the desktop and headless service; full Linux desktop acceptance remains open.
+v0.9.2.0 is the current version; v0.8.25.0 is the accepted development baseline. Neither is the v1.0 stability milestone. Availability of downloadable builds is shown on the Releases page. Windows and Linux share the desktop and headless service; full Linux desktop acceptance remains open.
 
-v0.9.1.0 translates the status and error messages the app builds too: server states, progress, results, warnings, drop-down choices, dialogs and file-picker titles now follow the chosen language, with the values they carry (names, numbers, times) kept as they are. v0.9.0.0 translated the whole window into 12 languages: English, 简体中文, Español, Português (Brasil), Русский, Deutsch, Français, 日本語, 한국어, Italiano, Polski and Türkçe. Every page's labels, buttons, tips and menus follow the language picked in the title bar (right of Settings) or in Settings. Translations other than English are first drafts awaiting native review. Chinese, Japanese and Korean use the system's own fonts for their scripts. v0.8.26.0 was a clean-up and verification release with no change to how the app behaves. The legacy WPF app and its installer are gone, along with about a thousand obsolete files; every remaining file was reviewed for this version. New scripts run the checks that used to need a person: a real Linux desktop session (window, clipboard, tray), in-game Give Item and teleport on a test server, real alert delivery, and Windows contrast themes. v0.8.25.0 made decorative colours follow every mode, respected Windows contrast themes and gave HOST its own artwork.
+v0.9.2.0 shows the game's item and Pal names in the chosen language, read from the installed game's own files (the Give Item picker, the kits and the map), and translates the map's summaries, Pal tooltips and the host's uptime. v0.9.1.0 translated the status and error messages the app builds: server states, progress, results, warnings, drop-down choices, dialogs and file-picker titles now follow the chosen language, with the values they carry (names, numbers, times) kept as they are. v0.9.0.0 translated the whole window into 12 languages: English, 简体中文, Español, Português (Brasil), Русский, Deutsch, Français, 日本語, 한국어, Italiano, Polski and Türkçe. Every page's labels, buttons, tips and menus follow the language picked in the title bar (right of Settings) or in Settings. Translations other than English are first drafts awaiting native review. Chinese, Japanese and Korean use the system's own fonts for their scripts. v0.8.26.0 was a clean-up and verification release with no change to how the app behaves. The legacy WPF app and its installer are gone, along with about a thousand obsolete files; every remaining file was reviewed for this version. New scripts run the checks that used to need a person: a real Linux desktop session (window, clipboard, tray), in-game Give Item and teleport on a test server, real alert delivery, and Windows contrast themes. v0.8.25.0 made decorative colours follow every mode, respected Windows contrast themes and gave HOST its own artwork.
 
 ![MystTiq dashboard](docs/images/01-dashboard.png)
 
@@ -62,8 +62,9 @@ The application is `src/MystTiq.Desktop` plus `src/MystTiq.HeadlessHost` and `sr
 | v0.8.25.0 | Accepted baseline | Theme completion, HOST artwork, role enforcement, host controls/history and service fixes |
 | v0.8.26.0 | Shipped | Legacy WPF app removed, repository clean-up, every file reviewed, live acceptance scripts, Windows and Linux packages |
 | v0.9.0.0 | Shipped | 12 languages for every label, button, tip and menu; language picker in the title bar; bell for Notifications; CJK fonts |
-| v0.9.1.0 | Current | Status values, progress, results, drop-down choices, dialogs and file-picker titles translated as they are shown |
-| v0.9.2.0 | Next | Native review of the 11 translations; the service's own messages and in-game names |
+| v0.9.1.0 | Shipped | Status values, progress, results, drop-down choices, dialogs and file-picker titles translated as they are shown |
+| v0.9.2.0 | Current | The game's item and Pal names in the chosen language (from the installed game); map summaries, Pal tooltips and uptime translated |
+| v0.9.3.0 | Next | The MystTiq service's own messages (Doctor findings, operation results) translated; native review continues |
 | v0.9.x | Planned stabilization | Live integration checks, Linux desktop/service acceptance, accessibility, upgrade/recovery and release packaging verification |
 | v1.0 | Target, no date committed | Release only after the documented acceptance gates pass and remaining limitations are published |
 
@@ -71,7 +72,7 @@ See the [full roadmap](docs/roadmap/PRODUCT_ROADMAP.md) for open verification wo
 
 ## Known limitations before v1.0
 
-- Messages from the MystTiq service itself (Doctor findings, server replies) and the game's own item and Pal names are still in English (v0.9.2.0). The 11 non-English translations are drafts awaiting native review. On Linux, Chinese, Japanese and Korean need Noto Sans CJK (or WenQuanYi) installed.
+- Messages from the MystTiq service itself (Doctor findings, server replies) are still in English (v0.9.3.0). The 11 non-English translations are drafts awaiting native review. On Linux, Chinese, Japanese and Korean need Noto Sans CJK (or WenQuanYi) installed.
 - On a real Linux desktop the window, maximize, clipboard and tray are checked automatically (v0.8.26.0); file pickers and priority restoration through an installed service still need acceptance testing.
 - Actual item/Pal delivery, live player-map behaviour and PalDefender teleport coordinate calibration need an online test player: `scripts/Test-v0.8.26.0-InGame.ps1` runs these once someone joins a test server. Real Discord/email delivery is checked by `scripts/Test-v0.8.26.0-Alerts.ps1`, which sends real test messages.
 - Disabled controls do not yet consistently explain which role is required. Linux desktop contrast-theme integration remains open.

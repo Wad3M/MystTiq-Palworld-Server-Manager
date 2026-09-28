@@ -1,4 +1,4 @@
-# MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
+# MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
 """MystTiq: read the English (or another language's) item and Pal display names from the server's own game pak.
 
 Read-only. Parses the Unreal pak (version 11) index, extracts two localisation tables, and prints JSON:
@@ -12,6 +12,8 @@ Exit codes: 0 ok, 2 ooz missing, 3 pak not supported, 4 tables not found, 5 read
 import argparse, json, struct, sys
 
 TABLE_DIR = "Pal/Content/L10N/{lang}/Pal/DataTable/Text/"
+# v0.9.2.0: Japanese is the game's source language, so its names are the base tables, outside L10N.
+SOURCE_LANG, SOURCE_DIR = "ja", "Pal/Content/Pal/DataTable/Text/"
 TABLES = {"items": ("DT_ItemNameText_Common", "ITEM_NAME_"), "pals": ("DT_PalNameText_Common", "PAL_NAME_")}
 PAK_MAGIC = 0x5A6F12E1
 FOOTER_SIZE = 221  # v11: guid 16, encrypted 1, magic 4, version 4, offset 8, size 8, hash 20, 5 x 32 method names
@@ -114,7 +116,7 @@ def main():
             files, encoded, methods = read_index(f)
             result = {"version": 1, "lang": a.lang}
             for kind, (table, prefix) in TABLES.items():
-                path = TABLE_DIR.format(lang=a.lang) + table + ".uexp"
+                path = (SOURCE_DIR if a.lang == SOURCE_LANG else TABLE_DIR.format(lang=a.lang)) + table + ".uexp"
                 if path not in files: raise Fail(4, f"{path} is not in the pak")
                 result[kind] = names_from_table(read_file(f, entry_offset(encoded, files[path]), methods), table, prefix)
         json.dump(result, sys.stdout, ensure_ascii=True, sort_keys=True)

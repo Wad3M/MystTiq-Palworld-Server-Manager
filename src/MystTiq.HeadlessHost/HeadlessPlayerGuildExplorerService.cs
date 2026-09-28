@@ -1,4 +1,4 @@
-// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using MystTiq.Core.Services;
@@ -26,8 +26,9 @@ public sealed class HeadlessPlayerGuildExplorerService
         this.gameNames = gameNames;
     }
 
+    // v0.9.2.0: language is the asking Desktop's display language, for the map's Pal species names.
     public async Task<HeadlessPlayerGuildSnapshot> ExploreAsync(
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, string? language = null)
     {
         var world = ResolveActiveWorld();
         if (world is null)
@@ -236,7 +237,7 @@ public sealed class HeadlessPlayerGuildExplorerService
         }
 
         // v0.8.11.0: owned Pals that are out in the world, named by owner and base here so the map needs no lookups.
-        var names = palLocations.OnMap.Count > 0 && gameNames is not null ? gameNames.Get().Catalog : GameNameCatalog.Empty;
+        var names = palLocations.OnMap.Count > 0 && gameNames is not null ? gameNames.Get(language).Catalog : GameNameCatalog.Empty;
         var guildByBase = baseLocations.GroupBy(b => b.BaseId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().GuildName, StringComparer.OrdinalIgnoreCase);
         var pals = palLocations.OnMap.Select(pal => new HeadlessPalLocation(

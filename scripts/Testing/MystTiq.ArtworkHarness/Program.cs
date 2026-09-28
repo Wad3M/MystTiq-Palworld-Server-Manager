@@ -1,4 +1,4 @@
-﻿// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
+﻿// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -276,6 +276,17 @@ Check(Localizer.T("The history could not be read: disk full") == jaText[MsgKey("
 Check(Localizer.T("Stopped / Not ready\nStopped intentionally or awaiting start.") == Localizer.T("Stopped / Not ready") + "\n" + Localizer.T("Stopped intentionally or awaiting start.") &&
       Localizer.T("Stopped intentionally or awaiting start.") != "Stopped intentionally or awaiting start.",
     "A multi-line status is translated line by line");
+// v0.9.2.0: a text composed of sentences is translated sentence by sentence (the map's summary line, Pal tooltips).
+Check(Localizer.T(MapContentsText.Describe(3, 3, 2)) == jaText[MsgKey("{0} player(s) online on the map.")].Replace("{0}", "3") + " " + jaText[MsgKey("{0} base(s) shown from the world save.")].Replace("{0}", "2"),
+    "A summary built from several sentences is translated sentence by sentence");
+var palTip = Localizer.T("Moco, level 12, working at Crystal's base (248, -495). Last position the save recorded. Click to zoom in.");
+Check(palTip.StartsWith(jaText[MsgKey("{0}, level {1}, working at {2}'s base {3}.")].Replace("{0}", "Moco").Replace("{1}", "12").Replace("{2}", "Crystal").Replace("{3}", "(248, -495)"), StringComparison.Ordinal) &&
+      !palTip.Contains("level", StringComparison.Ordinal) && !palTip.Contains("Click", StringComparison.Ordinal),
+    $"A Pal tooltip (name, level, place, coordinates, then notes) is fully translated, names and coordinates kept [{palTip}]");
+Check(Localizer.T("Moco, alpha, level 12, in the world (1, 2).").Contains(jaText[MsgKey("{0}, alpha")].Replace("{0}", "Moco"), StringComparison.Ordinal),
+    "An alpha Pal's name is marked in the language too");
+Check(Localizer.T("Up 3 d 4 h") == jaText[MsgKey("Up {0} d {1} h")].Replace("{0}", "3").Replace("{1}", "4"), "The host's uptime is translated");
+Check(Localizer.T("Version 1.2. Build 5") == "Version 1.2. Build 5", "Sentences that are no known message stay as they are");
 Check(Localizer.T("Frostbound Frontier") == "Frostbound Frontier" && Localizer.T("") == "" && Localizer.T(null) == "",
     "Text that is no known message (a server name) is shown unchanged");
 Check(!string.IsNullOrEmpty(vm.ServerState) && !vm.ServerState.Any(c => c >= 0x2E80),

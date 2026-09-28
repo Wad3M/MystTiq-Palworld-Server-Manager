@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.1.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.2.0: file reviewed for this release (2026-09-28). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-28. **Current version: v0.9.1.0. Accepted baseline: v0.8.25.0. Next: v0.9.2.0.**
+Updated 2026-09-28. **Current version: v0.9.2.0. Accepted baseline: v0.8.25.0. Next: v0.9.3.0.**
 
-This is the active plan. Version assignments after v0.9.1.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v0.9.2.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Delivered through v0.8.25.0
 
@@ -33,12 +33,15 @@ This is the active plan. Version assignments after v0.9.1.0 are proposed milesto
 - 481 bound texts show through the catalog (`{services:TrText}`); editable fields never do. Plain text in drop-downs and lists goes through a String data template.
 - Checked offline in every language: every message template round-trips, and no page shows an untranslated label or message. Data stays English: server names, the in-game restart command, date formats and place names.
 
-## v0.9.2.0 — the service's messages, review and game names
+## v0.9.2.0 — the game's names in the chosen language (delivered 2026-09-28)
 
-- The MystTiq service's own messages (Doctor findings, operation results), which arrive in English from the server.
-- Composed messages that are built from several pieces (the map's marker summaries, uptime) as whole sentences.
+- Item and Pal names in the Give Item picker, kits and on the map come in the Desktop's display language, from the installed game's own name tables (the game ships all 12: Japanese is its source language, the rest are its localisations). The service reads and caches each language separately and falls back to English, and says so, when a language's table is missing.
+- Texts the Desktop composes from several sentences (the map's summary line, Pal tooltips) are translated sentence by sentence, and the host's uptime is translated.
+
+## v0.9.3.0 — the service's own messages and review
+
+- The MystTiq service's own messages (Doctor findings, operation results, about 1,100 texts shown in the Desktop), which arrive in English from the server, translated when shown like the Desktop's own.
 - Review each language with native speakers, including plurals, date and number formatting, text expansion and keyboard/accessibility labels.
-- Localize item/Pal display names where supported by the installed game's tables.
 
 **Exit evidence:** a page-by-page coverage checklist, key/fallback checks, reviewed language samples and visual/accessibility checks for each advertised language.
 
@@ -82,4 +85,4 @@ Per-accent artwork, a separate night HOST illustration, OS-level traffic shaping
 
 ## Current publication work
 
-Publish v0.9.1.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.
+Publish v0.9.2.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.

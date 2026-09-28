@@ -1,4 +1,4 @@
-// MystTiq v0.9.1.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
@@ -41,7 +41,8 @@ public sealed class HeadlessGameIdCatalogService
         this.names = names;
     }
 
-    public GameIdCatalogSnapshot GetCatalog()
+    // v0.9.2.0: names in the asking Desktop's display language (English when the game has none for it).
+    public GameIdCatalogSnapshot GetCatalog(string? language = null)
     {
         var world = ResolveActiveWorld();
         var decoded = world is null ? null : ResolveDecodedLevelJson(world);
@@ -67,7 +68,7 @@ public sealed class HeadlessGameIdCatalogService
         var merged = Merge(ids, kitEntries, given);
         var worldId = world is null ? null : Path.GetFileName(world);
         var extra = merged.Count(e => e.WorldCount == 0);
-        var (gameNames, namesStatus) = names?.Get() ?? (GameNameCatalog.Empty, HeadlessGameNameService.Unavailable("names are not set up for this server"));
+        var (gameNames, namesStatus) = names?.Get(language) ?? (GameNameCatalog.Empty, HeadlessGameNameService.Unavailable("names are not set up for this server"));
         var entries = WithNames(merged, gameNames);
 
         string detail;
