@@ -11,15 +11,29 @@ body:
     id: version
     attributes:
       label: Version
-      placeholder: v0.2.12
+      placeholder: v0.9.4.0
     validations:
       required: true
   - type: input
-    id: windows
+    id: platform
     attributes:
-      label: Windows version
+      label: Operating system and desktop environment
+      placeholder: Windows 11 x64, or Ubuntu 24.04 x64 with XFCE
     validations:
       required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection type
+      options:
+        - Local MystTiq service
+        - Remote MystTiq service
+        - Not connected / unsure
+  - type: input
+    id: appearance
+    attributes:
+      label: Language and appearance mode (for display issues)
+      placeholder: Japanese, Light, Comfortable density
   - type: textarea
     id: steps
     attributes:

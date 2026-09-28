@@ -5,7 +5,7 @@ Updated 2026-09-28. **Current version: v0.9.4.0. Accepted baseline: v0.8.25.0. N
 
 This is the active plan. Version assignments after v0.9.4.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
-## Delivered through v0.8.25.0
+## Foundation delivered through v0.8.26.0
 
 | Area | Delivered |
 | --- | --- |
@@ -22,7 +22,7 @@ This is the active plan. Version assignments after v0.9.4.0 are proposed milesto
 ## v0.9.0.0 — the window in 12 languages (delivered 2026-09-27)
 
 - Every hard-coded XAML text (labels, buttons, tips, menus, accessible names, the tray menu; 998 texts) is a key in `Assets/i18n/en.json`, made with `scripts/Update-MystTiqUiText.ps1`, which also writes the text list (`docs/i18n/UI_TEXT_INVENTORY.md` and `.csv`) and lets the release gate fail on any new hard-coded text.
-- Languages, chosen by use on PCs and among Palworld's players: English, 简体中文, Español, Português (Brasil), Русский, Deutsch, Français, 日本語, 한국어, Italiano, Polski, Türkçe. All complete; all but English are drafts awaiting native review.
+- Languages, chosen by use on PCs and among Palworld's players: English, 简体中文, Español, Português (Brasil), Русский, Deutsch, Français, 日本語, 한국어, Italiano, Polski, Türkçe. Catalog coverage is present in all 12 languages; the 11 non-English translations are drafts awaiting native review. Coverage does not establish translation quality.
 - Chinese, Japanese and Korean use each language's own system font (Windows, then Noto CJK on Linux), so Japanese is not drawn with Chinese glyph shapes.
 - The language can be picked in the title bar (right of Settings) as well as in Settings; the Notifications button is a bell.
 - Checked offline in every language: the category tabs fit at 950x650, no Ribbon button is cut off, no Dashboard label splits or is cut off, and no page shows an untranslated English label.
@@ -31,17 +31,19 @@ This is the active plan. Version assignments after v0.9.4.0 are proposed milesto
 
 - The app's own status values, progress, results, validation and error messages, drop-down choices, dialogs and file-picker titles (1,113 messages, the `msg.*` keys) are translated as they are shown, so the app's logic keeps working with the English values. A message with values ("Restarted. '{0}' is now online.") is matched as a template; the values (names, numbers, times) are kept, and translated too when they are themselves a message.
 - 481 bound texts show through the catalog (`{services:TrText}`); editable fields never do. Plain text in drop-downs and lists goes through a String data template.
-- Checked offline in every language: every message template round-trips, and no page shows an untranslated label or message. Data stays English: server names, the in-game restart command, date formats and place names.
+- Recorded offline checks cover message-template round-trips and translated page text in every language. These checks do not establish coverage of service replies or all composed messages. Data stays English: server names, the in-game restart command, date formats and place names.
 
 ## v0.9.2.0 — the game's names in the chosen language (delivered 2026-09-28)
 
 - Item and Pal names in the Give Item picker, kits and on the map come in the Desktop's display language, from the installed game's own name tables (the game ships all 12: Japanese is its source language, the rest are its localisations). The service reads and caches each language separately and falls back to English, and says so, when a language's table is missing.
 - Texts the Desktop composes from several sentences (the map's summary line, Pal tooltips) are translated sentence by sentence, and the host's uptime is translated.
+- Recorded checks cover the per-language name cache, the English fallback and composed-text translation offline, and live reads of the installed game's Japanese, Korean and English names on a test server. Names come from the game and are outside the native review.
 
 ## v0.9.3.0 — the service's own messages and review aids (delivered 2026-09-28)
 
 - The MystTiq service's own messages (Doctor findings, operation results, crash explanations, network and router checks, recovery steps, validation errors; 1,339 texts), which arrive in English from the server, are translated when shown like the Desktop's own. Commands sent to the game, log patterns, protocol text and the names Windows shows stay English on purpose.
 - `scripts/Export-MystTiqTranslationReview.ps1` writes a review sheet per language and [`docs/i18n/TRANSLATION_REVIEW.md`](../i18n/TRANSLATION_REVIEW.md) is the reviewers' checklist and coverage table.
+- Recorded offline checks cover the round-trip of all 2,492 message templates in every language; a live check showed service messages in Japanese. Catalog coverage does not establish translation quality, and text the service passes on from Windows, Linux or the game stays as it arrives.
 - Still open, and needing people: every language is **awaiting native review** (meaning, terminology, plurals, length, accessibility names), and dates and numbers are still one fixed format for every language.
 
 **Exit evidence for the review:** each language's sheet returned with corrections applied, reviewed language samples, and a look at every page in each advertised language.
@@ -50,6 +52,7 @@ This is the active plan. Version assignments after v0.9.4.0 are proposed milesto
 
 - A control the signed-in role cannot use says which role it needs, in its tooltip (shown while disabled) and to screen readers, on every page; the Ribbon already did.
 - Every list, text box, drop-down, number box, slider and check box has an accessible name (about 150 added), and every enabled control can be reached with Tab; the release gate fails on a new unnamed control.
+- Recorded automated checks cover the role hints for every role on every page, accessible names and Tab reach. They do not replace a pass with a real screen reader.
 - The health states and values inside translated labels follow the language.
 - Still open, and needing people: a pass with a real screen reader (Narrator, Orca), and focus order and scaling checked on every page.
 

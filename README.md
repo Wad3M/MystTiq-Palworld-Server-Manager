@@ -1,93 +1,136 @@
 <!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
-<p align="center"><img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq Palworld Server Manager"></p>
+<p align="center">
+  <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
+</p>
 
-# MystTiq Palworld Server Manager
+<h1 align="center">Your worlds. Your servers. One place to manage them.</h1>
 
-An independent, open-source administration app for Palworld dedicated servers on Windows and Linux. Manage local servers or connect to a remote MystTiq service from the Avalonia desktop.
+<p align="center">An open-source desktop for running Palworld communities.<br>Manage servers, protect worlds, organize mods, and share administration across your team.</p>
 
-**Current version: v0.9.4.0 · Accepted baseline: v0.8.25.0 · Next: v0.9.5.0 — upgrade and recovery tested end to end · Target: v1.0 stable**
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-67e8d5" alt="Code license: MIT"></a>
+  <img src="https://img.shields.io/badge/stage-pre--1.0-b9a4ff" alt="Development stage: pre-1.0">
+  <img src="https://img.shields.io/badge/desktop-Windows%20%7C%20Linux-80caff" alt="Desktop targets: Windows and Linux">
+  <img src="https://img.shields.io/badge/language%20options-12-67e8d5" alt="12 language options; non-English translations await review">
+</p>
 
-[Downloads](https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/releases) · [Release notes](release-notes/v0.9.4.0.md) · [Roadmap](docs/roadmap/PRODUCT_ROADMAP.md) · [Report an issue](https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues) · [Contributing](CONTRIBUTING.md)
+<p align="center">
+  <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/releases"><strong>Browse downloads</strong></a> ·
+  <a href="#get-started">Get started</a> ·
+  <a href="docs/roadmap/PRODUCT_ROADMAP.md">Roadmap</a> ·
+  <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
+</p>
 
-## Current status
+**Current version: v0.9.4.0 · Accepted baseline: v0.8.25.0**
 
-v0.9.4.0 is the current version; v0.8.25.0 is the accepted development baseline. Neither is the v1.0 stability milestone. Availability of downloadable builds is shown on the Releases page. Windows and Linux share the desktop and headless service; full Linux desktop acceptance remains open.
+This source snapshot is a development release on the way to v1.0. Check the Releases page for published downloads; the version shown here does not imply a binary has been published. Windows is the current release-workflow download target. Linux builds are available from source, with desktop acceptance still in progress.
 
-v0.9.4.0 makes a button disabled for your role say which role it needs (in its tooltip and to screen readers), gives every list, box and drop-down a name a screen reader can say, and translates the health states. v0.9.3.0 translates the MystTiq service's own messages as they are shown: Doctor findings, operation results, crash explanations, network checks and recovery steps, with the values they carry kept; commands sent to the game and names Windows shows stay English. Review sheets per language help native reviewers. v0.9.2.0 shows the game's item and Pal names in the chosen language, read from the installed game's own files (the Give Item picker, the kits and the map), and translates the map's summaries, Pal tooltips and the host's uptime. v0.9.1.0 translated the status and error messages the app builds: server states, progress, results, warnings, drop-down choices, dialogs and file-picker titles now follow the chosen language, with the values they carry (names, numbers, times) kept as they are. v0.9.0.0 translated the whole window into 12 languages: English, 简体中文, Español, Português (Brasil), Русский, Deutsch, Français, 日本語, 한국어, Italiano, Polski and Türkçe. Every page's labels, buttons, tips and menus follow the language picked in the title bar (right of Settings) or in Settings. Translations other than English are first drafts awaiting native review. Chinese, Japanese and Korean use the system's own fonts for their scripts. v0.8.26.0 was a clean-up and verification release with no change to how the app behaves. The legacy WPF app and its installer are gone, along with about a thousand obsolete files; every remaining file was reviewed for this version. New scripts run the checks that used to need a person: a real Linux desktop session (window, clipboard, tray), in-game Give Item and teleport on a test server, real alert delivery, and Windows contrast themes. v0.8.25.0 made decorative colours follow every mode, respected Windows contrast themes and gave HOST its own artwork.
+## What's new in v0.9.4.0
 
-![MystTiq dashboard](docs/images/01-dashboard.png)
+**Disabled controls now say why.** When your signed-in role cannot use a button or menu item, its tooltip names the role it needs and the role you have, even while it is greyed out, and screen readers announce the same. Lists, text boxes, drop-downs, number boxes, sliders and check boxes throughout the desktop now have accessible names, and enabled controls can be reached with Tab. Health states and values inside labels also follow the chosen language.
 
-*The screenshot illustrates the interface; see the current release notes for changes.*
+Earlier v0.9 releases translated the service's own messages (v0.9.3.0) and showed the game's item and Pal names in the chosen language (v0.9.2.0). The 11 non-English translations are drafts awaiting native-speaker review, and a pass with a real screen reader is still to come.
 
-## What it does
+[Release notes](release-notes/v0.9.4.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
-- **Operate servers:** setup and adoption, start/stop/restart, updates, configuration, scheduling, crash recovery and diagnostics.
-- **Protect worlds:** backups and retention, restore checks, world/player/guild inspection, and guarded repair and migration workflows.
-- **Manage a community:** player tools, a world map, starter kits, give-item/Pal tools, teleport points, whitelist, temporary bans and Discord integration. Some actions require supported server mods.
-- **Manage mods:** inventory, enable/disable, health checks, rollback, UE4SS/Workshop support and Nexus integration. Nexus download options depend on the user's account and Nexus policies.
-- **Tune the host:** CPU, memory, disk and network information; seven-day history; per-server priority, eco mode, processor cores and game-level bandwidth settings.
-- **Share administration:** named accounts, Viewer/Operator/Admin/Owner roles, scoped API permissions, audit records and remote connections with pinned TLS.
-- **Choose your appearance:** themed artwork, Dark/Light/Midnight/High contrast/Follow system modes, density settings and 12 display languages (drafts awaiting review) with English fallback.
+## See your server at a glance
 
-The headless service owns server operations and persistent state. The desktop is its client: closing the window does not stop a managed server.
+![MystTiq dashboard with server controls, health and world information](docs/images/01-dashboard.png)
 
-## Download and run
+*Repository screenshots illustrate the interface and may show an earlier build.*
 
-1. Open [Releases](https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/releases) and read the notes and known limitations for the selected version.
-2. For Windows x64, download the **Windows-x64.zip** asset, extract the whole folder, and launch **MystTiq.Desktop.exe**. Keep the `headless` folder beside it. This self-contained package does not require a separate .NET installation.
-3. Connect to or configure your MystTiq service in the app. Keep existing server data and backups separate from the extracted application folder.
+## Built around everyday administration
 
-The **FullSource.zip** is for development. GitHub's automatic source archives are also source, not runnable downloads. Linux source builds are available; do not infer desktop acceptance from a successful build alone.
+| Work you need to do | Tools in MystTiq |
+| --- | --- |
+| **Run your servers** | Setup and adoption, start/stop/restart, updates, configuration, scheduling, diagnostics and crash recovery |
+| **Protect your worlds** | Backups, retention and restore checks, plus guarded world/player/guild repair and migration workflows |
+| **Look after your community** | Player tools, world map, kits, item/Pal tools, teleport points, whitelist, temporary bans and Discord integration; some actions require a supported mod/provider |
+| **Keep mods organized** | Inventory, enable/disable, health checks, rollback, UE4SS/Workshop support and Nexus integration |
+| **Understand the host** | CPU, memory, disk and network information, seven-day history, priority, eco mode, processor cores and game-level bandwidth settings |
+| **Share administration** | Named accounts, Viewer/Operator/Admin/Owner roles, scoped permissions, audit records and remote connections with pinned TLS; disabled controls name the role they need |
+| **Make it comfortable** | Dark, Light, Midnight, High contrast and Follow system modes, density settings, themed artwork and 12 language options |
 
-## Build from source
+Nexus download options depend on the account and provider. Game-level bandwidth settings are not OS-level traffic shaping. See [known limitations](#known-limitations) for features awaiting live verification.
 
-Requires the **.NET 10 SDK** and **PowerShell 7** for the scripts. Run these commands from the repository root:
+<details>
+<summary><strong>More of the interface: backups, players and mods</strong></summary>
 
-```powershell
-dotnet build src/MystTiq.HeadlessHost/MystTiq.HeadlessHost.csproj -c Release
-dotnet build src/MystTiq.Desktop/MystTiq.Desktop.csproj -c Release
+### Backups
 
-# Build a self-contained Windows desktop and matching service package:
-pwsh ./scripts/Package-GitHubRelease.ps1 -Runtime win-x64
-```
+![Backup management](docs/images/06-backups.png)
 
-Use `-Runtime linux-x64` to build a Linux ZIP; after extraction on Linux, grant execute permission to `MystTiq.Desktop` and `headless/mysttiq-server`. Windows native console capture additionally requires the MSVC x64 toolchain and `scripts/Build-ConsoleProxy.ps1`; the release workflow builds and includes that helper.
+### Players
 
-The application is `src/MystTiq.Desktop` plus `src/MystTiq.HeadlessHost` and `src/MystTiq.Core`. The legacy WPF app (`src/PalworldManager`) and its installer were removed in v0.8.26.0; they remain in the git history and earlier source archives.
+![Player administration](docs/images/03-players.png)
+
+### Mods
+
+![Mod management](docs/images/07-mods.png)
+
+</details>
+
+## Get started
+
+1. Open [Releases](https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/releases) and read the selected version's notes.
+2. Download its **Windows-x64.zip**, extract the entire folder, and run **MystTiq.Desktop.exe**. Keep the `headless` folder alongside it. The package includes .NET.
+3. Configure a local service or connect to a remote MystTiq service. Keep existing server data and backups separate from the application folder.
+
+| Download | Who it's for |
+| --- | --- |
+| `Windows-x64.zip` | Windows users who want to run the app |
+| `FullSource.zip` / GitHub source archives | Developers who want to build or inspect the source |
+| `SHA256SUMS.txt` | Checking that downloaded ZIPs match the release |
+
+Upgrading? Back up your server data, extract the new app into a fresh folder and follow that release's upgrade notes. Keep your existing configuration/data locations and verify the connection before resuming administration.
+
+**Closing the desktop does not stop a managed server.** The headless service owns operations and persistent state; the desktop connects to it locally or remotely.
+
+## Languages and platform status
+
+English · 简体中文 · Español · Português (Brasil) · Русский · Deutsch · Français · 日本語 · 한국어 · Italiano · Polski · Türkçe
+
+- **Translation:** the desktop's labels and messages, the service's messages and the game's item/Pal names are available in all 12 languages; the 11 translations need native review. English fallback remains available.
+- **Windows x64:** the release workflow packages the desktop, matching service and native console helper.
+- **Linux x64:** shared desktop/service source and local packaging are available. XFCE window, clipboard and tray checks are recorded in the roadmap; file pickers, scaling, other desktops and installed-service priority recovery remain open. Chinese/Japanese/Korean require suitable system fonts such as Noto Sans CJK.
 
 ## Roadmap to v1.0
 
-| Milestone | Status | Scope |
+| Milestone | Status | Focus |
 | --- | --- | --- |
-| v0.8.25.0 | Accepted baseline | Theme completion, HOST artwork, role enforcement, host controls/history and service fixes |
-| v0.8.26.0 | Shipped | Legacy WPF app removed, repository clean-up, every file reviewed, live acceptance scripts, Windows and Linux packages |
-| v0.9.0.0 | Shipped | 12 languages for every label, button, tip and menu; language picker in the title bar; bell for Notifications; CJK fonts |
-| v0.9.1.0 | Shipped | Status values, progress, results, drop-down choices, dialogs and file-picker titles translated as they are shown |
-| v0.9.2.0 | Shipped | The game's item and Pal names in the chosen language (from the installed game); map summaries, Pal tooltips and uptime translated |
-| v0.9.3.0 | Shipped | The MystTiq service's own messages (Doctor findings, operation results, crash explanations, network checks) translated; review sheets for native reviewers |
-| v0.9.4.0 | Current | Disabled controls say which role they need; every control named for screen readers and reachable with Tab; health states translated |
-| v0.9.5.0 | Next | Fresh setup, upgrade from the accepted baseline, settings and data kept, backup/restore and rollback tested on isolated data |
-| v0.9.x | Planned stabilization | Live integration checks, Linux desktop/service acceptance, accessibility, upgrade/recovery and release packaging verification |
-| v1.0 | Target, no date committed | Release only after the documented acceptance gates pass and remaining limitations are published |
+| v0.9.0.0 | Delivered | Labels, menus and language selection in 12 languages |
+| v0.9.1.0 | Delivered | Desktop status, progress, errors and dialogs follow the chosen language |
+| v0.9.2.0 | Delivered | Game-provided item and Pal names in the chosen language; composed map and tooltip text |
+| v0.9.3.0 | Delivered | The service's own messages follow the chosen language; review sheets for native reviewers |
+| v0.9.4.0 | Current | Disabled controls name the role they need; accessible names and Tab reach throughout |
+| v0.9.5.0 | Next | Fresh setup, upgrade from the accepted baseline, backup/restore and rollback tested on isolated data |
+| v0.9.x | Planned | Native translation review, live integration evidence, a screen-reader pass and Linux acceptance |
+| v1.0 | Target | Stable release after the acceptance gates pass; no date committed |
 
-See the [full roadmap](docs/roadmap/PRODUCT_ROADMAP.md) for open verification work, dependencies and optional ideas. Completed changes belong in the [changelog](CHANGELOG.md) and [release notes](release-notes/), not the future-work list.
+The [full roadmap](docs/roadmap/PRODUCT_ROADMAP.md) separates delivered work, remaining checks and optional ideas. Release history lives in the [changelog](CHANGELOG.md).
 
-## Known limitations before v1.0
+## Known limitations
 
-- Text the service passes on from Windows, Linux or the game (error details, log lines) is shown as it comes, usually English. The 11 non-English translations are drafts awaiting native review, and dates and numbers use one fixed format. On Linux, Chinese, Japanese and Korean need Noto Sans CJK (or WenQuanYi) installed.
-- On a real Linux desktop the window, maximize, clipboard and tray are checked automatically (v0.8.26.0); file pickers and priority restoration through an installed service still need acceptance testing.
-- Actual item/Pal delivery, live player-map behaviour and PalDefender teleport coordinate calibration need an online test player: `scripts/Test-v0.8.26.0-InGame.ps1` runs these once someone joins a test server. Real Discord/email delivery is checked by `scripts/Test-v0.8.26.0-Alerts.ps1`, which sends real test messages.
-- Disabled controls do not yet consistently explain which role is required. Linux desktop contrast-theme integration remains open.
-- OS-level traffic shaping, per-process network accounting, a browser UI and per-accent artwork are not promised for v1.0.
+- Non-English catalogs are draft translations awaiting native review. Text the service passes on from Windows, Linux or the game (error details, log lines) is shown as it arrives, usually in English, and dates and numbers use one fixed format.
+- Item/Pal delivery, live map/teleport calibration and real Discord/email delivery still need live acceptance with a player and configured channels. Test scripts exist; that alone is not evidence of a passed live test.
+- Linux acceptance remains partial. Accessible names and keyboard reach are checked automatically; a pass with a real screen reader and Linux native contrast integration still need work.
+- A browser UI, per-accent artwork, OS-level traffic shaping and per-process network accounting are optional ideas, not v1.0 commitments.
 
-## Documentation and support
+## Build and contribute
 
-- [Product roadmap and v1.0 gates](docs/roadmap/PRODUCT_ROADMAP.md)
-- [Publishing a release](docs/release/README.md)
-- [Release acceptance checklist](RELEASE_CHECKLIST.md)
-- [Linux testing notes](docs/linux/TESTED_ENVIRONMENT.md)
-- [Security reporting](SECURITY.md) · [Contribution guide](CONTRIBUTING.md)
+Install the **.NET 10 SDK** and **PowerShell 7**, then run from the repository root:
+
+```powershell
+dotnet build PalworldServerManager.slnx -c Release
+pwsh ./scripts/Package-GitHubRelease.ps1 -Runtime win-x64
+```
+
+For Linux packaging use `-Runtime linux-x64`; after extracting, grant execute permission to `MystTiq.Desktop` and `headless/mysttiq-server`. Windows native console capture additionally requires MSVC x64 and `scripts/Build-ConsoleProxy.ps1`; the release workflow includes this step.
+
+The app consists of `MystTiq.Desktop`, `MystTiq.HeadlessHost` and `MystTiq.Core`. The former Windows app and installer were removed in v0.8.26.0 and remain in Git history.
+
+[Contribution guide](CONTRIBUTING.md) · [Publishing guide](docs/release/README.md) · [Release checklist](RELEASE_CHECKLIST.md) · [Linux testing](docs/linux/TESTED_ENVIRONMENT.md) · [Security reporting](SECURITY.md)
 
 ## License and attribution
 
-MystTiq code is provided under the [MIT License](LICENSE). Palworld names and third-party/game artwork remain the property of their respective owners; the code license does not grant rights to those assets. MystTiq is an independent community project and is not affiliated with Pocketpair.
+MystTiq code is [MIT licensed](LICENSE). Palworld names and third-party/game artwork belong to their respective owners; the code license does not grant rights to those assets. MystTiq is an independent community project and is not affiliated with Pocketpair.

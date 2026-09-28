@@ -1,9 +1,9 @@
 <!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
 # Publishing a MystTiq release on GitHub
 
-This guide publishes **v0.9.4.0**; for a later version, replace the version everywhere below. The version always comes from `Directory.Build.props`, and the release workflow refuses a tag that does not match it. The accepted baseline is v0.8.25.0; the next feature milestone is v0.9.4.0.
+This guide publishes **v0.9.4.0**; for a later version, replace the version everywhere below. The version always comes from `Directory.Build.props`, and the release workflow refuses a tag that does not match it. The accepted baseline is v0.8.25.0; the next feature milestone is v0.9.5.0.
 
-A GitHub release is three things: a **tag** on a commit (`v0.9.4.0`), the **release page** (title and notes), and the **assets** attached to it (the ZIPs and their checksums). The repository's release workflow makes all three for you as a *draft*; nothing is public until you press **Publish release**.
+A GitHub release is three things: a **tag** on a commit (`v0.9.4.0`), the **release page** (title and notes), and the **assets** attached to it (the ZIPs and their checksums). You create and push the tag. The release workflow builds the assets and creates a *draft prerelease* for review. The pushed tag and source commit are already public in a public repository; the release page and attached downloads remain draft until you press **Publish release**.
 
 ## 1. Get the source onto GitHub
 
@@ -12,14 +12,14 @@ The v0.9.4.0 tree must be committed to `main` first. From your clone (for exampl
 ```powershell
 git switch main
 git pull --ff-only                      # take any Dependabot or web edits first
-# copy the v0.9.4.0 source over the clone (keep the clone's .git folder), then:
+# apply the reviewed v0.9.4.0 changes, including explicit obsolete-file removals, then:
 git add --all                           # stages new files AND the removals
 git status                              # review: no bin/, obj/, artifacts/, saves, logs or secrets
 git commit -m "v0.9.4.0: roles explained on disabled controls, and accessibility"
 git push origin main
 ```
 
-`git add --all` matters whenever a version removes files (v0.8.26.0 removed about a thousand: the legacy WPF app, its installer, old tests and pre-0.8 change lists, listed in [FILE_AUDIT_v0.8.26.0.md](FILE_AUDIT_v0.8.26.0.md)); only `--all` records removals.
+`git add --all` matters whenever a version removes files (v0.8.26.0 removed about a thousand: the legacy WPF app, its installer, old tests and pre-0.8 change lists, listed in [FILE_AUDIT_v0.8.26.0.md](FILE_AUDIT_v0.8.26.0.md)); `--all` stages removals that have already been made. Copying a ZIP over an existing checkout does not remove obsolete files; use the reviewed removal list and inspect the diff.
 
 Wait for the **Build** workflow on that commit to go green (Actions tab). Do not tag a commit whose build failed.
 
@@ -59,7 +59,7 @@ Pushing the tag starts the **Release** workflow (`.github/workflows/release.yml`
 4. writes `SHA256SUMS.txt`;
 5. creates a **draft prerelease** named "MystTiq v0.9.4.0" with the release notes as its text and those files attached.
 
-If it fails, fix the cause on `main`; if the tag itself is fine, rerun it from **Actions → Release → Run workflow** with the tag `v0.9.4.0`. Never move or re-use a published tag.
+If a source change is needed, commit the fix and prepare a new version/tag; changing `main` does not change an existing tag. For a transient failure that needs no source change, rerun from **Actions → Release → Run workflow** with the tag `v0.9.4.0`. Never move or re-use a published tag.
 
 ## 4. Review and publish
 
@@ -71,7 +71,7 @@ If it fails, fix the cause on `main`; if the tag itself is fine, rerun it from *
 
 ## Manual alternative (no workflow)
 
-Use this only if you are not pushing a tag (do not do both for the same version).
+Prefer the workflow above. For manual assets, coordinate with the repository maintainer so the tag-triggered workflow and manual upload do not both edit the same release.
 
 1. Build the ZIPs locally (step 2) and make the source ZIP: `git archive --format=zip --output=artifacts/MystTiqPalworldServer_v0.9.4.0_FullSource.zip HEAD`.
 2. Recompute `artifacts/SHA256SUMS.txt` so it covers all the ZIPs: `pwsh ./scripts/Build-Checksums.ps1 -Include '*.zip'`.
@@ -83,4 +83,4 @@ Use this only if you are not pushing a tag (do not do both for the same version)
 - The Linux ZIP, until Linux desktop acceptance is complete (window, clipboard and tray pass; file pickers and other desktops are still open, see the [roadmap](../roadmap/PRODUCT_ROADMAP.md)). The release workflow publishes Windows only on purpose.
 - Private checkpoint archives, logs, test reports, server saves, `artifacts/runtime-smoke` or anything with tokens or passwords.
 
-Before publishing, also go through the [pre-publication review](pre-publication-review.md) and the [release checklist](../../RELEASE_CHECKLIST.md). Any Nexus Mods coordination (their API policy asks public apps to contact support with a test build) is a separate owner action.
+Before publishing, also go through the [pre-publication review](pre-publication-review.md) and the [release checklist](../../RELEASE_CHECKLIST.md). Any Nexus Mods coordination is a separate owner action.

@@ -7,13 +7,13 @@ Thank you for helping improve MystTiq Palworld Server Manager.
 
 - Search existing issues.
 - Remove passwords, tokens, public IP addresses, private player identifiers, save files, and personal logs.
-- Include the application version, Windows version, action performed, expected behavior, actual behavior, and exact error text.
+- Include the application version, operating system (and Linux desktop environment where relevant), action performed, expected behavior, actual behavior, and exact error text.
 
 ## Development workflow
 
 1. Fork the repository.
 2. Create a focused branch, such as `fix/notification-toggle`.
-3. Keep changes small and preserve the established dark theme, button standards, tooltip standards, responsive layouts, semantic colors, and existing architecture.
+3. Keep changes small and preserve all supported appearance modes, button standards, tooltip standards, responsive layouts, semantic colors, and existing architecture.
 4. Do not redesign unrelated pages or introduce unrequested features.
 5. Update `Directory.Build.props` and the applicable documentation when the change is versioned.
 6. Place release notes, build test plans, compile hotfix notes, and apply instructions under `release-notes/`.
@@ -48,3 +48,14 @@ Thank you for helping improve MystTiq Palworld Server Manager.
 
 ## Release Workflow
 Follow the MystTiq workflow: Clean → Validate → All before opening a PR.
+
+## Translation feedback
+
+All 11 non-English translations are drafts. Native-speaker feedback is welcome, including small corrections.
+
+1. Open a translation-feedback issue and name the language, app version and page/dialog.
+2. Include the current wording, your suggested wording and the intended meaning. A cropped screenshot helps with context.
+3. Preserve message placeholders such as `{0}` and `{1}` in a proposed catalog change. Do not translate user-entered names or paths.
+4. Check natural phrasing, plurals, terminology, text expansion and accessibility labels. For Chinese, Japanese and Korean, mention the operating system and font if glyphs are missing.
+
+Catalogs are in `src/MystTiq.Desktop/Assets/i18n/`; the [text inventory](docs/i18n/UI_TEXT_INVENTORY.md) lists the window's texts, and [TRANSLATION_REVIEW.md](docs/i18n/TRANSLATION_REVIEW.md) explains how to export a review sheet for a whole language (`scripts/Export-MystTiqTranslationReview.ps1`).

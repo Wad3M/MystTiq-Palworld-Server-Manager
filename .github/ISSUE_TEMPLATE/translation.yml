@@ -1,0 +1,37 @@
+# MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+name: Translation feedback
+description: Improve wording, report missing text or help review a language
+title: "[Translation]: "
+body:
+  - type: markdown
+    attributes:
+      value: "The 11 non-English translations are drafts. Please include context and remove private server/player information from screenshots."
+  - type: input
+    id: language
+    attributes:
+      label: Language and app version
+      placeholder: Deutsch, v0.9.4.0
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Page or dialog
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current wording or missing text
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested wording and explanation
+      description: Keep placeholders such as '{0}' and '{1}' intact if proposing a catalog change.
+  - type: textarea
+    id: context
+    attributes:
+      label: Screenshot, operating system and font details
+      description: Useful for clipped text, missing glyphs and language-specific font issues.
