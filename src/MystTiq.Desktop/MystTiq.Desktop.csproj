@@ -13,10 +13,10 @@
   <ItemGroup>
     <!-- v0.3.1.9 connection/navigation foundation intentionally follows the current Avalonia 11.3 servicing line.
          Pin the exact resolved package version after the first successful Windows/Linux acceptance. -->
-    <PackageReference Include="Avalonia" Version="11.3.*" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.3.*" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.*" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.*" />
+    <PackageReference Include="Avalonia" Version="12.1.*" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.*" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.*" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.*" />
     <!-- v0.7.71.0: CredentialStore's Windows DPAPI-backed bearer token persistence. The API throws
          PlatformNotSupportedException at runtime on non-Windows; CredentialStore itself guards
          every call with OperatingSystem.IsWindows(), so this is safe to reference unconditionally
