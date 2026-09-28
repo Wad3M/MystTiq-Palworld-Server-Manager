@@ -1,4 +1,4 @@
-﻿// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
+﻿// MystTiq v0.9.3.0: file reviewed for this release (2026-09-28).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -291,6 +291,16 @@ Check(Localizer.T("Frostbound Frontier") == "Frostbound Frontier" && Localizer.T
     "Text that is no known message (a server name) is shown unchanged");
 Check(!string.IsNullOrEmpty(vm.ServerState) && !vm.ServerState.Any(c => c >= 0x2E80),
     "The view model itself keeps English while Japanese is shown (logic compares English)");
+// v0.9.3.0: the service's own messages (sent in English over the API) are in the catalog too; commands it reports are not.
+Check(english.Count(kv => kv.Key.StartsWith("msg.", StringComparison.Ordinal)) >= 2400 &&
+      Localizer.T("PalServer is not running.") == jaText[MsgKey("PalServer is not running.")] && Localizer.T("PalServer is not running.") != "PalServer is not running.",
+    "Japanese: a message from the service is shown in Japanese");
+const string wrongPath = @"A PalServer process is running, but not at the configured path. Expected: C:\GameServers\Palworld\Server. Found: PalServer-Win64-Shipping-Cmd (PID 24072) at C:\GameServers\Palworld\Server-clone\PalServer.exe.";
+Check(Localizer.T(wrongPath) == jaText[MsgKey("A PalServer process is running, but not at the configured path. Expected: {0}. Found: {1}.")]
+          .Replace("{0}", @"C:\GameServers\Palworld\Server").Replace("{1}", @"PalServer-Win64-Shipping-Cmd (PID 24072) at C:\GameServers\Palworld\Server-clone\PalServer.exe"),
+    $"A service message with a value keeps the value (paths and process ids) [{Localizer.T(wrongPath)}]");
+Check(Localizer.T("TeleportToMe 76561198000000000") == "TeleportToMe 76561198000000000" && Localizer.T("KickPlayer steam_1") == "KickPlayer steam_1",
+    "A server command the service reports stays as it is");
 // Every template, in every language: English filled with sample values comes back as that language's text with the
 // same values, so no template is shadowed by a wrong one.
 foreach (var language in Localizer.Languages.Where(l => l.Code != "en"))
@@ -301,10 +311,12 @@ foreach (var language in Localizer.Languages.Where(l => l.Code != "en"))
     foreach (var (key, en) in english.Where(kv => kv.Key.StartsWith("msg.", StringComparison.Ordinal) && System.Text.RegularExpressions.Regex.IsMatch(kv.Value, @"\{\d+\}")))
     {
         string Fill(string template) => System.Text.RegularExpressions.Regex.Replace(template, @"\{(\d+)\}", m => $"«v{m.Groups[1].Value}»");
-        var expected = Fill(translated[key]);
-        var actual = Localizer.T(Fill(en));
-        if (actual != expected && actual != Fill(en)) wrong.Add($"{key}: {actual}");
-        else if (actual == Fill(en) && translated[key] != en && en.Count(char.IsLetter) >= 4) wrong.Add($"{key}: (English)");
+        // v0.9.3.0: a message that begins a longer text ("… already reported earlier. " + more) is tried with a rest.
+        var rest = en.Length > en.TrimEnd().Length ? "«rest»" : "";
+        var expected = Fill(translated[key]) + rest;
+        var actual = Localizer.T(Fill(en) + rest);
+        if (actual != expected && actual != Fill(en) + rest) wrong.Add($"{key}: {actual}");
+        else if (actual == Fill(en) + rest && translated[key] != en && en.Count(char.IsLetter) >= 4) wrong.Add($"{key}: (English)");
     }
     Check(wrong.Count == 0, $"{language.NativeName}: every message template round-trips [{string.Join(" | ", wrong.Take(4))}]");
 }

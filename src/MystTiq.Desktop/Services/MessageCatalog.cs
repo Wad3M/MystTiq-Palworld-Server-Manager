@@ -1,4 +1,4 @@
-// MystTiq v0.9.2.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.3.0: file reviewed for this release (2026-09-28).
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -117,6 +117,10 @@ public sealed class MessageCatalog
         var trimmed = line.Trim();
         if (trimmed.Length == 0) return null;
         if (exact.TryGetValue(trimmed, out var direct)) return Reedge(line, trimmed, direct);
+        // v0.9.3.0: a template for the whole line wins when none of its values spans a sentence break: it is more
+        // specific than the line's sentences matched one by one ("Ready: base {0} will transfer from {1} to {2}. Every
+        // structure … updated to match." is one message, not "Ready: …" plus "Every {0}").
+        if (TranslateWhole(trimmed, 0, unsplitValues: true) is { } whole) return Reedge(line, trimmed, whole);
         var (sentences, complete) = TranslateSentences(trimmed);
         var result = complete ? sentences : TranslateWhole(trimmed, 0) ?? sentences;
         return result is null ? null : Reedge(line, trimmed, result);
@@ -146,12 +150,14 @@ public sealed class MessageCatalog
     }
 
     // An exact message or a template, the whole text; a template's values are translated too when each is a message.
-    private string? TranslateWhole(string trimmed, int depth)
+    // unsplitValues: skip a match that would take a sentence break into a value (that is several messages, not one).
+    private string? TranslateWhole(string trimmed, int depth, bool unsplitValues = false)
     {
         if (exact.TryGetValue(trimmed, out var direct)) return direct;
         foreach (var template in templates)
         {
             if (template.Match(trimmed) is not { } values) continue;
+            if (unsplitValues && values.Any(v => SentenceBreak.IsMatch(v))) continue;
             if (depth < MaxDepth)
             {
                 for (var i = 0; i < values.Length; i++)

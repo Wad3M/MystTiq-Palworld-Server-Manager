@@ -1,4 +1,23 @@
-<!-- MystTiq v0.9.2.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.3.0: file reviewed for this release (2026-09-28). -->
+## v0.9.3.0 — The Service's Messages in Your Language
+
+- The MystTiq service's own messages are translated as the Desktop shows them, like the Desktop's own. That covers
+  Doctor findings, operation results, crash explanations and remedies, network and router checks, recovery and restore
+  steps, configuration and validation errors: 1,339 more `msg.*` keys (3,490 keys per language, 2,492 messages). The
+  service still sends English, so its logs, history, alerts and API stay in one language.
+- Kept English on purpose (24 texts): commands sent to the game server, log patterns the crash analysis matches,
+  protocol and unit-file text, the Windows service and firewall-rule names, and product names. A text the Desktop
+  already had keeps its existing key.
+- `MessageCatalog` tries a template for the whole line before the line's sentences. It accepts that match only when no
+  value spans a sentence break, so a two-sentence message stays one message ("Ready: base {0} will transfer… Every
+  structure…"), while a template that would swallow a sentence still loses to the sentences.
+- `scripts/Export-MystTiqTranslationReview.ps1` writes a review sheet per language (key, kind, English, translation,
+  where it is used, Correction and Notes columns); `docs/i18n/TRANSLATION_REVIEW.md` is the reviewers' checklist.
+  Native review stays open.
+- Checked: the ArtworkHarness shows a service message in Japanese (the live "A PalServer process is running, but not
+  at the configured path…" with its paths kept) and leaves a server command alone. Its template round trip covers all
+  2,492 messages in every language, and gives a message that begins a longer text a rest to match.
+
 ## v0.9.2.0 — Game Names in Your Language
 
 - Item and Pal names follow the display language: the Give Item picker, kits and the map's Pal markers show the game's

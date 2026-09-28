@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.2.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.3.0: file reviewed for this release (2026-09-28). -->
 # Windows Backport / Improvement Registry
 
 During every v0.3 Linux implementation phase, useful discoveries are classified so improvements are not lost.

@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.2.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.3.0: file reviewed for this release (2026-09-28). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-28. **Current version: v0.9.2.0. Accepted baseline: v0.8.25.0. Next: v0.9.3.0.**
+Updated 2026-09-28. **Current version: v0.9.3.0. Accepted baseline: v0.8.25.0. Next: v0.9.4.0.**
 
-This is the active plan. Version assignments after v0.9.2.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v0.9.3.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Delivered through v0.8.25.0
 
@@ -38,12 +38,20 @@ This is the active plan. Version assignments after v0.9.2.0 are proposed milesto
 - Item and Pal names in the Give Item picker, kits and on the map come in the Desktop's display language, from the installed game's own name tables (the game ships all 12: Japanese is its source language, the rest are its localisations). The service reads and caches each language separately and falls back to English, and says so, when a language's table is missing.
 - Texts the Desktop composes from several sentences (the map's summary line, Pal tooltips) are translated sentence by sentence, and the host's uptime is translated.
 
-## v0.9.3.0 — the service's own messages and review
+## v0.9.3.0 — the service's own messages and review aids (delivered 2026-09-28)
 
-- The MystTiq service's own messages (Doctor findings, operation results, about 1,100 texts shown in the Desktop), which arrive in English from the server, translated when shown like the Desktop's own.
-- Review each language with native speakers, including plurals, date and number formatting, text expansion and keyboard/accessibility labels.
+- The MystTiq service's own messages (Doctor findings, operation results, crash explanations, network and router checks, recovery steps, validation errors; 1,339 texts), which arrive in English from the server, are translated when shown like the Desktop's own. Commands sent to the game, log patterns, protocol text and the names Windows shows stay English on purpose.
+- `scripts/Export-MystTiqTranslationReview.ps1` writes a review sheet per language and [`docs/i18n/TRANSLATION_REVIEW.md`](../i18n/TRANSLATION_REVIEW.md) is the reviewers' checklist and coverage table.
+- Still open, and needing people: every language is **awaiting native review** (meaning, terminology, plurals, length, accessibility names), and dates and numbers are still one fixed format for every language.
 
-**Exit evidence:** a page-by-page coverage checklist, key/fallback checks, reviewed language samples and visual/accessibility checks for each advertised language.
+**Exit evidence for the review:** each language's sheet returned with corrections applied, reviewed language samples, and a look at every page in each advertised language.
+
+## v0.9.4.0 — roles explained, and accessibility
+
+- Every control a role cannot use says which role it needs (tip and accessible name), instead of only being disabled.
+- Check focus order, keyboard navigation, accessible names, contrast and scaling across every page, in every appearance mode.
+
+**Exit evidence:** a page-by-page checklist of disabled controls and their explanations, and keyboard-only and screen-reader passes over each page.
 
 ## v0.9.x — integration and release stabilization
 
@@ -56,7 +64,7 @@ These are remaining checks or targeted fixes, not a request to rebuild shipped f
 | Notifications | Observe real Discord and email delivery, pause/resume, recovery and failure handling. `scripts/Test-v0.8.26.0-Alerts.ps1` sends a real test through every switched-on channel and reports failed sends; confirm arrival in each channel |
 | Linux desktop | Window, maximize/restore, clipboard and tray pass on the XFCE test VM (`scripts/Test-v0.8.26.0-LinuxDesktopSession.ps1`, 16/16). Still open: file pickers, scaling and other desktop environments |
 | Linux service priority | Install the new unit in a test environment and verify eco-to-normal priority recovery; unit syntax/headless checks alone are insufficient |
-| Permissions and accessibility | Explain required roles on disabled controls; verify focus, keyboard navigation, names, contrast and scaling across pages |
+| Permissions and accessibility | Planned as v0.9.4.0 (above) |
 | Themes | Verify supported modes throughout the app; with a Windows contrast theme on, run `scripts/Test-v0.8.26.0-ContrastTheme.ps1`; document Linux native contrast limitations |
 | Upgrade and recovery | Test fresh setup, upgrade from the accepted baseline, settings/data preservation, backup/restore and rollback on isolated data |
 | Distribution | Build the current desktop with its matching headless sidecar, include the Windows native helper, verify clean-machine launch, source parity, version identity and SHA-256 checksums |
