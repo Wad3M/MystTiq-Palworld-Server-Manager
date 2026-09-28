@@ -24,7 +24,7 @@ jobs:
           if ($version -ne $projectVersion) { throw "Tag version $version does not match project version $projectVersion." }
           ./scripts/Package-Portable.ps1 -Version $version
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body_path: release-notes/${{ github.ref_name }}.md
           files: |

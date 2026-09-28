@@ -12,6 +12,7 @@
   contrast theme's buttons are readable.
 - The HOST tab has its own page art and navigation icon (the user's; it used the System ones since v0.8.17.0).
 - Set as the accepted baseline (user, 2026-09-25).
+- Repository fix (2026-09-26): GitHub's first build failed on `LinuxHeadlessSupervisor.cs`, a file removed in v0.6.3.0 that an earlier upload had left in the repository (uploading adds and overwrites but never deletes; 28 such files). `.gitignore`'s `release/` also kept `docs/release/` out; it is `/release/` now. Dependabot's four bumps (Hosting.WindowsServices 10.0.12, SharpCompress 0.50.4, configure-pages v6, action-gh-release v3) are taken into the tree; the service-mode and cores smokes and the static gate pass with them.
 - Checked: ArtworkHarness 542 (19 new), renders of a dark and a light contrast theme and of the HOST tab.
 ## v0.8.24.0 — Processor Cores
 

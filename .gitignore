@@ -13,7 +13,8 @@ TestResults/
 # Build and publish output
 artifacts/
 publish/
-release/
+# Root build output only: a bare "release/" also matched docs/release/, which then never reached GitHub.
+/release/
 *.nupkg
 *.snupkg
 
