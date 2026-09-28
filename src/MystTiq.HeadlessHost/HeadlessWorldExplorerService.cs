@@ -1,3 +1,4 @@
+// MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 using MystTiq.Core.Services;
 using System.Text;
 using System.Text.RegularExpressions;

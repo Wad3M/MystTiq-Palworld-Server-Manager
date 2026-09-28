@@ -1,3 +1,4 @@
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 * text=auto
 *.cs text eol=crlf
 *.xaml text eol=crlf
@@ -5,3 +6,8 @@
 *.cmd text eol=crlf
 *.png binary
 *.ico binary
+# v0.8.26.0: Linux shell and Python scripts keep LF, whatever the checkout's line-ending setting (a CRLF shebang fails)
+*.sh text eol=lf
+*.py text eol=lf
+*.jpg binary
+*.webp binary

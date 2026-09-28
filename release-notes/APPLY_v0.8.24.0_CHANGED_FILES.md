@@ -1,3 +1,4 @@
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
 # v0.8.24.0 Changed Files
 
 - `Directory.Build.props`, `src/PalworldManager/app.manifest`: version bump to 0.8.24.0.

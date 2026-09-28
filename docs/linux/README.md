@@ -1,3 +1,4 @@
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
 ## Complete command reference
 
 See **[`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md)** for all headless commands, workflows, paths and security expectations.
@@ -6,7 +7,7 @@ See **[`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md)** for all headless commands
 
 v0.3 is the Linux/headless development line.
 
-The Linux implementation is built around a **headless-first** rule: server-management correctness must not depend on a GUI being present. The existing Windows WPF application remains the validated Windows reference while reusable functionality is introduced in `MystTiq.Core` and exercised through `MystTiq.HeadlessHost`.
+The Linux implementation is built around a **headless-first** rule: server-management correctness must not depend on a GUI being present. At the time (v0.3) the Windows WPF application was the validated Windows reference while reusable functionality moved into `MystTiq.Core` and `MystTiq.HeadlessHost`; that WPF application was removed in v0.8.26.0.
 
 ## v0.3.0.0 scope
 

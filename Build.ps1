@@ -1,11 +1,10 @@
-﻿[CmdletBinding()]
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
+[CmdletBinding()]
 param(
-    [ValidateSet('Build','Package','Installer','InstallerTools','Checksums','Release','All','Clean','Version','Validate','LinuxHeadless','WindowsHeadless','DesktopWindows','DesktopLinux','DeployDesktopLinux','LogicTests')]
+    [ValidateSet('Build','Package','Checksums','Release','All','Clean','Version','Validate','LinuxHeadless','WindowsHeadless','DesktopWindows','DesktopLinux','DeployDesktopLinux','LogicTests')]
     [string]$Action = 'All',
     [ValidateSet('Debug','Release')]
     [string]$Configuration = 'Release',
-    [string]$ISCC,
-    [switch]$SkipInstaller,
     [switch]$StrictValidation,
     [switch]$NoGuiLaunch
 )
@@ -74,7 +73,6 @@ function Invoke-Script {
 switch ($Action) {
     'Version' { Invoke-Script 'Get-ProjectVersion.ps1' }
     'Validate' { Invoke-Script 'Validate-Release.ps1' @{ Strict = $StrictValidation } }
-    'InstallerTools' { Invoke-Script 'Install-InnoSetup.ps1' }
     'Clean' {
         Write-Host '==> Cleaning build artifacts...' -ForegroundColor Cyan
         Stop-ArtifactHostedProcesses
@@ -101,26 +99,20 @@ switch ($Action) {
     'DesktopLinux' { Invoke-Script 'Build-AvaloniaDesktop.ps1' @{ Configuration = $Configuration; Runtime = 'linux-x64'; Publish = $true; NoLaunch = $true } }
     'DeployDesktopLinux' { Invoke-Script 'Deploy-Test-MystTiqDesktopLinux.ps1' }
     'LogicTests' { $v = & (Join-Path $scripts 'Get-ProjectVersion.ps1'); Invoke-Script "Test-v$v-Logic.ps1" @{ ProjectRoot = $root; ExportJson = $true } }
+    # v0.8.26.0: the self-contained Windows and Linux downloads (the desktop with the headless service beside it).
+    # The legacy WPF portable package and installer were removed.
     'Package' {
         Invoke-Script 'Build.ps1' @{ Configuration = $Configuration }
-        Invoke-Script 'Package-Portable.ps1'
-        Invoke-Script 'Build-Checksums.ps1'
-    }
-    'Installer' {
-        Invoke-Script 'Validate-Release.ps1' @{ Strict = $StrictValidation }
-        Invoke-Script 'Build.ps1' @{ Configuration = $Configuration }
-        Invoke-Script 'Build-Installer.ps1' @{ ISCC = $ISCC }
-        Invoke-Script 'Build-Checksums.ps1'
+        Invoke-Script 'Package-GitHubRelease.ps1' @{ Runtime = 'win-x64' }
+        Invoke-Script 'Package-GitHubRelease.ps1' @{ Runtime = 'linux-x64' }
+        Invoke-Script 'Build-Checksums.ps1' @{ Include = @('*.zip') }
     }
     'Checksums' { Invoke-Script 'Build-Checksums.ps1' }
     { $_ -in @('Release','All') } {
+        # Validates, builds, runs the release gate and packages (see scripts/Build-Release.ps1).
         Invoke-Script 'Build-Release.ps1' @{
             Configuration = $Configuration
-            ISCC = $ISCC
-            SkipInstaller = $SkipInstaller
             StrictValidation = $StrictValidation
         }
-        $v = & (Join-Path $scripts 'Get-ProjectVersion.ps1')
-        Invoke-Script "Test-v$v-Logic.ps1" @{ ProjectRoot = $root; ExportJson = $true }
     }
 }

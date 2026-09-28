@@ -1,7 +1,6 @@
-# MystTiq Roadmap Registries
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+# Roadmaps
 
-This directory contains active cross-version planning documents that should not be mixed into release history.
-
-- [`WINDOWS_BACKPORT_REGISTRY.md`](WINDOWS_BACKPORT_REGISTRY.md) — shared improvements and Windows-specific backports discovered during v0.3 Linux development.
-
-- [`PRODUCT_ROADMAP.md`](PRODUCT_ROADMAP.md) — detailed v0.3 through v0.8 product direction and cross-version dependencies.
+- [Product roadmap](PRODUCT_ROADMAP.md) — current v0.8.26.0, accepted v0.8.25.0 baseline, v0.9 translation work and v1.0 acceptance gates; the authoritative forward plan.
+- [Historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md) — preserved planning history, including superseded plans.
+- [Windows backport registry](WINDOWS_BACKPORT_REGISTRY.md) — historical cross-platform tracking; consult the active roadmap for current priorities.

@@ -1,5 +1,6 @@
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
 <Solution>
-  <Project Path="src/PalworldManager/PalworldManager.csproj" />
   <Project Path="src/MystTiq.Core/MystTiq.Core.csproj" />
   <Project Path="src/MystTiq.HeadlessHost/MystTiq.HeadlessHost.csproj" />
+  <Project Path="src/MystTiq.Desktop/MystTiq.Desktop.csproj" />
 </Solution>

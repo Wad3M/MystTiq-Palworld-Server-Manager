@@ -1,3 +1,4 @@
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
 # v0.8.1.0 Build and Test Plan
 
 1. Clean (including both harnesses' bin/obj), then PUBLISH the desktop build (with `Select-Object -Last`, never `-First`).

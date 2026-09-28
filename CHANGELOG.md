@@ -1,3 +1,23 @@
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+## v0.8.26.0 — Clean Repository, Live Acceptance Scripts
+
+- The legacy WPF app (`src/PalworldManager`), its Inno Setup installer and the scripts that only built or packaged it
+  were removed. The solution holds exactly Core, HeadlessHost and Desktop; the Desktop has its own Windows manifest,
+  which carries the version. `Build.ps1 Package` makes the self-contained Windows and Linux ZIPs and their checksums.
+- About a thousand obsolete files removed: old tests the release gate no longer runs, pre-0.8 change lists and test
+  plans (every version's notes stay), WPF parity notes and leftovers. Listed per file in
+  `docs/release/FILE_AUDIT_v0.8.26.0.md`.
+- Every text file reviewed and stamped for v0.8.26.0 (`scripts/Set-MystTiqFileStamp.ps1`; JSON, LICENSE and binaries
+  reviewed and listed, not stamped). The release gate checks the stamps.
+- Live acceptance scripts: a real Linux desktop session (passed 16/16), in-game Give Item and teleport on the clone
+  server, real alert delivery, and Windows contrast themes. The in-game and alerts scripts are rehearsed against
+  stand-in servers by the release gate.
+- The user's GitHub README, workflows and publishing documents merged; the publishing guide rewritten step by step.
+- Fixed: the v0.8.25.0 release note's title dash was garbled; `.sh` and `.py` files are kept LF on every checkout;
+  `Build-ConsoleProxy.ps1` writes its object file to `artifacts\native` instead of the repository root; the release
+  validation's stale-version scan no longer reads `v0.8.26.0-InGame` as a pre-release tag.
+- Release gate: 168/168, including the live-script rehearsal and the real Linux desktop session on the test VM.
+
 ## v0.8.25.0 — Every Colour Follows the Mode (accepted baseline)
 
 - The decorative colours left out of the theme catalogue by v0.8.16.0 are resources now: 92 colours (glows, borders,

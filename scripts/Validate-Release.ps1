@@ -1,3 +1,4 @@
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 [CmdletBinding()]
 # v0.7.115.0: -AllowBuildOutputs skips ONLY the hygiene check for build output (bin, obj, artifacts, publish and
 # anything inside them). The logic gates validate mid-run, after they themselves have built, published and
@@ -25,20 +26,21 @@ $version = & (Join-Path $PSScriptRoot 'Get-ProjectVersion.ps1')
 Write-Host "==> Validating MystTiq v$version release candidate..." -ForegroundColor Cyan
 if ($version -notmatch '^\d+\.\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') { Add-Issue Error 'Version format' "VersionPrefix is not a supported four-part version: $version" }
 
-@('Directory.Build.props','Build.ps1','README.md','CONTRIBUTING.md','CHANGELOG.md','LICENSE','RELEASE_CHECKLIST.md','PalworldServerManager.slnx','scripts\Build.ps1','scripts\Build-Release.ps1','scripts\Build-Installer.ps1','scripts\Build-Checksums.ps1','scripts\Validate-Release.ps1','scripts\Package-Portable.ps1','installer\MystTiqPalworldServer.iss','src\PalworldManager\PalworldManager.csproj','src\PalworldManager\MainWindow.xaml','src\MystTiq.Core\MystTiq.Core.csproj','src\MystTiq.HeadlessHost\MystTiq.HeadlessHost.csproj','scripts\Build-LinuxHeadless.ps1','docs\linux\TESTED_ENVIRONMENT.md','docs\roadmap\WINDOWS_BACKPORT_REGISTRY.md') | ForEach-Object { Test-RequiredPath $_ File }
+# v0.8.26.0: the product's files; the legacy WPF app, its installer and portable packager were removed.
+@('Directory.Build.props','Build.ps1','README.md','CONTRIBUTING.md','CHANGELOG.md','LICENSE','RELEASE_CHECKLIST.md','PalworldServerManager.slnx','scripts\Build.ps1','scripts\Build-Release.ps1','scripts\Build-Checksums.ps1','scripts\Validate-Release.ps1','scripts\Package-GitHubRelease.ps1','src\MystTiq.Core\MystTiq.Core.csproj','src\MystTiq.HeadlessHost\MystTiq.HeadlessHost.csproj','src\MystTiq.Desktop\MystTiq.Desktop.csproj','src\MystTiq.Desktop\app.manifest','scripts\Build-LinuxHeadless.ps1','docs\linux\TESTED_ENVIRONMENT.md','docs\roadmap\WINDOWS_BACKPORT_REGISTRY.md','docs\release\README.md') | ForEach-Object { Test-RequiredPath $_ File }
 Test-RequiredPath 'release-notes' Directory
 
 $buildOutputNames = @('bin','obj','artifacts','publish')
-$blockedDirectoryNames = @('.git','.vs','bin','obj','artifacts','publish','Backups','Logs')
+$blockedDirectoryNames = @('.vs','bin','obj','artifacts','publish','Backups','Logs')
 if ($AllowBuildOutputs) { $blockedDirectoryNames = @($blockedDirectoryNames | Where-Object { $_ -notin $buildOutputNames }) }
 function Test-InsideBuildOutput([string]$fullName) {
     if (-not $AllowBuildOutputs) { return $false }
     $parts = $fullName.Substring($root.Length + 1).Split([IO.Path]::DirectorySeparatorChar)
     return @($parts | Where-Object { $_ -in $buildOutputNames }).Count -gt 0
 }
-Get-ChildItem $root -Directory -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -in $blockedDirectoryNames -and -not (Test-InsideBuildOutput $_.FullName) } | ForEach-Object { Add-Issue Error 'Repository hygiene' "Generated/private directory found: $($_.FullName.Substring($root.Length + 1))" }
+Get-ChildItem $root -Directory -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notlike (Join-Path $root '.git/*') -and $_.Name -in $blockedDirectoryNames -and -not (Test-InsideBuildOutput $_.FullName) } | ForEach-Object { Add-Issue Error 'Repository hygiene' "Generated/private directory found: $($_.FullName.Substring($root.Length + 1))" }
 $blockedExtensions = @('.sav','.bak','.tmp','.dmp','.pfx','.snk')
-Get-ChildItem $root -File -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Extension.ToLowerInvariant() -in $blockedExtensions -and -not (Test-InsideBuildOutput $_.FullName) } | ForEach-Object { Add-Issue Error 'Repository hygiene' "Blocked runtime or signing file found: $($_.FullName.Substring($root.Length + 1))" }
+Get-ChildItem $root -File -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notlike (Join-Path $root '.git/*') -and $_.Extension.ToLowerInvariant() -in $blockedExtensions -and -not (Test-InsideBuildOutput $_.FullName) } | ForEach-Object { Add-Issue Error 'Repository hygiene' "Blocked runtime or signing file found: $($_.FullName.Substring($root.Length + 1))" }
 
 foreach ($pattern in @('APPLY_*.md','BUILD_TEST_PLAN_*.md','COMPILE_HOTFIX_*.md','RELEASE_NOTES_*.md')) {
     Get-ChildItem $root -File -Filter $pattern -ErrorAction SilentlyContinue | ForEach-Object { Add-Issue Error 'Release-note organization' "Move root note into release-notes: $($_.Name)" }
@@ -48,7 +50,7 @@ foreach ($requiredNote in @("release-notes\v$version.md","release-notes\BUILD_TE
 }
 
 # Version consistency in active product and release files.
-$expectedVersionFiles = @('Directory.Build.props','src\PalworldManager\app.manifest','README.md','docs\index.html',("release-notes\v$version.md"))
+$expectedVersionFiles = @('Directory.Build.props','src\MystTiq.Desktop\app.manifest','README.md','docs\index.html',("release-notes\v$version.md"))
 foreach ($relative in $expectedVersionFiles) {
     $path = Join-Path $root $relative
     if ((Test-Path $path -PathType Leaf) -and -not (Select-String -Path $path -SimpleMatch $version -Quiet)) { Add-Issue Warning 'Version consistency' "Current version $version was not found in $relative" }
@@ -77,7 +79,9 @@ $releaseLinePrefix = [regex]::Escape(($versionParts[0..2] -join '.'))
 $versionPattern = "(?<!\d)$releaseLinePrefix\.\d+(?:-[0-9A-Za-z.-]+)?(?!\d)"
 foreach ($file in $activeFiles) {
     foreach ($lineMatch in Select-String -Path $file.FullName -Pattern $versionPattern -AllMatches -ErrorAction SilentlyContinue) {
-        $stale = @($lineMatch.Matches | Where-Object { $_.Value -ne $version })
+        # v0.8.26.0: compare the four-part number only. A script named after the version ("Test-v0.8.26.0-InGame.ps1",
+        # "mysttiq-v0.8.26.0-alerts-...") reads like a pre-release tag but is the current version.
+        $stale = @($lineMatch.Matches | Where-Object { ($_.Value -replace '-.*$', '') -ne ($version -replace '-.*$', '') })
         if ($stale.Count -gt 0) {
             Add-Issue Warning 'Version consistency' "Possible stale version in $($file.FullName.Substring($root.Length + 1)):$($lineMatch.LineNumber): $($lineMatch.Line.Trim())"
         }
@@ -94,29 +98,8 @@ $tokens=$null; $parseErrors=$null
 [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'Build.ps1'),[ref]$tokens,[ref]$parseErrors)
 foreach ($parseError in $parseErrors) { Add-Issue Error 'PowerShell syntax' "Build.ps1:$($parseError.Extent.StartLineNumber): $($parseError.Message)" }
 
-# Direct message boxes should remain behind the dialog service.
-Get-ChildItem (Join-Path $root 'src\PalworldManager') -File -Recurse -Filter *.cs | Where-Object { $_.FullName -notlike '*\Services\Infrastructure\DialogService.cs' } | ForEach-Object {
-    foreach ($match in Select-String -Path $_.FullName -Pattern 'MessageBox\.Show\s*\(' -ErrorAction SilentlyContinue) { Add-Issue Error 'Dialog consistency' "Direct MessageBox.Show in $($_.FullName.Substring($root.Length + 1)):$($match.LineNumber)" }
-}
-
-# XAML resource and MainWindow handler checks.
-$xamlFiles = Get-ChildItem (Join-Path $root 'src\PalworldManager') -File -Recurse -Filter *.xaml
-$defined = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
-$referenced = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
-foreach ($file in $xamlFiles) {
-    $text = Get-Content $file.FullName -Raw
-    foreach ($m in [regex]::Matches($text, 'x:Key\s*=\s*"([^"]+)"')) { [void]$defined.Add($m.Groups[1].Value) }
-    foreach ($m in [regex]::Matches($text, '\{StaticResource\s+([^}\s]+)\}')) { [void]$referenced.Add($m.Groups[1].Value) }
-}
-foreach ($key in $referenced) { if (-not $defined.Contains($key) -and $key -ne 'BooleanToVisibilityConverter') { Add-Issue Error 'XAML resources' "Unresolved StaticResource: $key" } }
-$mainXaml = Join-Path $root 'src\PalworldManager\MainWindow.xaml'
-if (Test-Path $mainXaml) {
-    $xaml = Get-Content $mainXaml -Raw
-    $handlers = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
-    foreach ($m in [regex]::Matches($xaml, '(?<![A-Za-z0-9_:])(?:Click|Loaded|SelectionChanged|Checked|Unchecked|TextChanged|Closing|Closed|PreviewMouseDown|MouseDown)\s*=\s*"([A-Za-z_][A-Za-z0-9_]*)"')) { [void]$handlers.Add($m.Groups[1].Value) }
-    $codeText = (Get-ChildItem (Join-Path $root 'src\PalworldManager') -File -Recurse -Filter 'MainWindow*.cs' | ForEach-Object { Get-Content $_.FullName -Raw }) -join "`n"
-    foreach ($handler in $handlers) { if ($codeText -notmatch "\b$([regex]::Escape($handler))\s*\(") { Add-Issue Error 'XAML handlers' "Handler referenced by MainWindow.xaml was not found: $handler" } }
-}
+# v0.8.26.0: the WPF-only checks (MessageBox calls, XAML StaticResources, MainWindow.xaml handlers) went with the legacy
+# app. The Avalonia desktop's equivalents are covered by the release gate and the ArtworkHarness.
 
 $errors = @($issues | Where-Object Severity -eq 'Error')
 $warnings = @($issues | Where-Object Severity -eq 'Warning')

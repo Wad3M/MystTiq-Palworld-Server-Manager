@@ -1,11 +1,12 @@
-﻿[CmdletBinding()]
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
+[CmdletBinding()]
 param([ValidateSet('Debug','Release')][string]$Configuration='Release')
 
+# v0.8.26.0: builds the product -- the shared core, the headless service and the Avalonia desktop (the solution file
+# holds exactly these three). The legacy WPF app this script used to build was removed.
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
-$windowsProject=Join-Path $root 'src\PalworldManager\PalworldManager.csproj'
-$coreProject=Join-Path $root 'src\MystTiq.Core\MystTiq.Core.csproj'
-$headlessProject=Join-Path $root 'src\MystTiq.HeadlessHost\MystTiq.HeadlessHost.csproj'
+$solution=Join-Path $root 'PalworldServerManager.slnx'
 
 function Invoke-DotNet {
     param([Parameter(Mandatory)][string[]]$Arguments)
@@ -16,10 +17,5 @@ function Invoke-DotNet {
     }
 }
 
-Invoke-DotNet @('restore', $windowsProject)
-Invoke-DotNet @('restore', $coreProject)
-Invoke-DotNet @('restore', $headlessProject)
-
-Invoke-DotNet @('build', $windowsProject, '-c', $Configuration, '-r', 'win-x64', '--self-contained', 'true')
-Invoke-DotNet @('build', $coreProject, '-c', $Configuration, '--no-restore')
-Invoke-DotNet @('build', $headlessProject, '-c', $Configuration, '--no-restore')
+Invoke-DotNet @('restore', $solution)
+Invoke-DotNet @('build', $solution, '-c', $Configuration, '--no-restore')

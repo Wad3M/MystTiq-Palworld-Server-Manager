@@ -1,3 +1,4 @@
+// MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 namespace MystTiq.Core.Services;
 
 // v0.7.64.0: MystTiq-PalServer-Console.log had no size cap or rotation on either writer that

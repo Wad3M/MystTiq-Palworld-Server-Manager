@@ -1,3 +1,4 @@
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 # Visual Studio / .NET
 .vs/
 .vscode/
@@ -45,9 +46,6 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
-# Installer output
-installer/Output/
-
 # MystTiq v0.8.25.0: local and third-party files kept out of the repository
 .claude/
 *.obj
@@ -57,3 +55,7 @@ UE4SS-*.zip
 /SOURCE_MANIFEST_SHA256.txt
 /DELETE_THESE_*.txt
 /CHANGED_FILES_v*.txt
+
+# MystTiq v0.8.26.0: Python caches (the headless host ships a helper script)
+__pycache__/
+*.pyc

@@ -1,32 +1,67 @@
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (for example v0.8.25.0)
+        required: true
+        type: string
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-      - name: Package portable build
+      - name: Verify tag and version
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}".TrimStart('v')
-          $projectVersion = ./scripts/Get-ProjectVersion.ps1
-          if ($version -ne $projectVersion) { throw "Tag version $version does not match project version $projectVersion." }
-          ./scripts/Package-Portable.ps1 -Version $version
-      - name: Create GitHub Release
+          $version = ./scripts/Get-ProjectVersion.ps1
+          if ($env:RELEASE_TAG -ne "v$version") { throw 'Tag does not match Directory.Build.props.' }
+          git show-ref --verify "refs/tags/$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'Release requires an existing tag.' }
+          if (-not (Test-Path "release-notes/$env:RELEASE_TAG.md")) { throw 'Release notes missing.' }
+      - name: Build native helper and current desktop with matching service
+        shell: pwsh
+        run: |
+          ./scripts/Build-ConsoleProxy.ps1
+          ./scripts/Package-GitHubRelease.ps1 -Runtime win-x64 -RequireNativeProxy
+      - name: Archive tagged source and hash all assets
+        shell: pwsh
+        run: |
+          $version = ./scripts/Get-ProjectVersion.ps1
+          git archive --format=zip --output="artifacts/MystTiqPalworldServer_v${version}_FullSource.zip" $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Source archive failed.' }
+          Get-ChildItem artifacts -Filter *.zip | Sort-Object Name | ForEach-Object {
+            "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)"
+          } | Set-Content artifacts/SHA256SUMS.txt -Encoding utf8
+      - name: Prepare draft release
         uses: softprops/action-gh-release@v3
         with:
-          body_path: release-notes/${{ github.ref_name }}.md
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: MystTiq ${{ env.RELEASE_TAG }}
+          draft: true
+          prerelease: true
+          fail_on_unmatched_files: true
+          body_path: release-notes/${{ env.RELEASE_TAG }}.md
           files: |
-            artifacts/*.zip
+            artifacts/MystTiqPalworldServer_*.zip
             artifacts/SHA256SUMS.txt

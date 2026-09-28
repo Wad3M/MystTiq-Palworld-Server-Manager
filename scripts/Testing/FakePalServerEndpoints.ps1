@@ -1,3 +1,4 @@
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][ValidateSet('Rcon', 'Rest')][string]$Mode,

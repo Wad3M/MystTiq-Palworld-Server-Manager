@@ -1,3 +1,4 @@
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
 # v0.8.1.0 Changed Files
 
 Source of the icons: `MystTiq_Palworld_Ribbon_Icons.zip` (user-supplied).

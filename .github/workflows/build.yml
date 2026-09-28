@@ -1,3 +1,4 @@
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 name: Build
 
 on:
@@ -17,12 +18,6 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-      - name: Restore
-        run: dotnet restore src/PalworldManager/PalworldManager.csproj
-      - name: Build
-        run: dotnet build src/PalworldManager/PalworldManager.csproj -c Release -r win-x64 --self-contained true --no-restore
-      # v0.8.25.0: the product itself -- the headless service and the Avalonia desktop (the legacy WPF app above is the
-      # parity reference only).
       - name: Build the headless service and the desktop (Windows)
         run: |
           dotnet build src/MystTiq.HeadlessHost/MystTiq.HeadlessHost.csproj -c Release

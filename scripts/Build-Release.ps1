@@ -1,11 +1,15 @@
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 [CmdletBinding()]
 param(
     [ValidateSet('Debug','Release')][string]$Configuration = 'Release',
-    [string]$ISCC,
-    [switch]$SkipInstaller,
-    [switch]$StrictValidation
+    [switch]$StrictValidation,
+    # The full release gate (-RunBuild) takes about 50 minutes; skip it only when it has just passed.
+    [switch]$SkipGate
 )
 
+# v0.8.26.0: the local equivalent of the GitHub release workflow. Validate, build, run the release gate, then package
+# the self-contained Windows and Linux downloads (scripts/Package-GitHubRelease.ps1: the Avalonia desktop with the
+# headless service beside it) and write SHA256SUMS.txt. The legacy WPF build, portable package and installer are gone.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $version = & (Join-Path $PSScriptRoot 'Get-ProjectVersion.ps1')
@@ -21,40 +25,25 @@ try {
     Invoke-Step "Validating v$version release candidate" {
         & (Join-Path $PSScriptRoot 'Validate-Release.ps1') -Strict:$StrictValidation
     }
-    Invoke-Step "Building $Configuration win-x64" {
+    Invoke-Step "Building $Configuration" {
         & (Join-Path $PSScriptRoot 'Build.ps1') -Configuration $Configuration
     }
-    Invoke-Step "Running v$version logic tests" {
-        & (Join-Path $PSScriptRoot "Test-v$version-Logic.ps1") -ProjectRoot $root -ExportJson
-    }
-    Invoke-Step "Building Windows headless" {
-        & (Join-Path $PSScriptRoot 'Build-WindowsHeadless.ps1') -Configuration $Configuration
-    }
-    Invoke-Step "Building Linux headless" {
-        & (Join-Path $PSScriptRoot 'Build-LinuxHeadless.ps1') -Configuration $Configuration
-    }
-    Invoke-Step "Building Avalonia desktop for Windows" {
-        & (Join-Path $PSScriptRoot 'Build-AvaloniaDesktop.ps1') -Configuration $Configuration -Runtime 'win-x64' -Publish -NoLaunch
-    }
-    Invoke-Step "Running Windows headless API runtime smoke" {
-        & (Join-Path $PSScriptRoot "Test-v$version-RuntimeSmoke.ps1") -ProjectRoot $root
-    }
-    Invoke-Step "Building Avalonia desktop for Linux" {
-        & (Join-Path $PSScriptRoot 'Build-AvaloniaDesktop.ps1') -Configuration $Configuration -Runtime 'linux-x64' -Publish -NoLaunch
-    }
-    Invoke-Step "Creating portable package" {
-        & (Join-Path $PSScriptRoot 'Package-Portable.ps1') -Version $version
-    }
-    if ($SkipInstaller) {
-        Write-Warning 'Installer generation was explicitly skipped.'
+    if ($SkipGate) {
+        Write-Warning 'The release gate was explicitly skipped.'
     } else {
-        Invoke-Step 'Creating Windows installer' {
-            & (Join-Path $PSScriptRoot 'Build-Installer.ps1') -Version $version -ISCC $ISCC -SkipPackage
+        Invoke-Step "Running the v$version release gate" {
+            & (Join-Path $PSScriptRoot 'Build-AvaloniaDesktop.ps1') -Configuration $Configuration -Runtime 'win-x64' -Publish -NoLaunch
+            & (Join-Path $PSScriptRoot "Test-v$version-Logic.ps1") -ProjectRoot $root -RunBuild
+        }
+    }
+    foreach ($runtime in 'win-x64', 'linux-x64') {
+        Invoke-Step "Packaging $runtime" {
+            & (Join-Path $PSScriptRoot 'Package-GitHubRelease.ps1') -Runtime $runtime
         }
     }
     Invoke-Step 'Generating SHA256 checksums' {
-        & (Join-Path $PSScriptRoot 'Build-Checksums.ps1')
-        & (Join-Path $PSScriptRoot 'Build-Checksums.ps1') -Verify
+        & (Join-Path $PSScriptRoot 'Build-Checksums.ps1') -Include '*.zip'
+        & (Join-Path $PSScriptRoot 'Build-Checksums.ps1') -Include '*.zip' -Verify
     }
     $stopwatch.Stop()
     Write-Host "`nRelease v$version completed in $([math]::Round($stopwatch.Elapsed.TotalSeconds, 1)) seconds." -ForegroundColor Green

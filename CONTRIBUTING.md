@@ -1,3 +1,4 @@
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
 # Contributing
 
 Thank you for helping improve MystTiq Palworld Server Manager.
@@ -31,14 +32,15 @@ Thank you for helping improve MystTiq Palworld Server Manager.
 
 - `Build.ps1` is the supported root entry point.
 - `scripts/Build-Release.ps1` orchestrates validation and release assets.
-- `scripts/Build-Installer.ps1` supports Inno Setup 6 and 7 discovery through PATH, registry, environment, standard locations, or `-ISCC`.
+- `scripts/Package-GitHubRelease.ps1` builds the self-contained Windows (`-Runtime win-x64`) and Linux (`-Runtime linux-x64`) downloads.
+- `docs/release/README.md` is the step-by-step guide to publishing a GitHub release.
 - `scripts/Build-Checksums.ps1` creates and verifies `artifacts/SHA256SUMS.txt`.
 - Generated `artifacts`, `bin`, and `obj` directories must never be committed.
 
 ## Code expectations
 
 - Use nullable reference types correctly.
-- Avoid blocking the WPF UI thread.
+- Avoid blocking the Avalonia UI thread; long work belongs in the headless service or on a background task.
 - Validate paths and handle files disappearing during live Palworld saves.
 - Back up world data before destructive operations.
 - Do not introduce new direct world-write paths without a validated transaction and rollback design.

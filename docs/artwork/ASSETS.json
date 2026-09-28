@@ -358,5 +358,32 @@
     ],
     "mode": "RGB",
     "bytes": 1802635
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-host-dark.png",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "mode": "RGB",
+    "bytes": 2352820
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Artwork/page-art-host-light.png",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "mode": "RGB",
+    "bytes": 2352820
+  },
+  {
+    "asset": "src/MystTiq.Desktop/Assets/Icons/icon-host.png",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGB",
+    "bytes": 1744875
   }
 ]

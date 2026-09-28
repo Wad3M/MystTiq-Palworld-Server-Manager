@@ -1,4 +1,5 @@
-﻿[CmdletBinding()]
+﻿# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
+[CmdletBinding()]
 param(
     [string]$HostName = '192.168.1.248',
     [string]$UserName = 'mystroth',

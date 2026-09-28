@@ -1,3 +1,4 @@
+// MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 using System.Reflection;
 using System.Text.Json;
 using Avalonia;
@@ -35,7 +36,12 @@ var accounts = settings.GetProperty("accounts").EnumerateArray()
 // v0.8.22.0: optional; the Linux run names its renders "linux-...".
 var renderPrefix = settings.TryGetProperty("renderPrefix", out var prefixValue) ? prefixValue.GetString()! : "remote";
 
-AppBuilder.Configure<App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).SetupWithoutStarting();
+// v0.8.26.0: "realWindow": true runs in a real desktop session (the Linux VM's X11 display) instead of the headless
+// platform, and adds that session's own checks (RealSessionChecksAsync): an X11 window the window manager maximizes and
+// restores, the clipboard through the X server, a tray icon, and screenshots taken from the display itself.
+var realWindow = settings.TryGetProperty("realWindow", out var realValue) && realValue.GetBoolean();
+if (realWindow) AppBuilder.Configure<App>().UsePlatformDetect().SetupWithoutStarting();
+else AppBuilder.Configure<App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).SetupWithoutStarting();
 var checks = 0; var failures = new List<string>();
 void Check(bool ok, string description)
 {
@@ -119,6 +125,7 @@ foreach (var account in accounts)
     await Flush();
     vm.SelectedProfile = profiles.Load()[0];
     await Flush();
+    if (account == accounts[0] && realWindow) await RealSessionChecksAsync(window);
     if (account == accounts[0])
     {
         // v0.8.22.0: the window's own controls draw their icons, so they show on Linux (and Windows 10), which lack the
@@ -227,10 +234,10 @@ foreach (var account in accounts)
 
     selectedPageSet(vm, NavigationPage.Security);
     await Flush();
-    using (var frame = window.CaptureRenderedFrame()) frame?.Save(Path.Combine(output, $"{renderPrefix}-{account.Role.ToLowerInvariant()}-security.png"));
+    SaveShot(window, Path.Combine(output, $"{renderPrefix}-{account.Role.ToLowerInvariant()}-security.png"));
     selectedPageSet(vm, NavigationPage.Players);
     await Flush();
-    using (var frame = window.CaptureRenderedFrame()) frame?.Save(Path.Combine(output, $"{renderPrefix}-{account.Role.ToLowerInvariant()}-players.png"));
+    SaveShot(window, Path.Combine(output, $"{renderPrefix}-{account.Role.ToLowerInvariant()}-players.png"));
 
     // Sign Out is unavailable while the app is busy (as its button is), so wait for the refresh after sign-in first.
     var idle = await WaitFor(() => !vm.IsBusy, 60);
@@ -246,6 +253,98 @@ foreach (var account in accounts)
 
 Console.WriteLine(failures.Count == 0 ? $"PASS {checks} checks against {baseUrl}" : $"FAILED {failures.Count} of {checks} checks");
 return failures.Count == 0 ? 0 : 1;
+}
+
+// v0.8.26.0: a screenshot. Headless: the rendered frame. A real session: the whole display, as the X server shows it.
+void SaveShot(Window window, string path)
+{
+    if (!realWindow) { using var frame = window.CaptureRenderedFrame(); frame?.Save(path); return; }
+    var xwd = path + ".xwd";
+    RunTool("xwd", $"-root -silent -out \"{xwd}\"");
+    if (File.Exists(xwd)) { XwdToPng(xwd, path); File.Delete(xwd); }
+}
+
+// The desktop session's own checks, once, with the first account signed in: what headless rendering cannot show.
+async Task RealSessionChecksAsync(Window window)
+{
+    var handle = window.TryGetPlatformHandle();
+    var xid = handle?.Handle ?? IntPtr.Zero;
+    var props = xid != IntPtr.Zero ? RunTool("xprop", $"-id {xid} WM_STATE _NET_WM_NAME _NET_FRAME_EXTENTS") : "";
+    Check(handle?.HandleDescriptor == "XID" && xid != IntPtr.Zero && props.Contains("window state: Normal"),
+        $"real session: the Desktop is an X11 window the window manager manages ({handle?.HandleDescriptor} {xid}; {props.Replace('\n', ' ').Trim()})");
+
+    // Maximize and restore through the window manager, measured in device pixels against the work area.
+    var work = window.Screens.ScreenFromWindow(window)?.WorkingArea ?? window.Screens.Primary!.WorkingArea;
+    double Width() => window.Bounds.Width * window.RenderScaling;
+    window.WindowState = WindowState.Normal;
+    await WaitFor(() => false, 1);
+    var normalWidth = Width();
+    window.WindowState = WindowState.Maximized;
+    var maximized = await WaitFor(() => Math.Abs(Width() - work.Width) <= 40, 10);
+    var maximizedState = xid != IntPtr.Zero ? RunTool("xprop", $"-id {xid} _NET_WM_STATE") : "";
+    var maximizedWidth = Width();
+    window.WindowState = WindowState.Normal;
+    var restored = await WaitFor(() => Math.Abs(Width() - maximizedWidth) > 40 || Math.Abs(Width() - normalWidth) <= 40, 10);
+    Check(maximized && maximizedState.Contains("MAXIMIZED") && restored,
+        $"real session: maximize fills the work area {work.Width}x{work.Height} ({maximizedWidth:0} px, {maximizedState.Trim()}) and restore returns ({Width():0} px)");
+
+    // The clipboard, through the X server's selection.
+    var token = "MystTiq clipboard check " + Guid.NewGuid().ToString("N");
+    string? back = null;
+    try
+    {
+        await window.Clipboard!.SetTextAsync(token);
+        await WaitFor(() => false, 1);
+        back = await window.Clipboard.GetTextAsync();
+    }
+    catch (Exception ex) { back = "error: " + ex.Message; }
+    Check(back == token, $"real session: text copied to the clipboard reads back through the X server ({(back == token ? "same text" : back)})");
+
+    // The tray: Avalonia registers a StatusNotifierItem on the session bus; the panel shows it if it runs a watcher.
+    var tray = new TrayIcon { ToolTipText = "MystTiq session check", IsVisible = true,
+        Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri("avares://MystTiq.Desktop/Assets/PalworldServerManager.ico"))) };
+    TrayIcon.SetIcons(Application.Current!, new TrayIcons { tray });
+    await WaitFor(() => false, 3);
+    var names = RunTool("dbus-send", "--session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames");
+    var watcher = names.Contains("org.kde.StatusNotifierWatcher");
+    var item = names.Contains("org.kde.StatusNotifierItem-");
+    SaveShot(window, Path.Combine(output, $"{renderPrefix}-session-tray.png"));
+    Check(item, $"real session: the tray icon registers on the session bus (item {item}, panel watcher {watcher})");
+    TrayIcon.SetIcons(Application.Current!, new TrayIcons());
+}
+
+static string RunTool(string file, string arguments)
+{
+    try
+    {
+        using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file, arguments)
+            { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false });
+        if (process is null) return "";
+        var text = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+        process.WaitForExit(15000);
+        return text;
+    }
+    catch (Exception ex) { return "error: " + ex.Message; }
+}
+
+// X window dump (xwd -root) to PNG: the VM has no image converter, so the 24/32-bit ZPixmap is read here.
+static void XwdToPng(string xwdPath, string pngPath)
+{
+    var data = File.ReadAllBytes(xwdPath);
+    uint U(int field) => (uint)(data[field * 4] << 24 | data[field * 4 + 1] << 16 | data[field * 4 + 2] << 8 | data[field * 4 + 3]);
+    int headerSize = (int)U(0), width = (int)U(4), height = (int)U(5), byteOrder = (int)U(7), bitsPerPixel = (int)U(11), bytesPerLine = (int)U(12), colors = (int)U(19);
+    if (bitsPerPixel != 32) return;
+    var start = headerSize + colors * 12;
+    using var bitmap = new SkiaSharp.SKBitmap(width, height, SkiaSharp.SKColorType.Bgra8888, SkiaSharp.SKAlphaType.Opaque);
+    for (var y = 0; y < height; y++)
+        for (var x = 0; x < width; x++)
+        {
+            var i = start + y * bytesPerLine + x * 4;
+            byte b = byteOrder == 0 ? data[i] : data[i + 3], g = byteOrder == 0 ? data[i + 1] : data[i + 2], r = byteOrder == 0 ? data[i + 2] : data[i + 1];
+            bitmap.SetPixel(x, y, new SkiaSharp.SKColor(r, g, b));
+        }
+    using var png = bitmap.Encode(SkiaSharp.SKEncodedImageFormat.Png, 90);
+    File.WriteAllBytes(pngPath, png.ToArray());
 }
 
 static void selectedPageSet(MainWindowViewModel vm, NavigationPage page) =>

@@ -1,3 +1,4 @@
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
 # v0.8.18.0 Build and Test Plan
 
 1. Clean the build output, including the bin/obj folders of the harnesses and FakePalServer.

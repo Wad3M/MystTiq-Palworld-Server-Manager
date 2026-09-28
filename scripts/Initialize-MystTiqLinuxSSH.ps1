@@ -1,4 +1,5 @@
-﻿#requires -Version 7.0
+﻿# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
+#requires -Version 7.0
 [CmdletBinding()]
 param(
     [string]$LinuxHost = "192.168.1.248",

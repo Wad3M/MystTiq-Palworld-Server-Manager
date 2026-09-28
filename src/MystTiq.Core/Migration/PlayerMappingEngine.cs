@@ -1,3 +1,4 @@
+// MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 namespace MystTiq.Core.Migration;
 
 // v0.6.3.0 character/account migration. Adapted from the legacy WPF app's

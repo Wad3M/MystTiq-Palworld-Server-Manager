@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 set -euo pipefail
 VERSION="0.3.0.7"
 APP="${MYSTTIQ_APP:-$(pwd)/mysttiq-server}"

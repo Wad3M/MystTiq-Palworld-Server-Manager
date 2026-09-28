@@ -1,7 +1,8 @@
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
 <Project>
   <PropertyGroup>
     <!-- Single authoritative application version. Update this value for each build. -->
-    <VersionPrefix>0.8.25.0</VersionPrefix>
+    <VersionPrefix>0.8.26.0</VersionPrefix>
     <Version>$(VersionPrefix)</Version>
     <FileVersion>$(VersionPrefix)</FileVersion>
     <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>

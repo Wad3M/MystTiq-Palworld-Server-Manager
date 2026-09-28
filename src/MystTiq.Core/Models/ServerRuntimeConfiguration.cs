@@ -1,9 +1,9 @@
+// MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 namespace MystTiq.Core.Models;
 
 /// <summary>
 /// Minimal platform-neutral configuration consumed by the headless core.
-/// The WPF AppSettings model remains separate while shared state migrates
-/// incrementally into the cross-platform core.
+/// (The legacy WPF app's separate AppSettings model went with that app in v0.8.26.0.)
 /// </summary>
 public sealed record ServerRuntimeConfiguration(
     string ServerRoot,

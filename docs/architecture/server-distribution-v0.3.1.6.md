@@ -1,3 +1,4 @@
+<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
 # v0.3.1.6 Server Distribution Architecture
 
 The desktop does not launch SteamCMD directly.

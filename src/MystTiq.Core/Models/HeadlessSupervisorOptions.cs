@@ -1,3 +1,4 @@
+// MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 namespace MystTiq.Core.Models;
 
 // v0.6.3.0: platform-neutral -- was LinuxServiceSupervisorOptions, but nothing about these fields

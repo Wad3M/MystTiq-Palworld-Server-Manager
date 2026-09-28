@@ -1,3 +1,4 @@
+# MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -756,8 +757,8 @@ Add-MystTiqCheck $ctx 'Documentation' 'CHANGELOG.md has a v0.8.25.0 entry' ($cha
 $readmeText = Get-MystTiqText $ctx 'README.md'
 # v0.8.25.0 is the accepted baseline (user, 2026-09-25), replacing v0.8.1.0; the README's feature overview covers the 0.8 line.
 Add-MystTiqCheck $ctx 'Documentation' 'README records the accepted baseline v0.8.25.0 and its overview covers the 0.8 features (HOST tab, roles, appearance and language)' `
-    ($readmeText -match 'Accepted baseline:\*\* v0\.8\.25\.0' -and $readmeText -match '\| Host & Performance \|' -and $readmeText -match '### Accounts, Roles and Remote Management' -and
-     $readmeText -match '### Appearance & Language' -and (Get-MystTiqText $ctx 'docs\index.html') -match 'Accepted baseline: v0\.8\.25\.0') -Severity High
+    ($readmeText -match 'Accepted baseline: v0\.8\.25\.0' -and $readmeText -match 'Tune the host' -and $readmeText -match 'Share administration' -and
+     $readmeText -match 'Choose your appearance' -and (Get-MystTiqText $ctx 'docs\index.html') -match 'Accepted baseline: v0\.8\.25\.0') -Severity High
 # ---------------------------------------------------------------------------
 # 5. PowerShell syntax safety
 # ---------------------------------------------------------------------------
