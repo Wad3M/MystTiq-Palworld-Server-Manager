@@ -5,6 +5,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # v0.8.26.0: the Avalonia packages (Avalonia, .Desktop, .Fonts.Inter, .Themes.Fluent, .Headless) must move together.
+    # Separate pull requests each bumped only half of them and could never build (#15-#17, 2026-09-27).
+    groups:
+      avalonia:
+        patterns:
+          - "Avalonia*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
