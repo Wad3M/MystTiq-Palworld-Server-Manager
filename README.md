@@ -104,6 +104,7 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v0.9.3.0 | Delivered | The service's own messages follow the chosen language; review sheets for native reviewers |
 | v0.9.4.0 | Current | Disabled controls name the role they need; accessible names and Tab reach throughout |
 | v0.9.5.0 | Next | Fresh setup, upgrade from the accepted baseline, backup/restore and rollback tested on isolated data |
+| v0.9.6.0 | Planned | Firewall rule for the server's own port where the port is set; fast parallel server search that shows the ranges it scans |
 | v0.9.x | Planned | Native translation review, live integration evidence, a screen-reader pass and Linux acceptance |
 | v1.0 | Target | Stable release after the acceptance gates pass; no date committed |
 

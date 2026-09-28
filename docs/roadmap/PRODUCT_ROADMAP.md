@@ -62,6 +62,19 @@ This is the active plan. Version assignments after v0.9.4.0 are proposed milesto
 
 **Exit evidence:** a scripted run from a clean machine state and from a v0.8.25.0 install, with every setting, account and world compared before and after.
 
+## v0.9.6.0 — firewall rule for the server's port, and a fast server search
+
+Requested 2026-09-28, after a LAN join to the clone server needed a firewall rule typed by hand.
+
+- **Firewall rule for the current server's port.** Offer "Allow through Windows Firewall" where the server's game port is set (Configuration, the new-server wizard, Fleet clone), not only in Diagnostics. It adds or repairs one inbound UDP rule for that server's own port (`MystTiq Palworld Server - Game UDP <port>`), asks for administrator rights, and follows a port change: the old rule is removed or updated. The rule is shown per server with its state (present, missing, disabled, wrong profile).
+  - Fix first: the firewall check and repair start plain `powershell.exe`, which the service could not find on this machine ("cannot find the file specified"). Resolve it by its full `%SystemRoot%` path, or use the firewall API directly, and report a failure that names the cause.
+  - Linux: say which command to run (ufw/firewalld) rather than changing the firewall, as today.
+- **Fast server search.** Scan for MystTiq services with many parallel probes (a bounded pool of about 128–256, a short connect timeout before the `/healthz` request) and show each result as it answers, with a Cancel button.
+  - Show the IP ranges being scanned (for example "192.168.1.0/24 on Ethernet 2 · 172.20.64.0/24 on vEthernet (WSL)") and the progress (addresses probed / total, found so far).
+  - Scan each subnet once when several adapters share it, and skip virtual adapters (WSL, Hyper-V internal) unless chosen. Let the user add or remove a range.
+
+**Exit evidence:** a rule added and then updated after a port change, on Windows with elevation, and a join from another PC through it; a search of two /24 ranges that finishes in a few seconds, listing its ranges, its progress and each service as found.
+
 ## v0.9.x — integration and release stabilization
 
 These are remaining checks or targeted fixes, not a request to rebuild shipped features.
