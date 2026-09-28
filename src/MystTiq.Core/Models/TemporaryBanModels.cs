@@ -1,4 +1,4 @@
-// MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
+// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
 namespace MystTiq.Core.Models;
 
 // v0.7.15.0: backlog item -- a ban that auto-lifts after a set duration instead of staying

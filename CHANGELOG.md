@@ -1,4 +1,21 @@
-<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
+## v0.9.0.0 — The Window in 12 Languages
+
+- Every hard-coded XAML display text (932 places: labels, buttons, tips, menus, accessible names, dialogs, the tray menu)
+  is a translation key; `en.json` holds 998 texts. `scripts/Update-MystTiqUiText.ps1` converts, lists (`docs/i18n/
+  UI_TEXT_INVENTORY.md` and `.csv`) and checks them; the gate fails on a new hard-coded text.
+- 12 languages, all complete: English, 简体中文, Español, Português (Brasil), Русский, Deutsch, Français, 日本語, 한국어,
+  Italiano, Polski, Türkçe. Non-English texts are drafts awaiting native review; German and Spanish keep their reviewed
+  wording.
+- Chinese, Japanese and Korean use each language's own system font (resources set per language), so Japanese is not
+  drawn with Chinese glyphs.
+- The title bar has a language picker right of Settings (the same setting as Settings > Language) and a bell for
+  Notifications, which was a dot (the user, 2026-09-27).
+- The ArtworkHarness checks every language: tabs, Ribbon and Dashboard fit at 950x650, and no page shows an untranslated
+  English label. It caught French "SAUVEGARDE" not fitting the Dashboard card; French uses "BACKUP" there.
+- Roadmap: translation split into v0.9.0.0 (the window), v0.9.1.0 (status and error messages) and v0.9.2.0 (native
+  review, game names).
+
 ## v0.8.26.0 — Clean Repository, Live Acceptance Scripts
 
 - The legacy WPF app (`src/PalworldManager`), its Inno Setup installer and the scripts that only built or packaged it

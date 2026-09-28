@@ -1,19 +1,20 @@
-<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:services="using:MystTiq.Desktop.Services"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="MystTiq.Desktop.Views.ConfirmCloseTabDialog"
-        Title="Close Tab"
+        Title="{services:Tr ui.close_tab}"
         Width="440" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource CardGradient}"
         Icon="/Assets/PalworldServerManager.ico">
   <StackPanel Margin="22" Spacing="16">
-    <TextBlock Text="Server is running" FontSize="16" FontWeight="SemiBold"/>
+    <TextBlock Text="{services:Tr ui.server_is_running}" FontSize="16" FontWeight="SemiBold"/>
     <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-      <Button Content="Cancel" Click="Cancel_OnClick"/>
-      <Button Content="Leave Running" Click="LeaveRunning_OnClick"/>
-      <Button Classes="danger" Content="Stop &amp; Close" Click="StopAndClose_OnClick"/>
+      <Button Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
+      <Button Content="{services:Tr ui.leave_running}" Click="LeaveRunning_OnClick"/>
+      <Button Classes="danger" Content="{services:Tr ui.stop_and_close}" Click="StopAndClose_OnClick"/>
     </StackPanel>
   </StackPanel>
 </Window>

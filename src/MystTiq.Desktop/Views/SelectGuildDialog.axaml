@@ -1,8 +1,9 @@
-<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:services="using:MystTiq.Desktop.Services"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="MystTiq.Desktop.Views.SelectGuildDialog"
-        Title="Select Guild"
+        Title="{services:Tr ui.select_guild}"
         Width="420" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource CardGradient}"
@@ -11,8 +12,8 @@
     <TextBlock x:Name="PromptText" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
     <ComboBox x:Name="GuildCombo" HorizontalAlignment="Stretch"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-      <Button Content="Cancel" Click="Cancel_OnClick"/>
-      <Button Classes="primary" Content="Next" Click="Next_OnClick"/>
+      <Button Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
+      <Button Classes="primary" Content="{services:Tr ui.next_1ff57a}" Click="Next_OnClick"/>
     </StackPanel>
   </StackPanel>
 </Window>

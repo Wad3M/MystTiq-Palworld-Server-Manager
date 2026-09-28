@@ -1,4 +1,4 @@
-// MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
+// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
 using System.ComponentModel;
 using System.Text.Json;
 using Avalonia.Data;
@@ -23,12 +23,49 @@ public sealed record UiLanguage(string Code, string NativeName)
 // Localizer.Instance[key] and re-raise on LanguageChanged.
 public sealed class Localizer : INotifyPropertyChanged
 {
+    // v0.9.0.0: the most used languages on PCs and among Palworld's players (Steam's language share; the game's own
+    // language list), each shown in its own name. Everything but English is a draft awaiting native review.
     public static readonly IReadOnlyList<UiLanguage> Languages =
     [
         new("en", "English"),
+        new("zh-Hans", "简体中文"),
+        new("es", "Español"),
+        new("pt-BR", "Português (Brasil)"),
+        new("ru", "Русский"),
         new("de", "Deutsch"),
-        new("es", "Español")
+        new("fr", "Français"),
+        new("ja", "日本語"),
+        new("ko", "한국어"),
+        new("it", "Italiano"),
+        new("pl", "Polski"),
+        new("tr", "Türkçe")
     ];
+
+    // v0.9.0.0: the fonts each language is drawn with. Inter (and Bahnschrift for display text) cover the Latin and
+    // Cyrillic languages; Chinese, Japanese and Korean fall back to the system's own font for that language, first the
+    // Windows one, then the Linux one. Naming the language's own font (not just "any font with the character") keeps
+    // Japanese from being drawn with Chinese glyph shapes, which share code points.
+    public static string CjkFonts(string code) => code switch
+    {
+        "zh-Hans" => "Microsoft YaHei UI, Microsoft YaHei, Noto Sans CJK SC, Noto Sans SC, WenQuanYi Micro Hei",
+        "ja" => "Yu Gothic UI, Meiryo UI, Meiryo, Noto Sans CJK JP, Noto Sans JP",
+        "ko" => "Malgun Gothic, Noto Sans CJK KR, Noto Sans KR",
+        _ => string.Empty
+    };
+
+    public static string UiFontFamily(string code) => Join("Inter", CjkFonts(code), "Segoe UI");
+    public static string DisplayFontFamily(string code) => Join("Bahnschrift, Segoe UI Variable Display", CjkFonts(code), "Inter");
+    public static string DisplayTextFontFamily(string code) => Join("Bahnschrift, Segoe UI Variable Text", CjkFonts(code), "Inter");
+    private static string Join(params string[] parts) => string.Join(", ", parts.Where(p => p.Length > 0));
+
+    // The styles read these resources (DesignSystem.axaml); set on every language change.
+    private static void ApplyFonts(string code)
+    {
+        if (Avalonia.Application.Current is not { } app) return;
+        app.Resources["UiFontFamily"] = new Avalonia.Media.FontFamily(UiFontFamily(code));
+        app.Resources["UiDisplayFontFamily"] = new Avalonia.Media.FontFamily(DisplayFontFamily(code));
+        app.Resources["UiDisplayTextFontFamily"] = new Avalonia.Media.FontFamily(DisplayTextFontFamily(code));
+    }
 
     public static Localizer Instance { get; } = new();
 
@@ -61,6 +98,7 @@ public sealed class Localizer : INotifyPropertyChanged
     public void SetLanguage(string? code)
     {
         var language = Languages.FirstOrDefault(l => l.Code.Equals(code, StringComparison.OrdinalIgnoreCase)) ?? Languages[0];
+        ApplyFonts(language.Code);
         if (language.Code == LanguageCode && current.Count > 0) return;
         current = language.Code == "en" ? english : LoadAsset(language.Code);
         LanguageCode = language.Code;

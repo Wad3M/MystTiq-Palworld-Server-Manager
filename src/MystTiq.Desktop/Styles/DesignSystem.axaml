@@ -1,4 +1,4 @@
-<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Styles.Resources>
@@ -499,7 +499,7 @@
   <Style Selector="Window">
     <Setter Property="Background" Value="{DynamicResource Bg0Brush}"/>
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-    <Setter Property="FontFamily" Value="Inter, Segoe UI"/>
+    <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}"/>
     <Setter Property="FontSize" Value="13"/>
   </Style>
 
@@ -507,7 +507,7 @@
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
   </Style>
   <Style Selector="TextBlock.display">
-    <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter"/>
+    <Setter Property="FontFamily" Value="{DynamicResource UiDisplayFontFamily}"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
   </Style>
   <Style Selector="TextBlock.muted">
@@ -1184,12 +1184,12 @@
        the "MYSTTIQ" wordmark sits on StatusSurfaceGradient (the title bar), which is already
        Dark/Light-aware, so the text needs to be too. -->
   <Style Selector="TextBlock.brandText">
-    <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter"/>
+    <Setter Property="FontFamily" Value="{DynamicResource UiDisplayFontFamily}"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
   </Style>
   <Style Selector="TextBlock.brandVersion">
-    <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Text, Inter"/>
+    <Setter Property="FontFamily" Value="{DynamicResource UiDisplayTextFontFamily}"/>
     <Setter Property="FontSize" Value="10"/>
     <Setter Property="LetterSpacing" Value="0.45"/>
     <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>

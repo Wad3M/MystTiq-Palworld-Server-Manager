@@ -1,19 +1,20 @@
-<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:services="using:MystTiq.Desktop.Services"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="MystTiq.Desktop.Views.ConfirmSaveDiscardDialog"
-        Title="Unsaved Changes"
+        Title="{services:Tr ui.unsaved_changes}"
         Width="440" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource CardGradient}"
         Icon="/Assets/PalworldServerManager.ico">
   <StackPanel Margin="22" Spacing="16">
-    <TextBlock Text="Unsaved configuration changes" FontSize="16" FontWeight="SemiBold"/>
+    <TextBlock Text="{services:Tr ui.unsaved_configuration_changes}" FontSize="16" FontWeight="SemiBold"/>
     <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-      <Button Content="Cancel" Click="Cancel_OnClick"/>
-      <Button Content="Discard" Click="Discard_OnClick"/>
-      <Button Classes="primary" Content="Save Changes" Click="Save_OnClick"/>
+      <Button Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
+      <Button Content="{services:Tr ui.discard}" Click="Discard_OnClick"/>
+      <Button Classes="primary" Content="{services:Tr ui.save_changes}" Click="Save_OnClick"/>
     </StackPanel>
   </StackPanel>
 </Window>

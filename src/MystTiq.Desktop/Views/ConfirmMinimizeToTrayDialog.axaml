@@ -1,20 +1,21 @@
-<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:services="using:MystTiq.Desktop.Services"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="MystTiq.Desktop.Views.ConfirmMinimizeToTrayDialog"
-        Title="Server Still Running"
+        Title="{services:Tr ui.server_still_running}"
         Width="440" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource CardGradient}"
         Icon="/Assets/PalworldServerManager.ico">
   <StackPanel Margin="22" Spacing="16">
-    <TextBlock Text="Server is running" FontSize="16" FontWeight="SemiBold"/>
+    <TextBlock Text="{services:Tr ui.server_is_running}" FontSize="16" FontWeight="SemiBold"/>
     <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-      <Button Content="Cancel" Click="Cancel_OnClick"/>
-      <Button Content="Force Exit" Classes="danger" Click="ForceExit_OnClick" ToolTip.Tip="Terminate the server immediately and exit -- skips the graceful shutdown."/>
-      <Button Content="Safe Exit" Click="SafeExit_OnClick" ToolTip.Tip="Stop the server gracefully, then exit."/>
-      <Button Classes="primary" Content="Minimize to Tray" Click="MinimizeToTray_OnClick"/>
+      <Button Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
+      <Button Content="{services:Tr ui.force_exit}" Classes="danger" Click="ForceExit_OnClick" ToolTip.Tip="{services:Tr ui.terminate_the_server_immediately_and_exit_skips_c4d9fe}"/>
+      <Button Content="{services:Tr ui.safe_exit}" Click="SafeExit_OnClick" ToolTip.Tip="{services:Tr ui.stop_the_server_gracefully_then_exit}"/>
+      <Button Classes="primary" Content="{services:Tr ui.minimize_to_tray}" Click="MinimizeToTray_OnClick"/>
     </StackPanel>
   </StackPanel>
 </Window>

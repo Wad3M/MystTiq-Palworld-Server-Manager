@@ -1,8 +1,9 @@
-<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:services="using:MystTiq.Desktop.Services"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="MystTiq.Desktop.Views.ConfirmCopyPlayerDialog"
-        Title="Copy Player Data"
+        Title="{services:Tr ui.copy_player_data}"
         Width="480" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource CardGradient}"
@@ -16,10 +17,10 @@
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
-    <TextBlock Text="A fresh safety backup is taken automatically before this change." Foreground="{DynamicResource OrangeBrush}" TextWrapping="Wrap" FontSize="12"/>
+    <TextBlock Text="{services:Tr ui.a_fresh_safety_backup_is_taken_automatically_bef_51d566}" Foreground="{DynamicResource OrangeBrush}" TextWrapping="Wrap" FontSize="12"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-      <Button Content="Cancel" Click="Cancel_OnClick"/>
-      <Button Classes="primary" Content="Copy Data" Click="Confirm_OnClick"/>
+      <Button Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
+      <Button Classes="primary" Content="{services:Tr ui.copy_data}" Click="Confirm_OnClick"/>
     </StackPanel>
   </StackPanel>
 </Window>

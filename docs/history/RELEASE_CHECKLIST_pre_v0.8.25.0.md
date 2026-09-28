@@ -1,4 +1,4 @@
-<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
 ### v0.4.18.2 Workspace + Diagnostics + Settings closeout acceptance
 - [ ] Workspace refresh/validate/save uses the editable configuration API and rollback-safe headless persistence.
 - [ ] Browse/open actions are local-profile-only; remote paths never invoke the GUI computer shell.

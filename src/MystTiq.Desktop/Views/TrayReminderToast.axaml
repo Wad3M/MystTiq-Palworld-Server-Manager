@@ -1,5 +1,6 @@
-<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:services="using:MystTiq.Desktop.Services"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="MystTiq.Desktop.Views.TrayReminderToast"
         SystemDecorations="None" ShowInTaskbar="False" Topmost="True"
@@ -7,7 +8,7 @@
         WindowStartupLocation="Manual" Background="Transparent">
   <Border Background="{DynamicResource CardGradient}" BorderBrush="#28445D" BorderThickness="1" CornerRadius="8" Padding="16,12" MaxWidth="320">
     <StackPanel Spacing="4">
-      <TextBlock Text="MystTiq is still running" FontWeight="SemiBold" FontSize="13"/>
+      <TextBlock Text="{services:Tr ui.mysttiq_is_still_running}" FontWeight="SemiBold" FontSize="13"/>
       <TextBlock x:Name="MessageText" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
     </StackPanel>
   </Border>

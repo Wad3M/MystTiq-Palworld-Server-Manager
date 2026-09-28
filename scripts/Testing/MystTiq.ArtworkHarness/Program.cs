@@ -1,4 +1,4 @@
-// MystTiq v0.8.26.0: file reviewed for this release (2026-09-27).
+﻿// MystTiq v0.9.0.0: file reviewed for this release (2026-09-28).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -197,7 +197,12 @@ Check(Localizer.Lookup(new Dictionary<string, string>(), english, "page.Dashboar
 
 string[] VisibleTexts() => window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible && t.Text is not null).Select(t => t.Text!).ToArray();
 // The Ribbon section above left the tab connected to the preview profile, which is what these renders need.
-foreach (var (code, tools, dashboard, alertCenter) in new[] { ("de", "Werkzeuge", "Übersicht", "Warnungen"), ("es", "Herramientas", "Panel", "Alertas") })
+// v0.9.0.0: every language, with its own texts (the pinned German and Spanish words are still checked below).
+Check(Localizer.Parse(ReadLanguage("de"))["category.tools"] == "Werkzeuge" && Localizer.Parse(ReadLanguage("es"))["nav.Dashboard"] == "Panel",
+    "de and es keep their reviewed words (Werkzeuge, Panel)");
+foreach (var (code, tools, dashboard, alertCenter) in Localizer.Languages.Where(l => l.Code != "en")
+    .Select(l => Localizer.Parse(ReadLanguage(l.Code))).Zip(Localizer.Languages.Where(l => l.Code != "en"))
+    .Select(p => (p.Second.Code, p.First["category.tools"], p.First["nav.Dashboard"], p.First["nav.AlertCenter"])))
 {
     window.Width = 1440; window.Height = 880;
     Localizer.Instance.SetLanguage(code);
@@ -236,8 +241,56 @@ Check(Localizer.Instance.LanguageCode == "de" && savedLanguage.Contains("\"de\""
 vm.SelectedUiLanguage = Localizer.Languages[0];
 Check(Localizer.Instance.LanguageCode == "en", "Choosing English again switches back");
 
+// v0.9.0.0: the title bar has the language picker (right of Settings) and a bell for Notifications; both pickers are
+// the same setting.
+var titlePicker = window.FindControl<ComboBox>("TitleLanguagePicker")!;
+var bellButton = window.GetVisualDescendants().OfType<Button>().First(b => b.CommandParameter as string == "Notifications" && b.Classes.Contains("ghost"));
+Check(titlePicker is not null && titlePicker.IsEffectivelyVisible && titlePicker.ItemCount == 12 && bellButton.Content is PathIcon,
+    $"The title bar has the language picker with all 12 languages ({titlePicker?.ItemCount}) and a bell for Notifications");
+titlePicker!.SelectedItem = Localizer.Languages.Single(l => l.Code == "ja");
+Dispatcher.UIThread.RunJobs();
+Check(Localizer.Instance.LanguageCode == "ja" && vm.SelectedUiLanguage.Code == "ja" && VisibleTexts().Contains(Localizer.Parse(ReadLanguage("ja"))["category.tools"]),
+    "Choosing 日本語 in the title bar switches the whole window and the Settings choice follows");
+titlePicker.SelectedItem = Localizer.Languages[0];
+Dispatcher.UIThread.RunJobs();
+Check(Localizer.Instance.LanguageCode == "en", "Choosing English in the title bar switches back");
+
+// v0.9.0.0: no page shows a hard-coded English text in another language. Every page is visited in every language and
+// each visible text is compared with the English ui.* texts (translatable XAML texts) whose translation differs.
+window.Width = 1440; window.Height = 880;
+foreach (var language in Localizer.Languages.Where(l => l.Code != "en"))
+{
+    var translated = Localizer.Parse(ReadLanguage(language.Code));
+    var englishOnly = english.Where(kv => kv.Key.StartsWith("ui.") && translated[kv.Key] != kv.Value).Select(kv => kv.Value).ToHashSet();
+    Localizer.Instance.SetLanguage(language.Code);
+    var leftovers = new List<string>();
+    foreach (var page in Enum.GetValues<NavigationPage>())
+    {
+        selectedPage.SetValue(vm, page);
+        Dispatcher.UIThread.RunJobs();
+        leftovers.AddRange(VisibleTexts().Where(englishOnly.Contains).Select(t => $"{page}: {t}"));
+        leftovers.AddRange(window.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible && b.Content is string s && englishOnly.Contains(s)).Select(b => $"{page}: {b.Content}"));
+    }
+    Check(leftovers.Count == 0, $"{language.NativeName}: no page shows an untranslated English label or button [{string.Join(" | ", leftovers.Distinct().Take(6))}]");
+    if (language.Code is "zh-Hans" or "ja" or "ko" or "ru")
+    {
+        selectedPage.SetValue(vm, NavigationPage.Dashboard);
+        Render($"language-{language.Code}-dashboard-full");
+    }
+}
+Localizer.Instance.SetLanguage("en");
+Dispatcher.UIThread.RunJobs();
+Check(Application.Current!.Resources["UiFontFamily"] is Avalonia.Media.FontFamily enFont && string.Join(", ", enFont.FamilyNames) == "Inter, Segoe UI",
+    "English is drawn with Inter, as before");
+Localizer.Instance.SetLanguage("ja");
+Check(Application.Current!.Resources["UiFontFamily"] is Avalonia.Media.FontFamily jaFont && jaFont.FamilyNames.Contains("Yu Gothic UI") && !jaFont.FamilyNames.Any(f => f.Contains("YaHei")),
+    "Japanese is drawn with a Japanese font (Yu Gothic / Meiryo / Noto CJK JP), not a Chinese one");
+Localizer.Instance.SetLanguage("en");
+Dispatcher.UIThread.RunJobs();
+
 // v0.8.6.0: the Ribbon in every language. Its groups are page-specific, so every page is visited.
-foreach (var code in new[] { "en", "de", "es" })
+// v0.9.0.0: all 12 languages.
+foreach (var code in Localizer.Languages.Select(l => l.Code))
 {
     Localizer.Instance.SetLanguage(code);
     var raw = new List<string>();
@@ -315,7 +368,7 @@ Check(DashboardTexts().Contains("ACTIVE WORLD") && DashboardTexts().Contains($"S
 // At the minimum window size no Dashboard label may be split mid-word or cut off, in any language. Labels are found by
 // matching the visible text against that language's dashboard.* strings.
 window.Width = 950; window.Height = 650;
-foreach (var code in new[] { "en", "de", "es" })
+foreach (var code in Localizer.Languages.Select(l => l.Code))
 {
     Localizer.Instance.SetLanguage(code);
     selectedPage.SetValue(vm, NavigationPage.Dashboard);

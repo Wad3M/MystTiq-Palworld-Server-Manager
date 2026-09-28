@@ -1,7 +1,7 @@
-<!-- MystTiq v0.8.26.0: file reviewed for this release (2026-09-27). -->
+<!-- MystTiq v0.9.0.0: file reviewed for this release (2026-09-28). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-27. **Current version: v0.8.26.0. Accepted baseline: v0.8.25.0. Next milestone: v0.9.0.0.**
+Updated 2026-09-27. **Current version: v0.9.0.0. Accepted baseline: v0.8.25.0. Next: v0.9.1.0.**
 
 This is the active plan. Version assignments after v0.9.0.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
@@ -19,14 +19,23 @@ This is the active plan. Version assignments after v0.9.0.0 are proposed milesto
 | Repository and verification (v0.8.26.0) | Legacy WPF app, installer and ~1000 obsolete files removed; every file reviewed; Windows and Linux packages; live acceptance scripts for the Linux desktop session, in-game give/teleport, alert delivery and Windows contrast themes |
 | Translation foundation | English fallback and German/Spanish coverage for navigation, headers, Ribbon and Dashboard labels; not a completed translation |
 
-## v0.9.0.0 — complete translation coverage
+## v0.9.0.0 — the window in 12 languages (delivered 2026-09-27)
 
-- Translate remaining page content and status values, dialogs, validation/error messages, notifications, tooltips and accessible names.
-- Keep internal command identities stable while translating display text; preserve live language switching and English fallback.
-- Review German and Spanish with native speakers, including plurals, formatting, text expansion and keyboard/accessibility labels.
+- Every hard-coded XAML text (labels, buttons, tips, menus, accessible names, the tray menu; 998 texts) is a key in `Assets/i18n/en.json`, made with `scripts/Update-MystTiqUiText.ps1`, which also writes the text list (`docs/i18n/UI_TEXT_INVENTORY.md` and `.csv`) and lets the release gate fail on any new hard-coded text.
+- Languages, chosen by use on PCs and among Palworld's players: English, 简体中文, Español, Português (Brasil), Русский, Deutsch, Français, 日本語, 한국어, Italiano, Polski, Türkçe. All complete; all but English are drafts awaiting native review.
+- Chinese, Japanese and Korean use each language's own system font (Windows, then Noto CJK on Linux), so Japanese is not drawn with Chinese glyph shapes.
+- The language can be picked in the title bar (right of Settings) as well as in Settings; the Notifications button is a bell.
+- Checked offline in every language: the category tabs fit at 950x650, no Ribbon button is cut off, no Dashboard label splits or is cut off, and no page shows an untranslated English label.
+
+## v0.9.1.0 — status and error messages
+
+- The app's own status values, dialogs, validation and error messages (about 980 texts written in code; listed in the inventory) are translated as they are shown on screen, so the app's logic keeps working with the English values. Values filled into a message (names, numbers) are kept.
+- Then the service's own messages (Doctor findings, operation results), which arrive in English from the server.
+
+## v0.9.2.0 — review and remaining language work
+
+- Review each language with native speakers, including plurals, date and number formatting, text expansion and keyboard/accessibility labels.
 - Localize item/Pal display names where supported by the installed game's tables.
-- Audit missing keys and visible hard-coded text. Verify narrow layouts in each supported language.
-- Treat additional languages as follow-up scope. Check CJK fonts before advertising CJK support.
 
 **Exit evidence:** a page-by-page coverage checklist, key/fallback checks, reviewed language samples and visual/accessibility checks for each advertised language.
 
@@ -70,4 +79,4 @@ Per-accent artwork, a separate night HOST illustration, OS-level traffic shaping
 
 ## Current publication work
 
-Publish v0.8.26.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.
+Publish v0.9.0.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.
