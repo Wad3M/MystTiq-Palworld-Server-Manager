@@ -1,14 +1,18 @@
-// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
 using System.Reflection;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+// v0.9.7.0: Avalonia 12's clipboard text methods are extensions here (GetTextAsync became TryGetTextAsync).
+using Avalonia.Input.Platform;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using MystTiq.Core.Services;
 using MystTiq.Desktop;
+// v0.9.7.0: Avalonia 12 has its own Avalonia.Controls.NavigationPage; this harness means the app's.
+using NavigationPage = MystTiq.Desktop.Models.NavigationPage;
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 using MystTiq.Desktop.ViewModels;
@@ -295,7 +299,7 @@ async Task RealSessionChecksAsync(Window window)
     {
         await window.Clipboard!.SetTextAsync(token);
         await WaitFor(() => false, 1);
-        back = await window.Clipboard.GetTextAsync();
+        back = await window.Clipboard.TryGetTextAsync();
     }
     catch (Exception ex) { back = "error: " + ex.Message; }
     Check(back == token, $"real session: text copied to the clipboard reads back through the X server ({(back == token ? "same text" : back)})");

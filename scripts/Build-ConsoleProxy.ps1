@@ -1,4 +1,4 @@
-# MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
+# MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
 #requires -Version 7.0
 <#
 .SYNOPSIS

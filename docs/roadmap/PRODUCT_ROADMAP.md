@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.6.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.7.0: file reviewed for this release (2026-09-29). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-28. **Current version: v0.9.6.0. Accepted baseline: v0.8.25.0. Next: v0.9.7.0.**
+Updated 2026-09-28. **Current version: v0.9.7.0. Accepted baseline: v0.8.25.0. Next: v0.9.x acceptance.**
 
-This is the active plan. Version assignments after v0.9.6.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v0.9.7.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Foundation delivered through v0.8.26.0
 
@@ -83,11 +83,14 @@ Requested 2026-09-28, after a LAN join to the clone server needed a firewall rul
 
 **Exit evidence met:** the firewall state for the port each server binds, read in well under a second; a search of 255 addresses in under a second that lists its ranges, its progress and the service it found. **Still to record:** a rule added and then updated after a port change, with elevation, and a join from another PC through it.
 
-## v0.9.7.0 — Avalonia 12
+## v0.9.7.0 — Avalonia 12 (delivered 2026-09-29)
 
-Move the desktop from Avalonia 11.3 to 12.x as its own version, all four packages together (Avalonia, Avalonia.Desktop, Avalonia.Fonts.Inter, Avalonia.Themes.Fluent) plus `Avalonia.Headless` in the ArtworkHarness and RemoteSignInHarness. Dependabot's split pull requests (#15–#17, 2026-09-27) failed CI because each bumped only half of the set.
+- **Avalonia 11.3 → 12.1.3**, all four packages together (Avalonia, Avalonia.Desktop, Avalonia.Fonts.Inter, Avalonia.Themes.Fluent) and `Avalonia.Headless` 12.1.3 in the ArtworkHarness and RemoteSignInHarness, pinned to that exact version; Dependabot already groups the Avalonia packages (v0.8.26.0), so its split pull requests (#15–#17) cannot recur.
+- What the new version needed: the clipboard's text methods moved to extensions in `Avalonia.Input.Platform` (`GetTextAsync` became `TryGetTextAsync`); `TextBox.Watermark` became `PlaceholderText` (62 text boxes); `Window.SystemDecorations` became `WindowDecorations`; Avalonia 12 has its own `NavigationPage` control, so the harnesses alias the app's.
+- Recorded checks: the desktop builds with no new warnings; the ArtworkHarness passes in all 12 languages on Avalonia 12, and its page renders match 11.3's apart from an undersized (950×650) window, which now fits its content (the ribbon folds into "»") where 11.3 ran off the edge.
+- Still open: the real Linux desktop session on the test VM (window, maximize and restore, clipboard, tray), which needs the test user logged in to the VM's desktop.
 
-**Exit evidence:** clean Windows and Linux builds, both harnesses and the full release gate passing, the real Linux desktop session, and a look at every page in each appearance mode. Then pin the version and have Dependabot group the Avalonia packages.
+**Exit evidence met:** a clean Windows build, both harnesses building and the ArtworkHarness passing, the full release gate, and every page compared in each appearance mode. **Still to record:** the Linux desktop session on Avalonia 12.
 
 ## v0.9.x — integration and release stabilization
 
@@ -106,7 +109,7 @@ These are remaining checks or targeted fixes, not a request to rebuild shipped f
 | Distribution | Build the current desktop with its matching headless sidecar, include the Windows native helper, verify clean-machine launch, source parity, version identity and SHA-256 checksums |
 | Documentation | Keep README, site, release notes and supported-platform claims aligned with observed results; publish known limitations |
 | Crash analysis | Add signatures only from real anonymized reports; do not invent coverage for unseen crashes |
-| Avalonia 12 migration | Planned as v0.9.7.0 (above). Move the desktop from Avalonia 11.3 to 12.x as its own version, all four packages together (Avalonia, Avalonia.Desktop, Avalonia.Fonts.Inter, Avalonia.Themes.Fluent) plus `Avalonia.Headless` in the ArtworkHarness and RemoteSignInHarness. Dependabot's split pull requests (#15–#17, 2026-09-27) failed CI because each bumped only half of the set. Evidence: clean Windows and Linux builds, both harnesses and the full release gate passing, the real Linux desktop session, and a look at every page in each appearance mode. Then pin the version and have Dependabot group the Avalonia packages |
+| Avalonia 12 migration | Delivered in v0.9.7.0 (above); the Linux desktop session on Avalonia 12 remains |
 
 Use isolated test roots and disposable server data. Live verification needs the relevant test environment, account/channel or online player; missing evidence must remain explicitly open.
 

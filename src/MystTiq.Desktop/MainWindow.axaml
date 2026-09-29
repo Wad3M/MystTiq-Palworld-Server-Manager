@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.6.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.7.0: file reviewed for this release (2026-09-29). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -10,7 +10,7 @@
         x:DataType="vm:MainWindowViewModel"
         Title="{services:Tr ui.mysttiq_palworld_server_manager}"
         Width="1440" Height="880" MinWidth="950" MinHeight="650"
-        SystemDecorations="None" ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="None" ExtendClientAreaToDecorationsHint="True"
         WindowStartupLocation="CenterScreen" SizeChanged="Window_OnSizeChanged"
         Icon="/Assets/PalworldServerManager.ico">
   <Grid RowDefinitions="66,42,Auto,*,44">
@@ -848,7 +848,7 @@
           <StackPanel IsVisible="{Binding IsGuildsPage}" Spacing="14">
             <Border Classes="card accentWorld">
               <Grid ColumnDefinitions="2*,*,Auto,Auto" ColumnSpacing="10">
-                <TextBox Watermark="{services:Tr ui.search_guild_id_leader_or_player_id}" Text="{Binding GuildSearchText}"/>
+                <TextBox PlaceholderText="{services:Tr ui.search_guild_id_leader_or_player_id}" Text="{Binding GuildSearchText}"/>
                 <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_guild_status_filter}" Grid.Column="1" ItemsSource="{Binding GuildStatusFilters}" SelectedItem="{Binding SelectedGuildStatusFilter}"/>
                 <TextBlock Grid.Column="2" Text="{services:TrText GuildVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/>
                 <Button Grid.Column="3" Content="{services:Tr ui.export_guilds_csv}" Click="ExportGuildsCsv_Click"/>
@@ -876,11 +876,11 @@
                 <Border Classes="card accentWorld"><StackPanel Spacing="7"><TextBlock Text="{services:Tr ui.members}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.members}" ItemsSource="{Binding SelectedExplorerGuild.MemberPlayerIds}" MaxHeight="110"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontFamily="Consolas, monospace" FontSize="11"/></DataTemplate></ListBox.ItemTemplate></ListBox><TextBlock Text="{services:Tr ui.base_ids}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.base_ids}" ItemsSource="{Binding SelectedExplorerGuild.BaseIds}" MaxHeight="90"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontFamily="Consolas, monospace" FontSize="11"/></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
               </StackPanel>
             </Grid>
-            <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.guild_ownership_operations}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_guild_above_requires_pal_5e89f6}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="180,2*,Auto" ColumnSpacing="10"><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_guild_operation}" ItemsSource="{Binding GuildOperationTypes}" SelectedItem="{Binding GuildOperationType}"/><TextBox Grid.Column="1" Watermark="{services:Tr ui.target_player_id_32_hex}" Text="{Binding GuildOperationPlayerId}"/><Button Grid.Column="2" Content="{services:Tr ui.preview}" Command="{Binding PreviewGuildOwnershipCommand}"/></Grid><TextBlock Text="{services:TrText GuildOperationStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding GuildOperationConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyGuildOwnershipCommand}"/></StackPanel></Border>
+            <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.guild_ownership_operations}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_guild_above_requires_pal_5e89f6}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="180,2*,Auto" ColumnSpacing="10"><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_guild_operation}" ItemsSource="{Binding GuildOperationTypes}" SelectedItem="{Binding GuildOperationType}"/><TextBox Grid.Column="1" PlaceholderText="{services:Tr ui.target_player_id_32_hex}" Text="{Binding GuildOperationPlayerId}"/><Button Grid.Column="2" Content="{services:Tr ui.preview}" Command="{Binding PreviewGuildOwnershipCommand}"/></Grid><TextBlock Text="{services:TrText GuildOperationStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding GuildOperationConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyGuildOwnershipCommand}"/></StackPanel></Border>
           </StackPanel>
 
           <StackPanel IsVisible="{Binding IsBasesPage}" Spacing="14">
-            <Border Classes="card accentWorld"><Grid ColumnDefinitions="2*,*,Auto,Auto" ColumnSpacing="10"><TextBox Watermark="{services:Tr ui.search_base_id_guild_or_leader}" Text="{Binding BaseSearchText}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_base_status_filter}" Grid.Column="1" ItemsSource="{Binding BaseStatusFilters}" SelectedItem="{Binding SelectedBaseStatusFilter}"/><TextBlock Grid.Column="2" Text="{services:TrText BaseVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/><Button Grid.Column="3" Content="{services:Tr ui.export_bases_csv}" Click="ExportBasesCsv_Click"/></Grid></Border>
+            <Border Classes="card accentWorld"><Grid ColumnDefinitions="2*,*,Auto,Auto" ColumnSpacing="10"><TextBox PlaceholderText="{services:Tr ui.search_base_id_guild_or_leader}" Text="{Binding BaseSearchText}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_base_status_filter}" Grid.Column="1" ItemsSource="{Binding BaseStatusFilters}" SelectedItem="{Binding SelectedBaseStatusFilter}"/><TextBlock Grid.Column="2" Text="{services:TrText BaseVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/><Button Grid.Column="3" Content="{services:Tr ui.export_bases_csv}" Click="ExportBasesCsv_Click"/></Grid></Border>
             <Grid ColumnDefinitions="3*,2*" ColumnSpacing="14">
               <Border Classes="card accentWorld"><Grid RowDefinitions="Auto,*" RowSpacing="8"><TextBlock Text="{services:Tr ui.authoritative_base_references}" FontSize="18" FontWeight="SemiBold"/><ListBox Grid.Row="1" ItemsSource="{Binding FilteredExplorerBases}" SelectedItem="{Binding SelectedExplorerBase}" MaxHeight="480" ToolTip.Tip="{services:Tr ui.right_click_for_base_administration_actions}">
                 <ListBox.ContextMenu>
@@ -894,7 +894,7 @@
                 <ListBox.ItemTemplate><DataTemplate x:DataType="models:BaseExplorerItemDto"><Grid ColumnDefinitions="2*,2*,*" ColumnSpacing="10" Margin="0,8"><StackPanel><TextBlock Text="{Binding BaseId}" FontFamily="Consolas, monospace" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Evidence}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="{Binding GuildName}"/><TextBlock Text="{Binding GuildId}" FontSize="10" Foreground="{DynamicResource MutedBrush}"/></StackPanel><TextBlock Grid.Column="2" Text="{services:TrText OwnerHealth}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
               <StackPanel Grid.Column="1" Spacing="14"><Border Classes="card accentWorld"><StackPanel Spacing="7"><TextBlock Text="{services:Tr ui.base_ownership_evidence}" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedExplorerBase.BaseId}" FontFamily="Consolas, monospace" FontSize="16" Foreground="{DynamicResource VioletBrush}"/><TextBlock Text="{Binding SelectedExplorerBase.GuildName}" FontSize="18"/><TextBlock Text="{Binding SelectedExplorerBase.GuildId}"/><TextBlock Text="{Binding SelectedExplorerBase.LeaderName}"/><TextBlock Text="{Binding SelectedExplorerBase.LeaderPlayerId}" FontFamily="Consolas, monospace" FontSize="11"/><TextBlock Text="{services:TrText SelectedExplorerBase.OwnerHealth}"/><TextBlock Text="{services:TrText SelectedExplorerBase.Evidence}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Button Content="{services:Tr ui.copy_base_id}" Click="CopyBaseId_Click"/></StackPanel></Border></StackPanel>
             </Grid>
-            <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.base_ownership_transfer}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_base_above_moves_the_bas_c0d0ff}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="2*,Auto" ColumnSpacing="10"><TextBox Watermark="{services:Tr ui.target_guild_id_32_hex}" Text="{Binding BaseTransferTargetGuildId}"/><Button Grid.Column="1" Content="{services:Tr ui.preview_transfer}" Command="{Binding PreviewBaseTransferCommand}"/></Grid><TextBlock Text="{services:TrText BaseTransferStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding BaseTransferConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyBaseTransferCommand}"/></StackPanel></Border>
+            <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.base_ownership_transfer}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_base_above_moves_the_bas_c0d0ff}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="2*,Auto" ColumnSpacing="10"><TextBox PlaceholderText="{services:Tr ui.target_guild_id_32_hex}" Text="{Binding BaseTransferTargetGuildId}"/><Button Grid.Column="1" Content="{services:Tr ui.preview_transfer}" Command="{Binding PreviewBaseTransferCommand}"/></Grid><TextBlock Text="{services:TrText BaseTransferStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding BaseTransferConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyBaseTransferCommand}"/></StackPanel></Border>
             <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.base_recovery}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_base_above_permanently_r_763a73}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Button Content="{services:Tr ui.preview_recovery}" HorizontalAlignment="Left" Command="{Binding PreviewBaseRecoveryCommand}"/><TextBlock Text="{services:TrText BaseRecoveryStatusText}" Foreground="{DynamicResource OrangeBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_73337a}" IsChecked="{Binding BaseRecoveryConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyBaseRecoveryCommand}"/></StackPanel></Border>
           </StackPanel>
 
@@ -928,11 +928,11 @@
                   <TextBlock Text="{services:Tr ui.server_identity}" Grid.ColumnSpan="4" FontWeight="Bold" Foreground="{DynamicResource AmberBrush}" Margin="0,0,0,4"/>
                   <TextBlock Grid.Row="1" Text="{services:Tr ui.server_name}" Classes="muted" VerticalAlignment="Center"/>
                   <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <TextBox Text="{Binding ServerNameSetting.DisplayValue, Mode=TwoWay}" Watermark="{services:Tr ui.palworld_server_name}" Classes.dirty="{Binding ServerNameSetting.IsDirty}"/>
+                    <TextBox Text="{Binding ServerNameSetting.DisplayValue, Mode=TwoWay}" PlaceholderText="{services:Tr ui.palworld_server_name}" Classes.dirty="{Binding ServerNameSetting.IsDirty}"/>
                     <Button Grid.Column="1" Content="{services:Tr ui.generate}" Classes="inspectAction" Command="{Binding GenerateServerNameCommand}" ToolTip.Tip="{services:Tr ui.generates_a_random_server_browser_name_locally_s_c54884}" AutomationProperties.Name="{services:Tr ui.generate_a_random_server_name}" Padding="14,7" FontWeight="SemiBold"/>
                   </Grid>
                   <TextBlock Grid.Row="1" Grid.Column="2" Text="{services:Tr ui.description}" Classes="muted" VerticalAlignment="Center"/>
-                  <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding ServerDescriptionSetting.DisplayValue, Mode=TwoWay}" Watermark="{services:Tr ui.server_browser_description}" Classes.dirty="{Binding ServerDescriptionSetting.IsDirty}"/>
+                  <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding ServerDescriptionSetting.DisplayValue, Mode=TwoWay}" PlaceholderText="{services:Tr ui.server_browser_description}" Classes.dirty="{Binding ServerDescriptionSetting.IsDirty}"/>
                   <TextBlock Grid.Row="2" Text="{services:Tr ui.admin_password}" Classes="muted" VerticalAlignment="Center"/>
                   <TextBox AutomationProperties.Name="{services:Tr ui.admin_password}" Grid.Row="2" Grid.Column="1" Text="{Binding AdminPasswordSetting.DisplayValue, Mode=TwoWay}" PasswordChar="●" Classes.dirty="{Binding AdminPasswordSetting.IsDirty}"/>
                   <TextBlock Grid.Row="2" Grid.Column="2" Text="{services:Tr ui.server_password}" Classes="muted" VerticalAlignment="Center"/>
@@ -977,12 +977,12 @@
                 <Button Grid.Column="1" Classes.primary="{Binding IsConfigAdvancedView}" Content="{services:Tr ui.advanced_settings}" Command="{Binding ShowAdvancedConfigCommand}"/>
                 <TextBlock Grid.Column="2" Text="{services:Tr ui.qol_preset}" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Margin="12,0,0,0"/>
                 <ComboBox Grid.Column="3" ItemsSource="{Binding PalworldConfigPresets}" SelectedItem="{Binding SelectedConfigPreset, Mode=TwoWay}" ToolTip.Tip="{services:Tr ui.selecting_a_preset_applies_it_immediately}"/>
-                <TextBox Grid.Column="5" Watermark="{services:Tr ui.new_preset_name}" Text="{Binding NewConfigPresetName, Mode=TwoWay}"/>
+                <TextBox Grid.Column="5" PlaceholderText="{services:Tr ui.new_preset_name}" Text="{Binding NewConfigPresetName, Mode=TwoWay}"/>
                 <Button Grid.Column="6" Content="{services:Tr ui.save_as_preset}" Command="{Binding SaveCurrentAsPresetCommand}" ToolTip.Tip="{services:Tr ui.saves_every_currently_loaded_setting_value_as_a_e221d7}"/>
               </Grid>
 
               <Grid ColumnDefinitions="*,180" ColumnSpacing="8">
-                <TextBox Watermark="{services:Tr ui.search_setting_name_category_or_description}" Text="{Binding ConfigSearchText, Mode=TwoWay}"/>
+                <TextBox PlaceholderText="{services:Tr ui.search_setting_name_category_or_description}" Text="{Binding ConfigSearchText, Mode=TwoWay}"/>
                 <ComboBox AutomationProperties.Name="{services:Tr ui.qol_preset}" Grid.Column="1" ItemsSource="{Binding PalworldConfigCategories}" SelectedItem="{Binding SelectedConfigCategory, Mode=TwoWay}"/>
               </Grid>
 
@@ -1278,7 +1278,7 @@
                     <NumericUpDown Value="{Binding TeleportCooldownSeconds}" Minimum="0" Maximum="3600" FormatString="0" Width="130" Margin="0,0,0,6" ToolTip.Tip="{services:Tr ui.how_long_a_player_waits_between_teleports}"/>
                   </WrapPanel>
                   <TextBox Text="{Binding TeleportPointsText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" MaxHeight="200"
-                           Watermark="{services:Tr ui.one_per_line_name_then_x_y_optional_height_spawn_c9162e}"/>
+                           PlaceholderText="{services:Tr ui.one_per_line_name_then_x_y_optional_height_spawn_c9162e}"/>
                   <TextBlock Text="{services:Tr ui.coordinates_are_paldefender_s_own_what_its_getpo_038d13}"
                              Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
                   <WrapPanel Orientation="Horizontal">
@@ -1288,7 +1288,7 @@
                   </WrapPanel>
                   <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                     <TextBlock Text="{services:Tr ui.send_selected_player_to}" VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Text="{Binding TeleportSendPointName}" Watermark="{services:Tr ui.point_name}"/>
+                    <TextBox Grid.Column="1" Text="{Binding TeleportSendPointName}" PlaceholderText="{services:Tr ui.point_name}"/>
                     <Button Grid.Column="2" Content="{services:Tr ui.send}" Command="{Binding SendPlayerToTeleportPointCommand}" ToolTip.Tip="{services:Tr ui.teleports_the_selected_online_player_to_a_saved_b0d643}"/>
                   </Grid>
                   <TextBlock Text="{services:TrText TeleportStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
@@ -1354,7 +1354,7 @@
                 <TextBlock Grid.Column="1" Text="{services:TrText PlayerVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/>
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="2*,*,*,Auto" ColumnSpacing="10">
-                <TextBox Watermark="{services:Tr ui.search_player_id_guild_or_platform}" Text="{Binding PlayerSearchText}"/>
+                <TextBox PlaceholderText="{services:Tr ui.search_player_id_guild_or_platform}" Text="{Binding PlayerSearchText}"/>
                 <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_player_filter}" Grid.Column="1" ItemsSource="{Binding PlayerViewFilters}" SelectedItem="{Binding SelectedPlayerViewFilter}"/>
                 <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_admin_filter}" Grid.Column="2" ItemsSource="{Binding PlayerAdminFilters}" SelectedItem="{Binding SelectedPlayerAdminFilter}"/>
                 <!-- v0.7.18.0: requested directly: a selectable way to hide rows that share a
@@ -1424,9 +1424,9 @@
                 <StackPanel Spacing="8">
                   <TextBlock Text="{services:Tr ui.notes_and_warnings}" FontSize="17" FontWeight="SemiBold"/>
                   <TextBlock Text="{services:TrText PlayerMetadataState}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                  <TextBox Watermark="{services:Tr ui.private_operator_notes}" Text="{Binding SelectedPlayerNotes}" AcceptsReturn="True" MinHeight="78" MaxLength="4000" TextWrapping="Wrap"/>
+                  <TextBox PlaceholderText="{services:Tr ui.private_operator_notes}" Text="{Binding SelectedPlayerNotes}" AcceptsReturn="True" MinHeight="78" MaxLength="4000" TextWrapping="Wrap"/>
                   <Button Content="{services:Tr ui.save_notes}" Command="{Binding SavePlayerNotesCommand}"/>
-                  <TextBox Watermark="{services:Tr ui.add_an_operator_warning}" Text="{Binding NewPlayerWarning}" MaxLength="1000"/>
+                  <TextBox PlaceholderText="{services:Tr ui.add_an_operator_warning}" Text="{Binding NewPlayerWarning}" MaxLength="1000"/>
                   <Button Content="{services:Tr ui.add_warning}" Command="{Binding AddPlayerWarningCommand}" Classes="warning"/>
                   <ListBox AutomationProperties.Name="{services:Tr ui.notes_and_warnings}" ItemsSource="{Binding SelectedPlayerWarnings}" MaxHeight="130">
                     <ListBox.ItemTemplate><DataTemplate x:DataType="models:PlayerWarningDto"><TextBlock Text="{services:TrText DisplayText}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate>
@@ -1449,7 +1449,7 @@
               <TextBlock Text="{services:Tr ui.player_administration}" FontSize="17" FontWeight="SemiBold"/>
               <TextBlock Text="{services:Tr ui.kick_and_ban_route_through_the_palworld_rest_api_8c91fd}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
               <Grid ColumnDefinitions="2*,Auto,Auto" ColumnSpacing="10">
-                <TextBox Watermark="{services:Tr ui.kick_ban_reason}" Text="{Binding PlayerActionMessage}"/>
+                <TextBox PlaceholderText="{services:Tr ui.kick_ban_reason}" Text="{Binding PlayerActionMessage}"/>
                 <Button Grid.Column="1" Content="{services:Tr ui.kick}" Command="{Binding KickSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Classes="warning"/>
                 <Button Grid.Column="2" Content="{services:Tr ui.ban}" Command="{Binding BanSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Classes="danger"/>
               </Grid>
@@ -1476,7 +1476,7 @@
               <TextBlock Text="{services:Tr ui.give_items_or_pals}" IsVisible="{Binding CanManageAdmin}" FontWeight="SemiBold" Margin="0,4,0,0"/>
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding CanManageAdmin}">
                 <TextBox Text="{Binding GiveItemsText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="140"
-                         Watermark="{services:Tr ui.one_per_line_item_palsphere_10_pal_weaseldragon_9c778c}"/>
+                         PlaceholderText="{services:Tr ui.one_per_line_item_palsphere_10_pal_weaseldragon_9c778c}"/>
                 <Button Grid.Column="1" Content="{services:Tr ui.give}" VerticalAlignment="Top" Classes="success" Command="{Binding GiveItemSelectedPlayerCommand}" ToolTip.Tip="{services:Tr ui.gives_these_to_the_selected_online_player_throug_2328b5}"/>
               </Grid>
               <TextBlock IsVisible="{Binding CanManageAdmin}" Text="{services:Tr ui.lines_use_palworld_s_internal_ids_the_same_ones_e66c62}"
@@ -1488,7 +1488,7 @@
                 <StackPanel Spacing="6">
                   <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                     <TextBlock Text="{services:Tr ui.find_an_item_or_pal}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Text="{Binding GameIdFilterText}" Watermark="{services:Tr ui.search_names_or_ids_e_g_pal_sphere_lamball}"/>
+                    <TextBox Grid.Column="1" Text="{Binding GameIdFilterText}" PlaceholderText="{services:Tr ui.search_names_or_ids_e_g_pal_sphere_lamball}"/>
                     <Button Grid.Column="2" Content="{services:Tr ui.load_ids}" Command="{Binding LoadGameIdsCommand}" ToolTip.Tip="{services:Tr ui.reads_the_item_and_pal_ids_that_occur_in_this_se_8cee74}"/>
                   </Grid>
                   <ListBox AutomationProperties.Name="{services:Tr ui.find_an_item_or_pal}" x:Name="GameIdList" ItemsSource="{Binding FilteredGameIds}" SelectedItem="{Binding SelectedGameId}" MaxHeight="170">
@@ -1593,8 +1593,8 @@
                   <CheckBox AutomationProperties.Name="{services:Tr ui.enabled_auto_kick_anyone_not_listed}" Grid.Column="1" IsChecked="{Binding WhitelistConfig.Enabled}"/>
                 </Grid>
                 <Grid ColumnDefinitions="*,180,Auto" ColumnSpacing="10">
-                  <TextBox Text="{Binding NewWhitelistPlayerId}" Watermark="{services:Tr ui.steam_userid}"/>
-                  <TextBox Grid.Column="1" Text="{Binding NewWhitelistLabel}" Watermark="{services:Tr ui.label_optional}"/>
+                  <TextBox Text="{Binding NewWhitelistPlayerId}" PlaceholderText="{services:Tr ui.steam_userid}"/>
+                  <TextBox Grid.Column="1" Text="{Binding NewWhitelistLabel}" PlaceholderText="{services:Tr ui.label_optional}"/>
                   <Button Grid.Column="2" Content="{services:Tr ui.add}" Command="{Binding AddWhitelistEntryCommand}"/>
                 </Grid>
                 <ListBox AutomationProperties.Name="{services:Tr ui.whitelist}" ItemsSource="{Binding WhitelistEntries}" SelectedItem="{Binding SelectedWhitelistEntry}" MaxHeight="180">
@@ -1646,9 +1646,9 @@
                   </StackPanel>
                   <StackPanel Spacing="6" IsEnabled="{Binding HasSelectedKit}">
                     <TextBlock Text="{services:Tr ui.selected_kit}" FontWeight="SemiBold"/>
-                    <TextBox Text="{Binding KitNameText, Mode=TwoWay}" Watermark="{services:Tr ui.kit_name}" MaxLength="64"/>
+                    <TextBox Text="{Binding KitNameText, Mode=TwoWay}" PlaceholderText="{services:Tr ui.kit_name}" MaxLength="64"/>
                     <TextBox Text="{Binding KitEntriesText, Mode=TwoWay}" AcceptsReturn="True" MinHeight="110" FontFamily="Consolas, monospace" FontSize="12"
-                             Watermark="{services:Tr ui.one_per_line_item_palsphere_10_pal_weaseldragon_9c778c}"/>
+                             PlaceholderText="{services:Tr ui.one_per_line_item_palsphere_10_pal_weaseldragon_9c778c}"/>
                     <TextBlock Text="{services:Tr ui.tip_find_an_item_or_pal_under_player_administrat_167e7f}"
                                Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                   </StackPanel>
@@ -1802,7 +1802,7 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="{services:Tr ui.refresh_audit}" Command="{Binding RefreshActivityCommand}" ToolTip.Tip="{services:Tr ui.reload_persistent_mysttiq_management_and_api_act_03d42b}"/><Button Content="{services:Tr ui.export_visible}" Click="ExportActivity_Click"/><Button Content="{services:Tr ui.clear_persistent_audit_policy_locked}" IsEnabled="False"/></StackPanel>
               </Grid>
-              <Grid Grid.Row="1" ColumnDefinitions="2*,*,*" ColumnSpacing="8"><TextBox Text="{Binding ActivitySearchText}" Watermark="{services:Tr ui.search_activity}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_severity_filter}" Grid.Column="1" ItemsSource="{Binding ActivitySeverityOptions}" SelectedItem="{Binding ActivitySeverityFilter}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_category_filter}" Grid.Column="2" ItemsSource="{Binding ActivityCategoryOptions}" SelectedItem="{Binding ActivityCategoryFilter}"/></Grid>
+              <Grid Grid.Row="1" ColumnDefinitions="2*,*,*" ColumnSpacing="8"><TextBox Text="{Binding ActivitySearchText}" PlaceholderText="{services:Tr ui.search_activity}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_severity_filter}" Grid.Column="1" ItemsSource="{Binding ActivitySeverityOptions}" SelectedItem="{Binding ActivitySeverityFilter}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_category_filter}" Grid.Column="2" ItemsSource="{Binding ActivityCategoryOptions}" SelectedItem="{Binding ActivityCategoryFilter}"/></Grid>
               <TextBlock Grid.Row="2" Text="{services:TrText ActivityDetail}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
               <ListBox Grid.Row="3" ItemsSource="{Binding ActivityLines}" MaxHeight="360" ToolTip.Tip="{services:Tr ui.persistent_management_events_written_by_the_head_d21c48}">
                 <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontFamily="Consolas, monospace" FontSize="11" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate>
@@ -1831,7 +1831,7 @@
                 <TextBlock Grid.Column="4" Text="{services:TrText RconDetail}" MaxWidth="360" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
               </Grid>
               <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBox Text="{Binding RconCommandText, Mode=TwoWay}" Watermark="{services:Tr ui.rcon_command_for_example_info_showplayers_save}"/>
+                <TextBox Text="{Binding RconCommandText, Mode=TwoWay}" PlaceholderText="{services:Tr ui.rcon_command_for_example_info_showplayers_save}"/>
                 <Button Grid.Column="1" Classes="primary" Content="{services:Tr ui.send_command}" Command="{Binding RconSendCommand}" IsEnabled="{Binding CanManageAdmin}"/>
               </Grid>
               <ListBox AutomationProperties.Name="{services:Tr ui.a11y_rcon_output}" Grid.Row="3" ItemsSource="{Binding RconOutputLines}" MaxHeight="220" Background="{DynamicResource DecoBackground_0A1118}" FontFamily="Consolas, monospace" FontSize="11" ClipToBounds="True">
@@ -1849,7 +1849,7 @@
               <Grid Grid.Row="1" ColumnDefinitions="150,150,*,Auto" ColumnSpacing="8">
                 <ComboBox ItemsSource="{Binding ConsoleSeverityOptions}" SelectedItem="{Binding ConsoleSeverityFilter, Mode=TwoWay}" ToolTip.Tip="{services:Tr ui.filter_the_console_by_severity}"/>
                 <ComboBox Grid.Column="1" ItemsSource="{Binding ConsoleCategoryOptions}" SelectedItem="{Binding ConsoleCategoryFilter, Mode=TwoWay}" ToolTip.Tip="{services:Tr ui.filter_the_console_by_source_category}"/>
-                <TextBox Grid.Column="2" Watermark="{services:Tr ui.search_console}" Text="{Binding ConsoleSearchText, Mode=TwoWay}"/>
+                <TextBox Grid.Column="2" PlaceholderText="{services:Tr ui.search_console}" Text="{Binding ConsoleSearchText, Mode=TwoWay}"/>
                 <CheckBox Grid.Column="3" Content="{services:Tr ui.hide_routine_rest}" IsChecked="{Binding HideRoutineRest, Mode=TwoWay}" VerticalAlignment="Center"/>
               </Grid>
               <ListBox AutomationProperties.Name="{services:Tr ui.console_log}" Grid.Row="2" ItemsSource="{Binding FilteredLogLines}" MaxHeight="390" Background="{DynamicResource DecoBackground_07110A}" BorderBrush="{DynamicResource DecoBorder_214C2A}" Foreground="{DynamicResource GreenBrush}"
@@ -2222,7 +2222,7 @@
               <StackPanel Spacing="10" Margin="0,8,0,0">
                 <TextBlock Text="{services:Tr ui.browse_palworld_mods_on_nexus_mods_and_install_a_851339}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
                 <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                  <TextBox Text="{Binding NexusApiKeyInput, Mode=TwoWay}" PasswordChar="●" Watermark="{services:Tr ui.nexus_mods_api_key}"/>
+                  <TextBox Text="{Binding NexusApiKeyInput, Mode=TwoWay}" PasswordChar="●" PlaceholderText="{services:Tr ui.nexus_mods_api_key}"/>
                   <Button Grid.Column="1" Classes="primary" Content="{services:Tr ui.connect_1a2303}" Command="{Binding NexusConnectCommand}"/>
                   <Button Grid.Column="2" Content="{services:Tr ui.save_key}" Command="{Binding NexusSaveKeyCommand}" ToolTip.Tip="{services:Tr ui.stores_the_key_on_this_pc_only_encrypted_for_you_88097d}"/>
                   <Button Grid.Column="3" Content="{services:Tr ui.forget_key}" Command="{Binding NexusForgetKeyCommand}"/>
@@ -2232,7 +2232,7 @@
                   <Button Content="{services:Tr ui.trending}" Command="{Binding NexusLoadListCommand}" CommandParameter="trending" Margin="0,0,6,6"/>
                   <Button Content="{services:Tr ui.latest_added}" Command="{Binding NexusLoadListCommand}" CommandParameter="latest_added" Margin="0,0,6,6"/>
                   <Button Content="{services:Tr ui.latest_updated}" Command="{Binding NexusLoadListCommand}" CommandParameter="latest_updated" Margin="0,0,14,6"/>
-                  <TextBox Width="260" Text="{Binding NexusLookupText, Mode=TwoWay}" Watermark="{services:Tr ui.mod_id_or_nexusmods_com_page_url}" Margin="0,0,6,6"/>
+                  <TextBox Width="260" Text="{Binding NexusLookupText, Mode=TwoWay}" PlaceholderText="{services:Tr ui.mod_id_or_nexusmods_com_page_url}" Margin="0,0,6,6"/>
                   <Button Content="{services:Tr ui.look_up}" Command="{Binding NexusLookupCommand}" Margin="0,0,6,6"/>
                 </WrapPanel>
                 <ListBox AutomationProperties.Name="{services:Tr ui.a11y_nexus_mods_results}" ItemsSource="{Binding NexusMods}" SelectedItem="{Binding SelectedNexusMod}" MaxHeight="220">
@@ -2262,7 +2262,7 @@
                 </ListBox>
                 <Button Classes="success" Content="{services:Tr ui.download_and_install_selected_file}" Command="{Binding NexusInstallFileCommand}" HorizontalAlignment="Left" ToolTip.Tip="{services:Tr ui.premium_accounts_only_because_nexus_only_issues_4d6eac}"/>
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <TextBox Text="{Binding NexusNxmLinkText, Mode=TwoWay}" Watermark="{services:Tr ui.free_account_paste_the_nxm_link_from_the_mod_man_1520ec}"/>
+                  <TextBox Text="{Binding NexusNxmLinkText, Mode=TwoWay}" PlaceholderText="{services:Tr ui.free_account_paste_the_nxm_link_from_the_mod_man_1520ec}"/>
                   <Button Grid.Column="1" Content="{services:Tr ui.install_from_link}" Command="{Binding NexusInstallFromNxmCommand}"/>
                 </Grid>
                 <TextBlock Text="{services:TrText NexusStatusText}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
@@ -2394,7 +2394,7 @@
                        selection. -->
                   <TextBlock Text="{services:Tr ui.no_known_workshop_match_set_a_source_url_e_g_a_g_e24281}" Classes="muted" FontSize="10" TextWrapping="Wrap" IsVisible="{Binding ShowNoModDescriptionMatchMessage}"/>
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <TextBox Text="{Binding SelectedModDescriptionSourceInput}" Watermark="{services:Tr ui.https_github_com_owner_repo}"/>
+                    <TextBox Text="{Binding SelectedModDescriptionSourceInput}" PlaceholderText="{services:Tr ui.https_github_com_owner_repo}"/>
                     <Button Grid.Column="1" Content="{services:Tr ui.set_source}" Command="{Binding SetSelectedModDescriptionSourceCommand}"/>
                   </Grid>
                 </StackPanel>
@@ -2787,7 +2787,7 @@
         <StackPanel IsVisible="{Binding IsNotificationsPage}" Spacing="12">
           <!-- v0.7.42.0: Refresh/Self-Test/Mark All Read/Export Visible moved to the ribbon. -->
           <Border Classes="card accentSystem"><Grid ColumnDefinitions="*"><StackPanel><TextBlock Text="{services:TrText NotificationState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Grid></Border>
-          <Border Classes="card accentSystem"><StackPanel Spacing="10"><Grid ColumnDefinitions="2*,*" ColumnSpacing="8"><TextBox Text="{Binding NotificationSearchText}" Watermark="{services:Tr ui.search_notifications}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_severity_filter}" Grid.Column="1" ItemsSource="{Binding NotificationSeverityOptions}" SelectedItem="{Binding NotificationSeverityFilter}"/></Grid>
+          <Border Classes="card accentSystem"><StackPanel Spacing="10"><Grid ColumnDefinitions="2*,*" ColumnSpacing="8"><TextBox Text="{Binding NotificationSearchText}" PlaceholderText="{services:Tr ui.search_notifications}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_severity_filter}" Grid.Column="1" ItemsSource="{Binding NotificationSeverityOptions}" SelectedItem="{Binding NotificationSeverityFilter}"/></Grid>
             <Grid ColumnDefinitions="2*,*" ColumnSpacing="12">
               <ListBox AutomationProperties.Name="{services:Tr nav.Notifications}" ItemsSource="{Binding FilteredNotifications}" SelectedItem="{Binding SelectedNotification}" MaxHeight="470"><ListBox.ItemTemplate><DataTemplate x:DataType="models:NotificationItemDto"><Border Classes="statuscard accentSystem" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{services:TrText Title}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Message}" TextWrapping="Wrap"/><TextBlock Text="{services:TrText Severity}" Foreground="{DynamicResource VioletBrush}"/><TextBlock Text="{services:TrText StateText}" Classes="muted" FontSize="10"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
               <Border Grid.Column="1" Classes="statuscard accentSystem"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.selected_notification}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:TrText SelectedNotification.Title}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText SelectedNotification.Message}" TextWrapping="Wrap"/><TextBlock Text="{services:TrText SelectedNotification.StateText}" Classes="muted"/><Button Content="{services:Tr ui.toggle_read_unread}" Command="{Binding ToggleNotificationReadCommand}"/><Button Content="{services:Tr ui.pin_unpin}" Command="{Binding ToggleNotificationPinCommand}"/><Button Classes="danger" Content="{services:Tr ui.dismiss}" Command="{Binding DismissNotificationCommand}"/></StackPanel></Border>
@@ -2816,14 +2816,14 @@
             <StackPanel Spacing="10">
               <TextBlock Text="{services:Tr ui.new_rule}" FontSize="17" FontWeight="SemiBold"/>
               <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
-                <TextBlock Text="{services:Tr ui.name}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Column="1" Text="{Binding NewAutomationRuleName}" Watermark="{services:Tr ui.nightly_backup}"/>
+                <TextBlock Text="{services:Tr ui.name}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Column="1" Text="{Binding NewAutomationRuleName}" PlaceholderText="{services:Tr ui.nightly_backup}"/>
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.trigger}" VerticalAlignment="Center" Classes="muted"/><ComboBox AutomationProperties.Name="{services:Tr ui.trigger}" Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AutomationTriggerKinds}" SelectedItem="{Binding NewAutomationTriggerKind}"/>
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.time_utc_hh_mm_interval_min_idle_threshold_min}" VerticalAlignment="Center" Classes="muted"/>
-                <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,*,*" ColumnSpacing="10"><TextBox Text="{Binding NewAutomationTimeOfDayUtc}" Watermark="03:00"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.time_utc_hh_mm_interval_min_idle_threshold_min}" Grid.Column="1" Value="{Binding NewAutomationIntervalMinutes}" Minimum="1"/><NumericUpDown Grid.Column="2" Value="{Binding NewAutomationIdleThresholdMinutes}" Minimum="1" ToolTip.Tip="{services:Tr ui.used_only_when_trigger_is_idleempty_stop_after_t_8c30de}"/></Grid>
+                <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,*,*" ColumnSpacing="10"><TextBox Text="{Binding NewAutomationTimeOfDayUtc}" PlaceholderText="03:00"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.time_utc_hh_mm_interval_min_idle_threshold_min}" Grid.Column="1" Value="{Binding NewAutomationIntervalMinutes}" Minimum="1"/><NumericUpDown Grid.Column="2" Value="{Binding NewAutomationIdleThresholdMinutes}" Minimum="1" ToolTip.Tip="{services:Tr ui.used_only_when_trigger_is_idleempty_stop_after_t_8c30de}"/></Grid>
                 <TextBlock Grid.Row="3" Text="{services:Tr ui.action}" VerticalAlignment="Center" Classes="muted"/><ComboBox AutomationProperties.Name="{services:Tr ui.action}" Grid.Row="3" Grid.Column="1" ItemsSource="{Binding AutomationActionKinds}" SelectedItem="{Binding NewAutomationActionKind}"/>
                 <TextBlock Grid.Row="4" Text="{services:Tr ui.notification_title_message}" VerticalAlignment="Center" Classes="muted"/>
-                <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="*,*" ColumnSpacing="10"><TextBox Text="{Binding NewAutomationNotificationTitle}" Watermark="{services:Tr ui.title}"/><TextBox Grid.Column="1" Text="{Binding NewAutomationNotificationMessage}" Watermark="{services:Tr ui.message}"/></Grid>
-                <TextBlock Grid.Row="5" Text="{services:Tr ui.rcon_command}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="5" Grid.Column="1" Text="{Binding NewAutomationRconCommand}" Watermark="{services:Tr ui.broadcast_hello}"/>
+                <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="*,*" ColumnSpacing="10"><TextBox Text="{Binding NewAutomationNotificationTitle}" PlaceholderText="{services:Tr ui.title}"/><TextBox Grid.Column="1" Text="{Binding NewAutomationNotificationMessage}" PlaceholderText="{services:Tr ui.message}"/></Grid>
+                <TextBlock Grid.Row="5" Text="{services:Tr ui.rcon_command}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="5" Grid.Column="1" Text="{Binding NewAutomationRconCommand}" PlaceholderText="{services:Tr ui.broadcast_hello}"/>
               </Grid>
               <Button Classes="success" Content="{services:Tr ui.create_rule}" HorizontalAlignment="Left" Command="{Binding CreateAutomationRuleCommand}"/>
             </StackPanel>
@@ -2912,19 +2912,19 @@
               <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
                 <TextBlock Text="{services:Tr ui.enabled_92c1cd}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.enabled_92c1cd}" Grid.Column="1" IsChecked="{Binding DiscordBotConfig.Enabled}"/>
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.bot_token}" VerticalAlignment="Center" Classes="muted"/>
-                <TextBox Grid.Row="1" Grid.Column="1" Width="320" HorizontalAlignment="Left" Text="{Binding DiscordBotConfig.BotToken}" PasswordChar="•" Watermark="{Binding DiscordBotTokenWatermark}"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Width="320" HorizontalAlignment="Left" Text="{Binding DiscordBotConfig.BotToken}" PasswordChar="•" PlaceholderText="{Binding DiscordBotTokenWatermark}"/>
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.guild_server_id}" VerticalAlignment="Center" Classes="muted"/><TextBox AutomationProperties.Name="{services:Tr ui.guild_server_id}" Grid.Row="2" Grid.Column="1" Text="{Binding DiscordBotConfig.GuildId}"/>
-                <TextBlock Grid.Row="3" Text="{services:Tr ui.owner_discord_user_id_optional}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="3" Grid.Column="1" Text="{Binding DiscordBotConfig.OwnerDiscordUserId}" Watermark="{services:Tr ui.always_granted_the_owner_role_bypassing_role_map_48220c}"/>
+                <TextBlock Grid.Row="3" Text="{services:Tr ui.owner_discord_user_id_optional}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="3" Grid.Column="1" Text="{Binding DiscordBotConfig.OwnerDiscordUserId}" PlaceholderText="{services:Tr ui.always_granted_the_owner_role_bypassing_role_map_48220c}"/>
                 <!-- v0.7.95.0: live features. The bot keeps ONE status message up to date in this channel and
                      posts join, leave and server start or stop lines to the events channel. Needs the bot to
                      have View Channel, Send Messages and Embed Links there. Blank turns each off. -->
-                <TextBlock Grid.Row="4" Text="{services:Tr ui.live_status_channel_id}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="4" Grid.Column="1" Text="{Binding DiscordBotConfig.StatusChannelId}" Watermark="{services:Tr ui.optional_one_self_updating_status_message_is_kep_aadc8d}"/>
-                <TextBlock Grid.Row="5" Text="{services:Tr ui.events_channel_id}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="5" Grid.Column="1" Text="{Binding DiscordBotConfig.EventsChannelId}" Watermark="{services:Tr ui.optional_players_joining_or_leaving_server_start_ed21b8}"/>
+                <TextBlock Grid.Row="4" Text="{services:Tr ui.live_status_channel_id}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="4" Grid.Column="1" Text="{Binding DiscordBotConfig.StatusChannelId}" PlaceholderText="{services:Tr ui.optional_one_self_updating_status_message_is_kep_aadc8d}"/>
+                <TextBlock Grid.Row="5" Text="{services:Tr ui.events_channel_id}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="5" Grid.Column="1" Text="{Binding DiscordBotConfig.EventsChannelId}" PlaceholderText="{services:Tr ui.optional_players_joining_or_leaving_server_start_ed21b8}"/>
                 <TextBlock Grid.Row="6" Text="{services:Tr ui.show_status_in_bot_presence}" VerticalAlignment="Center" Classes="muted"/><CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding DiscordBotConfig.ShowPresence}" Content="{services:Tr ui.bot_shows_watching_n_players_online}"/>
               </Grid>
               <TextBlock Text="{services:Tr ui.role_mapping_discord_role_id_mysttiq_role}" FontWeight="SemiBold"/>
               <Grid ColumnDefinitions="*,140,Auto" ColumnSpacing="10">
-                <TextBox Text="{Binding NewRoleMappingDiscordRoleId}" Watermark="{services:Tr ui.discord_role_id}"/>
+                <TextBox Text="{Binding NewRoleMappingDiscordRoleId}" PlaceholderText="{services:Tr ui.discord_role_id}"/>
                 <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="1" ItemsSource="{Binding MystTiqRoles}" SelectedItem="{Binding NewRoleMappingRole}"/>
                 <Button Grid.Column="2" Content="{services:Tr ui.add}" Command="{Binding AddDiscordRoleMappingCommand}"/>
               </Grid>
@@ -2993,7 +2993,7 @@
           <Border Classes="card accentSystem" IsVisible="{Binding CanManagePrincipals}" IsEnabled="{Binding CanManagePrincipals}">
             <StackPanel Spacing="10">
               <TextBlock Text="{services:Tr ui.create_principal}" FontSize="17" FontWeight="SemiBold"/>
-              <Grid ColumnDefinitions="150,*" ColumnSpacing="10"><TextBox Text="{Binding NewPrincipalName}" Watermark="{services:Tr ui.name}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="1" ItemsSource="{Binding MystTiqRoles}" SelectedItem="{Binding NewPrincipalRole}"/></Grid>
+              <Grid ColumnDefinitions="150,*" ColumnSpacing="10"><TextBox Text="{Binding NewPrincipalName}" PlaceholderText="{services:Tr ui.name}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="1" ItemsSource="{Binding MystTiqRoles}" SelectedItem="{Binding NewPrincipalRole}"/></Grid>
               <Button Classes="success" Content="{services:Tr ui.create}" HorizontalAlignment="Left" Command="{Binding CreatePrincipalCommand}"/>
             </StackPanel>
           </Border>
@@ -3009,11 +3009,11 @@
               <TextBlock Text="{services:Tr ui.people_who_sign_in_with_a_username_and_password_4ca134}"
                          Classes="muted" TextWrapping="Wrap"/>
               <Grid ColumnDefinitions="*,*,130,*" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
-                <TextBox Text="{Binding NewUserUsername}" Watermark="{services:Tr ui.username}"/>
-                <TextBox Grid.Column="1" Text="{Binding NewUserDisplayName}" Watermark="{services:Tr ui.display_name_optional}"/>
+                <TextBox Text="{Binding NewUserUsername}" PlaceholderText="{services:Tr ui.username}"/>
+                <TextBox Grid.Column="1" Text="{Binding NewUserDisplayName}" PlaceholderText="{services:Tr ui.display_name_optional}"/>
                 <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="2" ItemsSource="{Binding MystTiqRoles}" SelectedItem="{Binding NewUserRole}" HorizontalAlignment="Stretch"/>
-                <TextBox Grid.Column="3" Text="{Binding NewUserScope}" Watermark="{services:Tr ui.only_this_server_id_optional}"/>
-                <TextBox Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding NewUserPassword}" PasswordChar="●" Watermark="{services:Tr ui.password_at_least_10_characters}"/>
+                <TextBox Grid.Column="3" Text="{Binding NewUserScope}" PlaceholderText="{services:Tr ui.only_this_server_id_optional}"/>
+                <TextBox Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding NewUserPassword}" PasswordChar="●" PlaceholderText="{services:Tr ui.password_at_least_10_characters}"/>
                 <Button Grid.Row="1" Grid.Column="2" Classes="success" Content="{services:Tr ui.create_account}" Command="{Binding CreateUserCommand}"/>
               </Grid>
               <ListBox AutomationProperties.Name="{services:Tr ui.user_accounts}" ItemsSource="{Binding UserAccounts}" SelectedItem="{Binding SelectedUserAccount}" MaxHeight="300">
@@ -3030,7 +3030,7 @@
                 </ListBox.ItemTemplate>
               </ListBox>
               <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                <TextBox Text="{Binding UserResetPassword}" PasswordChar="●" Watermark="{services:Tr ui.new_password_for_the_selected_account}"/>
+                <TextBox Text="{Binding UserResetPassword}" PasswordChar="●" PlaceholderText="{services:Tr ui.new_password_for_the_selected_account}"/>
                 <Button Grid.Column="1" Content="{services:Tr ui.reset_password}" Command="{Binding ResetUserPasswordCommand}" ToolTip.Tip="{services:Tr ui.sets_a_new_password_and_signs_the_account_out_ev_510d9d}"/>
                 <Button Grid.Column="2" Content="{services:Tr ui.enable_disable}" Command="{Binding ToggleUserEnabledCommand}" ToolTip.Tip="{services:Tr ui.a_disabled_account_cannot_sign_in_and_its_open_s_c22536}"/>
                 <Button Grid.Column="3" Classes="danger" Content="{services:Tr ui.delete}" Command="{Binding DeleteUserCommand}"/>
@@ -3091,8 +3091,8 @@
               <StackPanel Spacing="3">
                 <TextBlock Text="{services:Tr ui.new_profile}" Classes="muted" FontSize="10"/>
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                  <TextBox Watermark="{services:Tr ui.new_profile_id_e_g_world_2}" Text="{Binding CloneNewProfileId}"/>
-                  <TextBox Grid.Column="1" Watermark="{services:Tr ui.display_name_optional}" Text="{Binding CloneNewProfileName}"/>
+                  <TextBox PlaceholderText="{services:Tr ui.new_profile_id_e_g_world_2}" Text="{Binding CloneNewProfileId}"/>
+                  <TextBox Grid.Column="1" PlaceholderText="{services:Tr ui.display_name_optional}" Text="{Binding CloneNewProfileName}"/>
                 </Grid>
               </StackPanel>
 
@@ -3181,7 +3181,7 @@
               <!-- v0.8.24.0: processor cores (affinity). -->
               <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="{services:Tr ui.processor_cores}" VerticalAlignment="Center"/>
-                <TextBox x:Name="HostCoresBox" Text="{Binding CoresText}" Watermark="{services:Tr ui.every_core}" Width="180"/>
+                <TextBox x:Name="HostCoresBox" Text="{Binding CoresText}" PlaceholderText="{services:Tr ui.every_core}" Width="180"/>
               </StackPanel>
               <TextBlock Text="{services:TrText CoresHintText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
               <TextBlock Text="{services:TrText PriorityWarningText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding HasPriorityWarning}"/>
@@ -3348,7 +3348,7 @@
               <!-- v0.9.6.0: virtual adapters (WSL, Hyper-V, Docker) are searched only when ticked; extra ranges can be typed in. -->
               <WrapPanel>
                 <CheckBox Content="{services:Tr ui.include_virtual_adapters}" IsChecked="{Binding DiscoveryIncludeVirtualAdapters}" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                <TextBox AutomationProperties.Name="{services:Tr ui.extra_ranges}" Text="{Binding DiscoveryExtraRanges}" Watermark="{services:Tr ui.extra_ranges_watermark}" MinWidth="260"/>
+                <TextBox AutomationProperties.Name="{services:Tr ui.extra_ranges}" Text="{Binding DiscoveryExtraRanges}" PlaceholderText="{services:Tr ui.extra_ranges_watermark}" MinWidth="260"/>
               </WrapPanel>
               <!-- v0.9.6.0: the ranges being searched, how far the search is, and Cancel. -->
               <StackPanel Spacing="4" IsVisible="{Binding HasDiscoveryRanges}">
@@ -3380,7 +3380,7 @@
                 <TextBox AutomationProperties.Name="{services:Tr ui.name}" Grid.Column="1" Text="{Binding ProfileName}" />
 
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.service_url}" VerticalAlignment="Center" />
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ServerUrl}" Watermark="{services:Tr ui.https_192_168_1_248_8213}" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ServerUrl}" PlaceholderText="{services:Tr ui.https_192_168_1_248_8213}" />
 
                 <!-- v0.7.63.0: two profiles CAN legitimately share the same Service URL; a
                      multi-server fleet host (see LocalManagementApiHost's "Multi-Server Fleet"
@@ -3390,20 +3390,20 @@
                      both match an existing profile is rejected (see BuildProfileFromEditor);
                      that combination is a genuine duplicate, not a second server. -->
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.target_server_id}" VerticalAlignment="Center" />
-                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding TargetServerId}" Watermark="{services:Tr ui.blank_this_host_s_default_server}" />
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding TargetServerId}" PlaceholderText="{services:Tr ui.blank_this_host_s_default_server}" />
 
                 <TextBlock Grid.Row="3" Text="{services:Tr ui.bearer_token}" VerticalAlignment="Center" />
                 <!-- v0.7.71.0: watermark updated; tokens are now remembered (CredentialStore,
                      Windows DPAPI-encrypted) after a successful Connect, not process-memory-only
                      as before. "Forget" clears just the saved copy, leaving the typed value alone. -->
                 <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
-                  <TextBox Text="{Binding BearerToken}" PasswordChar="●" RevealPassword="{Binding ShowBearerToken}" Watermark="{services:Tr ui.saved_encrypted_after_connecting}" />
+                  <TextBox Text="{Binding BearerToken}" PasswordChar="●" RevealPassword="{Binding ShowBearerToken}" PlaceholderText="{services:Tr ui.saved_encrypted_after_connecting}" />
                   <ToggleButton Grid.Column="1" IsChecked="{Binding ShowBearerToken}" Content="{Binding ShowBearerToken, Converter={x:Static converters:BoolToEyeGlyphConverter.Instance}}" ToolTip.Tip="{services:Tr ui.show_hide_the_bearer_token}" Padding="8,4"/>
                   <Button Grid.Column="2" Content="{services:Tr ui.forget}" Command="{Binding ForgetSavedTokenCommand}" ToolTip.Tip="{services:Tr ui.remove_the_saved_encrypted_token_for_this_profil_f473c2}" Padding="8,4"/>
                 </Grid>
 
                 <TextBlock Grid.Row="4" Text="{services:Tr ui.tls_sha_256_pin}" VerticalAlignment="Center" />
-                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding CertificateSha256}" Watermark="{services:Tr ui.optional_64_hex_certificate_fingerprint}" />
+                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding CertificateSha256}" PlaceholderText="{services:Tr ui.optional_64_hex_certificate_fingerprint}" />
 
                 <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="10">
                   <Button Classes="primary" Content="{services:Tr ui.connect_1a2303}" Command="{Binding ConnectCommand}"/>
@@ -3416,8 +3416,8 @@
               <TextBlock Text="{services:Tr ui.sign_in_with_a_user_account}" FontWeight="SemiBold" Margin="0,6,0,0"/>
               <TextBlock Text="{services:Tr ui.for_a_mysttiq_with_authentication_on_remote_acce_6d3ba2}" Classes="muted" FontSize="12" TextWrapping="Wrap"/>
               <Grid ColumnDefinitions="*,*,Auto,Auto" ColumnSpacing="8">
-                <TextBox Text="{Binding SignInUsername}" Watermark="{services:Tr ui.username}"/>
-                <TextBox Grid.Column="1" Text="{Binding SignInPassword}" PasswordChar="●" Watermark="{services:Tr ui.password}"/>
+                <TextBox Text="{Binding SignInUsername}" PlaceholderText="{services:Tr ui.username}"/>
+                <TextBox Grid.Column="1" Text="{Binding SignInPassword}" PasswordChar="●" PlaceholderText="{services:Tr ui.password}"/>
                 <Button Grid.Column="2" Classes="primary" Content="{services:Tr ui.sign_in}" Command="{Binding SignInCommand}"/>
                 <Button Grid.Column="3" Content="{services:Tr ui.sign_out}" Command="{Binding SignOutCommand}" ToolTip.Tip="{services:Tr ui.ends_this_session_on_the_server_and_forgets_the_051e27}"/>
               </Grid>
@@ -3550,7 +3550,7 @@
                   <TextBlock Text="{services:Tr ui.name}" VerticalAlignment="Center"/>
                   <TextBox AutomationProperties.Name="{services:Tr ui.name}" Grid.Column="1" Text="{Binding ProfileName}"/>
                   <TextBlock Grid.Row="1" Text="{services:Tr ui.service_url}" VerticalAlignment="Center"/>
-                  <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ServerUrl}" Watermark="{services:Tr ui.http_127_0_0_1_8213}"/>
+                  <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ServerUrl}" PlaceholderText="{services:Tr ui.http_127_0_0_1_8213}"/>
                 </Grid>
               </StackPanel>
 
@@ -3563,7 +3563,7 @@
                 <!-- v0.9.6.0: virtual adapters (WSL, Hyper-V, Docker) are searched only when ticked; extra ranges can be typed in. -->
                 <WrapPanel>
                   <CheckBox Content="{services:Tr ui.include_virtual_adapters}" IsChecked="{Binding DiscoveryIncludeVirtualAdapters}" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                  <TextBox AutomationProperties.Name="{services:Tr ui.extra_ranges}" Text="{Binding DiscoveryExtraRanges}" Watermark="{services:Tr ui.extra_ranges_watermark}" MinWidth="260"/>
+                  <TextBox AutomationProperties.Name="{services:Tr ui.extra_ranges}" Text="{Binding DiscoveryExtraRanges}" PlaceholderText="{services:Tr ui.extra_ranges_watermark}" MinWidth="260"/>
                 </WrapPanel>
                 <!-- v0.9.6.0: the ranges being searched, how far the search is, and Cancel. -->
                 <StackPanel Spacing="4" IsVisible="{Binding HasDiscoveryRanges}">
@@ -3592,15 +3592,15 @@
                   <TextBlock Text="{services:Tr ui.name}" VerticalAlignment="Center"/>
                   <TextBox AutomationProperties.Name="{services:Tr ui.name}" Grid.Column="1" Text="{Binding ProfileName}"/>
                   <TextBlock Grid.Row="1" Text="{services:Tr ui.service_url}" VerticalAlignment="Center"/>
-                  <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ServerUrl}" Watermark="{services:Tr ui.https_192_168_1_248_8213}"/>
+                  <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ServerUrl}" PlaceholderText="{services:Tr ui.https_192_168_1_248_8213}"/>
                   <TextBlock Grid.Row="2" Text="{services:Tr ui.bearer_token}" VerticalAlignment="Center"/>
                   <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
-                    <TextBox Text="{Binding BearerToken}" PasswordChar="●" RevealPassword="{Binding ShowBearerToken}" Watermark="{services:Tr ui.saved_encrypted_after_connecting}"/>
+                    <TextBox Text="{Binding BearerToken}" PasswordChar="●" RevealPassword="{Binding ShowBearerToken}" PlaceholderText="{services:Tr ui.saved_encrypted_after_connecting}"/>
                     <ToggleButton Grid.Column="1" IsChecked="{Binding ShowBearerToken}" Content="{Binding ShowBearerToken, Converter={x:Static converters:BoolToEyeGlyphConverter.Instance}}" ToolTip.Tip="{services:Tr ui.show_hide_the_bearer_token}" Padding="8,4"/>
                     <Button Grid.Column="2" Content="{services:Tr ui.forget}" Command="{Binding ForgetSavedTokenCommand}" ToolTip.Tip="{services:Tr ui.remove_the_saved_encrypted_token_for_this_profil_f473c2}" Padding="8,4"/>
                   </Grid>
                   <TextBlock Grid.Row="3" Text="{services:Tr ui.tls_sha_256_pin}" VerticalAlignment="Center"/>
-                  <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CertificateSha256}" Watermark="{services:Tr ui.optional_64_hex_certificate_fingerprint}"/>
+                  <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CertificateSha256}" PlaceholderText="{services:Tr ui.optional_64_hex_certificate_fingerprint}"/>
                 </Grid>
               </StackPanel>
 
@@ -3668,7 +3668,7 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.new_server_id}" VerticalAlignment="Center"/>
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewServerCloneTargetId}" Watermark="{services:Tr ui.e_g_world_2}"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewServerCloneTargetId}" PlaceholderText="{services:Tr ui.e_g_world_2}"/>
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.port_offset}" VerticalAlignment="Center"/>
                 <ComboBox AutomationProperties.Name="{services:Tr ui.port_offset}" Grid.Row="2" Grid.Column="1" ItemsSource="{Binding CloneWorldPortOffsetOptions}" SelectedItem="{Binding CloneWorldPortOffset}" HorizontalAlignment="Left" MinWidth="140"/>
               </Grid>
@@ -3695,7 +3695,7 @@
               <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
                 <StackPanel><TextBlock Text="{services:Tr ui.server_name}" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="6"><TextBox AutomationProperties.Name="{services:Tr ui.server_name}" Text="{Binding SetupServerName, Mode=TwoWay}" MaxLength="128"/><Button Grid.Column="1" Content="🎲" Command="{Binding GenerateSetupServerNameCommand}" ToolTip.Tip="{services:Tr ui.generate_a_random_server_name}" AutomationProperties.Name="{services:Tr ui.generate_a_random_server_name}" Padding="10,7"/></Grid></StackPanel>
                 <StackPanel Grid.Column="1"><TextBlock Text="{services:Tr ui.description}" Classes="muted"/><TextBox AutomationProperties.Name="{services:Tr ui.description}" Text="{Binding SetupServerDescription, Mode=TwoWay}" MaxLength="512"/></StackPanel>
-                <StackPanel Grid.Row="1"><TextBlock Text="{services:Tr ui.admin_password}" Classes="muted"/><TextBox Text="{Binding SetupAdminPassword, Mode=TwoWay}" PasswordChar="●" Watermark="{services:Tr ui.optional_sent_only_to_the_authenticated_headless_407242}"/></StackPanel>
+                <StackPanel Grid.Row="1"><TextBlock Text="{services:Tr ui.admin_password}" Classes="muted"/><TextBox Text="{Binding SetupAdminPassword, Mode=TwoWay}" PasswordChar="●" PlaceholderText="{services:Tr ui.optional_sent_only_to_the_authenticated_headless_407242}"/></StackPanel>
                 <StackPanel Grid.Row="1" Grid.Column="1"><TextBlock Text="{services:Tr ui.server_password_optional}" Classes="muted"/><TextBox AutomationProperties.Name="{services:Tr ui.server_password_optional}" Text="{Binding SetupServerPassword, Mode=TwoWay}" PasswordChar="●"/></StackPanel>
                 <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12">
                   <StackPanel><TextBlock Text="{services:Tr ui.players}" Classes="muted"/><TextBox AutomationProperties.Name="{services:Tr ui.players}" Text="{Binding SetupMaximumPlayers, Mode=TwoWay}" Width="72"/></StackPanel>
@@ -3944,7 +3944,7 @@
                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
                   <StackPanel><TextBlock Text="{services:Tr ui.server_name}" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="6"><TextBox AutomationProperties.Name="{services:Tr ui.server_name}" Text="{Binding SetupServerName, Mode=TwoWay}" MaxLength="128"/><Button Grid.Column="1" Content="🎲" Command="{Binding GenerateSetupServerNameCommand}" ToolTip.Tip="{services:Tr ui.generate_a_random_server_name}" AutomationProperties.Name="{services:Tr ui.generate_a_random_server_name}" Padding="10,7"/></Grid></StackPanel>
                   <StackPanel Grid.Column="1"><TextBlock Text="{services:Tr ui.description}" Classes="muted"/><TextBox AutomationProperties.Name="{services:Tr ui.description}" Text="{Binding SetupServerDescription, Mode=TwoWay}" MaxLength="512"/></StackPanel>
-                  <StackPanel Grid.Row="1"><TextBlock Text="{services:Tr ui.admin_password}" Classes="muted"/><TextBox Text="{Binding SetupAdminPassword, Mode=TwoWay}" PasswordChar="●" Watermark="{services:Tr ui.optional_sent_only_to_the_authenticated_headless_407242}"/></StackPanel>
+                  <StackPanel Grid.Row="1"><TextBlock Text="{services:Tr ui.admin_password}" Classes="muted"/><TextBox Text="{Binding SetupAdminPassword, Mode=TwoWay}" PasswordChar="●" PlaceholderText="{services:Tr ui.optional_sent_only_to_the_authenticated_headless_407242}"/></StackPanel>
                   <StackPanel Grid.Row="1" Grid.Column="1"><TextBlock Text="{services:Tr ui.server_password_optional}" Classes="muted"/><TextBox AutomationProperties.Name="{services:Tr ui.server_password_optional}" Text="{Binding SetupServerPassword, Mode=TwoWay}" PasswordChar="●"/></StackPanel>
                   <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12">
                     <StackPanel><TextBlock Text="{services:Tr ui.players}" Classes="muted"/><TextBox AutomationProperties.Name="{services:Tr ui.players}" Text="{Binding SetupMaximumPlayers, Mode=TwoWay}" Width="72"/></StackPanel>

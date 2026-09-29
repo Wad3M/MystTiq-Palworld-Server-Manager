@@ -1,7 +1,9 @@
-// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+// v0.9.7.0: Avalonia 12 moved the clipboard's text methods to extension methods in this namespace.
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using MystTiq.Desktop.Models;

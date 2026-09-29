@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.6.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.7.0: file reviewed for this release (2026-09-29). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,17 +21,19 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v0.9.6.0 · Accepted baseline: v0.8.25.0**
+**Current version: v0.9.7.0 · Accepted baseline: v0.8.25.0**
 
 This source snapshot is a development release on the way to v1.0. Check the Releases page for published downloads; the version shown here does not imply a binary has been published. Windows is the current release-workflow download target. Linux builds are available from source, with desktop acceptance still in progress.
 
-## What's new in v0.9.6.0
+## What's new in v0.9.7.0
 
-**Let players in, and find your servers in seconds.** Settings, Diagnostics and the new-server wizard now show whether Windows Firewall lets players reach the port your server really uses, with an **Allow through Firewall** button that asks Windows for administrator rights when needed. The rule follows the port: change it, allow again, and the old port is closed. The check ignores rules that only look like they help (the game client's, Store apps', the launcher's), and a second server set up through the wizard now gets its own port.
+**A current UI framework underneath.** The desktop now runs on Avalonia 12, the current version of the framework it is built with, so it keeps receiving fixes and platform support. Nothing about how you use MystTiq changes; every page was checked in all 12 languages and each appearance mode.
+
+From v0.9.6.0: **let players in, and find your servers in seconds.** Settings, Diagnostics and the new-server wizard now show whether Windows Firewall lets players reach the port your server really uses, with an **Allow through Firewall** button that asks Windows for administrator rights when needed. The rule follows the port: change it, allow again, and the old port is closed. The check ignores rules that only look like they help (the game client's, Store apps', the launcher's), and a second server set up through the wizard now gets its own port.
 
 The server search checks 256 addresses at a time, shows the ranges it searches and its progress, lists each server as it answers, and can be cancelled; virtual adapters are searched only when you ask, and you can add ranges of your own. v0.9.5.0 made update checks truthful and stopped servers from starting each other; earlier v0.9 releases brought 12 languages and accessible names. The 11 non-English translations are drafts awaiting native-speaker review.
 
-[Release notes](release-notes/v0.9.6.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v0.9.7.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -104,8 +106,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v0.9.3.0 | Delivered | The service's own messages follow the chosen language; review sheets for native reviewers |
 | v0.9.4.0 | Delivered | Disabled controls name the role they need; accessible names and Tab reach throughout |
 | v0.9.5.0 | Delivered | Servers no longer start each other; true update checks (Steam's public build, PalDefender); upgrade, restore and rollback tested |
-| v0.9.6.0 | Current | Firewall rule for each server's own port where the port is set; a second server gets its own port; server search in seconds, showing its ranges |
-| v0.9.7.0 | Next | Avalonia 12: the desktop moves to the current UI framework, checked page by page in every appearance mode |
+| v0.9.6.0 | Delivered | Firewall rule for each server's own port where the port is set; a second server gets its own port; server search in seconds, showing its ranges |
+| v0.9.7.0 | Current | Avalonia 12: the desktop moves to the current UI framework, checked page by page in every appearance mode |
 | v0.9.x | Planned | Native translation review, live integration evidence, a screen-reader pass and Linux acceptance |
 | v1.0 | Target | Stable release after the acceptance gates pass; no date committed |
 

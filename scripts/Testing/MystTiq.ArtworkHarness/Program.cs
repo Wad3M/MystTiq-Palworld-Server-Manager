@@ -1,4 +1,4 @@
-// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -10,6 +10,8 @@ using Avalonia.Media;
 using Avalonia.Platform;
 using MystTiq.Core.Services;
 using MystTiq.Desktop;
+// v0.9.7.0: Avalonia 12 has its own Avalonia.Controls.NavigationPage; this harness means the app's.
+using NavigationPage = MystTiq.Desktop.Models.NavigationPage;
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 using MystTiq.Desktop.ViewModels;
@@ -126,7 +128,7 @@ foreach (var light in new[] { false, true })
             }
         });
     }
-    var gallery = new Window { Width = 1040, Height = 512, Content = panel, Background = new SolidColorBrush(Color.Parse(light ? "#F2F6FA" : "#0A1624")), SystemDecorations = SystemDecorations.None };
+    var gallery = new Window { Width = 1040, Height = 512, Content = panel, Background = new SolidColorBrush(Color.Parse(light ? "#F2F6FA" : "#0A1624")), WindowDecorations = WindowDecorations.None };
     gallery.Show(); Dispatcher.UIThread.RunJobs();
     using var frame = gallery.CaptureRenderedFrame();
     frame!.Save(Path.Combine(output, $"icons-{(light ? "light" : "dark")}.png"));
@@ -994,7 +996,7 @@ string? AccessibleName(Control c)
     if (Avalonia.Automation.AutomationProperties.GetName(c) is { Length: > 0 } name) return name;
     if (c is ContentControl { Content: string { Length: > 0 } text }) return text;
     if (c.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.IsEffectivelyVisible && !string.IsNullOrWhiteSpace(t.Text)) is { } inner) return inner.Text;
-    if (c is TextBox { Watermark: string { Length: > 0 } mark }) return mark;
+    if (c is TextBox { PlaceholderText: string { Length: > 0 } mark }) return mark;
     return ToolTip.GetTip(c) as string is { Length: > 0 } tipName ? tipName : null;
 }
 var unnamed = new List<string>();

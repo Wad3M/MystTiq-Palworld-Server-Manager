@@ -1,4 +1,17 @@
-<!-- MystTiq v0.9.6.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.7.0: file reviewed for this release (2026-09-29). -->
+## v0.9.7.0 — Avalonia 12
+
+- The desktop moves from Avalonia 11.3 to 12.1.3, all four packages together (Avalonia, Avalonia.Desktop,
+  Avalonia.Fonts.Inter, Avalonia.Themes.Fluent) and `Avalonia.Headless` 12.1.3 in the ArtworkHarness and the
+  RemoteSignInHarness, pinned to that exact version (Dependabot already groups them).
+- Code changes the new version needs: the clipboard's text methods are extensions in `Avalonia.Input.Platform`
+  (`GetTextAsync` became `TryGetTextAsync`); `TextBox.Watermark` became `PlaceholderText` (62 text boxes);
+  `Window.SystemDecorations` became `WindowDecorations`; the harnesses alias the app's `NavigationPage`, since Avalonia
+  12 has a control of that name.
+- Checked: the desktop builds with no new warnings; the ArtworkHarness passes in all 12 languages on Avalonia 12, and
+  its page renders match 11.3's except that an undersized window now fits its content (the ribbon folds into "»"
+  instead of running off the edge).
+
 ## v0.9.6.0 — Firewall and Server Search
 
 - Firewall rule for each server's own port: `GET /diagnostics/network/firewall` reports whether Windows Firewall lets
