@@ -3562,5 +3562,14 @@
   "ui.extra_ranges_watermark": "Ek aralıklar, ör. 10.0.5.0/24, 10.0.5.7",
   "ui.not_searched_virtual": "Taranmadı (sanal):",
   "ui.could_not_read_ranges": "Okunamadı:",
-  "ui.clone_firewall_hint": "Klon yeni bir oyun bağlantı noktasını dinler. Çevrimiçi olunca sekmesini açın ve oyuncuların katılabilmesi için Güvenlik duvarında izin ver’i (Ayarlar veya Tanılama) kullanın."
+  "ui.clone_firewall_hint": "Klon yeni bir oyun bağlantı noktasını dinler. Çevrimiçi olunca sekmesini açın ve oyuncuların katılabilmesi için Güvenlik duvarında izin ver’i (Ayarlar veya Tanılama) kullanın.",
+  "msg.firewall_other_networks": "Bir kural {0} {1} için yalnızca diğer ağlarda ({2}) izin veriyor; bu bilgisayar {3} ağında.",
+  "ui.component_out_of_date": "Oyun sunucusu veya PalDefender güncel değil",
+  "ui.component_out_of_date_hint": "Oyun sunucusu Steam’in genel sürümünün gerisinde kaldığında veya PalDefender oyun sürümüne göre güncellenmediğini bildirdiğinde tetiklenir.",
+  "msg.alert_game_server_update_available": "Oyun sunucusu güncellemesi var",
+  "msg.alert_game_server_behind": "Bu sunucu {0} sürümünde; Steam’in genel sürümü {1}. Güncellenene kadar oyunun güncel sürümündeki oyuncular katılamaz (Güncelleme Merkezi).",
+  "msg.alert_game_server_current": "Oyun sunucusu Steam’in güncel genel sürümünde.",
+  "msg.alert_paldefender_update_needed": "PalDefender güncellemesi gerekiyor",
+  "msg.alert_paldefender_behind": "PalDefender bu oyun sürümü için güncellenmediğini bildiriyor: \"{0}\". Oyuncular katılırken bağlantıları kopabilir veya sunucu durabilir.",
+  "msg.alert_paldefender_current": "PalDefender artık güncel olmadığını bildirmiyor."
 }

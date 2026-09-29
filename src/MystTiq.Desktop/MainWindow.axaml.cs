@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -45,7 +45,13 @@ public sealed partial class MainWindow : Window
     {
         UpdateMaximizeGlyph();
         if (DataContext is MainWindowViewModel vm)
+        {
             vm.UpdateServerSetupTableHeight(e.NewSize.Height);
+            // v0.9.8.0: after this layout pass, not inside it: changing the title bar while the window is being laid out left
+            // the rows below at the old width (seen in the ArtworkHarness at 950 px).
+            var width = e.NewSize.Width;
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => vm.UpdateWindowWidth(width), Avalonia.Threading.DispatcherPriority.Background);
+        }
     }
 
     // v0.7.16.0: the tab strip's own host panel, not the whole window -- it resizes whenever the

@@ -3562,5 +3562,14 @@
   "ui.extra_ranges_watermark": "额外范围，例如 10.0.5.0/24, 10.0.5.7",
   "ui.not_searched_virtual": "未搜索（虚拟）：",
   "ui.could_not_read_ranges": "无法识别：",
-  "ui.clone_firewall_hint": "克隆使用新的游戏端口。上线后，请打开它的标签页并使用“允许通过防火墙”（设置或诊断），以便玩家加入。"
+  "ui.clone_firewall_hint": "克隆使用新的游戏端口。上线后，请打开它的标签页并使用“允许通过防火墙”（设置或诊断），以便玩家加入。",
+  "msg.firewall_other_networks": "有规则仅在其他网络（{2}）上允许 {0} {1}；这台电脑当前处于 {3} 网络。",
+  "ui.component_out_of_date": "游戏服务器或 PalDefender 已过期",
+  "ui.component_out_of_date_hint": "当游戏服务器落后于 Steam 的公开版本，或 PalDefender 表示尚未适配当前游戏版本时触发。",
+  "msg.alert_game_server_update_available": "游戏服务器有可用更新",
+  "msg.alert_game_server_behind": "此服务器为版本 {0}；Steam 的公开版本为 {1}。更新之前，当前游戏版本的玩家无法加入（更新中心）。",
+  "msg.alert_game_server_current": "游戏服务器已是 Steam 当前的公开版本。",
+  "msg.alert_paldefender_update_needed": "需要更新 PalDefender",
+  "msg.alert_paldefender_behind": "PalDefender 表示尚未适配此游戏版本：“{0}”。玩家加入时可能会断开连接，或服务器可能停止。",
+  "msg.alert_paldefender_current": "PalDefender 不再报告已过期。"
 }

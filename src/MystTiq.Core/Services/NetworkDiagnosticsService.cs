@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 using MystTiq.Core.Models;
 namespace MystTiq.Core.Services;
 public sealed class NetworkDiagnosticsService
@@ -22,7 +22,7 @@ public sealed class NetworkDiagnosticsService
   }
   DateTimeOffset? started=null;try{using var p=System.Diagnostics.Process.GetProcessById(proc.ProcessId);started=p.StartTime.ToUniversalTime();}catch{}
   checks.Add(new("PalServer Process",DiagnosticState.Pass,$"Running: {proc.ProcessName}, PID {proc.ProcessId}."));
-  if(OperatingSystem.IsWindows())try{var fw=await platform.GetInboundFirewallRulesAsync(port,"UDP",token);if(fw.Count==0)checks.Add(new("Windows Firewall",DiagnosticState.Fail,$"No suitable inbound UDP Allow rule exists for {port}.","Add / Repair Firewall Rule."));else{var block=fw.Any(r=>r.Enabled&&r.Action.Equals("Block",StringComparison.OrdinalIgnoreCase));var allow=fw.Any(r=>r.Enabled&&r.Action.Equals("Allow",StringComparison.OrdinalIgnoreCase));checks.Add(new("Windows Firewall",block?DiagnosticState.Fail:allow?DiagnosticState.Pass:DiagnosticState.Warning,string.Join("; ",fw.Select(r=>$"{r.Name} [{r.Action}, Enabled={r.Enabled}, Profiles={r.Profiles}]")),block?"Review blocking rule.":allow?"":"Enable or repair the rule."));}}catch(Exception ex){checks.Add(new("Windows Firewall",DiagnosticState.Warning,$"Inspection unavailable: {ex.Message}","Run elevated for firewall diagnostics."));}
+  if(OperatingSystem.IsWindows())try{var fw=await platform.GetInboundFirewallRulesAsync(port,"UDP",token);if(fw.Count==0)checks.Add(new("Windows Firewall",DiagnosticState.Fail,$"No suitable inbound UDP Allow rule exists for {port}.","Add / Repair Firewall Rule."));else{var block=fw.Any(r=>r.Enabled&&r.CoversCurrentNetwork&&r.Action.Equals("Block",StringComparison.OrdinalIgnoreCase));var allow=fw.Any(r=>r.Enabled&&r.CoversCurrentNetwork&&r.Action.Equals("Allow",StringComparison.OrdinalIgnoreCase));checks.Add(new("Windows Firewall",block?DiagnosticState.Fail:allow?DiagnosticState.Pass:DiagnosticState.Warning,string.Join("; ",fw.Select(r=>$"{r.Name} [{r.Action}, Enabled={r.Enabled}, Profiles={r.Profiles}]")),block?"Review blocking rule.":allow?"":"Enable or repair the rule."));}}catch(Exception ex){checks.Add(new("Windows Firewall",DiagnosticState.Warning,$"Inspection unavailable: {ex.Message}","Run elevated for firewall diagnostics."));}
   else checks.Add(new("Firewall",DiagnosticState.Skipped,"Windows firewall inspection does not apply."));
   var eps=await platform.GetUdpEndpointsAsync(token);var same=eps.Where(e=>e.LocalPort==port).ToArray();var owned=same.FirstOrDefault(e=>e.OwningProcessId==proc.ProcessId);
   string? binding=null,lan=null;NetworkHealthState health;string action="";
@@ -61,7 +61,7 @@ public sealed class NetworkDiagnosticsService
  {
   if(OperatingSystem.IsLinux())return FirewallRules.Evaluate(port,"UDP",serverId,[],[],supported:false) with{Commands=FirewallRules.LinuxCommands(port,"UDP")};
   if(!OperatingSystem.IsWindows())return FirewallRules.Evaluate(port,"UDP",serverId,[],[],supported:false);
-  try{var rules=await platform.GetInboundFirewallRulesAsync(port,"UDP",token);var ours=await platform.GetMystTiqFirewallRulesAsync(token);return FirewallRules.Evaluate(port,"UDP",serverId,rules,ours);}
+  try{var rules=await platform.GetInboundFirewallRulesAsync(port,"UDP",token);var ours=await platform.GetMystTiqFirewallRulesAsync(token);return FirewallRules.Evaluate(port,"UDP",serverId,rules,ours,currentNetwork:platform.GetCurrentFirewallNetwork());}
   catch(Exception ex)when(ex is not OperationCanceledException){return FirewallRules.Evaluate(port,"UDP",serverId,[],[],error:ex.Message);}
  }
  public static (int Port,bool UsedDefault,bool Invalid) ResolveGamePort(IReadOnlyList<string> args){var ps=new List<int>();foreach(var a in args){if(!a.StartsWith("-port=",StringComparison.OrdinalIgnoreCase))continue;if(!int.TryParse(a[6..],out var p)||p is<1 or>65535)return(DefaultGamePort,false,true);ps.Add(p);}if(ps.Distinct().Count()>1)return(DefaultGamePort,false,true);return ps.Count==0?(DefaultGamePort,true,false):(ps[0],false,false);}

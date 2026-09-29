@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.7.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.8.0: file reviewed for this release (2026-09-29). -->
 # Secure Remote API Enrollment & TLS Provisioning — v0.3.0.6
 
 ## Principle

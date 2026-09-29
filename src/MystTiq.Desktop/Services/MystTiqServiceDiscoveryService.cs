@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
@@ -56,7 +56,6 @@ public interface IMystTiqServiceDiscoveryService
 /// </summary>
 public sealed class MystTiqServiceDiscoveryService : IMystTiqServiceDiscoveryService
 {
-    private const int MaxCandidatesPerInterface = 254;
     private const int Parallelism = 256;
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromMilliseconds(600);
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromMilliseconds(2500);
@@ -117,13 +116,12 @@ public sealed class MystTiqServiceDiscoveryService : IMystTiqServiceDiscoverySer
         .ToArray();
 
     /// <summary>
-    /// This computer (127.0.0.1) and the /24 around each IPv4 address of every adapter that is up, each range once, plus
-    /// the extra ranges asked for. A broader mask is still searched as its /24 only, so a large office or VPN network is
-    /// not swept.
+    /// This computer (127.0.0.1) and the subnet of each IPv4 address of every adapter that is up (at most a /22), each range
+    /// once, plus the extra ranges asked for.
     /// </summary>
     public static DiscoveryPlan GetPlan(DiscoveryOptions options)
     {
-        var adapters = new List<(string Name, string Description, IPAddress Address, bool HasGateway)>();
+        var adapters = new List<(string Name, string Description, IPAddress Address, bool HasGateway, int PrefixLength)>();
         foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
         {
             if (nic.OperationalStatus != OperationalStatus.Up || nic.NetworkInterfaceType == NetworkInterfaceType.Loopback)
@@ -131,7 +129,7 @@ public sealed class MystTiqServiceDiscoveryService : IMystTiqServiceDiscoverySer
             var properties = nic.GetIPProperties();
             var hasGateway = properties.GatewayAddresses.Any(g => g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any));
             foreach (var unicast in properties.UnicastAddresses)
-                adapters.Add((nic.Name, nic.Description, unicast.Address, hasGateway));
+                adapters.Add((nic.Name, nic.Description, unicast.Address, hasGateway, unicast.PrefixLength));
         }
 
         return BuildPlan(adapters, options);
@@ -139,7 +137,15 @@ public sealed class MystTiqServiceDiscoveryService : IMystTiqServiceDiscoverySer
 
     /// <summary>The ranges for a list of adapter addresses with every adapter included (the logic harness's shorthand).</summary>
     public static IReadOnlyList<DiscoveryRange> BuildRanges(IEnumerable<(string Adapter, IPAddress Address)> adapters) =>
-        BuildPlan(adapters.Select(a => (a.Adapter, string.Empty, a.Address, false)), new DiscoveryOptions(IncludeVirtualAdapters: true)).Ranges;
+        BuildPlan(adapters.Select(a => (a.Adapter, string.Empty, a.Address, false, 24)), new DiscoveryOptions(IncludeVirtualAdapters: true)).Ranges;
+
+    /// <summary>The plan for adapters whose subnet is not known (treated as /24).</summary>
+    public static DiscoveryPlan BuildPlan(IEnumerable<(string Adapter, string Description, IPAddress Address, bool HasGateway)> adapters, DiscoveryOptions options) =>
+        BuildPlan(adapters.Select(a => (a.Adapter, a.Description, a.Address, a.HasGateway, 24)), options);
+
+    // v0.9.8.0: an adapter's own subnet is searched, but never wider than a /22 (1,022 addresses, a few seconds at 256 at a
+    // time), so a large office or VPN network is still not swept end to end. Before, every adapter was searched as a /24.
+    public const int WidestPrefix = 22;
 
     /// <summary>
     /// Loopback first, link-local and IPv6 skipped, each /24 once; virtual adapters apart unless included. An adapter is
@@ -148,30 +154,34 @@ public sealed class MystTiqServiceDiscoveryService : IMystTiqServiceDiscoverySer
     /// this machine, leaving only 127.0.0.1 to search. Real adapters claim their range first, so a physical card on the
     /// same /24 as a virtual one is never dropped as a duplicate of it.
     /// </summary>
-    public static DiscoveryPlan BuildPlan(IEnumerable<(string Adapter, string Description, IPAddress Address, bool HasGateway)> adapters, DiscoveryOptions options)
+    public static DiscoveryPlan BuildPlan(IEnumerable<(string Adapter, string Description, IPAddress Address, bool HasGateway, int PrefixLength)> adapters, DiscoveryOptions options)
     {
         var ranges = new List<DiscoveryRange> { new("127.0.0.1", "this computer", ["127.0.0.1"]) };
         var skipped = new List<DiscoveryRange>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var ordered = adapters
-            .Select(a => (a.Adapter, a.Address, Virtual: IsVirtualAdapter(a.Adapter, a.Description) && !a.HasGateway))
+            .Select(a => (a.Adapter, a.Address, Virtual: IsVirtualAdapter(a.Adapter, a.Description) && !a.HasGateway, Prefix: Math.Clamp(a.PrefixLength is > 0 and <= 32 ? a.PrefixLength : 24, WidestPrefix, 30)))
             .OrderBy(a => a.Virtual)
             .ToArray();
-        foreach (var (adapter, address, isVirtual) in ordered)
+        foreach (var (adapter, address, isVirtual, prefix) in ordered)
         {
             if (address.AddressFamily != AddressFamily.InterNetwork || IPAddress.IsLoopback(address))
                 continue;
             var bytes = address.GetAddressBytes();
             if (bytes[0] == 169 && bytes[1] == 254)
                 continue;
-            var cidr = $"{bytes[0]}.{bytes[1]}.{bytes[2]}.0/24";
+            var value = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(bytes);
+            var network = value & (uint.MaxValue << (32 - prefix));
+            var size = 1u << (32 - prefix);
+            var cidr = $"{ToAddress(network)}/{prefix}";
             if (!seen.Add(cidr))
                 continue;
 
-            var hosts = new List<string>(MaxCandidatesPerInterface + 1) { address.ToString() };
-            for (var host = 1; host <= MaxCandidatesPerInterface; host++)
+            // The adapter's own address first, then every host (a subnet's network and broadcast addresses answer nothing).
+            var hosts = new List<string>((int)size) { address.ToString() };
+            for (var i = 1u; i < size - 1; i++)
             {
-                var candidate = new IPAddress([bytes[0], bytes[1], bytes[2], (byte)host]).ToString();
+                var candidate = ToAddress(network + i);
                 if (candidate != hosts[0]) hosts.Add(candidate);
             }
 
@@ -202,7 +212,7 @@ public sealed class MystTiqServiceDiscoveryService : IMystTiqServiceDiscoverySer
             || (marker.Length > 4 && ((name?.Contains(marker, StringComparison.OrdinalIgnoreCase) ?? false) || (description?.Contains(marker, StringComparison.OrdinalIgnoreCase) ?? false))));
 
     /// <summary>
-    /// Extra ranges typed by the user: single addresses ("10.0.5.7") and networks from /24 to /32 ("10.0.5.0/24"),
+    /// Extra ranges typed by the user: single addresses ("10.0.5.7") and networks from /22 to /32 ("10.0.5.0/24"),
     /// separated by commas, semicolons or spaces. Anything else is named in <paramref name="problems"/>.
     /// </summary>
     public static IReadOnlyList<DiscoveryRange> ParseExtraRanges(string? text, List<string> problems)
@@ -215,7 +225,7 @@ public sealed class MystTiqServiceDiscoveryService : IMystTiqServiceDiscoverySer
             var addressText = slash < 0 ? entry : entry[..slash];
             var prefix = 32;
             if (!IPAddress.TryParse(addressText, out var address) || address.AddressFamily != AddressFamily.InterNetwork
-                || (slash >= 0 && (!int.TryParse(entry[(slash + 1)..], out prefix) || prefix is < 24 or > 32)))
+                || (slash >= 0 && (!int.TryParse(entry[(slash + 1)..], out prefix) || prefix < WidestPrefix || prefix > 32)))
             {
                 problems.Add(entry);
                 continue;

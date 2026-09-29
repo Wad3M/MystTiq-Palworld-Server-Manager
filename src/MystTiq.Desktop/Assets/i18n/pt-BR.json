@@ -3562,5 +3562,14 @@
   "ui.extra_ranges_watermark": "Faixas adicionais, ex.: 10.0.5.0/24, 10.0.5.7",
   "ui.not_searched_virtual": "Não pesquisadas (virtuais):",
   "ui.could_not_read_ranges": "Não foi possível ler:",
-  "ui.clone_firewall_hint": "O clone escuta em uma nova porta de jogo. Quando estiver online, abra a aba dele e use Permitir no firewall (Configurações ou Diagnóstico) para que os jogadores possam entrar."
+  "ui.clone_firewall_hint": "O clone escuta em uma nova porta de jogo. Quando estiver online, abra a aba dele e use Permitir no firewall (Configurações ou Diagnóstico) para que os jogadores possam entrar.",
+  "msg.firewall_other_networks": "Uma regra permite {0} {1} só em outras redes ({2}); este computador está em uma rede {3}.",
+  "ui.component_out_of_date": "Servidor do jogo ou PalDefender desatualizado",
+  "ui.component_out_of_date_hint": "Dispara quando o servidor do jogo está atrás da versão pública da Steam, ou o PalDefender diz que não está atualizado para a versão do jogo.",
+  "msg.alert_game_server_update_available": "Atualização do servidor do jogo disponível",
+  "msg.alert_game_server_behind": "Este servidor tem a versão {0}; a versão pública da Steam é {1}. Jogadores na versão atual do jogo não conseguem entrar até que seja atualizado (Central de atualizações).",
+  "msg.alert_game_server_current": "O servidor do jogo está na versão pública atual da Steam.",
+  "msg.alert_paldefender_update_needed": "É preciso atualizar o PalDefender",
+  "msg.alert_paldefender_behind": "O PalDefender diz que não está atualizado para esta versão do jogo: \"{0}\". Jogadores podem ser desconectados, ou o servidor pode parar, ao entrar.",
+  "msg.alert_paldefender_current": "O PalDefender não indica mais que está desatualizado."
 }

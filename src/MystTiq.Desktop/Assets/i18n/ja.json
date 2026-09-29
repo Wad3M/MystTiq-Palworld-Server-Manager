@@ -3562,5 +3562,14 @@
   "ui.extra_ranges_watermark": "追加の範囲（例：10.0.5.0/24, 10.0.5.7）",
   "ui.not_searched_virtual": "検索しない（仮想）：",
   "ui.could_not_read_ranges": "読み取れません：",
-  "ui.clone_firewall_hint": "クローンは新しいゲームポートで待ち受けます。オンラインになったらそのタブを開き、［ファイアウォールで許可］（設定または診断）を使ってプレイヤーが参加できるようにしてください。"
+  "ui.clone_firewall_hint": "クローンは新しいゲームポートで待ち受けます。オンラインになったらそのタブを開き、［ファイアウォールで許可］（設定または診断）を使ってプレイヤーが参加できるようにしてください。",
+  "msg.firewall_other_networks": "{0} {1} を許可する規則は他のネットワーク（{2}）だけに適用されます。このコンピューターは {3} ネットワーク上にあります。",
+  "ui.component_out_of_date": "ゲームサーバーまたは PalDefender が古い",
+  "ui.component_out_of_date_hint": "ゲームサーバーが Steam の公開ビルドより古いとき、または PalDefender がゲームのバージョンに未対応と報告したときに通知します。",
+  "msg.alert_game_server_update_available": "ゲームサーバーの更新があります",
+  "msg.alert_game_server_behind": "このサーバーのビルドは {0}、Steam の公開ビルドは {1} です。更新するまで、現在のゲームバージョンのプレイヤーは参加できません（アップデートセンター）。",
+  "msg.alert_game_server_current": "ゲームサーバーは Steam の現在の公開ビルドです。",
+  "msg.alert_paldefender_update_needed": "PalDefender の更新が必要です",
+  "msg.alert_paldefender_behind": "PalDefender はこのゲームバージョンに未対応と報告しています：「{0}」。参加時にプレイヤーが切断されたり、サーバーが停止したりすることがあります。",
+  "msg.alert_paldefender_current": "PalDefender は古いと報告しなくなりました。"
 }

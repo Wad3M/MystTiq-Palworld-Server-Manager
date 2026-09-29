@@ -1,4 +1,4 @@
-# MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+# MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 name: Translation feedback
 description: Improve wording, report missing text or help review a language
 title: "[Translation]: "
@@ -10,7 +10,7 @@ body:
     id: language
     attributes:
       label: Language and app version
-      placeholder: Deutsch, v0.9.7.0
+      placeholder: Deutsch, v0.9.8.0
     validations:
       required: true
   - type: input

@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.7.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.8.0: file reviewed for this release (2026-09-29). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -21,22 +21,27 @@
          of scroll position. See also the page-header Border's BorderBrush below, tinted the same
          way, for a second, larger reinforcement of the same signal. -->
     <Border Grid.Row="0" Background="{DynamicResource StatusSurfaceGradient}" BorderBrush="{Binding ActiveTabAccentBrush}" BorderThickness="0,0,0,3" PointerPressed="TitleBar_OnPointerPressed">
-      <Grid ColumnDefinitions="430,*,Auto">
-        <Grid Grid.Column="0" Margin="14,7,10,7" ColumnDefinitions="52,Auto,Auto">
+      <!-- v0.9.8.0: the brand column was a fixed 430 px; at the minimum window width that left the tab strip about 70 px,
+           not even one tab, and the "+" was pushed off (reported). Below 1200 px it narrows to the logo and wordmark. -->
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Grid Grid.Column="0" Margin="14,7,10,7" ColumnDefinitions="52,Auto,Auto" MinWidth="{Binding BrandMinWidth}">
           <Border Classes="appIcon" Width="48" Height="48"><Image Source="/Assets/PalworldServerManager.png" Stretch="UniformToFill"/></Border>
           <StackPanel Grid.Column="1" Margin="10,1,0,0" VerticalAlignment="Center" Spacing="1">
             <Image Source="/Assets/mysttiq-wordmark-v5.png" Width="145" Height="27" HorizontalAlignment="Left" Stretch="Uniform"/>
             <TextBlock Classes="brandVersion" Text="{services:TrText Version}"/>
           </StackPanel>
-          <TextBlock Grid.Column="2" Text="{services:Tr ui.palworld_server_manager}" Foreground="{DynamicResource MutedBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="14,1,0,0"/>
+          <TextBlock Grid.Column="2" Text="{services:Tr ui.palworld_server_manager}" Foreground="{DynamicResource MutedBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="14,1,0,0" IsVisible="{Binding ShowBrandSubtitle}"/>
         </Grid>
         <!-- v0.7.16.0: was hardcoded MaxWidth="720" regardless of actual available window width,
              and tabs past whatever fit were silently clipped with no way to reach them. Now sized
              from TabStripHost_OnSizeChanged (code-behind) via MainWindowViewModel.UpdateTabStripWidth,
              which splits Tabs into VisibleTabs/OverflowTabs: the ListBox below only ever shows
              VisibleTabs, and the chevron button after it opens a flyout for the rest. -->
-        <StackPanel x:Name="TabStripHost" Grid.Column="1" Orientation="Horizontal" ClipToBounds="True" SizeChanged="TabStripHost_OnSizeChanged">
-        <ListBox AutomationProperties.Name="{services:Tr ui.a11y_server_tabs}" ItemsSource="{Binding VisibleTabs}" SelectedItem="{Binding ActiveTab}" Background="Transparent" BorderThickness="0" Margin="0,6">
+        <!-- v0.9.8.0: the tabs, the "»" and the "+" were one clipped horizontal panel, so whatever did not fit was cut at its
+             right edge, the "+" first. The tabs are now capped at the width left after the two buttons (TabListMaxWidth) and clipped there,
+             so the "»" and "+" always follow them inside the strip. -->
+        <Grid x:Name="TabStripHost" Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto,*" ClipToBounds="True" SizeChanged="TabStripHost_OnSizeChanged">
+        <ListBox Grid.Column="0" HorizontalAlignment="Left" ClipToBounds="True" MaxWidth="{Binding TabListMaxWidth}" AutomationProperties.Name="{services:Tr ui.a11y_server_tabs}" ItemsSource="{Binding VisibleTabs}" SelectedItem="{Binding ActiveTab}" Background="Transparent" BorderThickness="0" Margin="0,6">
           <ListBox.Styles>
             <Style Selector="ListBoxItem"><Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="CornerRadius" Value="6"/></Style>
             <Style Selector="ListBoxItem:nth-child(2n)"><Setter Property="Background" Value="Transparent"/></Style>
@@ -90,16 +95,16 @@
              listing the hidden ones (click to switch) plus "Set Up New Server", the same entry the
              "+" button's own flyout offers, so creating a new tab is reachable from here too without
              needing to first free up strip space. -->
-        <Button x:Name="TabOverflowButton" Width="36" Height="44" Margin="2,10" Padding="0" Classes="ghost"
+        <Button x:Name="TabOverflowButton" Grid.Column="1" Width="36" Height="44" Margin="2,10" Padding="0" Classes="ghost"
                 IsVisible="{Binding HasOverflowTabs}" Click="TabOverflowButton_OnClick"
                 ToolTip.Tip="{services:Tr ui.show_hidden_tabs}" AutomationProperties.Name="{services:Tr ui.show_hidden_tabs}">
           <TextBlock FontSize="16" Text="»" Foreground="{DynamicResource TextBrush}"/>
         </Button>
-        <Button x:Name="AddTabButton" Width="44" Height="44" Margin="4,10" Classes="ghost"
+        <Button x:Name="AddTabButton" Grid.Column="2" Width="44" Height="44" Margin="4,10" Classes="ghost"
                 Click="AddTabButton_OnClick" ToolTip.Tip="{services:Tr ui.open_a_new_tab}" AutomationProperties.Name="{services:Tr ui.open_a_new_tab}">
           <Path Data="{StaticResource IconAddTab}" Fill="{DynamicResource TextBrush}" Width="20" Height="20" Stretch="Uniform"/>
         </Button>
-        </StackPanel>
+        </Grid>
         <!-- v0.7.14.0: window-chrome buttons had ToolTip coverage everywhere else in the app except
              here (Minimize/Maximize/Close had none), and none of these six icon-only buttons had an
              AutomationProperties.Name: a ToolTip.Tip is not exposed as the accessible name to
@@ -2842,17 +2847,19 @@
           <Border Classes="card accentSystem" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="10">
               <TextBlock Text="{services:Tr ui.threshold_rules}" FontSize="17" FontWeight="SemiBold"/>
-              <Grid ColumnDefinitions="220,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+              <Grid ColumnDefinitions="220,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
                 <TextBlock Text="{services:Tr ui.sustained_high_cpu}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.sustained_high_cpu}" Grid.Column="1" IsChecked="{Binding AlertRules.HighCpuSustained.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.sustained_high_cpu}" Grid.Column="2" Value="{Binding AlertRules.HighCpuSustained.ThresholdPercent}" Minimum="1" Maximum="100"/>
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.sustained_high_memory_mb}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.sustained_high_memory_mb}" Grid.Row="1" Grid.Column="1" IsChecked="{Binding AlertRules.HighMemorySustained.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.sustained_high_memory_mb}" Grid.Row="1" Grid.Column="2" Value="{Binding AlertRules.HighMemorySustained.ThresholdMb}" Minimum="1"/>
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.low_disk_space}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.low_disk_space}" Grid.Row="2" Grid.Column="1" IsChecked="{Binding AlertRules.LowDiskSpace.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.low_disk_space}" Grid.Row="2" Grid.Column="2" Value="{Binding AlertRules.LowDiskSpace.ThresholdPercent}" Minimum="1" Maximum="100"/>
                 <TextBlock Grid.Row="3" Text="{services:Tr ui.disk_exhaustion_predicted_within_days}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.disk_exhaustion_predicted_within_days}" Grid.Row="3" Grid.Column="1" IsChecked="{Binding AlertRules.DiskSpaceExhaustionPredicted.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.disk_exhaustion_predicted_within_days}" Grid.Row="3" Grid.Column="2" Value="{Binding AlertRules.DiskSpaceExhaustionPredicted.ThresholdDays}" Minimum="1"/>
                 <TextBlock Grid.Row="4" Text="{services:Tr ui.mod_ue4ss_health_needs_attention}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.mod_ue4ss_health_needs_attention}" Grid.Row="4" Grid.Column="1" IsChecked="{Binding AlertRules.ModHealthDegraded.Enabled}"/><TextBlock Grid.Row="4" Grid.Column="2" Text="{services:Tr ui.fires_when_an_enabled_mod_reports_failed_missing_d454e6}" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+                <!-- v0.9.8.0: the game server behind Steam's public build, or PalDefender not updated for the game. -->
+                <TextBlock Grid.Row="5" Text="{services:Tr ui.component_out_of_date}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.component_out_of_date}" Grid.Row="5" Grid.Column="1" IsChecked="{Binding AlertRules.ComponentOutdated.Enabled}"/><TextBlock Grid.Row="5" Grid.Column="2" Text="{services:Tr ui.component_out_of_date_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
                 <!-- v0.7.108.0: was an env-var-only live-testing knob (MYSTTIQ_ALERT_REMINDER_MINUTES) in
                      v0.7.107.0; now a real setting here too, applying to every rule above. 0 turns the
                      "Still active: ..." follow-up off entirely. -->
-                <TextBlock Grid.Row="5" Text="{services:Tr ui.reminder_every_minutes_0_off}" VerticalAlignment="Center" Classes="muted" ToolTip.Tip="{services:Tr ui.how_often_a_still_active_condition_sends_a_still_24ec91}"/>
-                <NumericUpDown AutomationProperties.Name="{services:Tr ui.reminder_every_minutes_0_off}" Grid.Row="5" Grid.Column="2" Value="{Binding AlertRules.ReminderMinutes}" Minimum="0" Maximum="10080" FormatString="0"/>
+                <TextBlock Grid.Row="6" Text="{services:Tr ui.reminder_every_minutes_0_off}" VerticalAlignment="Center" Classes="muted" ToolTip.Tip="{services:Tr ui.how_often_a_still_active_condition_sends_a_still_24ec91}"/>
+                <NumericUpDown AutomationProperties.Name="{services:Tr ui.reminder_every_minutes_0_off}" Grid.Row="6" Grid.Column="2" Value="{Binding AlertRules.ReminderMinutes}" Minimum="0" Maximum="10080" FormatString="0"/>
               </Grid>
               <!-- v0.7.111.0: crash-recovery alerts had no settings at all. Stored in this profile's own
                    rules, so each server tab has its own, and saved with Save Rules like everything above. -->

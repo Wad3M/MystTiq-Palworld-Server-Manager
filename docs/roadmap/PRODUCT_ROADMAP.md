@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.7.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.8.0: file reviewed for this release (2026-09-29). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-28. **Current version: v0.9.7.0. Accepted baseline: v0.8.25.0. Next: v0.9.x acceptance.**
+Updated 2026-09-29. **Current version: v0.9.8.0. Accepted baseline: v0.8.25.0. Next: v0.9.x acceptance.**
 
-This is the active plan. Version assignments after v0.9.7.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v0.9.8.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Foundation delivered through v0.8.26.0
 
@@ -64,9 +64,9 @@ This is the active plan. Version assignments after v0.9.7.0 are proposed milesto
 - **A refused manifest no longer stops an update.** When Steam refuses the installed build's manifest ("Access Denied"), MystTiq moves the app manifest aside and checks every file against the new build instead, keeping the old manifest (or putting it back if that fails too), and a failure names SteamCMD's reason instead of "exit code 8".
 - **Upgrade and recovery tested.** `scripts/Test-v0.9.5.0-Upgrade.ps1`: the accepted baseline (v0.8.25.0) takes settings and data, this version keeps every value, the baseline's backup verifies and a restore is byte for byte, rolling back to v0.8.25.0 still reads everything, and a fresh setup starts. `scripts/Test-v0.9.5.0-FleetRecovery.ps1`: two servers in one service; restarting or killing one never starts the other.
 - Recorded checks: the logic harness pins the unreadable-process rule, the expected port, SteamCMD's app info and failures, and PalDefender's warning; live on this machine, stopping and starting the real clone server under the new build started no other server and logged no crash, the Update Center reported the main server one build behind (25080279 against 25247047) and the clone current, and the Doctor warned on the main server. The fleet smoke also passes on the old build (the stand-in server's path is readable at once), so the logic harness and the live run are the evidence for the fix. Not yet recorded live: an update from MystTiq that meets a refused manifest (the clone was updated by hand before this version).
-- Still open: accounts in the upgrade test (it ran without sign-in); a notification (not only a Doctor warning) when a component falls behind; linking a server exit to the player join just before it; UE4SS's installed release is still compared by hand.
+- Still open: linking a server exit to the player join just before it; UE4SS's installed release is still compared by hand. (Accounts in the upgrade test and an alert when a component falls behind: delivered in v0.9.8.0.)
 
-**Exit evidence met:** a scripted upgrade from v0.8.25.0 and a fresh setup with every value compared, and a server one build behind reported as out of date. **Still to record:** an update from MystTiq through a refused manifest, and a scripted upgrade with accounts.
+**Exit evidence met:** a scripted upgrade from v0.8.25.0 and a fresh setup with every value compared, and a server one build behind reported as out of date. **Still to record:** an update from MystTiq through a refused manifest (a scripted upgrade with accounts: v0.9.8.0).
 
 ## v0.9.6.0 — firewall rule for the server's port, and a fast server search (delivered 2026-09-28)
 
@@ -79,7 +79,7 @@ Requested 2026-09-28, after a LAN join to the clone server needed a firewall rul
 - **Fast server search.** A TCP connect sweep, 256 addresses at a time with a 600 ms timeout, then the `/healthz` probe only where the port answers: 255 addresses in about 0.6 s in the harness. It shows the ranges it searches and its progress, lists each service as it answers, and has Cancel; the window stays usable. Each subnet is searched once; virtual adapters (WSL, Hyper-V, Docker, VMware, VirtualBox, libvirt) without a default gateway are listed as not searched unless ticked (a Hyper-V external switch carrying the real LAN, as on this machine, is searched); typed ranges (single addresses or `/24` to `/32`) are added.
 - **A stop is never taken for a crash.** Found by this version's gate (the v0.9.5.0 fleet smoke, about one run in three): the process inspector dropped a terminating process whose details could not be read, so a stop recorded "Stopped" while the process was still exiting, the next read listed it as "Running", and the supervisor then restarted it as crashed. A process is now listed until Windows reports it has exited and never after, status reads and a stop's state writes are serialised, and a read during a stop keeps the stop request (Windows and Linux); the lifecycle state file retries a replace that something holding it open refused.
 - Recorded checks: the logic harness pins rule matching (with the rules found on this machine), the tagged allow script and its cleanup, the rule state, a real read of this computer's firewall, ranges, virtual adapters and typed ranges, a timed search with a stand-in service, Cancel, and a second server's arguments. `scripts/Test-v0.9.6.0-FirewallRoute.ps1`: two servers in one service, one advertising a port it does not bind; the route and the Doctor report the bound port, and only GET routes are called. The ArtworkHarness checks the 44 new texts in all 12 languages.
-- Still open: counting a rule only when it covers the network profile in use (a Private-only rule reads as allowed on a Public network); adding a rule live (it changes this computer's security settings, so the owner clicks it and confirms Windows' prompt), then changing the port and allowing again, and a join from another PC through the rule; searching more than the `/24` around an address on a wider network; changing a mismatched `-port=` from the Doctor (launch arguments apply when MystTiq restarts).
+- Still open: adding a rule live (it changes this computer's security settings, so the owner clicks it and confirms Windows' prompt), then changing the port and allowing again, and a join from another PC through the rule; changing a mismatched `-port=` from the Doctor (launch arguments apply when MystTiq restarts).
 
 **Exit evidence met:** the firewall state for the port each server binds, read in well under a second; a search of 255 addresses in under a second that lists its ranges, its progress and the service it found. **Still to record:** a rule added and then updated after a port change, with elevation, and a join from another PC through it.
 
@@ -88,9 +88,19 @@ Requested 2026-09-28, after a LAN join to the clone server needed a firewall rul
 - **Avalonia 11.3 → 12.1.3**, all four packages together (Avalonia, Avalonia.Desktop, Avalonia.Fonts.Inter, Avalonia.Themes.Fluent) and `Avalonia.Headless` 12.1.3 in the ArtworkHarness and RemoteSignInHarness, pinned to that exact version; Dependabot already groups the Avalonia packages (v0.8.26.0), so its split pull requests (#15–#17) cannot recur.
 - What the new version needed: the clipboard's text methods moved to extensions in `Avalonia.Input.Platform` (`GetTextAsync` became `TryGetTextAsync`); `TextBox.Watermark` became `PlaceholderText` (62 text boxes); `Window.SystemDecorations` became `WindowDecorations`; Avalonia 12 has its own `NavigationPage` control, so the harnesses alias the app's.
 - Recorded checks: the desktop builds with no new warnings; the ArtworkHarness passes in all 12 languages on Avalonia 12, and its page renders match 11.3's apart from an undersized (950×650) window, which now fits its content (the ribbon folds into "»") where 11.3 ran off the edge.
-- Still open: the real Linux desktop session on the test VM (window, maximize and restore, clipboard, tray), which needs the test user logged in to the VM's desktop.
+- The real Linux desktop session on the test VM (window, maximize and restore, clipboard, tray) passed on Avalonia 12 in the v0.9.8.0 gate (2026-09-29), once the test user was logged in to the VM's desktop.
 
-**Exit evidence met:** a clean Windows build, both harnesses building and the ArtworkHarness passing, the full release gate, and every page compared in each appearance mode. **Still to record:** the Linux desktop session on Avalonia 12.
+**Exit evidence met:** a clean Windows build, both harnesses building and the ArtworkHarness passing, the full release gate, and every page compared in each appearance mode. **Recorded in the v0.9.8.0 gate:** the Linux desktop session on Avalonia 12.
+
+## v0.9.8.0 — small screens, alerts and Linux install (delivered 2026-09-29)
+
+- **The "+" stays on small windows** (reported 2026-09-29). The title bar's fixed 430 px brand left the tab strip too little room at the minimum width, and the tabs, "»" and "+" were one panel clipped at its right edge. The "»" and "+" now have their own columns after the tabs (capped at the space left), and below 1200 px the brand drops its subtitle. The ArtworkHarness checks the "+" and the active tab at 950, 1100 and 1440 px.
+- **Alerts when a component falls behind.** The Alert Center's "Game server or PalDefender out of date" rule (on by default) alerts on a game server behind Steam's public build and on PalDefender's "not updated for this game version" warning, with reminders and a Resolved notice (closes v0.9.5.0's open item).
+- **Firewall rules and the network in use.** A rule counts only on the network profile(s) the computer is on; a Private-only rule on a Public network is reported as such (closes v0.9.6.0's open item).
+- **Wider server search.** Each adapter's own subnet, capped at /22, instead of always the /24; typed ranges accept /22 (closes v0.9.6.0's open item).
+- **Linux install with a desktop shortcut.** `scripts/Install-MystTiqDesktopLinux.ps1` (`.\Build.ps1 DeployDesktopLinux`) installs the Linux download in the user's home over SSH, with a trusted launcher on the desktop and in the applications menu; used on the test VM on 2026-09-29.
+- **Accounts across an upgrade.** `scripts/Test-v0.9.8.0-UpgradeAccounts.ps1`: accounts, roles, a changed password and a disabled account from v0.8.25.0 to this version and back (closes v0.9.5.0's open item).
+- Still open: linking a server exit to the player join just before it; UE4SS's installed release is still compared by hand.
 
 ## v0.9.x — integration and release stabilization
 

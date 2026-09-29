@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 namespace MystTiq.Core.Models;
 
 // v0.6.4.0: gained Unknown so this can serve as the canonical per-check severity for the unified
@@ -13,14 +13,15 @@ public enum DiagnosticState { Pass, Warning, Fail, Starting, Skipped, Unknown }
 public enum NetworkHealthState { Unknown, Starting, Healthy, Warning, Error, NotRunning }
 public sealed record NetworkEndpointInfo(string Protocol,string LocalAddress,int LocalPort,int? OwningProcessId,string? ProcessName=null,string? ExecutablePath=null);
 // ServerId (v0.9.6.0): the server a MystTiq rule belongs to, from its description; null for other rules and older ones.
-public sealed record FirewallRuleInfo(string Name,bool Enabled,string Direction,string Action,string Protocol,int LocalPort,string Profiles,bool ManagedByMystTiq=false,string? ServerId=null);
+public sealed record FirewallRuleInfo(string Name,bool Enabled,string Direction,string Action,string Protocol,int LocalPort,string Profiles,bool ManagedByMystTiq=false,string? ServerId=null){ public bool CoversCurrentNetwork { get; init; } = true; }
 public sealed record NetworkDiagnosticCheck(string Test,DiagnosticState State,string Details,string Recommendation="");
 // v0.9.6.0: NeedsElevation says the service may not change the firewall; Script is the change to run as an administrator
 // instead (the Desktop runs it elevated on this computer). Removed names the rules for the server's old port.
 public sealed record FirewallRepairResult(bool Success,bool Changed,string Message,bool NeedsElevation=false,string? Script=null,IReadOnlyList<string>? Removed=null);
 // v0.9.6.0: one server's game port in the firewall: whether a rule allows or blocks it, and this server's rules for a
 // port it no longer uses. Supported is false where MystTiq does not change the firewall (Linux), with Commands to run.
-public sealed record FirewallStatus(int Port,string Protocol,bool Supported,bool Allowed,bool Blocked,IReadOnlyList<FirewallRuleInfo> Rules,IReadOnlyList<string> StaleRules,string Summary,string? Error=null,IReadOnlyList<string>? Commands=null);
+// CurrentNetwork (v0.9.8.0): the network profile(s) in use, e.g. "Private".
+public sealed record FirewallStatus(int Port,string Protocol,bool Supported,bool Allowed,bool Blocked,IReadOnlyList<FirewallRuleInfo> Rules,IReadOnlyList<string> StaleRules,string Summary,string? Error=null,IReadOnlyList<string>? Commands=null){ public string? CurrentNetwork { get; init; } }
 // v0.7.2.0: a standalone "is this candidate port already bound" query, independent of any
 // configured/running server profile -- unlike NetworkDiagnosticReport (which only ever checks one
 // already-running profile's own configured port), this answers the question a new-server-creation

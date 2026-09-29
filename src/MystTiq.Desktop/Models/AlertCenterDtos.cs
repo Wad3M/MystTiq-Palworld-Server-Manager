@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 namespace MystTiq.Desktop.Models;
 
 public sealed class AlertThresholdRuleDto
@@ -35,6 +35,8 @@ public sealed class AlertRuleSetDto
     public AlertThresholdRuleDto LowDiskSpace { get; set; } = new();
     public AlertDiskDaysRuleDto DiskSpaceExhaustionPredicted { get; set; } = new();
     public AlertSimpleRuleDto ModHealthDegraded { get; set; } = new();
+    // v0.9.8.0: the game server behind Steam's build, or PalDefender not updated for the game.
+    public AlertSimpleRuleDto ComponentOutdated { get; set; } = new();
     // v0.7.108.0: how often a still-active condition's "Still active: ..." reminder repeats. 0 turns
     // reminders off entirely.
     public int ReminderMinutes { get; set; } = 1440;

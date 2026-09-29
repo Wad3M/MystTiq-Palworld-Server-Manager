@@ -3562,5 +3562,14 @@
   "ui.extra_ranges_watermark": "Plages supplémentaires, ex. 10.0.5.0/24, 10.0.5.7",
   "ui.not_searched_virtual": "Non recherchées (virtuelles) :",
   "ui.could_not_read_ranges": "Illisible :",
-  "ui.clone_firewall_hint": "Le clone écoute sur un nouveau port de jeu. Une fois en ligne, ouvrez son onglet et utilisez Autoriser dans le pare-feu (Paramètres ou Diagnostics) pour que les joueurs puissent rejoindre."
+  "ui.clone_firewall_hint": "Le clone écoute sur un nouveau port de jeu. Une fois en ligne, ouvrez son onglet et utilisez Autoriser dans le pare-feu (Paramètres ou Diagnostics) pour que les joueurs puissent rejoindre.",
+  "msg.firewall_other_networks": "Une règle autorise {0} {1} seulement sur d’autres réseaux ({2}) ; cet ordinateur est sur un réseau {3}.",
+  "ui.component_out_of_date": "Serveur de jeu ou PalDefender obsolète",
+  "ui.component_out_of_date_hint": "Se déclenche quand le serveur de jeu est en retard sur la version publique de Steam, ou quand PalDefender indique qu’il n’est pas à jour pour la version du jeu.",
+  "msg.alert_game_server_update_available": "Mise à jour du serveur de jeu disponible",
+  "msg.alert_game_server_behind": "Ce serveur a la version {0} ; la version publique de Steam est {1}. Les joueurs sur la version actuelle du jeu ne peuvent pas rejoindre tant qu’il n’est pas mis à jour (Centre de mise à jour).",
+  "msg.alert_game_server_current": "Le serveur de jeu est sur la version publique actuelle de Steam.",
+  "msg.alert_paldefender_update_needed": "Mise à jour de PalDefender nécessaire",
+  "msg.alert_paldefender_behind": "PalDefender indique qu’il n’est pas à jour pour cette version du jeu : « {0} ». Les joueurs peuvent être déconnectés, ou le serveur s’arrêter, quand ils rejoignent.",
+  "msg.alert_paldefender_current": "PalDefender n’indique plus qu’il est obsolète."
 }

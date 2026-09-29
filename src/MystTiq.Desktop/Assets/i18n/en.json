@@ -3562,5 +3562,14 @@
   "ui.extra_ranges_watermark": "Extra ranges, e.g. 10.0.5.0/24, 10.0.5.7",
   "ui.not_searched_virtual": "Not searched (virtual):",
   "ui.could_not_read_ranges": "Could not read:",
-  "ui.clone_firewall_hint": "The clone listens on a new game port. Once it is online, open its tab and use Allow through Firewall (Settings or Diagnostics) so players can join."
+  "ui.clone_firewall_hint": "The clone listens on a new game port. Once it is online, open its tab and use Allow through Firewall (Settings or Diagnostics) so players can join.",
+  "msg.firewall_other_networks": "A rule allows {0} {1} only on other networks ({2}); this computer is on a {3} network.",
+  "ui.component_out_of_date": "Game server or PalDefender out of date",
+  "ui.component_out_of_date_hint": "Fires when the game server is behind Steam's public build, or PalDefender says it isn't updated for the game version.",
+  "msg.alert_game_server_update_available": "Game server update available",
+  "msg.alert_game_server_behind": "This server has build {0}; Steam's public build is {1}. Players on the current game version cannot join until it is updated (Update Center).",
+  "msg.alert_game_server_current": "The game server is on Steam's current public build.",
+  "msg.alert_paldefender_update_needed": "PalDefender update needed",
+  "msg.alert_paldefender_behind": "PalDefender says it is not updated for this game version: \"{0}\". Players may be disconnected, or the server may stop, when they join.",
+  "msg.alert_paldefender_current": "PalDefender no longer reports that it is out of date."
 }

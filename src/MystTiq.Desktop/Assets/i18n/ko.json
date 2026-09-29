@@ -3562,5 +3562,14 @@
   "ui.extra_ranges_watermark": "추가 범위(예: 10.0.5.0/24, 10.0.5.7)",
   "ui.not_searched_virtual": "검색 안 함(가상):",
   "ui.could_not_read_ranges": "읽을 수 없음:",
-  "ui.clone_firewall_hint": "클론은 새 게임 포트를 사용합니다. 온라인이 되면 해당 탭을 열고 방화벽에서 허용(설정 또는 진단)을 사용해 플레이어가 접속할 수 있게 하세요."
+  "ui.clone_firewall_hint": "클론은 새 게임 포트를 사용합니다. 온라인이 되면 해당 탭을 열고 방화벽에서 허용(설정 또는 진단)을 사용해 플레이어가 접속할 수 있게 하세요.",
+  "msg.firewall_other_networks": "{0} {1}을(를) 허용하는 규칙은 다른 네트워크({2})에만 적용됩니다. 이 컴퓨터는 {3} 네트워크에 있습니다.",
+  "ui.component_out_of_date": "게임 서버 또는 PalDefender가 오래됨",
+  "ui.component_out_of_date_hint": "게임 서버가 Steam 공개 빌드보다 뒤처지거나 PalDefender가 게임 버전에 맞게 업데이트되지 않았다고 알릴 때 발생합니다.",
+  "msg.alert_game_server_update_available": "게임 서버 업데이트 있음",
+  "msg.alert_game_server_behind": "이 서버의 빌드는 {0}이고 Steam 공개 빌드는 {1}입니다. 업데이트하기 전까지 현재 게임 버전의 플레이어는 접속할 수 없습니다(업데이트 센터).",
+  "msg.alert_game_server_current": "게임 서버가 Steam의 현재 공개 빌드입니다.",
+  "msg.alert_paldefender_update_needed": "PalDefender 업데이트 필요",
+  "msg.alert_paldefender_behind": "PalDefender가 이 게임 버전에 맞게 업데이트되지 않았다고 알립니다: \"{0}\". 접속할 때 플레이어 연결이 끊기거나 서버가 멈출 수 있습니다.",
+  "msg.alert_paldefender_current": "PalDefender가 더 이상 오래되었다고 알리지 않습니다."
 }

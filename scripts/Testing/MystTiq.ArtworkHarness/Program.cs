@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -91,6 +91,23 @@ var ribbonTop = ribbon.TranslatePoint(default, window)!.Value;
 Check(headerTop.Y >= categoriesTop.Y + categories.Bounds.Height, "Header cannot cover the category navigation");
 Check(ribbonTop.X + ribbon.Bounds.Width <= headerTop.X, "Header cannot cover Ribbon commands");
 Check(vm.HasOverflowRibbonGroups, "Narrow-window commands remain reachable through Ribbon overflow");
+// v0.9.8.0: the "+" (new tab) stays inside the window and the tab strip at every width (at the minimum width it was pushed
+// off the right edge, reported by the user), and a tab that no longer fits goes to the "»" menu.
+foreach (var titleWidth in new[] { 950.0, 1100.0, 1440.0 })
+{
+    window.Width = titleWidth;
+    Render($"titlebar-{titleWidth:0}");
+    var addTab = window.FindControl<Button>("AddTabButton")!;
+    var strip = window.FindControl<Grid>("TabStripHost")!;
+    var addAt = addTab.TranslatePoint(default, window)!.Value;
+    var stripAt = strip.TranslatePoint(default, window)!.Value;
+    Check(addTab.IsEffectivelyVisible && addAt.X >= stripAt.X && addAt.X + addTab.Bounds.Width <= stripAt.X + strip.Bounds.Width + 0.5 && addAt.X + addTab.Bounds.Width <= titleWidth,
+        $"at {titleWidth:0} px wide the \"+\" is inside the tab strip and the window (at {addAt.X:0}+{addTab.Bounds.Width:0}, strip {stripAt.X:0}..{stripAt.X + strip.Bounds.Width:0})");
+    Check(vm.ActiveTab is not null && vm.VisibleTabs.Contains(vm.ActiveTab) && vm.VisibleTabs.Count + vm.OverflowTabs.Count == vm.Tabs.Count && (vm.OverflowTabs.Count == 0 || vm.HasOverflowTabs),
+        $"at {titleWidth:0} px wide the active tab is shown and every tab is either shown or in the \"»\" menu ({vm.VisibleTabs.Count} shown, {vm.OverflowTabs.Count} in the menu)");
+}
+Check(!vm.ShowBrandSubtitle || window.Width >= 1200, "the title bar drops its subtitle below 1200 px");
+window.Width = 950;
 vm.SelectedProfile = null;
 Render("setup-wizard-light");
 Check(window.GetVisualDescendants().OfType<Image>().Any(i => i.IsEffectivelyVisible && ReferenceEquals(i.Source, vm.SetupArtwork)), "Setup wizard uses themed Server artwork");

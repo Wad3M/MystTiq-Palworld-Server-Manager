@@ -3562,5 +3562,14 @@
   "ui.extra_ranges_watermark": "Dodatkowe zakresy, np. 10.0.5.0/24, 10.0.5.7",
   "ui.not_searched_virtual": "Nieprzeszukane (wirtualne):",
   "ui.could_not_read_ranges": "Nie można odczytać:",
-  "ui.clone_firewall_hint": "Klon nasłuchuje na nowym porcie gry. Gdy będzie online, otwórz jego kartę i użyj Zezwól w zaporze (Ustawienia lub Diagnostyka), aby gracze mogli dołączyć."
+  "ui.clone_firewall_hint": "Klon nasłuchuje na nowym porcie gry. Gdy będzie online, otwórz jego kartę i użyj Zezwól w zaporze (Ustawienia lub Diagnostyka), aby gracze mogli dołączyć.",
+  "msg.firewall_other_networks": "Reguła zezwala na {0} {1} tylko w innych sieciach ({2}); ten komputer jest w sieci {3}.",
+  "ui.component_out_of_date": "Serwer gry lub PalDefender nieaktualny",
+  "ui.component_out_of_date_hint": "Uruchamia się, gdy serwer gry jest za publiczną wersją Steam lub PalDefender zgłasza, że nie jest zaktualizowany do wersji gry.",
+  "msg.alert_game_server_update_available": "Dostępna aktualizacja serwera gry",
+  "msg.alert_game_server_behind": "Ten serwer ma wersję {0}; publiczna wersja Steam to {1}. Gracze z aktualną wersją gry nie dołączą, dopóki nie zostanie zaktualizowany (Centrum aktualizacji).",
+  "msg.alert_game_server_current": "Serwer gry ma aktualną publiczną wersję Steam.",
+  "msg.alert_paldefender_update_needed": "Wymagana aktualizacja PalDefender",
+  "msg.alert_paldefender_behind": "PalDefender zgłasza, że nie jest zaktualizowany do tej wersji gry: „{0}”. Gracze mogą zostać rozłączeni lub serwer może się zatrzymać przy dołączaniu.",
+  "msg.alert_paldefender_current": "PalDefender nie zgłasza już, że jest nieaktualny."
 }

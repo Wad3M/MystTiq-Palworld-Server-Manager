@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -4018,6 +4018,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ServerSetupTableMaxHeight = Math.Clamp(windowHeight - nonTableChromeHeight, minTableHeight, maxTableHeight);
     }
 
+    // v0.9.8.0: below 1200 px the title bar drops the "Palworld Server Manager" subtitle and its fixed 430 px brand width, so
+    // the tab strip keeps room for a tab and the "+".
+    private bool _showBrandSubtitle = true;
+    public bool ShowBrandSubtitle { get => _showBrandSubtitle; private set { if (SetField(ref _showBrandSubtitle, value)) RaisePropertyChanged(nameof(BrandMinWidth)); } }
+    public double BrandMinWidth => ShowBrandSubtitle ? 430 : 0;
+    // The tab list's cap: the strip less the "+" and, when shown, the "»", so both always fit after the tabs.
+    private double _tabListMaxWidth = double.PositiveInfinity;
+    public double TabListMaxWidth { get => _tabListMaxWidth; private set => SetField(ref _tabListMaxWidth, value); }
+    public void UpdateWindowWidth(double width) { if (width > 0) ShowBrandSubtitle = width >= 1200; }
+
     public void UpdateTabStripWidth(double width)
     {
         if (width <= 0 || Math.Abs(width - _tabStripWidth) < 1) return;
@@ -4039,7 +4049,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        // Doesn't fit without the overflow button itself claiming some of that space too.
+        // Doesn't fit without the overflow button itself claiming some of that space too. At least one tab stays: the list must
+        // hold the active tab (its selection would otherwise clear it), and since v0.9.8.0 the "+" and "»" have their own
+        // columns, so a tab wider than the space left is clipped inside the tabs' column instead of pushing the "+" off.
         maxVisible = Math.Max(1, (int)Math.Floor((available - overflowButtonWidth) / perTabWidth));
         var visible = Tabs.Take(maxVisible).ToList();
         var overflow = Tabs.Skip(maxVisible).ToList();
@@ -4071,6 +4083,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             foreach (var tab in overflow) OverflowTabs.Add(tab);
         }
         HasOverflowTabs = OverflowTabs.Count > 0;
+        TabListMaxWidth = Math.Max(0, _tabStripWidth - 52 - (HasOverflowTabs ? 40 : 0));
     }
 
     public void UpdateRibbonWidth(double width)

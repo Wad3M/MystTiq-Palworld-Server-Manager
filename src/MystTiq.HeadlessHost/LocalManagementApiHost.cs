@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -171,7 +171,9 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             // v0.7.111.0: created before the crash observer, which reads this profile's alert rules (crash
             // alerts on/off and the mute) from it.
             var historicalMetrics = new HeadlessHistoricalMetricsService(paths);
-            var alertCenter = new HeadlessAlertCenterService(paths, historicalMetrics, notifications, modManagement);
+            // v0.9.8.0: built before the alert center, which now alerts when a component falls behind.
+            var componentUpdates = new HeadlessComponentUpdateService(paths, modManagement);
+            var alertCenter = new HeadlessAlertCenterService(paths, historicalMetrics, notifications, modManagement, componentUpdates);
             // v0.7.115.0: crash recovery's own state (restart window, give-up, pinned DOWN notice) survives a
             // MystTiq restart. Shared by the supervisor loop and the alert observer of this one profile.
             var recoveryState = SupervisorRecoveryStateStore.ForProfile(paths);
@@ -215,7 +217,6 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 activity);
             policyLifecycle.AfterStart = async token => await resourcePolicy.ApplyAsync(token);
             var automation = new HeadlessAutomationService(paths, configuration, serverConfig, lifecycle, backups, notifications, notificationRouting, rcon, operations, activity, alertCenter, monitoring, antiCheat, crashReports, resourcePolicy);
-            var componentUpdates = new HeadlessComponentUpdateService(paths, modManagement);
             var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer, backups, crashAndSaveTools, () => alertCenter.LowDiskCriticalPercent(), automation, componentUpdates, networkDiagnostics, profileId.Value, serverConfig.LaunchArguments);
             var worldClone = new HeadlessWorldCloneService(paths, lifecycle, serverConfig, fleetConfigurationApi, palworldConfiguration, activity);
             var modSafeStart = new HeadlessModSafeStartService(

@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 using MystTiq.Core.Models;
 
 namespace MystTiq.Core.Services;
@@ -74,11 +74,15 @@ public static class FirewallRules
     /// The state of one server's port from the rules that cover it and every MystTiq rule: allowed, blocked, and which of
     /// this server's own rules are for a port it no longer uses.
     /// </summary>
-    public static FirewallStatus Evaluate(int port, string protocol, string? serverId, IReadOnlyList<FirewallRuleInfo> portRules, IReadOnlyList<FirewallRuleInfo> mysttiqRules, bool supported = true, string? error = null)
+    // v0.9.8.0: currentNetwork names the network profile(s) in use ("Private"); a rule only counts where it covers one of them
+    // (FirewallRuleInfo.CoversCurrentNetwork). A Private-only rule used to read as "allowed" on a Public network too.
+    public static FirewallStatus Evaluate(int port, string protocol, string? serverId, IReadOnlyList<FirewallRuleInfo> portRules, IReadOnlyList<FirewallRuleInfo> mysttiqRules, bool supported = true, string? error = null, string? currentNetwork = null)
     {
         var proto = Protocol(protocol);
-        var blocked = portRules.Any(r => r.Enabled && r.Action.Equals("Block", StringComparison.OrdinalIgnoreCase));
-        var allowed = !blocked && portRules.Any(r => r.Enabled && r.Action.Equals("Allow", StringComparison.OrdinalIgnoreCase));
+        var active = portRules.Where(r => r.CoversCurrentNetwork).ToArray();
+        var blocked = active.Any(r => r.Enabled && r.Action.Equals("Block", StringComparison.OrdinalIgnoreCase));
+        var allowed = !blocked && active.Any(r => r.Enabled && r.Action.Equals("Allow", StringComparison.OrdinalIgnoreCase));
+        var otherNetworks = !allowed && !blocked && portRules.Any(r => !r.CoversCurrentNetwork && r.Enabled && r.Action.Equals("Allow", StringComparison.OrdinalIgnoreCase));
         var stale = string.IsNullOrWhiteSpace(serverId)
             ? []
             : mysttiqRules.Where(r => string.Equals(r.ServerId, serverId, StringComparison.OrdinalIgnoreCase) && r.LocalPort != port).Select(r => r.Name).Distinct().ToArray();
@@ -86,11 +90,12 @@ public static class FirewallRules
             : error is not null ? $"The firewall could not be read: {error}"
             : blocked ? $"A rule blocks {proto} {port}. Players cannot join until it is removed or disabled."
             : allowed ? $"{proto} {port} is allowed through Windows Firewall."
+            : otherNetworks ? $"A rule allows {proto} {port} only on other networks ({string.Join(", ", portRules.Where(r => !r.CoversCurrentNetwork).Select(r => r.Profiles).Distinct())}); this computer is on a {currentNetwork ?? "different"} network."
             : portRules.Count > 0 ? $"A rule for {proto} {port} exists but is turned off."
             : $"No rule allows {proto} {port}. Players on other computers cannot join.";
         if (supported && error is null && stale.Length > 0)
             summary += $" {stale.Length} old rule(s) for this server's previous port are still open.";
-        return new FirewallStatus(port, proto, supported, allowed, blocked, portRules, stale, summary, error);
+        return new FirewallStatus(port, proto, supported, allowed, blocked, portRules, stale, summary, error) { CurrentNetwork = currentNetwork };
     }
 
     /// <summary>Whether a rule's protocol number (17 UDP, 6 TCP, 256 any) covers <paramref name="protocol"/>.</summary>
@@ -140,6 +145,9 @@ public static class FirewallRules
         var file = Path.GetFileName(application.Trim().Trim('"'));
         return ServerExecutables.Any(name => string.Equals(name, file, StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>Whether a rule's profile bits cover any of the profiles in use (0 in use: no network, so every rule counts).</summary>
+    public static bool CoversNetwork(int ruleProfiles, int currentProfiles) => currentProfiles == 0 || (ruleProfiles & currentProfiles & 7) != 0;
 
     /// <summary>A rule's profile bits (1 Domain, 2 Private, 4 Public) as Windows shows them.</summary>
     public static string ProfileNames(int profiles)

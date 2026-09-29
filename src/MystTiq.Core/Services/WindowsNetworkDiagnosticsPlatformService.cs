@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -17,13 +17,16 @@ public sealed class WindowsNetworkDiagnosticsPlatformService:INetworkDiagnostics
  // covers the port and is not limited to some other program or service (a game's own "Palworld.exe" rule opens nothing
  // for the dedicated server). Each rule also reports the server id in its description (FirewallRules).
  public Task<IReadOnlyList<FirewallRuleInfo>> GetInboundFirewallRulesAsync(int port,string protocol,CancellationToken c=default)=>Task.Run<IReadOnlyList<FirewallRuleInfo>>(()=>
-  ReadRules().Where(r=>r.Inbound&&FirewallRules.CoversProtocol(r.Protocol,protocol)&&FirewallRules.CoversPort(r.LocalPorts,port)&&FirewallRules.AppliesToServer(r.Application,r.Service,r.Package,r.Owner)).Select(r=>r.ToInfo(protocol.ToUpperInvariant(),port)).ToArray(),c);
+  {var current=CurrentProfiles();return ReadRules().Where(r=>r.Inbound&&FirewallRules.CoversProtocol(r.Protocol,protocol)&&FirewallRules.CoversPort(r.LocalPorts,port)&&FirewallRules.AppliesToServer(r.Application,r.Service,r.Package,r.Owner)).Select(r=>r.ToInfo(protocol.ToUpperInvariant(),port) with{CoversCurrentNetwork=FirewallRules.CoversNetwork(r.Profiles,current)}).ToArray();},c);
  public Task<IReadOnlyList<FirewallRuleInfo>> GetMystTiqFirewallRulesAsync(CancellationToken c=default)=>Task.Run<IReadOnlyList<FirewallRuleInfo>>(()=>
   ReadRules().Where(r=>r.Name.StartsWith(FirewallRules.NamePrefix,StringComparison.Ordinal)).Select(r=>r.ToInfo(r.Protocol==6?"TCP":"UDP",FirewallRules.FirstPort(r.LocalPorts))).ToArray(),c);
  private sealed record ComRule(string Name,string? Description,bool Enabled,bool Inbound,bool Allow,int Protocol,string LocalPorts,string? Application,string? Service,int Profiles,string? Package,string? Owner)
  {
   public FirewallRuleInfo ToInfo(string protocol,int port)=>new(Name,Enabled,Inbound?"Inbound":"Outbound",Allow?"Allow":"Block",protocol,port,FirewallRules.ProfileNames(Profiles),Name.StartsWith(FirewallRules.NamePrefix,StringComparison.Ordinal),FirewallRules.ServerIdFromDescription(Description));
  }
+ // v0.9.8.0: the network profile(s) in use (1 Domain, 2 Private, 4 Public); a rule counts only where it covers one.
+ private static int CurrentProfiles(){try{var type=Type.GetTypeFromProgID("HNetCfg.FwPolicy2");if(type is null)return 0;dynamic policy=Activator.CreateInstance(type)!;return (int)policy.CurrentProfileTypes;}catch{return 0;}}
+ public string? GetCurrentFirewallNetwork(){var current=CurrentProfiles();return current==0?null:FirewallRules.ProfileNames(current);}
  private static List<ComRule> ReadRules()
  {
   var type=Type.GetTypeFromProgID("HNetCfg.FwPolicy2")??throw new InvalidOperationException("Windows Firewall is not available on this computer.");

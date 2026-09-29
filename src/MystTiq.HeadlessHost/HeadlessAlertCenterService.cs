@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 using System.Text.Json;
 using MystTiq.Core.Services;
 
@@ -45,14 +45,16 @@ public sealed class HeadlessAlertCenterService
     private readonly HeadlessHistoricalMetricsService history;
     private readonly HeadlessNotificationService notifications;
     private readonly HeadlessModManagementService modManagement;
+    private readonly HeadlessComponentUpdateService? componentUpdates;
     private readonly object gate = new();
     private readonly string rulesPath;
     private AlertRuleSet rules;
     private DateTimeOffset lastEvaluatedUtc = DateTimeOffset.MinValue;
     private readonly AlertEpisodeTracker episodes;
 
-    public HeadlessAlertCenterService(IServerPathProfile paths, HeadlessHistoricalMetricsService history, HeadlessNotificationService notifications, HeadlessModManagementService modManagement)
+    public HeadlessAlertCenterService(IServerPathProfile paths, HeadlessHistoricalMetricsService history, HeadlessNotificationService notifications, HeadlessModManagementService modManagement, HeadlessComponentUpdateService? componentUpdates = null)
     {
+        this.componentUpdates = componentUpdates;
         this.paths = paths;
         this.history = history;
         this.notifications = notifications;
@@ -90,6 +92,7 @@ public sealed class HeadlessAlertCenterService
                 LowDiskSpace = rules.LowDiskSpace,
                 DiskSpaceExhaustionPredicted = rules.DiskSpaceExhaustionPredicted,
                 ModHealthDegraded = rules.ModHealthDegraded,
+                ComponentOutdated = rules.ComponentOutdated ?? new AlertSimpleRule(true, 1440),
                 ReminderMinutes = rules.ReminderMinutes,
                 CrashAlerts = rules.CrashAlerts ?? new CrashAlertRule(true, true),
                 MutedUntilUtc = AlertMutePolicy.MuteUntil(minutes, DateTimeOffset.UtcNow)
@@ -195,6 +198,30 @@ public sealed class HeadlessAlertCenterService
                 $"{issues.Length} enabled MOD(s) have an issue: {names}{suffix}.", "MOD/UE4SS health is back to normal.", set.ModHealthDegraded.CooldownMinutes);
         }
         else Unpin(episodes.Close("mod-health-degraded"));
+
+        // v0.9.8.0: a component that falls behind was only a Doctor warning (v0.9.5.0); players on the new game version were
+        // turned away, or disconnected by an outdated PalDefender, until someone opened the Doctor. Steam's build is the cached
+        // one (never a SteamCMD call here); an unknown build leaves the episode as it is rather than calling it resolved.
+        var component = set.ComponentOutdated ?? new AlertSimpleRule(true, 1440);
+        if (component.Enabled && componentUpdates is not null)
+        {
+            if (ComponentAlerts.GameServerBehind(componentUpdates.InstalledServerBuild(), componentUpdates.PeekPublicBuild()?.BuildId) is { } behind)
+                Track("game-server-outdated", "Warning", "Game server update available", behind,
+                    $"This server has build {componentUpdates.InstalledServerBuild()}; Steam's public build is {componentUpdates.PeekPublicBuild()?.BuildId}. Players on the current game version cannot join until it is updated (Update Center).",
+                    "The game server is on Steam's current public build.", component.CooldownMinutes);
+            if (File.Exists(Path.Combine(paths.RuntimeBinaryRoot, "PalDefender.dll")))
+            {
+                var warning = HeadlessComponentUpdateService.PalDefenderGameWarning(paths.RuntimeBinaryRoot);
+                Track("paldefender-outdated", "Warning", "PalDefender update needed", warning is not null,
+                    $"PalDefender says it is not updated for this game version: \"{warning}\". Players may be disconnected, or the server may stop, when they join.",
+                    "PalDefender no longer reports that it is out of date.", component.CooldownMinutes);
+            }
+        }
+        else
+        {
+            Unpin(episodes.Close("game-server-outdated"));
+            Unpin(episodes.Close("paldefender-outdated"));
+        }
     }
 
     // The low-disk percentage the Doctor should use so both agree, or null when the rule is switched off.
@@ -289,6 +316,9 @@ public sealed class AlertRuleSet
     public AlertThresholdRule LowDiskSpace { get; init; } = new(true, 10, 60);
     public AlertDiskDaysRule DiskSpaceExhaustionPredicted { get; init; } = new(true, 7, 1440);
     public AlertSimpleRule ModHealthDegraded { get; init; } = new(true, 60);
+    // v0.9.8.0: the game server behind Steam's public build, or PalDefender not updated for the game. Nullable so a rules
+    // file (or a client) from before this version reads as the default rather than switched off.
+    public AlertSimpleRule? ComponentOutdated { get; init; } = new(true, 1440);
     // v0.7.108.0: how often a still-active condition's reminder repeats (see AlertEpisodeTracker's
     // reminderInterval, added in v0.7.107.0 as an env-var-only live-testing knob). 1440 minutes (24
     // hours) by default; 0 turns reminders off entirely. A per-rule setting was considered and rejected --
@@ -306,6 +336,14 @@ public sealed class AlertRuleSet
 public sealed record CrashAlertRule(bool Enabled, bool RecoveryNotices);
 
 public sealed record AlertMuteRequest(int Minutes);
+
+// v0.9.8.0: pure, so the logic harness covers it. True when the installed build is older than Steam's, false when it is
+// current, null when either is unknown (then nothing is decided).
+public static class ComponentAlerts
+{
+    public static bool? GameServerBehind(string? installed, string? steamBuild) =>
+        long.TryParse(installed, out var have) && long.TryParse(steamBuild, out var latest) ? have < latest : null;
+}
 
 // v0.7.111.0: pure, so the logic harness covers every case.
 public static class AlertMutePolicy

@@ -1,4 +1,4 @@
-// MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -437,6 +437,31 @@ try
         Assert(!FirewallRules.Evaluate(8212, "UDP", "alpha", [], [], supported: false).Supported, "unsupported platform");
     }, failures);
 
+    // v0.9.8.0: a component that falls behind raises an Alert Center alert (it was only a Doctor warning).
+    RunScenario("Component alert: the game server is behind only when both builds are known and the installed one is older; old rules files keep the alert on", () =>
+    {
+        Assert(ComponentAlerts.GameServerBehind("25080279", "25247047") == true, "one build behind");
+        Assert(ComponentAlerts.GameServerBehind("25247047", "25247047") == false, "current");
+        Assert(ComponentAlerts.GameServerBehind(null, "25247047") is null && ComponentAlerts.GameServerBehind("25080279", null) is null, "an unknown build decides nothing, so an open alert is not called resolved");
+        var old = System.Text.Json.JsonSerializer.Deserialize<AlertRuleSet>("{\"LowDiskSpace\":{\"Enabled\":true,\"ThresholdPercent\":10,\"CooldownMinutes\":60}}")!;
+        Assert(old.ComponentOutdated is { Enabled: true }, "a rules file from before v0.9.8.0 reads with the alert on");
+        var off = System.Text.Json.JsonSerializer.Deserialize<AlertRuleSet>("{\"ComponentOutdated\":{\"Enabled\":false,\"CooldownMinutes\":1440}}")!;
+        Assert(off.ComponentOutdated is { Enabled: false }, "switched off stays off");
+    }, failures);
+    // v0.9.8.0: a rule counts only on the network profiles it covers; a Private-only rule used to read as "allowed" on a
+    // Public network (the clone's rule on this machine is Private-only).
+    RunScenario("Firewall: a rule counts only on the networks it covers, and says so when it covers only others", () =>
+    {
+        Assert(FirewallRules.CoversNetwork(2, 2) && !FirewallRules.CoversNetwork(2, 4) && FirewallRules.CoversNetwork(0x7FFFFFFF, 4) && FirewallRules.CoversNetwork(4, 0), "profile bits against the profiles in use (none in use: every rule counts)");
+        var privateOnly = new FirewallRuleInfo(FirewallRules.RuleName(8311, "UDP"), true, "Inbound", "Allow", "UDP", 8311, "Private", true) { CoversCurrentNetwork = false };
+        var onPublic = FirewallRules.Evaluate(8311, "UDP", "second-local", [privateOnly], [privateOnly], currentNetwork: "Public");
+        Assert(!onPublic.Allowed && onPublic.CurrentNetwork == "Public", "a Private-only rule does not allow the port on a Public network");
+        Assert(onPublic.Summary == "A rule allows UDP 8311 only on other networks (Private); this computer is on a Public network.", onPublic.Summary);
+        var onPrivate = FirewallRules.Evaluate(8311, "UDP", "second-local", [privateOnly with { CoversCurrentNetwork = true }], [], currentNetwork: "Private");
+        Assert(onPrivate.Allowed, "the same rule allows it on a Private network");
+        var blockElsewhere = new FirewallRuleInfo("Block on Public", true, "Inbound", "Block", "UDP", 8311, "Public") { CoversCurrentNetwork = false };
+        Assert(FirewallRules.Evaluate(8311, "UDP", null, [privateOnly with { CoversCurrentNetwork = true }, blockElsewhere], [], currentNetwork: "Private") is { Allowed: true, Blocked: false }, "a block on another network does not block this one");
+    }, failures);
     if (OperatingSystem.IsWindows())
     {
         RunScenarioAsync("Firewall: this computer's rules are read through the firewall's COM API in a few seconds, without changing anything", async () =>
@@ -503,6 +528,25 @@ try
             [("vEthernet (Default Switch)", "Hyper-V Virtual Ethernet Adapter", IPAddress.Parse("192.168.1.9"), false), ("Ethernet", "Intel", IPAddress.Parse("192.168.1.5"), true)],
             new MystTiq.Desktop.Services.DiscoveryOptions());
         Assert(cardFirst.Ranges.Any(r => r.Cidr == "192.168.1.0/24" && r.Adapter == "Ethernet") && cardFirst.Skipped.Count == 0, "a real card claims its /24 even when a virtual adapter on it is listed first");        Assert(MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.IsVirtualAdapter("virbr0", null) && !MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.IsVirtualAdapter("Wi-Fi", "Intel(R) Wi-Fi 6E AX211"), "libvirt is virtual; Wi-Fi is not");
+    }, failures);
+    // v0.9.8.0: an adapter's own subnet is searched (it was always the /24), capped at a /22.
+    RunScenario("Server search: each adapter's own subnet is searched, a /23 whole and anything wider as the /22 around the address", () =>
+    {
+        var plan = MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.BuildPlan(
+        [
+            ("Office", "Intel", IPAddress.Parse("10.20.3.40"), true, 23),
+            ("VPN", "WireGuard", IPAddress.Parse("172.16.200.9"), true, 16),
+            ("Lab", "Realtek", IPAddress.Parse("192.168.50.70"), true, 26),
+        ], new MystTiq.Desktop.Services.DiscoveryOptions());
+        var office = plan.Ranges.Single(r => r.Adapter == "Office");
+        Assert(office.Cidr == "10.20.2.0/23" && office.Addresses.Count == 510 && office.Addresses[0] == "10.20.3.40" && office.Addresses.Contains("10.20.2.1") && office.Addresses.Contains("10.20.3.254"), $"a /23 is its 510 hosts: {office.Cidr} {office.Addresses.Count}");
+        var vpn = plan.Ranges.Single(r => r.Adapter == "VPN");
+        Assert(vpn.Cidr == "172.16.200.0/22" && vpn.Addresses.Count == 1022, $"a /16 is searched as the /22 around the address: {vpn.Cidr} {vpn.Addresses.Count}");
+        var lab = plan.Ranges.Single(r => r.Adapter == "Lab");
+        Assert(lab.Cidr == "192.168.50.64/26" && lab.Addresses.Count == 62 && !lab.Addresses.Contains("192.168.50.64") && !lab.Addresses.Contains("192.168.50.127"), $"a /26 is its 62 hosts: {lab.Cidr} {lab.Addresses.Count}");
+        var problems = new List<string>();
+        var typed = MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.ParseExtraRanges("10.9.0.0/22, 10.8.0.0/21", problems);
+        Assert(typed.Count == 1 && typed[0].Addresses.Count == 1022 && problems.SequenceEqual(["10.8.0.0/21"]), "a typed /22 is accepted, a /21 is named");
     }, failures);
     RunScenarioAsync("Server search: a service is found, and 255 addresses that never answer take seconds, not minutes", async () =>
     {

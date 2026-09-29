@@ -1,4 +1,22 @@
-<!-- MystTiq v0.9.7.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.8.0: file reviewed for this release (2026-09-29). -->
+## v0.9.8.0 — Small Screens, Alerts and Linux Install
+
+- The title bar keeps the "+" on narrow windows (reported): the "»" and "+" have their own columns after the tabs, the
+  tabs are capped at the space left, and below 1200 px the brand drops its subtitle and fixed width. The ArtworkHarness
+  checks the "+" and the active tab at 950, 1100 and 1440 px.
+- Alert Center: a "Game server or PalDefender out of date" rule (on by default) alerts when the game server is behind
+  Steam's public build or PalDefender reports it isn't updated for the game version, with reminders and a Resolved
+  notice; it was a Doctor warning only.
+- Firewall: a rule counts only on the network profile(s) the computer is on; a Private-only rule on a Public network is
+  reported as such.
+- Server search: each adapter's own subnet (capped at /22) instead of always the /24; typed ranges accept /22.
+- `scripts/Install-MystTiqDesktopLinux.ps1` (`.\Build.ps1 DeployDesktopLinux`): installs the Linux download in the
+  user's home over SSH with a trusted desktop launcher and an applications-menu entry; replaces the stale v0.3.1.9
+  deploy script.
+- Checked: `Test-v0.9.8.0-UpgradeAccounts.ps1` (accounts, roles, a changed password and a disabled account from
+  v0.8.25.0 to this version and back); new logic-harness scenarios (component alert, network profiles, subnets); 9 new
+  texts in all 12 languages.
+
 ## v0.9.7.0 — Avalonia 12
 
 - The desktop moves from Avalonia 11.3 to 12.1.3, all four packages together (Avalonia, Avalonia.Desktop,

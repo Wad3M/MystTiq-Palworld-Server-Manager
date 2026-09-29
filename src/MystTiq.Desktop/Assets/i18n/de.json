@@ -3562,5 +3562,14 @@
   "ui.extra_ranges_watermark": "Zusätzliche Bereiche, z. B. 10.0.5.0/24, 10.0.5.7",
   "ui.not_searched_virtual": "Nicht durchsucht (virtuell):",
   "ui.could_not_read_ranges": "Nicht lesbar:",
-  "ui.clone_firewall_hint": "Der Klon lauscht auf einem neuen Spielport. Sobald er online ist, öffne seinen Tab und nutze „In der Firewall zulassen“ (Einstellungen oder Diagnose), damit Spieler beitreten können."
+  "ui.clone_firewall_hint": "Der Klon lauscht auf einem neuen Spielport. Sobald er online ist, öffne seinen Tab und nutze „In der Firewall zulassen“ (Einstellungen oder Diagnose), damit Spieler beitreten können.",
+  "msg.firewall_other_networks": "Eine Regel lässt {0} {1} nur in anderen Netzwerken zu ({2}); dieser Computer ist in einem {3}-Netzwerk.",
+  "ui.component_out_of_date": "Spielserver oder PalDefender veraltet",
+  "ui.component_out_of_date_hint": "Löst aus, wenn der Spielserver hinter dem öffentlichen Steam-Build liegt oder PalDefender meldet, dass er nicht für die Spielversion aktualisiert ist.",
+  "msg.alert_game_server_update_available": "Spielserver-Update verfügbar",
+  "msg.alert_game_server_behind": "Dieser Server hat Build {0}; der öffentliche Steam-Build ist {1}. Spieler mit der aktuellen Spielversion können erst nach dem Update beitreten (Update-Center).",
+  "msg.alert_game_server_current": "Der Spielserver ist auf dem aktuellen öffentlichen Steam-Build.",
+  "msg.alert_paldefender_update_needed": "PalDefender-Update nötig",
+  "msg.alert_paldefender_behind": "PalDefender meldet, dass er nicht für diese Spielversion aktualisiert ist: „{0}“. Spieler können beim Beitreten getrennt werden oder der Server kann anhalten.",
+  "msg.alert_paldefender_current": "PalDefender meldet nicht mehr, dass er veraltet ist."
 }

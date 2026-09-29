@@ -3562,5 +3562,14 @@
   "ui.extra_ranges_watermark": "Intervalli aggiuntivi, es. 10.0.5.0/24, 10.0.5.7",
   "ui.not_searched_virtual": "Non cercati (virtuali):",
   "ui.could_not_read_ranges": "Impossibile leggere:",
-  "ui.clone_firewall_hint": "Il clone ascolta su una nuova porta di gioco. Quando è online, apri la sua scheda e usa Consenti nel firewall (Impostazioni o Diagnostica) perché i giocatori possano entrare."
+  "ui.clone_firewall_hint": "Il clone ascolta su una nuova porta di gioco. Quando è online, apri la sua scheda e usa Consenti nel firewall (Impostazioni o Diagnostica) perché i giocatori possano entrare.",
+  "msg.firewall_other_networks": "Una regola consente {0} {1} solo su altre reti ({2}); questo computer è su una rete {3}.",
+  "ui.component_out_of_date": "Server di gioco o PalDefender non aggiornato",
+  "ui.component_out_of_date_hint": "Si attiva quando il server di gioco è indietro rispetto alla build pubblica di Steam, o PalDefender segnala di non essere aggiornato per la versione del gioco.",
+  "msg.alert_game_server_update_available": "Aggiornamento del server di gioco disponibile",
+  "msg.alert_game_server_behind": "Questo server ha la build {0}; la build pubblica di Steam è {1}. I giocatori con la versione attuale del gioco non possono entrare finché non viene aggiornato (Centro aggiornamenti).",
+  "msg.alert_game_server_current": "Il server di gioco è sulla build pubblica attuale di Steam.",
+  "msg.alert_paldefender_update_needed": "Serve aggiornare PalDefender",
+  "msg.alert_paldefender_behind": "PalDefender segnala di non essere aggiornato per questa versione del gioco: \"{0}\". I giocatori possono essere disconnessi, o il server fermarsi, quando entrano.",
+  "msg.alert_paldefender_current": "PalDefender non segnala più di essere obsoleto."
 }

@@ -1,4 +1,4 @@
-# MystTiq v0.9.7.0: file reviewed for this release (2026-09-29).
+# MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
 [CmdletBinding()]
 param(
     [ValidateSet('Build','Package','Checksums','Release','All','Clean','Version','Validate','LinuxHeadless','WindowsHeadless','DesktopWindows','DesktopLinux','DeployDesktopLinux','LogicTests')]
@@ -97,7 +97,9 @@ switch ($Action) {
     'WindowsHeadless' { Invoke-Script 'Build-WindowsHeadless.ps1' @{ Configuration = $Configuration } }
     'DesktopWindows' { Invoke-Script 'Build-AvaloniaDesktop.ps1' @{ Configuration = $Configuration; Runtime = 'win-x64'; Publish = $true; NoLaunch = $NoGuiLaunch } }
     'DesktopLinux' { Invoke-Script 'Build-AvaloniaDesktop.ps1' @{ Configuration = $Configuration; Runtime = 'linux-x64'; Publish = $true; NoLaunch = $true } }
-    'DeployDesktopLinux' { Invoke-Script 'Deploy-Test-MystTiqDesktopLinux.ps1' }
+    # v0.9.8.0: installs the Linux download into the user's home on a Linux machine, with a desktop launcher (the old
+    # v0.3.1.9 deploy script it replaces was pinned to that version and an old address).
+    'DeployDesktopLinux' { Invoke-Script 'Install-MystTiqDesktopLinux.ps1' }
     'LogicTests' { $v = & (Join-Path $scripts 'Get-ProjectVersion.ps1'); Invoke-Script "Test-v$v-Logic.ps1" @{ ProjectRoot = $root; ExportJson = $true } }
     # v0.8.26.0: the self-contained Windows and Linux downloads (the desktop with the headless service beside it).
     # The legacy WPF portable package and installer were removed.
