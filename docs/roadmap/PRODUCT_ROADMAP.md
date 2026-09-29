@@ -88,8 +88,8 @@ These are remaining checks or targeted fixes, not a request to rebuild shipped f
 
 | Work | Acceptance evidence / dependency |
 | --- | --- |
-| Give Item/Pal and starter kits | Observe delivery to a real online player with the supported provider; verify refusal and error reporting. Run `scripts/Test-v0.8.26.0-InGame.ps1` on the clone server with a player online (rehearsed against stand-ins by the release gate) |
-| Live map and teleport points | Verify player markers live; capture paired REST world and PalDefender positions before choosing a coordinate conversion (the in-game script records the pair); verify chat-triggered teleport and then point placement on the map |
+| Give Item/Pal and starter kits | 2026-09-28, clone server on game v1.0.5 with PalDefender v1.9.2: `scripts/Test-v0.8.26.0-InGame.ps1` passed 8/8 with a real player online; PalDefender accepted "give 1 Wood" over RCON. Still to record: the player seeing the item arrive, a Pal delivery, a starter kit, and a refused give (wrong id, offline player) |
+| Live map and teleport points | 2026-09-28: one paired position recorded. REST world X −362179.44, Y 270846.47 and PalDefender map 245.85, −519.15 match map X = (world Y − 158000) / 459 and map Y = (world X + 123888) / 459 to two decimals; confirm with a second, distant position. A teleport command was accepted. Still to verify: the player marker live on the map, a chat-triggered teleport, and point placement on the map |
 | Notifications | Observe real Discord and email delivery, pause/resume, recovery and failure handling. `scripts/Test-v0.8.26.0-Alerts.ps1` sends a real test through every switched-on channel and reports failed sends; confirm arrival in each channel |
 | Linux desktop | Window, maximize/restore, clipboard and tray pass on the XFCE test VM (`scripts/Test-v0.8.26.0-LinuxDesktopSession.ps1`, 16/16). Still open: file pickers, scaling and other desktop environments |
 | Linux service priority | Install the new unit in a test environment and verify eco-to-normal priority recovery; unit syntax/headless checks alone are insufficient |
