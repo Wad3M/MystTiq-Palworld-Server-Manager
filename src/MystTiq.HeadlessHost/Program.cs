@@ -1,4 +1,4 @@
-// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -564,7 +564,7 @@ switch (command.ToLowerInvariant())
         ILinuxServiceManager? linuxServiceManager = null;
         IServerLifecycleService LifecycleFactory(HeadlessServerProfileConfiguration serverProfile, IServerPathProfile profilePaths)
         {
-            var configuredGamePort = new PalworldSettingsConfigurationService(profilePaths).GetConfiguredGamePort();
+            var configuredGamePort = ServerGamePort.Expected(profilePaths, serverProfile.LaunchArguments);
             var guardedPorts = platform.GuardedPorts.Append(configuredGamePort).Distinct().ToArray();
             if (OperatingSystem.IsWindows())
             {
@@ -665,7 +665,7 @@ switch (command.ToLowerInvariant())
 #pragma warning disable CA1416 // The [SupportedOSPlatform("windows")] attribute above (and this whole branch's own OperatingSystem.IsWindows() guard) already make this Windows-only; the platform-compat analyzer just doesn't trace guard attributes through local functions.
             IServerLifecycleService WindowsServiceRunLifecycleFactory(HeadlessServerProfileConfiguration serverProfile, IServerPathProfile profilePaths)
             {
-                var configuredGamePort = new PalworldSettingsConfigurationService(profilePaths).GetConfiguredGamePort();
+                var configuredGamePort = ServerGamePort.Expected(profilePaths, serverProfile.LaunchArguments);
                 var guardedPorts = platform.GuardedPorts.Append(configuredGamePort).Distinct().ToArray();
                 var profileSessionInspector = new WindowsServerSessionInspector(guardedPorts);
                 return new WindowsServerLifecycleService(platform, profilePaths, profileSessionInspector, expectedGamePort: configuredGamePort);
@@ -814,7 +814,7 @@ switch (command.ToLowerInvariant())
             [System.Runtime.Versioning.SupportedOSPlatform("linux")]
             IServerLifecycleService ServiceRunLifecycleFactory(HeadlessServerProfileConfiguration serverProfile, IServerPathProfile profilePaths)
             {
-                var configuredGamePort = new PalworldSettingsConfigurationService(profilePaths).GetConfiguredGamePort();
+                var configuredGamePort = ServerGamePort.Expected(profilePaths, serverProfile.LaunchArguments);
                 var guardedPorts = platform.GuardedPorts.Append(configuredGamePort).Distinct().ToArray();
                 var profileSessionInspector = new LinuxServerSessionInspector(guardedPorts);
 #pragma warning disable CA1416 // The [SupportedOSPlatform("linux")] attribute above (and this whole "service-run" case's own OperatingSystem.IsLinux() guard) already make this Linux-only; the platform-compat analyzer just doesn't trace guard attributes through local functions.

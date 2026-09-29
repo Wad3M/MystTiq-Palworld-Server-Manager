@@ -1,4 +1,4 @@
-# MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+# MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -87,6 +87,8 @@ try {
     & $exe config-write-default --config $config --overwrite | Out-Null
     $cfg = Get-Content $config -Raw | ConvertFrom-Json
     $cfg.FleetRoot = $fleetRoot
+    # v0.9.5.0: readiness waits for the -port= launch argument (PublicPort only advertises); the smoke binds $GamePort.
+    foreach ($s in $cfg.Servers) { $s.LaunchArguments = @("-port=$GamePort") }
     $cfg.Lifecycle.ServicePollSeconds = 1
     $cfg.Lifecycle.RecoveryBackoffSeconds = 1
     $cfg.Lifecycle.MaximumRecoveryAttempts = 1

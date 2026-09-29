@@ -1,4 +1,4 @@
-// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
@@ -43,8 +43,12 @@ public sealed class WindowsServerSessionInspector : IServerSessionInspector
                 if (!wanted.Any(name => process.ProcessName.Equals(name, StringComparison.OrdinalIgnoreCase)))
                     continue;
 
-                string path = string.Empty;
-                try { path = process.MainModule?.FileName ?? string.Empty; } catch { }
+                // v0.9.5.0: MainModule needs full access and fails while a process starts or exits, which left the path
+                // empty; the lifecycle then took any PalServer for its own (see WindowsServerLifecycleService). The image
+                // name needs only limited query access and is readable for the whole life of the process.
+                var path = ImagePath(process.Id);
+                if (path.Length == 0)
+                    try { path = process.MainModule?.FileName ?? string.Empty; } catch { }
                 result.Add(new ServerSessionProcessInfo(process.Id, 0, process.ProcessName, path, process.Responding));
             }
             catch { }
@@ -52,6 +56,30 @@ public sealed class WindowsServerSessionInspector : IServerSessionInspector
         }
         return result.OrderBy(item => item.ProcessId).ToArray();
     }
+
+    private static string ImagePath(int processId)
+    {
+        var handle = OpenProcess(ProcessQueryLimitedInformation, false, processId);
+        if (handle == IntPtr.Zero) return string.Empty;
+        try
+        {
+            var buffer = new System.Text.StringBuilder(1024);
+            var size = buffer.Capacity;
+            return QueryFullProcessImageName(handle, 0, buffer, ref size) ? buffer.ToString(0, size) : string.Empty;
+        }
+        finally { CloseHandle(handle); }
+    }
+
+    private const uint ProcessQueryLimitedInformation = 0x1000;
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(uint access, bool inheritHandle, int processId);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern bool QueryFullProcessImageName(IntPtr process, uint flags, System.Text.StringBuilder name, ref int size);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr handle);
 
     public IReadOnlyList<int> GetGuardedListeningPorts()
     {

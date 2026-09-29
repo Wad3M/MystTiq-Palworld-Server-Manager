@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-28. **Current version: v0.9.4.0. Accepted baseline: v0.8.25.0. Next: v0.9.5.0.**
+Updated 2026-09-28. **Current version: v0.9.5.0. Accepted baseline: v0.8.25.0. Next: v0.9.6.0.**
 
-This is the active plan. Version assignments after v0.9.4.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v0.9.5.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Foundation delivered through v0.8.26.0
 
@@ -56,18 +56,17 @@ This is the active plan. Version assignments after v0.9.4.0 are proposed milesto
 - The health states and values inside translated labels follow the language.
 - Still open, and needing people: a pass with a real screen reader (Narrator, Orca), and focus order and scaling checked on every page.
 
-## v0.9.5.0 — upgrade and recovery
+## v0.9.5.0 — upgrade and recovery (delivered 2026-09-28)
 
-- Test a fresh setup, an upgrade from the accepted baseline (v0.8.25.0) with its settings, accounts and data kept, backup and restore, and rollback, all on isolated data.
+- **Servers no longer start each other.** When any PalServer process started or exited, every other profile on the machine logged "server crashed, restarting" and started its own server, even one stopped on purpose: a process whose path could not be read (starting or exiting) counted as every profile's own. Paths are now read by image name, which works for the whole life of a process, and an unreadable one belongs to a server only when that server started it (Windows and Linux).
+- **Readiness waits for the right port.** It waited for PalWorldSettings.ini's PublicPort, which only advertises; the server binds its `-port=` argument (8211 without one). Two profiles launched with `-port=8211` whose ini said 8219 and 8213 could never become ready.
+- **The Palworld server's update check tells the truth.** It compares the installed build with Steam's public build from SteamCMD (`+app_info_print 2394010`, cached 15 minutes); the Steam Web API's `UpToDateCheck`, used before, compares against a minimum version and always said "Up to date". The Update Center has a PalDefender row (installed DLL version against its latest GitHub release, and PalDefender's own "not updated for this game version" warning). The Doctor warns when the server is behind Steam and when PalDefender reports that warning, so both reach the Dashboard's health line.
+- **A refused manifest no longer stops an update.** When Steam refuses the installed build's manifest ("Access Denied"), MystTiq moves the app manifest aside and checks every file against the new build instead, keeping the old manifest (or putting it back if that fails too), and a failure names SteamCMD's reason instead of "exit code 8".
+- **Upgrade and recovery tested.** `scripts/Test-v0.9.5.0-Upgrade.ps1`: the accepted baseline (v0.8.25.0) takes settings and data, this version keeps every value, the baseline's backup verifies and a restore is byte for byte, rolling back to v0.8.25.0 still reads everything, and a fresh setup starts. `scripts/Test-v0.9.5.0-FleetRecovery.ps1`: two servers in one service; restarting or killing one never starts the other.
+- Recorded checks: the logic harness pins the unreadable-process rule, the expected port, SteamCMD's app info and failures, and PalDefender's warning; live on this machine, stopping and starting the real clone server under the new build started no other server and logged no crash, the Update Center reported the main server one build behind (25080279 against 25247047) and the clone current, and the Doctor warned on the main server. The fleet smoke also passes on the old build (the stand-in server's path is readable at once), so the logic harness and the live run are the evidence for the fix. Not yet recorded live: an update from MystTiq that meets a refused manifest (the clone was updated by hand before this version).
+- Still open: accounts in the upgrade test (it ran without sign-in); a notification (not only a Doctor warning) when a component falls behind; linking a server exit to the player join just before it; UE4SS's installed release is still compared by hand.
 
-- **Palworld server updates (found 2026-09-28, when a v1.0.5 game could not join a v1.0.4 server):**
-  - The Update Center said "Up to date" for build 25080279 while Steam's public build was 25247047. Steam's `ISteamApps/UpToDateCheck` compares against a developer-set minimum version (1000 for this app), not the build, so it can never report an update. Read the public branch's build from SteamCMD (`+app_info_print 2394010`) instead, and show both builds.
-  - Update information is fetched live, not assumed: the game server's public build, PalDefender (github.com/Ultimeit/PalDefender releases; v1.8.3 was installed while v1.9.2 was out) and UE4SS are each compared with their latest release in the Update Center, checked on a schedule and after every game update, with a notification when one is behind.
-  - After a game update, check the add-ons that hook the game before players join: PalDefender v1.8.3 loaded on game v1.0.5 with "hasn't yet updated to the latest version of the game", and the server then died about 40 seconds after each player joined, with no crash report and nothing in the Windows event log (the Crash Analyzer found nothing new). PalDefender v1.9.2 loaded cleanly. MystTiq should flag that warning, link each exit to the join just before it ("stopped 40 s after a player joined"), and offer to update the add-on.
-  - **Other servers start themselves when any server process exits (high priority).** On one machine with five profiles, each time a PalServer process ended (the clone's, or one MystTiq stopped), the other profiles logged "server crashed, restarting" within a second and started their own servers, even one that had just been stopped on purpose (the stop did not hold). Two of them can never become ready: `frostbound-frontier-8886` expects UDP 8219 but listens on 8211, and `frostbound-pal-realm-1069` expects UDP 8213, MystTiq's own API port. They kept retrying, one using a full CPU core, while the machine had 5 GB of RAM free and a player on it kept timing out; stopping both brought CPU from about 72% to 25%. Each profile must watch only its own server's process (by path and PID, never by name), a stop must hold, and a profile whose port can never be confirmed (or collides with MystTiq's API port) should be reported instead of retried.
-  - The SteamCMD update failed twice with exit code 8: Steam refused the installed build's manifest ("Failed to get manifest request code, 'Access Denied'"). It worked once the app manifest was moved aside, so SteamCMD validated the files against the new build instead. MystTiq should recognise that failure, retry that way on its own (keeping the old manifest), and show SteamCMD's actual reason instead of "exit code 8".
-
-**Exit evidence:** a scripted run from a clean machine state and from a v0.8.25.0 install, with every setting, account and world compared before and after; a server one build behind reported as out of date and updated from MystTiq without manual steps.
+**Exit evidence met:** a scripted upgrade from v0.8.25.0 and a fresh setup with every value compared, and a server one build behind reported as out of date. **Still to record:** an update from MystTiq through a refused manifest, and a scripted upgrade with accounts.
 
 ## v0.9.6.0 — firewall rule for the server's port, and a fast server search
 
@@ -95,7 +94,7 @@ These are remaining checks or targeted fixes, not a request to rebuild shipped f
 | Linux service priority | Install the new unit in a test environment and verify eco-to-normal priority recovery; unit syntax/headless checks alone are insufficient |
 | Permissions and accessibility | Delivered in v0.9.4.0 (above); a real screen-reader pass remains |
 | Themes | Verify supported modes throughout the app; with a Windows contrast theme on, run `scripts/Test-v0.8.26.0-ContrastTheme.ps1`; document Linux native contrast limitations |
-| Upgrade and recovery | Planned as v0.9.5.0 (above) |
+| Upgrade and recovery | Delivered in v0.9.5.0 (above); accounts in the upgrade test and an update through a refused manifest remain |
 | Distribution | Build the current desktop with its matching headless sidecar, include the Windows native helper, verify clean-machine launch, source parity, version identity and SHA-256 checksums |
 | Documentation | Keep README, site, release notes and supported-platform claims aligned with observed results; publish known limitations |
 | Crash analysis | Add signatures only from real anonymized reports; do not invent coverage for unseen crashes |

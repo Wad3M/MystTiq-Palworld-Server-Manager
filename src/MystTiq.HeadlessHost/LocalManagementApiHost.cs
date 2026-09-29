@@ -1,4 +1,4 @@
-// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -215,9 +215,9 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 activity);
             policyLifecycle.AfterStart = async token => await resourcePolicy.ApplyAsync(token);
             var automation = new HeadlessAutomationService(paths, configuration, serverConfig, lifecycle, backups, notifications, notificationRouting, rcon, operations, activity, alertCenter, monitoring, antiCheat, crashReports, resourcePolicy);
-            var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer, backups, crashAndSaveTools, () => alertCenter.LowDiskCriticalPercent(), automation);
-            var worldClone = new HeadlessWorldCloneService(paths, lifecycle, serverConfig, fleetConfigurationApi, palworldConfiguration, activity);
             var componentUpdates = new HeadlessComponentUpdateService(paths, modManagement);
+            var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer, backups, crashAndSaveTools, () => alertCenter.LowDiskCriticalPercent(), automation, componentUpdates);
+            var worldClone = new HeadlessWorldCloneService(paths, lifecycle, serverConfig, fleetConfigurationApi, palworldConfiguration, activity);
             var modSafeStart = new HeadlessModSafeStartService(
                 lifecycle, modManagement, serverConfig, activity, operations, profileId,
                 TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds),

@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
 # v0.3.1.4 Backup & Configuration Architecture
 
 ## Backup authority

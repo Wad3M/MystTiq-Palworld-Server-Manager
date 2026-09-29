@@ -1,4 +1,4 @@
-; MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+; MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 ; MystTiqConsoleProxy exports, at the EXACT ordinals the real system dsound.dll uses (confirmed via
 ; `dumpbin /exports C:\Windows\System32\dsound.dll`). PalServer-Win64-Shipping-Cmd.exe imports
 ; DSOUND.dll by ordinal, not by name (confirmed via `dumpbin /imports` against the real binary), so

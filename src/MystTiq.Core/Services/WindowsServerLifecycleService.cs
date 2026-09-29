@@ -1,4 +1,4 @@
-// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -307,9 +307,17 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
     private IReadOnlyList<ServerSessionProcessInfo> FindManagedServerProcesses()
     {
         var root = NormalizedServerRoot();
+        // v0.9.5.0: a process whose path cannot be read is this server's only when it is the one this server started (the
+        // launcher, or the game process it last recorded). It used to count as every profile's own: while any server started
+        // or exited, every other profile recorded it as its own running server, then saw it vanish and restarted its own
+        // server as "crashed", even after a deliberate stop.
+        var persisted = stateStore.Read();
+        var ownIds = new HashSet<int>();
+        try { if (ownedProcess is { HasExited: false } launcher) ownIds.Add(launcher.Id); } catch { }
+        if (persisted?.LastKnownProcessId is int lastKnown) ownIds.Add(lastKnown);
         return sessionInspector.FindProcessesByName(platform.ProcessNames).Where(process =>
         {
-            if (string.IsNullOrWhiteSpace(process.ExecutablePath)) return true;
+            if (string.IsNullOrWhiteSpace(process.ExecutablePath)) return ownIds.Contains(process.ProcessId);
             try { return Path.GetFullPath(process.ExecutablePath).StartsWith(root, StringComparison.OrdinalIgnoreCase); }
             catch { return false; }
         }).OrderBy(process => process.ProcessId).ToArray();

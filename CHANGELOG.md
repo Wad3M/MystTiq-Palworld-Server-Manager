@@ -1,4 +1,23 @@
-<!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
+## v0.9.5.0 — Upgrade and Recovery
+
+- Servers no longer start each other: a process whose path could not be read (starting or exiting) counted as every
+  profile's own, so any server starting or stopping made the others record it as theirs, see it vanish and "recover"
+  their own servers, even after a deliberate stop. Paths are read with `QueryFullProcessImageName`, and an unreadable
+  one belongs to a server only when that server started it (Windows and Linux).
+- Readiness waits for the port the server binds (`-port=`, else 8211), not PalWorldSettings.ini's PublicPort
+  (`ServerGamePort.Expected`).
+- The Palworld server is compared with Steam's public build from SteamCMD's app info (cached 15 minutes), replacing the
+  Steam Web API's `UpToDateCheck`, which compares against a minimum version and always said "Up to date". New
+  PalDefender row in the Update Center, and Doctor findings for a server behind Steam and for PalDefender's "not updated
+  for this game version" warning.
+- A SteamCMD update that meets a refused manifest ("Access Denied") is retried by checking every file against the new
+  build, keeping the old app manifest; failures name SteamCMD's reason instead of "exit code 8".
+- Checked: six logic-harness scenarios; `Test-v0.9.5.0-Upgrade.ps1` (v0.8.25.0 → this version → v0.8.25.0 with every
+  value kept, backup verified and restored byte for byte, a fresh setup); `Test-v0.9.5.0-FleetRecovery.ps1` (two
+  servers in one service). Live: restarting the real clone server under the new build started no other server; the
+  Update Center and the Doctor reported the main server one build behind.
+
 ## v0.9.4.0 — Roles Explained, and Accessibility
 
 - A button or menu item disabled for the signed-in role says which role it needs ("Needs the Admin role. You are signed

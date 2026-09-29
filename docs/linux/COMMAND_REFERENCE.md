@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
 # MystTiq Linux Headless Command Reference
 
 Current release line: **v0.3.0.7**

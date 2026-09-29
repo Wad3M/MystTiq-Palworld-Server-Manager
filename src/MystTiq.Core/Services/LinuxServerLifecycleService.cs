@@ -1,4 +1,4 @@
-// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using MystTiq.Core.Models;
@@ -435,11 +435,14 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         var root = Path.GetFullPath(paths.ServerRoot)
             .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
+        // v0.9.5.0: a process whose /proc/<pid>/exe cannot be read (another user's, or one starting or exiting) is this
+        // server's only when it is the game process this server last recorded; it used to count as every profile's own.
+        var lastKnown = stateStore.Read()?.LastKnownProcessId;
         return sessionInspector.FindProcessesByName(platform.ProcessNames)
             .Where(process =>
             {
                 if (string.IsNullOrWhiteSpace(process.ExecutablePath))
-                    return true; // procfs name is still useful when /proc/<pid>/exe is restricted.
+                    return process.ProcessId == lastKnown;
 
                 var executable = Path.GetFullPath(process.ExecutablePath);
                 return executable.StartsWith(root, StringComparison.Ordinal);

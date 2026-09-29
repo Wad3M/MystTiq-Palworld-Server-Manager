@@ -1,4 +1,4 @@
-// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 using MystTiq.Core.Automation;
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
@@ -37,6 +37,7 @@ public sealed class HeadlessDiagnosticsService
     private readonly HeadlessCrashAndSaveToolsService? crashTools;
     private readonly Func<double?>? lowDiskPercent;
     private readonly HeadlessAutomationService? automation;
+    private readonly HeadlessComponentUpdateService? componentUpdates;
     private readonly object backupRuleGate = new();
 
     public HeadlessDiagnosticsService(
@@ -51,8 +52,10 @@ public sealed class HeadlessDiagnosticsService
         HeadlessBackupService? backups = null,
         HeadlessCrashAndSaveToolsService? crashTools = null,
         Func<double?>? lowDiskPercent = null,
-        HeadlessAutomationService? automation = null)
+        HeadlessAutomationService? automation = null,
+        HeadlessComponentUpdateService? componentUpdates = null)
     {
+        this.componentUpdates = componentUpdates;
         this.automation = automation;
         this.lowDiskPercent = lowDiskPercent;
         this.backups = backups;
@@ -143,6 +146,7 @@ public sealed class HeadlessDiagnosticsService
         findings.AddRange(BuildSecurityFindings());
         findings.AddRange(BuildRecentCrashFindings());
         findings.AddRange(await BuildIdentityFindingsAsync(cancellationToken));
+        findings.AddRange(BuildVersionFindings());
 
         return BuildReport(findings, status.Ready);
     }
@@ -580,6 +584,59 @@ public sealed class HeadlessDiagnosticsService
             default:
                 return HeadlessDiagnosticFixResult.Failure(
                     finding.UnavailableReason ?? "No automatic fix is available for this finding yet.");
+        }
+    }
+
+    // v0.9.5.0: a game server behind Steam's public build turns away every player on the current game ("server and game
+    // are running different versions"), and a PalDefender not updated for the game can take the server down when a
+    // player joins; both happened live on 2026-09-28 while MystTiq reported nothing. The public build is the cached one
+    // (fetched by SteamCMD in the background), so the report never waits on Steam.
+    private IEnumerable<DiagnosticFinding> BuildVersionFindings()
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (componentUpdates?.InstalledServerBuild() is { } installed && componentUpdates.PeekPublicBuild() is { } steam)
+        {
+            var behind = long.TryParse(installed, out var have) && long.TryParse(steam.BuildId, out var latest) && have < latest;
+            var published = steam.Updated is { } at ? $" (published {at.ToLocalTime():yyyy-MM-dd})" : string.Empty;
+            yield return new DiagnosticFinding(
+                Id: "version-game-server",
+                Category: "Setup",
+                Component: "Game server version",
+                State: behind ? DiagnosticState.Warning : DiagnosticState.Pass,
+                Location: Path.Combine(paths.ServerRoot, "steamapps", "appmanifest_2394010.acf"),
+                Evidence: behind
+                    ? $"This server has build {installed}; Steam's public build is {steam.BuildId}{published}. Players on the current game cannot join."
+                    : $"Build {installed} is Steam's current public build{published}.",
+                Recommendation: behind
+                    ? "Stop the server and use Update (Update Center). Afterwards check that PalDefender and UE4SS support the new game version."
+                    : "Nothing to do.",
+                ActionKind: behind ? "install-distribution" : null,
+                ActionSupported: behind,
+                UnavailableReason: null,
+                ObservedAt: now,
+                Duration: TimeSpan.Zero);
+        }
+
+        if (File.Exists(Path.Combine(paths.RuntimeBinaryRoot, "PalDefender.dll")))
+        {
+            var warning = HeadlessComponentUpdateService.PalDefenderGameWarning(paths.RuntimeBinaryRoot);
+            yield return new DiagnosticFinding(
+                Id: "version-paldefender",
+                Category: "Setup",
+                Component: "PalDefender",
+                State: warning is null ? DiagnosticState.Pass : DiagnosticState.Warning,
+                Location: Path.Combine(paths.RuntimeBinaryRoot, "PalDefender.dll"),
+                Evidence: warning is null
+                    ? "PalDefender reported no problem with this game version when the server last started."
+                    : $"PalDefender says it is not updated for this game version: \"{warning}\"",
+                Recommendation: warning is null
+                    ? "Nothing to do."
+                    : "Update PalDefender from github.com/Ultimeit/PalDefender/releases (PalDefender.dll and d3d9.dll in the server's Win64 folder, with the server stopped). Until then players may be disconnected, or the server may stop, when they join.",
+                ActionKind: null,
+                ActionSupported: false,
+                UnavailableReason: warning is null ? null : "Replacing PalDefender is a manual step: download it from its GitHub releases.",
+                ObservedAt: now,
+                Duration: TimeSpan.Zero);
         }
     }
 

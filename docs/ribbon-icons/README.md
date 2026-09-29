@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
 # MystTiq — simple Palworld-inspired Ribbon icons
 
 Ten original vector icons for the actions in the supplied screenshot. Capture-sphere motifs identify lifecycle commands; a storage chest, Palbox-style terminal, Pal ears and workbench bring in the survival/crafting theme. Emergency Force Stop keeps the conventional red octagon and cross for immediate recognition.

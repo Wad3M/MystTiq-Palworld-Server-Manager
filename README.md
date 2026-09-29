@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.4.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,17 +21,17 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v0.9.4.0 · Accepted baseline: v0.8.25.0**
+**Current version: v0.9.5.0 · Accepted baseline: v0.8.25.0**
 
 This source snapshot is a development release on the way to v1.0. Check the Releases page for published downloads; the version shown here does not imply a binary has been published. Windows is the current release-workflow download target. Linux builds are available from source, with desktop acceptance still in progress.
 
-## What's new in v0.9.4.0
+## What's new in v0.9.5.0
 
-**Disabled controls now say why.** When your signed-in role cannot use a button or menu item, its tooltip names the role it needs and the role you have, even while it is greyed out, and screen readers announce the same. Lists, text boxes, drop-downs, number boxes, sliders and check boxes throughout the desktop now have accessible names, and enabled controls can be reached with Tab. Health states and values inside labels also follow the chosen language.
+**Updates you can trust, and servers that stay stopped.** The Update Center now compares your Palworld server with the build Steam actually publishes, so a server one update behind says so, and the Doctor warns about it on the Dashboard. PalDefender has its own row, with a warning when it isn't updated for the game version yet. An update that Steam refuses part of ("Access Denied") now completes by checking every file instead. On machines with several servers, starting or stopping one no longer makes MystTiq restart the others.
 
-Earlier v0.9 releases translated the service's own messages (v0.9.3.0) and showed the game's item and Pal names in the chosen language (v0.9.2.0). The 11 non-English translations are drafts awaiting native-speaker review, and a pass with a real screen reader is still to come.
+Upgrades from the accepted v0.8.25.0 are tested end to end: settings and data carry over, backups verify and restore byte for byte, and going back works. v0.9.4.0 explained disabled controls and named every control for screen readers; earlier v0.9 releases brought 12 languages. The 11 non-English translations are drafts awaiting native-speaker review.
 
-[Release notes](release-notes/v0.9.4.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v0.9.5.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -102,9 +102,9 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v0.9.1.0 | Delivered | Desktop status, progress, errors and dialogs follow the chosen language |
 | v0.9.2.0 | Delivered | Game-provided item and Pal names in the chosen language; composed map and tooltip text |
 | v0.9.3.0 | Delivered | The service's own messages follow the chosen language; review sheets for native reviewers |
-| v0.9.4.0 | Current | Disabled controls name the role they need; accessible names and Tab reach throughout |
-| v0.9.5.0 | Next | Fresh setup, upgrade from the accepted baseline, backup/restore and rollback tested on isolated data |
-| v0.9.6.0 | Planned | Firewall rule for the server's own port where the port is set; fast parallel server search that shows the ranges it scans |
+| v0.9.4.0 | Delivered | Disabled controls name the role they need; accessible names and Tab reach throughout |
+| v0.9.5.0 | Current | Servers no longer start each other; true update checks (Steam's public build, PalDefender); upgrade, restore and rollback tested |
+| v0.9.6.0 | Next | Firewall rule for the server's own port where the port is set; fast parallel server search that shows the ranges it scans |
 | v0.9.x | Planned | Native translation review, live integration evidence, a screen-reader pass and Linux acceptance |
 | v1.0 | Target | Stable release after the acceptance gates pass; no date committed |
 

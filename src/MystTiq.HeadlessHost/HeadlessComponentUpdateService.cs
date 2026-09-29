@@ -1,4 +1,4 @@
-// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -22,6 +22,7 @@ public sealed class HeadlessComponentUpdateService
     private const string PalworldDedicatedServerAppId = "2394010";
     private const string MystTiqRepo = "Wad3M/MystTiq-Palworld-Server-Manager";
     private const string Ue4ssRepo = "Okaetsu/RE-UE4SS";
+    private const string PalDefenderRepo = "Ultimeit/PalDefender";
 
     private static readonly HttpClient Http = BuildHttpClient();
     private static readonly TimeSpan ProcessTimeout = TimeSpan.FromSeconds(8);
@@ -44,6 +45,7 @@ public sealed class HeadlessComponentUpdateService
             CheckSteamCmd(now),
             await CheckPalworldServerAsync(now, cancellationToken),
             await CheckUe4ssAsync(now, cancellationToken),
+            await CheckPalDefenderAsync(now, cancellationToken),
             await CheckPythonAsync(now, cancellationToken),
             await CheckPipAsync(now, cancellationToken),
             await CheckSaveToolsAsync(now, cancellationToken),
@@ -98,21 +100,133 @@ public sealed class HeadlessComponentUpdateService
             return Unavailable("Core Server", "Palworld Dedicated Server", "Installed (build id unknown)", $"Steam App ID {PalworldDedicatedServerAppId}", now,
                 $"Server is installed, but its SteamCMD manifest ({manifestPath}) was not found or could not be read to determine the installed build id.");
 
-        // Unauthenticated Steam Web API endpoint -- passes the installed buildid as "version" and
-        // gets back whether it's current, plus the real latest buildid if not. No API key needed.
-        var check = await TryGetJsonAsync<SteamUpToDateCheckDto>(
-            $"https://api.steampowered.com/ISteamApps/UpToDateCheck/v1/?appid={PalworldDedicatedServerAppId}&version={buildId}", ct);
-        if (check?.Response is not { } response || !response.Success)
-            return Unavailable("Core Server", "Palworld Dedicated Server", buildId, "Steam Web API", now,
-                "Could not reach the Steam Web API's UpToDateCheck endpoint to compare the installed build.");
+        // v0.9.5.0: the latest build comes from SteamCMD's app info for the public branch. The Steam Web API's
+        // ISteamApps/UpToDateCheck, used before, compares against a developer-set minimum version (1000 for this app),
+        // not the build, so it answered "up to date" for build 25080279 while Steam's public build was 25247047 and a
+        // v1.0.5 game could not join the v1.0.4 server.
+        var (publicBuild, error) = await GetPublicBuildAsync(ct);
+        if (publicBuild is null)
+            return Unavailable("Core Server", "Palworld Dedicated Server", buildId, "SteamCMD app info (public branch)", now,
+                $"Could not read Steam's current public build for app {PalworldDedicatedServerAppId}: {error}");
 
-        if (response.UpToDate)
-            return new ComponentVersionInfo("Core Server", "Palworld Dedicated Server", buildId, buildId, "UpToDate", "Steam Web API", now,
-                "Installed build matches the latest build Steam reports for this app.");
+        var published = publicBuild.Updated is { } updated ? $" (published {updated.ToLocalTime():yyyy-MM-dd})" : string.Empty;
+        if (!long.TryParse(buildId, out var installedNumber) || !long.TryParse(publicBuild.BuildId, out var publicNumber))
+            return Unavailable("Core Server", "Palworld Dedicated Server", buildId, "SteamCMD app info (public branch)", now,
+                $"Steam's public build is {publicBuild.BuildId}{published}; the installed build id could not be compared with it.");
+        if (installedNumber < publicNumber)
+            return new ComponentVersionInfo("Core Server", "Palworld Dedicated Server", buildId, publicBuild.BuildId, "UpdateAvailable", "SteamCMD app info (public branch)", now,
+                $"Steam's public build is {publicBuild.BuildId}{published}; this server has {buildId}. Players on the current game cannot join until it is updated: stop the server and use Update. After a game update, check that PalDefender and UE4SS support it.");
+        return new ComponentVersionInfo("Core Server", "Palworld Dedicated Server", buildId, publicBuild.BuildId, "UpToDate", "SteamCMD app info (public branch)", now,
+            installedNumber == publicNumber
+                ? $"The installed build is Steam's current public build{published}."
+                : $"The installed build is newer than Steam's public build {publicBuild.BuildId}{published} (a beta branch?).");
+    }
 
-        var latestBuildId = response.RequiredVersion?.ToString() ?? "unknown";
-        return new ComponentVersionInfo("Core Server", "Palworld Dedicated Server", buildId, latestBuildId, "UpdateAvailable", "Steam Web API", now,
-            "A newer build is available. Use Update Center's existing SteamCMD update action to install it.");
+    public sealed record SteamPublicBuild(string BuildId, DateTimeOffset? Updated);
+
+    private static readonly SemaphoreSlim PublicBuildGate = new(1, 1);
+    private static readonly Dictionary<string, (DateTimeOffset At, SteamPublicBuild? Build, string Error)> PublicBuildCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan PublicBuildCacheAge = TimeSpan.FromMinutes(15);
+
+    // SteamCMD takes 10-30 s to log in and fetch app info, so one answer serves every server using the same SteamCMD
+    // for 15 minutes.
+    private async Task<(SteamPublicBuild? Build, string Error)> GetPublicBuildAsync(CancellationToken ct)
+    {
+        var steamCmd = paths.SteamCmdExecutable;
+        if (!File.Exists(steamCmd)) return (null, $"SteamCMD was not found at {steamCmd}.");
+        await PublicBuildGate.WaitAsync(ct);
+        try
+        {
+            lock (PublicBuildCache)
+                if (PublicBuildCache.TryGetValue(steamCmd, out var cached) && DateTimeOffset.UtcNow - cached.At < PublicBuildCacheAge)
+                    return (cached.Build, cached.Error);
+            var (exitCode, output, _) = await RunProcessAsync(steamCmd, $"+login anonymous +app_info_update 1 +app_info_print {PalworldDedicatedServerAppId} +quit", ct, TimeSpan.FromSeconds(120));
+            var build = ParsePublicBuild(output);
+            var error = build is not null ? string.Empty
+                : exitCode == -1 && output.Length == 0 ? "SteamCMD did not answer within two minutes."
+                : $"SteamCMD's app info had no public branch build (exit code {exitCode}).";
+            lock (PublicBuildCache) PublicBuildCache[steamCmd] = (DateTimeOffset.UtcNow, build, error);
+            return (build, error);
+        }
+        finally { PublicBuildGate.Release(); }
+    }
+
+    private static int publicBuildRefreshing;
+
+    // v0.9.5.0: for the Doctor, which must not wait on SteamCMD: the last known public build (null until one is known),
+    // and a refresh started in the background when it is missing or older than 15 minutes.
+    public SteamPublicBuild? PeekPublicBuild()
+    {
+        var steamCmd = paths.SteamCmdExecutable;
+        (DateTimeOffset At, SteamPublicBuild? Build, string Error) cached;
+        bool known;
+        lock (PublicBuildCache) known = PublicBuildCache.TryGetValue(steamCmd, out cached);
+        if ((!known || DateTimeOffset.UtcNow - cached.At >= PublicBuildCacheAge) && File.Exists(steamCmd) &&
+            Interlocked.CompareExchange(ref publicBuildRefreshing, 1, 0) == 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                try { await GetPublicBuildAsync(CancellationToken.None); }
+                finally { Interlocked.Exchange(ref publicBuildRefreshing, 0); }
+            });
+        }
+        return known ? cached.Build : null;
+    }
+
+    public string? InstalledServerBuild() =>
+        TryReadAcfBuildId(Path.Combine(paths.ServerRoot, "steamapps", $"appmanifest_{PalworldDedicatedServerAppId}.acf"));
+
+    // The public branch's build in SteamCMD's `app_info_print` output:
+    //   "branches" { "public" { "buildid" "25247047" "timeupdated" "1789441330" } ... }
+    public static SteamPublicBuild? ParsePublicBuild(string appInfo)
+    {
+        var branches = appInfo.IndexOf("\"branches\"", StringComparison.Ordinal);
+        if (branches < 0) return null;
+        var match = Regex.Match(appInfo[branches..], "\"public\"\\s*\\{\\s*\"buildid\"\\s*\"(\\d+)\"(?:\\s*\"timeupdated\"\\s*\"(\\d+)\")?");
+        if (!match.Success) return null;
+        DateTimeOffset? updated = long.TryParse(match.Groups[2].Value, out var seconds) ? DateTimeOffset.FromUnixTimeSeconds(seconds) : null;
+        return new SteamPublicBuild(match.Groups[1].Value, updated);
+    }
+    // v0.9.5.0: PalDefender delivers give-item, kits and teleports, and hooks the game; after the game update to v1.0.5
+    // the installed v1.8.3 took the server down about 40 s after each player joined (live, 2026-09-28), while v1.9.2 was
+    // already out. The installed version is the DLL's product version; the latest is its newest GitHub release.
+    private async Task<ComponentVersionInfo> CheckPalDefenderAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        const string component = "PalDefender";
+        var dll = Path.Combine(paths.RuntimeBinaryRoot, "PalDefender.dll");
+        if (!File.Exists(dll))
+            return NotInstalled("Core Server", component, $"GitHub: {PalDefenderRepo}", now,
+                "PalDefender is not installed; Give Item, kits and teleports need it (Windows servers only).");
+        var installed = ExtractVersion(FileVersionInfo.GetVersionInfo(dll).ProductVersion) ?? "unknown";
+        var warning = PalDefenderGameWarning(paths.RuntimeBinaryRoot);
+        var note = warning is null ? string.Empty
+            : $" PalDefender's own log says it is not updated for this game version (\"{warning}\"); players may be disconnected or the server may stop when they join until it is updated.";
+        var release = await TryGetJsonAsync<GitHubReleaseDto>($"https://api.github.com/repos/{PalDefenderRepo}/releases/latest", ct);
+        if (release?.TagName is not { Length: > 0 } tag)
+            return Unavailable("Core Server", component, installed, $"GitHub: {PalDefenderRepo}", now,
+                "Could not reach the GitHub releases API to check for a newer PalDefender." + note);
+        var result = Compare("Core Server", component, installed, tag.TrimStart('v', 'V'), $"GitHub: {PalDefenderRepo}", now,
+            $"Latest release: {tag}" + (release.PublishedAt is { } at ? $" ({at.ToLocalTime():yyyy-MM-dd})." : ".") +
+            " Replace PalDefender.dll and d3d9.dll in the server's Win64 folder with the server stopped." + note);
+        return warning is not null && result.Status == "UpToDate" ? result with { Status = "UpdateAvailable" } : result;
+    }
+
+    // The warning PalDefender logs at start-up when the game has changed under it, from its newest session log.
+    public static string? PalDefenderGameWarning(string runtimeBinaryRoot)
+    {
+        try
+        {
+            var logs = new DirectoryInfo(Path.Combine(runtimeBinaryRoot, "PalDefender", "Logs"));
+            if (!logs.Exists) return null;
+            var newest = logs.GetFiles("*.log").OrderByDescending(f => f.LastWriteTimeUtc).FirstOrDefault();
+            if (newest is null) return null;
+            using var stream = new FileStream(newest.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd().Split('\n').Select(l => l.Trim())
+                .FirstOrDefault(l => l.Contains("hasn't yet updated to the latest version", StringComparison.OrdinalIgnoreCase))
+                is { } line ? Regex.Replace(line, @"^\[[^\]]*\]\[[^\]]*\]\s*", string.Empty) : null;
+        }
+        catch { return null; }
     }
 
     private async Task<ComponentVersionInfo> CheckUe4ssAsync(DateTimeOffset now, CancellationToken ct)
@@ -514,20 +628,6 @@ public sealed class HeadlessComponentUpdateService
     private sealed class PyPiInfoDto
     {
         [JsonPropertyName("version")] public string? Version { get; init; }
-    }
-
-    private sealed class SteamUpToDateCheckDto
-    {
-        [JsonPropertyName("response")] public SteamUpToDateCheckResponseDto? Response { get; init; }
-    }
-
-    private sealed class SteamUpToDateCheckResponseDto
-    {
-        [JsonPropertyName("success")] public bool Success { get; init; }
-        [JsonPropertyName("up_to_date")] public bool UpToDate { get; init; }
-        [JsonPropertyName("version_is_listable")] public bool VersionIsListable { get; init; }
-        [JsonPropertyName("required_version")] public long? RequiredVersion { get; init; }
-        [JsonPropertyName("message")] public string? Message { get; init; }
     }
 
     private sealed class DotNetReleasesIndexDto

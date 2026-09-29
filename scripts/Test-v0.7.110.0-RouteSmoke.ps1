@@ -1,4 +1,4 @@
-# MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+# MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -46,6 +46,13 @@ Set-Content (Join-Path $configDir 'PalWorldSettings.ini') @"
 [/Script/Pal.PalGameWorldSettings]
 OptionSettings=(ServerName="Give-up Smoke",ServerDescription="",AdminPassword="a-long-random-admin-secret",ServerPassword="",ServerPlayerMaxNum=32,PublicPort=$gamePort,RESTAPIEnabled=False,RESTAPIPort=8212,RCONEnabled=False,RCONPort=25575)
 "@
+# v0.9.5.0: readiness waits for the port the server binds, its -port= launch argument (PublicPort only advertises), so
+# the fixture's server is launched with -port= set to the port this smoke binds for it.
+& $exe config-write-default --config $config --overwrite | Out-Null
+$cfg = Get-Content $config -Raw | ConvertFrom-Json
+$cfg.FleetRoot = Join-Path $temp 'fleet'
+foreach ($s in $cfg.Servers) { $s.LaunchArguments = @("-port=$gamePort") }
+$cfg | ConvertTo-Json -Depth 20 | Set-Content $config
 $script:udp = $null
 # Phase 3 = Running, a process id that cannot exist, and no stop requested: the real lifecycle
 # service reads that as "the server was running and is gone", i.e. a crash.

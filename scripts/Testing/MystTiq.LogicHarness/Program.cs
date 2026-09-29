@@ -1,4 +1,4 @@
-// MystTiq v0.9.4.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -268,6 +268,93 @@ try
         Assert(persisted is not null && persisted.Phase == ServerLifecyclePhase.Stopped,
             $"the state actually written to disk must now be Stopped, not left as stale Crashed, got {persisted?.Phase}");
         Assert(persisted!.StopRequested, "the persisted state must record that a stop was explicitly requested/acknowledged");
+    }, failures);
+
+    // v0.9.5.0: on a machine with several server profiles, whenever any PalServer started or exited, every other
+    // profile logged "server crashed, restarting" and started its own server, even one stopped on purpose. A process
+    // whose path could not be read (starting or exiting) counted as every profile's own: each recorded it as its running
+    // server, then saw it vanish and "recovered". A process with an unreadable path is now a profile's own only when that
+    // profile started it.
+    RunScenarioAsync("Another server's process with an unreadable path is not taken for this server: a stopped server stays stopped, no crash is reported", async () =>
+    {
+        var root = Path.Combine(tempRoot, "unreadable-path-not-ours");
+        Directory.CreateDirectory(root);
+        var stateStore = new ServerLifecycleStateStore(root);
+        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopped, null, DateTimeOffset.UtcNow.AddMinutes(-2), true, "Stopped on request."));
+        var inspector = new FixedSessionInspector([new ServerSessionProcessInfo(9999, 0, "PalServer-Win64-Shipping-Cmd", "", true)]);
+        var lifecycle = new WindowsServerLifecycleService(ServerPlatformProfile.Windows, new HarnessPathProfile(root), inspector, stateStore);
+
+        var whileOtherRuns = await lifecycle.GetStatusAsync();
+        Assert(whileOtherRuns.Phase == ServerLifecyclePhase.Stopped, $"another server's process must not make this one Running, got {whileOtherRuns.Phase}");
+        Assert(stateStore.Read() is { Phase: ServerLifecyclePhase.Stopped, StopRequested: true }, "the deliberate stop must stay recorded");
+
+        inspector.Processes = [];
+        var afterItExits = await lifecycle.GetStatusAsync();
+        Assert(!afterItExits.CrashDetected && afterItExits.Phase == ServerLifecyclePhase.Stopped,
+            $"the other process exiting must not read as this server crashing, got {afterItExits.Phase} crash={afterItExits.CrashDetected}");
+    }, failures);
+
+    RunScenarioAsync("This server's own game process still counts while its path cannot be read", async () =>
+    {
+        var root = Path.Combine(tempRoot, "unreadable-path-ours");
+        Directory.CreateDirectory(root);
+        var stateStore = new ServerLifecycleStateStore(root);
+        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Running, 5555, DateTimeOffset.UtcNow.AddMinutes(-2), false, "Running."));
+        var inspector = new FixedSessionInspector([new ServerSessionProcessInfo(5555, 0, "PalServer-Win64-Shipping-Cmd", "", true)]);
+        var lifecycle = new WindowsServerLifecycleService(ServerPlatformProfile.Windows, new HarnessPathProfile(root), inspector, stateStore);
+        var status = await lifecycle.GetStatusAsync();
+        Assert(status.Phase == ServerLifecyclePhase.Running && status.NativeProcessId == 5555, $"its own recorded process must still be Running, got {status.Phase} pid={status.NativeProcessId}");
+    }, failures);
+
+    // v0.9.5.0: readiness waits for the port the server binds (-port=, else 8211), not PalWorldSettings.ini's PublicPort,
+    // which only advertises. A profile launched with -port=8211 whose ini said 8219 never became ready and kept restarting.
+    RunScenario("The expected game port is the -port= launch argument (else 8211); PublicPort is used only when the arguments are unusable", () =>
+    {
+        var root = Path.Combine(tempRoot, "expected-game-port");
+        Directory.CreateDirectory(root);
+        File.WriteAllText(Path.Combine(root, "PalWorldSettings.ini"), "[/Script/Pal.PalGameWorldSettings]\nOptionSettings=(PublicPort=8219)\n");
+        var paths = new HarnessPathProfile(root);
+        Assert(ServerGamePort.Expected(paths, ["-unattended", "-port=8311"]) == 8311, "-port=8311 must be expected");
+        Assert(ServerGamePort.Expected(paths, ["-unattended"]) == 8211, "without -port= the server binds 8211, whatever PublicPort says");
+        Assert(ServerGamePort.Expected(paths, ["-port=8311", "-port=8312"]) == 8219, "two different -port= values fall back to PublicPort");
+        Assert(ServerGamePort.Expected(paths, ["-port=abc"]) == 8219, "an unreadable -port= value falls back to PublicPort");
+    }, failures);
+
+    // v0.9.5.0: the Palworld server's latest build comes from SteamCMD's app info (the Steam Web API's UpToDateCheck
+    // compared against a minimum version and always said "up to date"), and a refused manifest is recognised.
+    RunScenario("SteamCMD app info: the public branch's build and date are read, other branches are ignored", () =>
+    {
+        const string appInfo = "\"2394010\"\n{\n\t\"depots\"\n\t{\n\t\t\"branches\"\n\t\t{\n\t\t\t\"public\"\n\t\t\t{\n\t\t\t\t\"buildid\"\t\t\"25247047\"\n\t\t\t\t\"timeupdated\"\t\t\"1789441330\"\n\t\t\t}\n\t\t\t\"beta\"\n\t\t\t{\n\t\t\t\t\"buildid\"\t\t\"25300000\"\n\t\t\t}\n\t\t}\n\t}\n}";
+        var build = HeadlessComponentUpdateService.ParsePublicBuild(appInfo);
+        Assert(build is { BuildId: "25247047" } && build.Updated == DateTimeOffset.FromUnixTimeSeconds(1789441330), $"expected public build 25247047 with its date, got {build}");
+        Assert(HeadlessComponentUpdateService.ParsePublicBuild("Connecting anonymously to Steam Public...OK") is null, "no branches block means no build, not a guess");
+    }, failures);
+
+    RunScenario("SteamCMD failure: a refused manifest is recognised and every failure names Steam's own reason", () =>
+    {
+        string[] output = ["Error! App '2394010' state is 0x6 after update job."];
+        string[] denied = ["[2026-09-28 18:28:12] CDepotDownloadMgr::BYldRequestDepotManifest(App: 2394010, Depot: 2394011, Manifest: 1255909640202740384, branch: ): Failed to get manifest request code, 'Access Denied'",
+                           "[2026-09-28 18:28:13] AppID 2394010 update canceled : Failed downloading 1 manifests (No connection)"];
+        Assert(SteamCmdFailure.IsManifestAccessDenied(output, denied), "the Access Denied manifest line must be recognised");
+        Assert(SteamCmdFailure.Describe(output, denied).Contains("refused the manifest", StringComparison.Ordinal), "the reason must say the manifest was refused");
+        string[] noConnection = ["[2026-09-28 18:28:13] AppID 2394010 update canceled : Failed downloading 1 manifests (No connection)"];
+        Assert(!SteamCmdFailure.IsManifestAccessDenied(output, noConnection), "a plain connection failure is not a refused manifest");
+        Assert(SteamCmdFailure.Describe(output, noConnection) == "Steam cancelled the update: Failed downloading 1 manifests (No connection).", $"got '{SteamCmdFailure.Describe(output, noConnection)}'");
+        Assert(SteamCmdFailure.Describe(output, []) == "Error! App '2394010' state is 0x6 after update job.", "without a log line, SteamCMD's error line is shown");
+    }, failures);
+
+    RunScenario("PalDefender's 'not updated for this game version' warning is read from its newest session log only", () =>
+    {
+        var bin = Path.Combine(tempRoot, "paldefender-warning", "Win64");
+        var logs = Directory.CreateDirectory(Path.Combine(bin, "PalDefender", "Logs"));
+        Assert(HeadlessComponentUpdateService.PalDefenderGameWarning(bin) is null, "no log means no warning");
+        var old = Path.Combine(logs.FullName, "28.09 18.30.46.log");
+        File.WriteAllText(old, "[18:30:46][info] Starting PalDefender Anti Cheat v1.8.3 (console)\n[18:30:54][warning] Warning: Failed to find UFunction: RequestUnlockFastTravelPoint_ToServer. Most likely that means that you are using PalDefender version that hasn't yet updated to the latest version of the game. (Note: it may still be working fine though)\n");
+        File.SetLastWriteTimeUtc(old, DateTime.UtcNow.AddMinutes(-10));
+        var warning = HeadlessComponentUpdateService.PalDefenderGameWarning(bin);
+        Assert(warning is not null && warning.StartsWith("Warning: Failed to find UFunction", StringComparison.Ordinal), $"the warning must be found without its time stamp, got '{warning}'");
+        File.WriteAllText(Path.Combine(logs.FullName, "28.09 18.41.59.log"), "[18:41:59][info] Starting PalDefender Anti Cheat v1.9.2 (console)\n[18:42:07][info] PalDefender Anti Cheat v1.9.2 loaded!\n");
+        Assert(HeadlessComponentUpdateService.PalDefenderGameWarning(bin) is null, "after updating, the newest log has no warning, so none is reported");
     }, failures);
 
     RunScenarioAsync("PalworldRconService.ExecuteAsync reports failure honestly when the RCON password is wrong", async () =>
@@ -3117,6 +3204,15 @@ sealed class EmptySessionInspector : IServerSessionInspector
         new(sessionId, rootPid, DateTime.UtcNow, [], [], []);
     public IReadOnlySet<int> GetDescendantProcessIds(int rootPid) => new HashSet<int>();
     public IReadOnlyList<ServerSessionProcessInfo> FindProcessesByName(IEnumerable<string> names) => [];
+    public IReadOnlyList<int> GetGuardedListeningPorts() => [];
+}
+
+sealed class FixedSessionInspector(IReadOnlyList<ServerSessionProcessInfo> processes) : IServerSessionInspector
+{
+    public IReadOnlyList<ServerSessionProcessInfo> Processes { get; set; } = processes;
+    public ServerSessionSnapshot Capture(long sessionId, int rootPid) => new(sessionId, rootPid, DateTime.UtcNow, Processes, [], []);
+    public IReadOnlySet<int> GetDescendantProcessIds(int rootPid) => new HashSet<int>();
+    public IReadOnlyList<ServerSessionProcessInfo> FindProcessesByName(IEnumerable<string> names) => Processes;
     public IReadOnlyList<int> GetGuardedListeningPorts() => [];
 }
 
