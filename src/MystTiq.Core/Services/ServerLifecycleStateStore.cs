@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Text.Json;
 using MystTiq.Core.Models;
 
@@ -25,9 +25,9 @@ public sealed class ServerLifecycleStateStore
             if (!File.Exists(statePath))
                 return null;
 
-            return JsonSerializer.Deserialize<PersistedServerLifecycleState>(
-                File.ReadAllText(statePath),
-                jsonOptions);
+            // v0.9.6.0: opened so that a write can still replace the file while it is being read (see Write).
+            using var stream = new FileStream(statePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            return JsonSerializer.Deserialize<PersistedServerLifecycleState>(stream, jsonOptions);
         }
         catch
         {
@@ -41,8 +41,27 @@ public sealed class ServerLifecycleStateStore
         ArgumentNullException.ThrowIfNull(state);
         Directory.CreateDirectory(Path.GetDirectoryName(statePath)!);
 
-        var temporaryPath = statePath + ".tmp";
-        File.WriteAllText(temporaryPath, JsonSerializer.Serialize(state, jsonOptions));
-        File.Move(temporaryPath, statePath, overwrite: true);
+        // v0.9.6.0: one writer at a time (two writers shared the same .tmp file), and a replace that Windows refuses
+        // because something has the file open (a virus scan, a backup, a script reading it) is retried briefly instead of
+        // failing the start or stop that wrote it (seen as "Access to the path is denied" on a start).
+        lock (writeGate)
+        {
+            var temporaryPath = statePath + ".tmp";
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(state, jsonOptions));
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    File.Move(temporaryPath, statePath, overwrite: true);
+                    return;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 20)
+                {
+                    Thread.Sleep(25);
+                }
+            }
+        }
     }
+
+    private readonly object writeGate = new();
 }

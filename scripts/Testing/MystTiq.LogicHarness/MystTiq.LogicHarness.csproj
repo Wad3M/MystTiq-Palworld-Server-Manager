@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.6.0: file reviewed for this release (2026-09-29). -->
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- v0.7.12.0: a standalone, throwaway C# harness for business logic that genuinely needs a real
@@ -34,6 +34,9 @@
     <Compile Include="..\..\..\src\MystTiq.Desktop\Models\PalworldConfigurationDtos.cs" Link="Desktop\PalworldConfigurationDtos.cs" />
     <!-- v0.7.105.0: DiagnosticFindingDto's new FixConfirmed change-notification logic, same reasoning. -->
     <Compile Include="..\..\..\src\MystTiq.Desktop\Models\DiagnosticFindingDtos.cs" Link="Desktop\DiagnosticFindingDtos.cs" />
+    <!-- v0.9.6.0: the server search's ranges and a new server's launch arguments, same reasoning. -->
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Services\MystTiqServiceDiscoveryService.cs" Link="Desktop\MystTiqServiceDiscoveryService.cs" />
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Services\LaunchArgumentsText.cs" Link="Desktop\LaunchArgumentsText.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 // MystTiq Console Proxy -- v0.7.57.0 Native Console Capture (PalServer DLL Proxy Logger)
 // Console-write hook implemented v0.7.72.0.
 //

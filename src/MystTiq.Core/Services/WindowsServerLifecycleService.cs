@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -42,9 +42,20 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
         this.rcon = new PalworldRconService(new PalworldSettingsConfigurationService(paths));
     }
 
+    // v0.9.6.0: a status read lists the processes, reads the recorded state and may write it; a stop writes "Stopping" and
+    // "Stopped". Unsynchronised, a read that listed the server just before it exited but read the state just after the stop
+    // wrote "Stopped" recorded "Running" again, and the supervisor then restarted the server as crashed (traced in the
+    // v0.9.5.0 fleet smoke). Both now take this lock, so a read sees the process and the state from the same moment.
+    private readonly object stateGate = new();
+
     public Task<ServerLifecycleSnapshot> GetStatusAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        lock (stateGate) return ReadStatus();
+    }
+
+    private Task<ServerLifecycleSnapshot> ReadStatus()
+    {
         var processes = FindManagedServerProcesses();
         var ports = sessionInspector.GetGuardedListeningPorts();
         var persisted = stateStore.Read();
@@ -58,7 +69,11 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
                 ServerLifecyclePhase.Running, native?.ProcessId, processes, ports, ready, false, now,
                 persisted?.LastTransitionAt,
                 ready ? $"PalServer process and UDP {expectedGamePort} are active." : $"PalServer process is active; UDP {expectedGamePort} has not been confirmed.");
-            if (persisted?.Phase != ServerLifecyclePhase.Running || persisted.LastKnownProcessId != native?.ProcessId)
+            // v0.9.6.0: a stop in progress keeps its recorded intent. A status read while the process was still exiting
+            // rewrote "Stopping (stop requested)" as "Running", so a poll a second later found no process, no stop request,
+            // and restarted the server as crashed (found by the v0.9.5.0 fleet smoke: about one run in three).
+            if (persisted is not { Phase: ServerLifecyclePhase.Stopping, StopRequested: true } &&
+                (persisted?.Phase != ServerLifecyclePhase.Running || persisted.LastKnownProcessId != native?.ProcessId))
             {
                 stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Running, native?.ProcessId, now, false, snapshot.Detail));
                 snapshot = snapshot with { LastTransitionAt = now };
@@ -223,8 +238,9 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
             return new ServerLifecycleOperationResult(HeadlessExitCode.NotRunning, snapshot, false, "PalServer is already stopped.");
         }
 
-        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopping, SelectNativeProcess(processes)?.ProcessId,
-            DateTimeOffset.UtcNow, true, "Windows shutdown requested."));
+        lock (stateGate)
+            stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopping, SelectNativeProcess(processes)?.ProcessId,
+                DateTimeOffset.UtcNow, true, "Windows shutdown requested."));
 
         // v0.7.68.0 bugfix: found live-testing this same session's own tray-toast fix, then traced
         // properly -- CloseMainWindow() below silently does NOTHING (returns false, no exception,
@@ -288,7 +304,7 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
         ownedProcess?.Dispose();
         ownedProcess = null;
         var now = DateTimeOffset.UtcNow;
-        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopped, null, now, true, message));
+        lock (stateGate) stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopped, null, now, true, message));
         var snapshot = new ServerLifecycleSnapshot(ServerLifecyclePhase.Stopped, null, [], sessionInspector.GetGuardedListeningPorts(), false, false, now, now, message);
         return new ServerLifecycleOperationResult(HeadlessExitCode.Success, snapshot, forced, message);
     }

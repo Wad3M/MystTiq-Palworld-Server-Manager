@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
@@ -46,10 +46,21 @@ public sealed class WindowsServerSessionInspector : IServerSessionInspector
                 // v0.9.5.0: MainModule needs full access and fails while a process starts or exits, which left the path
                 // empty; the lifecycle then took any PalServer for its own (see WindowsServerLifecycleService). The image
                 // name needs only limited query access and is readable for the whole life of the process.
+                // v0.9.6.0: a process that has exited stays in the process list while anything holds a handle to it (this
+                // service, the other profiles' own lookups, a script), and its image name is still readable. Counted as
+                // running, it made a server stopped a moment earlier read "Running" again and then "crashed", and the
+                // supervisor restarted it (the v0.9.5.0 fleet smoke, about one run in three). Exited processes are skipped.
+                if (HasExited(process.Id))
+                    continue;
                 var path = ImagePath(process.Id);
                 if (path.Length == 0)
                     try { path = process.MainModule?.FileName ?? string.Empty; } catch { }
-                result.Add(new ServerSessionProcessInfo(process.Id, 0, process.ProcessName, path, process.Responding));
+                // v0.9.6.0: Responding throws for a process that is terminating; the catch below used to drop that process,
+                // so a stop's wait saw "no process" while it was still exiting, and the next read listed it again ("Running"),
+                // then lost it ("crashed"). A process is now listed until Windows reports it has exited (above).
+                bool responding;
+                try { responding = process.Responding; } catch { responding = false; }
+                result.Add(new ServerSessionProcessInfo(process.Id, 0, process.ProcessName, path, responding));
             }
             catch { }
             finally { process.Dispose(); }
@@ -70,7 +81,21 @@ public sealed class WindowsServerSessionInspector : IServerSessionInspector
         finally { CloseHandle(handle); }
     }
 
+    // True only when the process is known to have exited; a process that cannot be opened is left to the checks above.
+    private static bool HasExited(int processId)
+    {
+        var handle = OpenProcess(ProcessQueryLimitedInformation | Synchronize, false, processId);
+        if (handle == IntPtr.Zero) return false;
+        try { return WaitForSingleObject(handle, 0) == WaitObject0; }
+        finally { CloseHandle(handle); }
+    }
+
     private const uint ProcessQueryLimitedInformation = 0x1000;
+    private const uint Synchronize = 0x00100000;
+    private const uint WaitObject0 = 0;
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
 
     [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr OpenProcess(uint access, bool inheritHandle, int processId);

@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using MystTiq.Core.Models;
 namespace MystTiq.Core.Services;
 public sealed class NetworkDiagnosticsService
@@ -55,7 +55,15 @@ public sealed class NetworkDiagnosticsService
   await CheckTcp("RCON",rcon,Port(text,"RCONPort",25575),false);
   await CheckTcp("REST API",rest,Port(text,"RESTAPIPort",8212),true);
  }
- public Task<FirewallRepairResult> RepairFirewallAsync(int port,CancellationToken token=default)=>platform.RepairInboundFirewallRuleAsync(port,"UDP",token);
+ public Task<FirewallRepairResult> RepairFirewallAsync(int port,string? serverId,CancellationToken token=default)=>platform.RepairInboundFirewallRuleAsync(port,"UDP",serverId,token);
+ // v0.9.6.0: whether this server's game port is allowed through the firewall, and its rules for a port it no longer uses.
+ public async Task<FirewallStatus> GetFirewallStatusAsync(int port,string? serverId,CancellationToken token=default)
+ {
+  if(OperatingSystem.IsLinux())return FirewallRules.Evaluate(port,"UDP",serverId,[],[],supported:false) with{Commands=FirewallRules.LinuxCommands(port,"UDP")};
+  if(!OperatingSystem.IsWindows())return FirewallRules.Evaluate(port,"UDP",serverId,[],[],supported:false);
+  try{var rules=await platform.GetInboundFirewallRulesAsync(port,"UDP",token);var ours=await platform.GetMystTiqFirewallRulesAsync(token);return FirewallRules.Evaluate(port,"UDP",serverId,rules,ours);}
+  catch(Exception ex)when(ex is not OperationCanceledException){return FirewallRules.Evaluate(port,"UDP",serverId,[],[],error:ex.Message);}
+ }
  public static (int Port,bool UsedDefault,bool Invalid) ResolveGamePort(IReadOnlyList<string> args){var ps=new List<int>();foreach(var a in args){if(!a.StartsWith("-port=",StringComparison.OrdinalIgnoreCase))continue;if(!int.TryParse(a[6..],out var p)||p is<1 or>65535)return(DefaultGamePort,false,true);ps.Add(p);}if(ps.Distinct().Count()>1)return(DefaultGamePort,false,true);return ps.Count==0?(DefaultGamePort,true,false):(ps[0],false,false);}
  private static NetworkDiagnosticReport Make(ServerLifecycleSnapshot r,int port,bool used,int? pid,string? n,string? path,DateTimeOffset? st,IReadOnlyList<NetworkDiagnosticCheck> c,NetworkHealthState h,string a,string? b=null,string? l=null)=>new(DateTimeOffset.UtcNow,r.Phase.ToString(),h,port,used,pid,n,path,st,b,l,c,a);
 }

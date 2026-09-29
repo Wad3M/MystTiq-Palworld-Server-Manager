@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using MystTiq.Core.Automation;
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
@@ -38,6 +38,9 @@ public sealed class HeadlessDiagnosticsService
     private readonly Func<double?>? lowDiskPercent;
     private readonly HeadlessAutomationService? automation;
     private readonly HeadlessComponentUpdateService? componentUpdates;
+    private readonly NetworkDiagnosticsService? network;
+    private readonly string? serverId;
+    private readonly IReadOnlyList<string> launchArguments;
     private readonly object backupRuleGate = new();
 
     public HeadlessDiagnosticsService(
@@ -53,9 +56,15 @@ public sealed class HeadlessDiagnosticsService
         HeadlessCrashAndSaveToolsService? crashTools = null,
         Func<double?>? lowDiskPercent = null,
         HeadlessAutomationService? automation = null,
-        HeadlessComponentUpdateService? componentUpdates = null)
+        HeadlessComponentUpdateService? componentUpdates = null,
+        NetworkDiagnosticsService? network = null,
+        string? serverId = null,
+        IReadOnlyList<string>? launchArguments = null)
     {
         this.componentUpdates = componentUpdates;
+        this.network = network;
+        this.serverId = serverId;
+        this.launchArguments = launchArguments ?? [];
         this.automation = automation;
         this.lowDiskPercent = lowDiskPercent;
         this.backups = backups;
@@ -147,6 +156,7 @@ public sealed class HeadlessDiagnosticsService
         findings.AddRange(BuildRecentCrashFindings());
         findings.AddRange(await BuildIdentityFindingsAsync(cancellationToken));
         findings.AddRange(BuildVersionFindings());
+        findings.AddRange(await BuildPortFindingsAsync(cancellationToken));
 
         return BuildReport(findings, status.Ready);
     }
@@ -581,10 +591,77 @@ public sealed class HeadlessDiagnosticsService
                 var result = await serverDistribution.UpdateAsync(validate: true, cancellationToken);
                 return new HeadlessDiagnosticFixResult(result.Success, result.Message);
 
+            case "allow-firewall":
+                if (!canAdminister)
+                    return HeadlessDiagnosticFixResult.Failure("Changing the firewall needs the Admin role.");
+                if (network is null)
+                    return HeadlessDiagnosticFixResult.Failure("Network diagnostics are not available on this server.");
+                var firewall = await network.RepairFirewallAsync(ServerGamePort.Expected(paths, launchArguments), serverId, cancellationToken);
+                return new HeadlessDiagnosticFixResult(firewall.Success, firewall.NeedsElevation
+                    ? firewall.Message + " On this computer, use Diagnostics > Allow through Firewall, which asks Windows for administrator rights."
+                    : firewall.Message);
+
             default:
                 return HeadlessDiagnosticFixResult.Failure(
                     finding.UnavailableReason ?? "No automatic fix is available for this finding yet.");
         }
+    }
+
+    // v0.9.6.0: the port the server really binds (the -port= launch argument, else 8211) against PublicPort, which only
+    // says what the server advertises; and whether the firewall lets players reach that port. Both came from the live
+    // join on 2026-09-28: a second server set up on another port still bound 8211, and the firewall rule had to be added
+    // by hand.
+    private async Task<IReadOnlyList<DiagnosticFinding>> BuildPortFindingsAsync(CancellationToken cancellationToken)
+    {
+        var findings = new List<DiagnosticFinding>();
+        var now = DateTimeOffset.UtcNow;
+        var bound = ServerGamePort.Expected(paths, launchArguments);
+        var snapshot = palworldConfiguration.Load();
+        if (snapshot.Exists && GetInt(snapshot, "PublicPort") is int advertised and > 0)
+        {
+            var same = advertised == bound;
+            findings.Add(new DiagnosticFinding(
+                Id: "configuration-game-port",
+                Category: "Configuration",
+                Component: "Game port",
+                State: same ? DiagnosticState.Pass : DiagnosticState.Warning,
+                Location: palworldConfiguration.ConfigurationPath,
+                Evidence: same
+                    ? $"The server binds UDP {bound}, the port PalWorldSettings.ini advertises."
+                    : $"The server binds UDP {bound} (its -port= launch argument, or 8211 without one), but PalWorldSettings.ini's PublicPort says {advertised}. Players given port {advertised} cannot join.",
+                Recommendation: same
+                    ? "Nothing to do."
+                    : $"Make them match: set the launch argument -port={advertised} in Settings (then restart MystTiq), or set PublicPort to {bound}.",
+                ActionKind: null,
+                ActionSupported: false,
+                UnavailableReason: same ? null : "Launch arguments take effect when MystTiq restarts, so this is not changed automatically.",
+                ObservedAt: now,
+                Duration: TimeSpan.Zero));
+        }
+
+        if (network is null) return findings;
+        var status = await network.GetFirewallStatusAsync(bound, serverId, cancellationToken);
+        var fixable = status.Supported && status.Error is null && !status.Blocked && (!status.Allowed || status.StaleRules.Count > 0);
+        findings.Add(new DiagnosticFinding(
+            Id: "network-firewall",
+            Category: "Network",
+            Component: "Firewall",
+            State: !status.Supported || status.Error is not null ? DiagnosticState.Skipped
+                : status.Blocked ? DiagnosticState.Fail
+                : status.Allowed && status.StaleRules.Count == 0 ? DiagnosticState.Pass
+                : DiagnosticState.Warning,
+            Location: $"UDP {bound}",
+            Evidence: status.Rules.Count == 0 ? status.Summary : status.Summary + " Rules: " + string.Join("; ", status.Rules.Select(r => $"{r.Name} [{r.Action}, {(r.Enabled ? "on" : "off")}, {r.Profiles}]")),
+            Recommendation: status.Commands is { Count: > 0 } commands ? "Open the port yourself: " + string.Join("  or  ", commands)
+                : status.Blocked ? "Remove or turn off the blocking rule in Windows Defender Firewall."
+                : fixable ? "Allow the port through Windows Firewall (Fix)."
+                : "Nothing to do.",
+            ActionKind: fixable ? "allow-firewall" : null,
+            ActionSupported: fixable,
+            UnavailableReason: status.Blocked ? "MystTiq does not remove rules it did not make." : null,
+            ObservedAt: now,
+            Duration: TimeSpan.Zero));
+        return findings;
     }
 
     // v0.9.5.0: a game server behind Steam's public build turns away every player on the current game ("server and game

@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;

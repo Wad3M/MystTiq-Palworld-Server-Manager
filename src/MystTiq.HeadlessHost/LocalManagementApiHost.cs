@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -216,7 +216,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             policyLifecycle.AfterStart = async token => await resourcePolicy.ApplyAsync(token);
             var automation = new HeadlessAutomationService(paths, configuration, serverConfig, lifecycle, backups, notifications, notificationRouting, rcon, operations, activity, alertCenter, monitoring, antiCheat, crashReports, resourcePolicy);
             var componentUpdates = new HeadlessComponentUpdateService(paths, modManagement);
-            var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer, backups, crashAndSaveTools, () => alertCenter.LowDiskCriticalPercent(), automation, componentUpdates);
+            var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer, backups, crashAndSaveTools, () => alertCenter.LowDiskCriticalPercent(), automation, componentUpdates, networkDiagnostics, profileId.Value, serverConfig.LaunchArguments);
             var worldClone = new HeadlessWorldCloneService(paths, lifecycle, serverConfig, fleetConfigurationApi, palworldConfiguration, activity);
             var modSafeStart = new HeadlessModSafeStartService(
                 lifecycle, modManagement, serverConfig, activity, operations, profileId,
@@ -841,10 +841,14 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             return Results.Ok(report);
         });
 
+        // v0.9.6.0: the port the server binds (ServerGamePort), and the rule is tagged with this server's id, so a port
+        // change removes the rule for the old port. GET reports the rule state without changing anything.
+        routes.MapGet("/diagnostics/network/firewall", async (CancellationToken token) =>
+            Results.Ok(await p.NetworkDiagnostics.GetFirewallStatusAsync(ServerGamePort.Expected(p.Paths, p.ServerProfile.LaunchArguments), p.Id.Value, token)));
+
         routes.MapPost("/diagnostics/network/firewall/repair", async (CancellationToken token) =>
         {
-            var resolved = NetworkDiagnosticsService.ResolveGamePort(p.ServerProfile.LaunchArguments);
-            var result = await p.NetworkDiagnostics.RepairFirewallAsync(resolved.Port, token);
+            var result = await p.NetworkDiagnostics.RepairFirewallAsync(ServerGamePort.Expected(p.Paths, p.ServerProfile.LaunchArguments), p.Id.Value, token);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         });
 

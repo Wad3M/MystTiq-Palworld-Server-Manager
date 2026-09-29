@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -972,6 +972,12 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         return await ReadOperationAsync<NetworkRecoveryResultDto>(response, cancellationToken);
     }
 
+    public async Task<FirewallStatusDto> GetNetworkFirewallAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        return await client.GetFromJsonAsync<FirewallStatusDto>("/api/v1/diagnostics/network/firewall", cancellationToken)
+            ?? throw new InvalidOperationException("MystTiq returned an empty firewall status.");
+    }
     public async Task<FirewallRepairResultDto> RepairNetworkFirewallAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
     {
         using var client = BuildClient(profile, bearerToken);

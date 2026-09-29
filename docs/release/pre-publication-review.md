@@ -1,7 +1,7 @@
-<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.6.0: file reviewed for this release (2026-09-29). -->
 # Pre-publication review
 
-- Confirm the tag, `Directory.Build.props`, release notes and binary version all identify the version being released (v0.9.5.0 for this release).
+- Confirm the tag, `Directory.Build.props`, release notes and binary version all identify the version being released (v0.9.6.0 for this release).
 - Inspect staged Git changes. Keep local settings, saves, logs, server data, credentials, build output, third-party distribution ZIPs and obsolete source manifests out of Git.
 - Check screenshots, examples and exported diagnostics for private account/server details. A clean extension scan alone is not proof that no secrets exist.
 - Include the matching headless service and native Windows console helper (the legacy WPF application was removed in v0.8.26.0 and is no longer built).

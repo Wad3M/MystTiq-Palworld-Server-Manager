@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 namespace MystTiq.Desktop.Models;
 public sealed record NetworkDiagnosticCheckDto(string Test,int State,string Details,string Recommendation)
 {
@@ -8,7 +8,12 @@ public sealed record NetworkDiagnosticReportDto(DateTimeOffset CheckedAt,string 
 {
  public string NetworkHealthText=>NetworkHealth switch{1=>"STARTING",2=>"HEALTHY",3=>"WARNING",4=>"ERROR",5=>"NOT RUNNING",_=>"UNKNOWN"};
 }
-public sealed record FirewallRepairResultDto(bool Success,bool Changed,string Message);
+// v0.9.6.0: NeedsElevation and Script: the service may not change the firewall, so the Desktop runs Script as an
+// administrator on this computer. Removed names the rules for the server's previous port that were taken away.
+public sealed record FirewallRepairResultDto(bool Success,bool Changed,string Message,bool NeedsElevation=false,string? Script=null,IReadOnlyList<string>? Removed=null);
+public sealed record FirewallRuleInfoDto(string Name,bool Enabled,string Direction,string Action,string Protocol,int LocalPort,string Profiles,bool ManagedByMystTiq=false,string? ServerId=null);
+// v0.9.6.0: one server's game port in the firewall (GET /diagnostics/network/firewall).
+public sealed record FirewallStatusDto(int Port,string Protocol,bool Supported,bool Allowed,bool Blocked,IReadOnlyList<FirewallRuleInfoDto> Rules,IReadOnlyList<string> StaleRules,string Summary,string? Error=null,IReadOnlyList<string>? Commands=null);
 
 public sealed record NetworkRecoveryResultDto(bool Success, LifecycleOperationResultDto Restart, NetworkDiagnosticReportDto Diagnostics);
 

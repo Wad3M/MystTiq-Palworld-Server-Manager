@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -306,6 +306,32 @@ try
         Assert(status.Phase == ServerLifecyclePhase.Running && status.NativeProcessId == 5555, $"its own recorded process must still be Running, got {status.Phase} pid={status.NativeProcessId}");
     }, failures);
 
+    // v0.9.6.0: a stop in progress keeps its recorded intent. A status read while the process was still exiting rewrote
+    // "Stopping" as "Running", and the next read found no process and reported a crash, so the supervisor restarted a
+    // server that had been stopped on purpose (the v0.9.5.0 fleet smoke, about one run in three).
+    RunScenarioAsync("A status read while a stopped server is still exiting does not turn the stop into a crash", async () =>
+    {
+        var root = Path.Combine(tempRoot, "stop-race");
+        Directory.CreateDirectory(root);
+        var stateStore = new ServerLifecycleStateStore(root);
+        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopping, 6666, DateTimeOffset.UtcNow, true, "Windows shutdown requested."));
+        var exe = Path.Combine(root, "Pal", "Binaries", "Win64", "PalServer-Win64-Shipping-Cmd.exe");
+        var inspector = new FixedSessionInspector([new ServerSessionProcessInfo(6666, 0, "PalServer-Win64-Shipping-Cmd", exe, true)]);
+        var lifecycle = new WindowsServerLifecycleService(ServerPlatformProfile.Windows, new HarnessPathProfile(root), inspector, stateStore);
+        var exiting = await lifecycle.GetStatusAsync();
+        Assert(exiting.Phase == ServerLifecyclePhase.Running, $"a process still present reads as running, got {exiting.Phase}");
+        Assert(stateStore.Read() is { Phase: ServerLifecyclePhase.Stopping, StopRequested: true }, $"the recorded stop request must survive that read, got {stateStore.Read()}");
+        inspector.Processes = [];
+        var gone = await lifecycle.GetStatusAsync();
+        Assert(!gone.CrashDetected && gone.Phase != ServerLifecyclePhase.Crashed, $"once it has exited, a requested stop is not a crash, got {gone.Phase} crash={gone.CrashDetected}");
+        // A running server is still recorded as running (and a crash still detected) when no stop was requested.
+        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Starting, 6666, DateTimeOffset.UtcNow, false, "Starting."));
+        inspector.Processes = [new ServerSessionProcessInfo(6666, 0, "PalServer-Win64-Shipping-Cmd", exe, true)];
+        await lifecycle.GetStatusAsync();
+        Assert(stateStore.Read() is { Phase: ServerLifecyclePhase.Running, StopRequested: false }, "without a stop request the read records Running as before");
+        inspector.Processes = [];
+        Assert((await lifecycle.GetStatusAsync()).CrashDetected, "and a process that then vanishes is still a crash");
+    }, failures);
     // v0.9.5.0: readiness waits for the port the server binds (-port=, else 8211), not PalWorldSettings.ini's PublicPort,
     // which only advertises. A profile launched with -port=8211 whose ini said 8219 never became ready and kept restarting.
     RunScenario("The expected game port is the -port= launch argument (else 8211); PublicPort is used only when the arguments are unusable", () =>
@@ -357,6 +383,197 @@ try
         Assert(HeadlessComponentUpdateService.PalDefenderGameWarning(bin) is null, "after updating, the newest log has no warning, so none is reported");
     }, failures);
 
+    // v0.9.6.0: the firewall rule for a server's own port. Each rule carries the server's id, so allowing a new port
+    // removes that server's rule for the old one; a rule for another program (the game client, Steam) opens nothing for
+    // the dedicated server; the scripts are built without touching the firewall.
+    RunScenario("Firewall: a rule covers the port by number, list or range, and only for PalServer or every program", () =>
+    {
+        Assert(FirewallRules.CoversPort("*", 8211) && FirewallRules.CoversPort("8211", 8211) && FirewallRules.CoversPort("27015,8211", 8211) && FirewallRules.CoversPort("8000-9000", 8211), "number, list, range and * all cover 8211");
+        Assert(!FirewallRules.CoversPort("8212", 8211) && !FirewallRules.CoversPort("RPC", 8211) && !FirewallRules.CoversPort("9000-9100", 8211), "other ports and keywords do not");
+        Assert(FirewallRules.CoversProtocol(17, "UDP") && FirewallRules.CoversProtocol(256, "udp") && !FirewallRules.CoversProtocol(6, "UDP"), "UDP is 17, any is 256, TCP is not UDP");
+        Assert(FirewallRules.AppliesToServer(null, null) && FirewallRules.AppliesToServer("", "*"), "a rule for every program applies");
+        Assert(FirewallRules.AppliesToServer(@"C:\Palworld\Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe", null) && FirewallRules.AppliesToServer("\"D:\\srv\\Pal\\Binaries\\Win64\\PalServer-Win64-Shipping.exe\"", null), "a rule for the server binary applies");
+        Assert(!FirewallRules.AppliesToServer(@"C:\GameServers\Palworld\Server\PalServer.exe", null), "a rule for the PalServer.exe launcher opens nothing: the game binary it starts owns the port (found on this machine)");
+        Assert(!FirewallRules.AppliesToServer(@"E:\SteamLibrary\steamapps\common\Palworld\Palworld.exe", null), "the game client's own rule opens nothing for the server (seen on this machine)");
+        Assert(!FirewallRules.AppliesToServer(null, "Dnscache"), "a rule for a Windows service does not apply");
+        Assert(!FirewallRules.AppliesToServer(null, null, owner: "S-1-5-21-1-2-3-1000") && !FirewallRules.AppliesToServer(null, null, package: "S-1-15-2-1"), "a Store app's rule (owner or package, all ports) does not apply: found on this machine for Xbox and ChatGPT");
+        Assert(FirewallRules.FirstPort("8212") == 8212 && FirewallRules.FirstPort("8000-9000") == 8000 && FirewallRules.FirstPort("*") == 0, "first port");
+        Assert(FirewallRules.ProfileNames(0x7FFFFFFF) == "Any" && FirewallRules.ProfileNames(3) == "Domain, Private" && FirewallRules.ProfileNames(4) == "Public", "profile names as Windows shows them");
+    }, failures);
+
+    RunScenario("Firewall: the allow script tags the rule with the server and removes only that server's rules for other ports", () =>
+    {
+        Assert(FirewallRules.ServerIdFromDescription("MystTiq server: alpha") == "alpha" && FirewallRules.ServerIdFromDescription("Inbound rule for AllJoyn") is null && FirewallRules.ServerIdFromDescription(null) is null, "the server id is read back from the description");
+        var script = FirewallRules.AllowScript(8212, "UDP", "alpha");
+        Assert(script.Contains("$n='MystTiq Palworld Server - Game UDP 8212'", StringComparison.Ordinal) && script.Contains("-LocalPort $p", StringComparison.Ordinal) && script.Contains("$p=8212;", StringComparison.Ordinal), "rule name and port");
+        Assert(script.Contains("$d='MystTiq server: alpha'", StringComparison.Ordinal) && script.Contains("-Description $d", StringComparison.Ordinal), "the rule is tagged with the server id");
+        Assert(script.Contains("$_.Description -eq $d -and $_.DisplayName -ne $n", StringComparison.Ordinal) && script.Contains("Remove-NetFirewallRule", StringComparison.Ordinal), "only this server's rules with another name (another port) are removed");
+        Assert(script.Contains("-Profile Any", StringComparison.Ordinal) && script.Contains("-Action Allow", StringComparison.Ordinal) && script.StartsWith("$ErrorActionPreference='Stop';", StringComparison.Ordinal), "enabled allow for every profile; a refusal stops the script");
+        var untagged = FirewallRules.AllowScript(8211, "udp", null);
+        Assert(!untagged.Contains("Remove-NetFirewallRule", StringComparison.Ordinal) && !untagged.Contains("-Description", StringComparison.Ordinal), "without a server id nothing is removed");
+        Assert(FirewallRules.AllowScript(8211, "UDP", "o'brien").Contains("$d='MystTiq server: o''brien'", StringComparison.Ordinal), "a quote in an id is escaped");
+        var threw = false; try { FirewallRules.AllowScript(0, "UDP", "a"); } catch (ArgumentOutOfRangeException) { threw = true; }
+        Assert(threw, "port 0 is refused");
+        Assert(FirewallRules.IsAccessDenied("New-NetFirewallRule : Access is denied.") && FirewallRules.IsAccessDenied("PermissionDenied: (MSFT_NetFirewallRule)") && !FirewallRules.IsAccessDenied("The object already exists."), "access denied is recognised");
+        var linux = FirewallRules.LinuxCommands(8212, "UDP");
+        Assert(linux.Count == 2 && linux[0] == "sudo ufw allow 8212/udp comment 'MystTiq Palworld Server'" && linux[1].Contains("--add-port=8212/udp", StringComparison.Ordinal), "ufw and firewalld commands");
+    }, failures);
+
+    RunScenario("Firewall: the state says allowed, blocked, off or missing, and names the server's rules for an old port", () =>
+    {
+        FirewallRuleInfo Rule(string name, string action, bool enabled = true, int port = 8212, string? id = null) => new(name, enabled, "Inbound", action, "UDP", port, "Any", name.StartsWith(FirewallRules.NamePrefix, StringComparison.Ordinal), id);
+        var ours = Rule(FirewallRules.RuleName(8212, "UDP"), "Allow", id: "alpha");
+        var old = Rule(FirewallRules.RuleName(8211, "UDP"), "Allow", port: 8211, id: "alpha");
+        var otherServer = Rule(FirewallRules.RuleName(8213, "UDP"), "Allow", port: 8213, id: "beta");
+        var allowed = FirewallRules.Evaluate(8212, "UDP", "alpha", [ours], [ours, old, otherServer]);
+        Assert(allowed.Allowed && !allowed.Blocked && allowed.StaleRules.SequenceEqual([old.Name]), $"allowed, with only alpha's old-port rule stale: {string.Join(",", allowed.StaleRules)}");
+        Assert(allowed.Summary == "UDP 8212 is allowed through Windows Firewall. 1 old rule(s) for this server's previous port are still open.", allowed.Summary);
+        var blocked = FirewallRules.Evaluate(8212, "UDP", "alpha", [ours, Rule("Block Palworld", "Block")], []);
+        Assert(blocked.Blocked && !blocked.Allowed, "an enabled block wins over an allow");
+        Assert(FirewallRules.Evaluate(8212, "UDP", "alpha", [Rule("Old", "Allow", enabled: false)], []).Summary == "A rule for UDP 8212 exists but is turned off.", "a disabled rule");
+        var none = FirewallRules.Evaluate(8212, "UDP", "alpha", [], []);
+        Assert(!none.Allowed && none.Summary == "No rule allows UDP 8212. Players on other computers cannot join.", none.Summary);
+        Assert(FirewallRules.Evaluate(8212, "UDP", null, [ours], [old]).StaleRules.Count == 0, "without a server id nothing is stale");
+        Assert(!FirewallRules.Evaluate(8212, "UDP", "alpha", [], [], supported: false).Supported, "unsupported platform");
+    }, failures);
+
+    if (OperatingSystem.IsWindows())
+    {
+        RunScenarioAsync("Firewall: this computer's rules are read through the firewall's COM API in a few seconds, without changing anything", async () =>
+        {
+            var platform = new WindowsNetworkDiagnosticsPlatformService();
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var rules = await platform.GetInboundFirewallRulesAsync(8211, "UDP");
+            var ours = await platform.GetMystTiqFirewallRulesAsync();
+            clock.Stop();
+            Assert(clock.Elapsed < TimeSpan.FromSeconds(10), $"reading took {clock.Elapsed.TotalSeconds:0.0} s (PowerShell took about 27 s on this machine)");
+            Assert(rules.All(r => r.Direction == "Inbound" && r.Protocol == "UDP" && r.LocalPort == 8211), "every rule returned is inbound UDP 8211");
+            Assert(ours.All(r => r.ManagedByMystTiq), "MystTiq's own rules are recognised by name");
+            Console.WriteLine($"    (read {rules.Count} rule(s) covering UDP 8211 and {ours.Count} MystTiq rule(s) in {clock.Elapsed.TotalMilliseconds:0} ms)");
+        }, failures);
+    }
+
+    // v0.9.6.0: the server search: a TCP sweep, many addresses at once, then the identity probe only where the port answers.
+    RunScenario("Server search: this computer first, each adapter's /24 once, link-local and IPv6 skipped", () =>
+    {
+        var ranges = MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.BuildRanges(
+        [
+            ("Ethernet", IPAddress.Parse("192.168.1.20")),
+            ("Wi-Fi", IPAddress.Parse("192.168.1.35")),
+            ("vEthernet (WSL)", IPAddress.Parse("172.28.16.1")),
+            ("Ethernet", IPAddress.Parse("169.254.10.2")),
+            ("Ethernet", IPAddress.Parse("fe80::1")),
+            ("Loopback", IPAddress.Loopback),
+        ]);
+        Assert(ranges.Select(r => r.Cidr).SequenceEqual(["127.0.0.1", "192.168.1.0/24", "172.28.16.0/24"]), string.Join(" | ", ranges.Select(r => r.DisplayText)));
+        Assert(ranges[1].DisplayText == "192.168.1.0/24 (Ethernet)" && ranges[1].Addresses.Count == 254 && ranges[1].Addresses[0] == "192.168.1.20", "the adapter's own address is tried first, 254 hosts in all");
+        Assert(ranges[1].Addresses.Distinct().Count() == ranges[1].Addresses.Count, "no address twice");
+    }, failures);
+
+    RunScenario("Server search: virtual adapters are left out unless ticked, and typed ranges are added or named when unreadable", () =>
+    {
+        (string, string, IPAddress, bool)[] adapters =
+        [
+            ("Ethernet 2", "Realtek PCIe 2.5GbE Family Controller", IPAddress.Parse("192.168.1.20"), true),
+            ("vEthernet (WSL (Hyper-V firewall))", "Hyper-V Virtual Ethernet Adapter", IPAddress.Parse("172.28.16.1"), false),
+            ("vEthernet (Default Switch)", "Hyper-V Virtual Ethernet Adapter #2", IPAddress.Parse("172.20.64.1"), false),
+            ("docker0", "", IPAddress.Parse("172.17.0.1"), false),
+        ];
+        var plan = MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.BuildPlan(adapters, new MystTiq.Desktop.Services.DiscoveryOptions());
+        Assert(plan.Ranges.Select(r => r.Cidr).SequenceEqual(["127.0.0.1", "192.168.1.0/24"]), string.Join(" | ", plan.Ranges.Select(r => r.DisplayText)));
+        Assert(plan.Skipped.Select(r => r.Cidr).SequenceEqual(["172.28.16.0/24", "172.20.64.0/24", "172.17.0.0/24"]), "WSL, Hyper-V and Docker are listed as not searched");
+        var all = MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.BuildPlan(adapters, new MystTiq.Desktop.Services.DiscoveryOptions(IncludeVirtualAdapters: true, ExtraRanges: "10.0.5.0/24, 10.0.6.7; 10.0.7.9/30 bogus 10.0.8.0/16"));
+        Assert(all.Ranges.Count == 8 && all.Skipped.Count == 0, $"ticked: every adapter plus three typed ranges, got {all.Ranges.Count}");
+        var added = all.Ranges.Where(r => r.Adapter == "added").ToArray();
+        Assert(added[0].Cidr == "10.0.5.0/24" && added[0].Addresses.Count == 254 && added[0].Addresses[0] == "10.0.5.1" && added[0].Addresses[^1] == "10.0.5.254", "a /24 is its 254 hosts");
+        Assert(added[1].Cidr == "10.0.6.7" && added[1].Addresses.SequenceEqual(["10.0.6.7"]), "a single address");
+        Assert(added[2].Cidr == "10.0.7.8/30" && added[2].Addresses.SequenceEqual(["10.0.7.9", "10.0.7.10"]), "a /30 is its two hosts, from any address inside it");
+        Assert(all.Problems.SequenceEqual(["bogus", "10.0.8.0/16"]), $"unreadable and too-wide entries are named: {string.Join(",", all.Problems)}");
+        // This machine: the real LAN is on a Hyper-V external switch (with the router as its gateway), listed before the
+        // physical card on the same /24. v0.9.6.0's first build skipped it by name and dropped the card as a duplicate.
+        (string, string, IPAddress, bool)[] thisMachine =
+        [
+            ("vEthernet (MystTiq External)", "Hyper-V Virtual Ethernet Adapter #3", IPAddress.Parse("192.168.1.6"), true),
+            ("Ethernet 2", "Realtek USB GbE Family Controller", IPAddress.Parse("192.168.1.5"), true),
+            ("vEthernet (WSL (Hyper-V firewall))", "Hyper-V Virtual Ethernet Adapter", IPAddress.Parse("172.20.64.1"), false),
+        ];
+        var here = MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.BuildPlan(thisMachine, new MystTiq.Desktop.Services.DiscoveryOptions());
+        Assert(here.Ranges.Select(r => r.Cidr).SequenceEqual(["127.0.0.1", "192.168.1.0/24"]) && here.Skipped.Select(r => r.Cidr).SequenceEqual(["172.20.64.0/24"]), $"the LAN behind an external switch is searched, WSL is not: {string.Join(" | ", here.Ranges.Select(r => r.DisplayText))} / skipped {string.Join(" | ", here.Skipped.Select(r => r.DisplayText))}");
+        var cardFirst = MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.BuildPlan(
+            [("vEthernet (Default Switch)", "Hyper-V Virtual Ethernet Adapter", IPAddress.Parse("192.168.1.9"), false), ("Ethernet", "Intel", IPAddress.Parse("192.168.1.5"), true)],
+            new MystTiq.Desktop.Services.DiscoveryOptions());
+        Assert(cardFirst.Ranges.Any(r => r.Cidr == "192.168.1.0/24" && r.Adapter == "Ethernet") && cardFirst.Skipped.Count == 0, "a real card claims its /24 even when a virtual adapter on it is listed first");        Assert(MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.IsVirtualAdapter("virbr0", null) && !MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.IsVirtualAdapter("Wi-Fi", "Intel(R) Wi-Fi 6E AX211"), "libvirt is virtual; Wi-Fi is not");
+    }, failures);
+    RunScenarioAsync("Server search: a service is found, and 255 addresses that never answer take seconds, not minutes", async () =>
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        using var stop = new CancellationTokenSource();
+        var server = Task.Run(async () =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                TcpClient client;
+                try { client = await listener.AcceptTcpClientAsync(stop.Token); } catch { break; }
+                _ = Task.Run(async () =>
+                {
+                    using (client)
+                    {
+                        try
+                        {
+                            var stream = client.GetStream();
+                            var buffer = new byte[4096];
+                            var read = await stream.ReadAsync(buffer).AsTask().WaitAsync(TimeSpan.FromSeconds(2));
+                            if (read <= 0 || buffer[0] == 0x16) return; // a TLS hello: this stub speaks HTTP only
+                            var body = "{\"component\":\"mysttiq-headless\",\"authentication\":false}";
+                            var reply = $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n{body}";
+                            await stream.WriteAsync(Encoding.ASCII.GetBytes(reply));
+                        }
+                        catch { }
+                    }
+                });
+            }
+        });
+
+        var ranges = MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.BuildRanges([("TEST-NET-1", IPAddress.Parse("192.0.2.10"))]);
+        var reports = new List<MystTiq.Desktop.Services.DiscoveryProgress>();
+        var progress = new SyncProgress<MystTiq.Desktop.Services.DiscoveryProgress>(p => { lock (reports) reports.Add(p); });
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var found = await MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.ScanAsync(ranges, port, progress);
+        clock.Stop();
+        stop.Cancel();
+        listener.Stop();
+        Assert(found.Count == 1 && found[0].Address == "127.0.0.1" && !found[0].UsesTls && !found[0].AuthenticationEnabled, $"the loopback service must be found over HTTP, got {found.Count}");
+        Assert(clock.Elapsed < TimeSpan.FromSeconds(10), $"255 addresses took {clock.Elapsed.TotalSeconds:0.0} s");
+        lock (reports)
+        {
+            Assert(reports.Count > 0 && reports[0].Checked == 0 && reports[0].Total == 255 && reports[0].Ranges.Count == 2, "the first report names the ranges and the total before anything is checked");
+            Assert(reports.Any(r => r.Found?.Address == "127.0.0.1"), "the service is reported the moment it answers");
+            Assert(reports.Max(r => r.Checked) == 255, "the last report has every address checked");
+        }
+
+        Console.WriteLine($"    (searched 255 addresses in {clock.Elapsed.TotalSeconds:0.0} s)");
+        await Task.WhenAny(server, Task.Delay(1000));
+    }, failures);
+
+    RunScenarioAsync("Server search: cancelling stops the search", async () =>
+    {
+        var ranges = MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.BuildRanges([("TEST-NET-2", IPAddress.Parse("198.51.100.10"))]);
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+        var cancelled = false;
+        try { await MystTiq.Desktop.Services.MystTiqServiceDiscoveryService.ScanAsync(ranges, 1, null, cancel.Token); }
+        catch (OperationCanceledException) { cancelled = true; }
+        Assert(cancelled, "a cancelled search ends with OperationCanceledException, which the window reports as cancelled");
+    }, failures);
+
+    RunScenario("A second server's launch arguments are the first one's with its own -port=", () =>
+    {
+        var args = MystTiq.Desktop.Services.LaunchArgumentsText.WithPort("-port=8211\n-useperfthreads\r\n-NoAsyncLoadingThread\n", "8212");
+        Assert(args.SequenceEqual(["-useperfthreads", "-NoAsyncLoadingThread", "-port=8212"]), string.Join(" ", args));
+        Assert(MystTiq.Desktop.Services.LaunchArgumentsText.WithPort("", "8215").SequenceEqual(["-port=8215"]), "without arguments, just the port");
+        Assert(MystTiq.Desktop.Services.LaunchArgumentsText.WithPort("-PORT=8211", "abc").Length == 0, "an unusable port adds none, and the old one is still dropped");
+    }, failures);
     RunScenarioAsync("PalworldRconService.ExecuteAsync reports failure honestly when the RCON password is wrong", async () =>
     {
         using var stub = new StubRconServer("real-password", "unused");
@@ -3335,4 +3552,10 @@ sealed class StubSmtpServer : IDisposable
         listener.Stop();
         try { acceptTask.Wait(TimeSpan.FromSeconds(2)); } catch { /* best effort */ }
     }
+}
+
+// v0.9.6.0: reports on the calling thread at once (Progress<T> posts to a thread-pool queue, so a harness would race it).
+sealed class SyncProgress<T>(Action<T> report) : IProgress<T>
+{
+    public void Report(T value) => report(value);
 }

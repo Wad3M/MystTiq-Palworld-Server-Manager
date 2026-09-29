@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
@@ -10,7 +10,9 @@ public sealed class LinuxNetworkDiagnosticsPlatformService:INetworkDiagnosticsPl
  public async Task<IReadOnlyList<NetworkEndpointInfo>> GetUdpEndpointsAsync(CancellationToken c=default)=>Parse(await Run("-lunp",c),"UDP");
  public async Task<IReadOnlyList<NetworkEndpointInfo>> GetTcpListenersAsync(CancellationToken c=default)=>Parse(await Run("-lntp",c),"TCP");
  public Task<IReadOnlyList<FirewallRuleInfo>> GetInboundFirewallRulesAsync(int p,string x,CancellationToken c=default)=>Task.FromResult<IReadOnlyList<FirewallRuleInfo>>([]);
- public Task<FirewallRepairResult> RepairInboundFirewallRuleAsync(int p,string x,CancellationToken c=default)=>Task.FromResult(new FirewallRepairResult(false,false,"Automatic firewall repair is Windows-only; Linux firewall mutation remains intentionally unsupported."));
+ // v0.9.6.0: still no change to a Linux firewall; the message now names the commands that open the port.
+ public Task<FirewallRepairResult> RepairInboundFirewallRuleAsync(int p,string x,string? id,CancellationToken c=default)=>Task.FromResult(new FirewallRepairResult(false,false,"MystTiq does not change a Linux firewall. To open the port, run one of: "+string.Join(" | ",FirewallRules.LinuxCommands(p,x))));
+ public Task<IReadOnlyList<FirewallRuleInfo>> GetMystTiqFirewallRulesAsync(CancellationToken c=default)=>Task.FromResult<IReadOnlyList<FirewallRuleInfo>>([]);
  public IReadOnlyList<string> GetLanIPv4Addresses()=>NetworkAddressHelper.GetLanIPv4Addresses();
  private static IReadOnlyList<NetworkEndpointInfo> Parse(string t,string proto){var r=new List<NetworkEndpointInfo>();foreach(var line in t.Split('\n',StringSplitOptions.RemoveEmptyEntries).Skip(1)){var m=Regex.Match(line,@"\s(?<addr>\*|[0-9a-fA-F:\.]+):(?<port>\d+)\s+");if(!m.Success||!int.TryParse(m.Groups["port"].Value,out var port))continue;var pm=Regex.Match(line,@"pid=(?<pid>\d+)");int? pid=pm.Success&&int.TryParse(pm.Groups["pid"].Value,out var id)?id:null;string? n=null,p=null;if(pid is int i)try{using var q=Process.GetProcessById(i);n=q.ProcessName;p=q.MainModule?.FileName;}catch{}r.Add(new(proto,m.Groups["addr"].Value=="*"?"0.0.0.0":m.Groups["addr"].Value,port,pid,n,p));}return r;}
  private static async Task<string> Run(string a,CancellationToken c){var si=new ProcessStartInfo("ss",a){RedirectStandardOutput=true,RedirectStandardError=true,UseShellExecute=false};using var p=Process.Start(si)??throw new InvalidOperationException("Unable to start ss.");var o=await p.StandardOutput.ReadToEndAsync(c);await p.WaitForExitAsync(c);return o;}

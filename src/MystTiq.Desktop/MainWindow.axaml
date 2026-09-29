@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.6.0: file reviewed for this release (2026-09-29). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -2457,7 +2457,18 @@
             <Border Grid.Column="2" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.game_port}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding NetworkPort}" FontSize="20" FontWeight="SemiBold"/></StackPanel></Border>
             <Border Grid.Column="3" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.lan_endpoint}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText NetworkLanEndpoint}" FontSize="16" FontWeight="SemiBold"/></StackPanel></Border>
           </Grid>
-          <Border Classes="card accentTools"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.binding}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText NetworkBinding}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding NetworkRecommendation, StringFormat='Recommended action: {0}'}" TextWrapping="Wrap"/></StackPanel></Border>
+          <!-- v0.9.6.0: the firewall rule for the port this server binds; allowing it removes the rule for an old port. -->
+          <Border Classes="card accentTools" IsVisible="{Binding HasFirewallStatus}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{services:Tr ui.windows_firewall}" Foreground="{DynamicResource MutedBrush}"/>
+                <TextBlock Text="{services:TrText FirewallStatusText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:Tr ui.firewall_linux_commands}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding HasFirewallCommands}"/>
+                <TextBox AutomationProperties.Name="{services:Tr ui.firewall_linux_commands}" Text="{Binding FirewallCommandsText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas, monospace" FontSize="11" IsVisible="{Binding HasFirewallCommands}"/>
+              </StackPanel>
+              <Button Grid.Column="1" Classes="primary" VerticalAlignment="Center" Content="{services:Tr ui.allow_through_firewall}" AutomationProperties.Name="{services:Tr ui.allow_through_firewall}" Command="{Binding RepairFirewallCommand}" IsVisible="{Binding FirewallNeedsAction}"/>
+            </Grid>
+          </Border>          <Border Classes="card accentTools"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.binding}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText NetworkBinding}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding NetworkRecommendation, StringFormat='Recommended action: {0}'}" TextWrapping="Wrap"/></StackPanel></Border>
           <ItemsControl ItemsSource="{Binding NetworkDiagnosticChecks}">
             <ItemsControl.ItemTemplate><DataTemplate x:DataType="models:NetworkDiagnosticCheckDto">
               <Border Classes="card accentTools" Margin="0,0,0,8"><Grid ColumnDefinitions="180,100,*,220" ColumnSpacing="12">
@@ -3099,6 +3110,8 @@
                    explicit button rather than fired automatically, since this page's connection is
                    already actively in use. -->
               <Button Classes="success" Content="{services:Tr ui.restart_mysttiq_now_to_bring_it_online}" Command="{Binding RestartAfterCloneCommand}" HorizontalAlignment="Left" IsVisible="{Binding CloneWorldNeedsRestart}"/>
+              <!-- v0.9.6.0: the clone's game port is new, so it needs its own firewall rule. -->
+              <TextBlock Text="{services:Tr ui.clone_firewall_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding CloneWorldNeedsRestart}"/>
             </StackPanel>
           </Border>
           <Border Classes="card accentSystem"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.last_fleet_action_results}" FontSize="17" FontWeight="SemiBold"/>
@@ -3328,8 +3341,30 @@
 
               <StackPanel Orientation="Horizontal" Spacing="10">
                 <Button Content="{services:Tr ui.discover_lan_services}" Command="{Binding DiscoverServicesCommand}"/>
+                <Button Content="{services:Tr ui.cancel}" Command="{Binding CancelDiscoveryCommand}" IsVisible="{Binding IsDiscovering}"/>
                 <Button Content="{services:Tr ui.bootstrap_local_service}" Command="{Binding BootstrapLocalCommand}" IsEnabled="{Binding IsLocalProfile}"/>
                 <TextBlock Text="{services:TrText DiscoveryStateText}" VerticalAlignment="Center" Classes="muted" TextWrapping="Wrap" />
+              </StackPanel>
+              <!-- v0.9.6.0: virtual adapters (WSL, Hyper-V, Docker) are searched only when ticked; extra ranges can be typed in. -->
+              <WrapPanel>
+                <CheckBox Content="{services:Tr ui.include_virtual_adapters}" IsChecked="{Binding DiscoveryIncludeVirtualAdapters}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                <TextBox AutomationProperties.Name="{services:Tr ui.extra_ranges}" Text="{Binding DiscoveryExtraRanges}" Watermark="{services:Tr ui.extra_ranges_watermark}" MinWidth="260"/>
+              </WrapPanel>
+              <!-- v0.9.6.0: the ranges being searched, how far the search is, and Cancel. -->
+              <StackPanel Spacing="4" IsVisible="{Binding HasDiscoveryRanges}">
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding DiscoveryProgressValue}" Height="4" IsVisible="{Binding IsDiscovering}"/>
+                <WrapPanel>
+                  <TextBlock Text="{services:Tr ui.searching_ranges}" Classes="muted" FontSize="11" Margin="0,0,6,0"/>
+                  <TextBlock Text="{services:TrText DiscoveryRangesText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                </WrapPanel>
+                <WrapPanel IsVisible="{Binding HasDiscoverySkipped}">
+                  <TextBlock Text="{services:Tr ui.not_searched_virtual}" Classes="muted" FontSize="11" Margin="0,0,6,0"/>
+                  <TextBlock Text="{services:TrText DiscoverySkippedText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                </WrapPanel>
+                <WrapPanel IsVisible="{Binding HasDiscoveryProblems}">
+                  <TextBlock Text="{services:Tr ui.could_not_read_ranges}" Foreground="{DynamicResource AmberBrush}" FontSize="11" Margin="0,0,6,0"/>
+                  <TextBlock Text="{services:TrText DiscoveryProblemsText}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
+                </WrapPanel>
               </StackPanel>
 
               <ComboBox AutomationProperties.Name="{services:Tr ui.connection_profiles}" ItemsSource="{Binding DiscoveredServices}" SelectedItem="{Binding SelectedDiscoveredService}" MinWidth="400">
@@ -3445,6 +3480,16 @@
 
               <TextBlock Text="{services:Tr ui.launch_arguments_one_per_line}" FontWeight="SemiBold" />
               <TextBox AutomationProperties.Name="{services:Tr ui.launch_arguments_one_per_line}" Text="{Binding ConfigLaunchArguments}" AcceptsReturn="True" MinHeight="110" />
+              <!-- v0.9.6.0: the firewall rule for the -port= above, beside where the port is set. -->
+              <Border Classes="statuscard accentSystem" IsVisible="{Binding HasFirewallStatus}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{services:TrText FirewallStatusText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{services:Tr ui.firewall_settings_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                  </StackPanel>
+                  <Button Grid.Column="1" VerticalAlignment="Center" Content="{services:Tr ui.allow_through_firewall}" AutomationProperties.Name="{services:Tr ui.allow_through_firewall}" Command="{Binding RepairFirewallCommand}" IsVisible="{Binding FirewallNeedsAction}"/>
+                </Grid>
+              </Border>
 
               <TextBlock Text="{services:Tr ui.configuration_is_validated_before_writing_and_a_9746a1}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
             </StackPanel>
@@ -3512,7 +3557,29 @@
               <StackPanel IsVisible="{Binding IsRemoteConnectionChoice}" Spacing="10">
                 <StackPanel Orientation="Horizontal" Spacing="10">
                   <Button Content="{services:Tr ui.scan_network}" Command="{Binding DiscoverServicesCommand}"/>
+                  <Button Content="{services:Tr ui.cancel}" Command="{Binding CancelDiscoveryCommand}" IsVisible="{Binding IsDiscovering}"/>
                   <TextBlock Text="{services:TrText DiscoveryStateText}" VerticalAlignment="Center" Classes="muted" TextWrapping="Wrap"/>
+                </StackPanel>
+                <!-- v0.9.6.0: virtual adapters (WSL, Hyper-V, Docker) are searched only when ticked; extra ranges can be typed in. -->
+                <WrapPanel>
+                  <CheckBox Content="{services:Tr ui.include_virtual_adapters}" IsChecked="{Binding DiscoveryIncludeVirtualAdapters}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                  <TextBox AutomationProperties.Name="{services:Tr ui.extra_ranges}" Text="{Binding DiscoveryExtraRanges}" Watermark="{services:Tr ui.extra_ranges_watermark}" MinWidth="260"/>
+                </WrapPanel>
+                <!-- v0.9.6.0: the ranges being searched, how far the search is, and Cancel. -->
+                <StackPanel Spacing="4" IsVisible="{Binding HasDiscoveryRanges}">
+                  <ProgressBar Minimum="0" Maximum="100" Value="{Binding DiscoveryProgressValue}" Height="4" IsVisible="{Binding IsDiscovering}"/>
+                  <WrapPanel>
+                    <TextBlock Text="{services:Tr ui.searching_ranges}" Classes="muted" FontSize="11" Margin="0,0,6,0"/>
+                    <TextBlock Text="{services:TrText DiscoveryRangesText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                  </WrapPanel>
+                  <WrapPanel IsVisible="{Binding HasDiscoverySkipped}">
+                    <TextBlock Text="{services:Tr ui.not_searched_virtual}" Classes="muted" FontSize="11" Margin="0,0,6,0"/>
+                    <TextBlock Text="{services:TrText DiscoverySkippedText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                  </WrapPanel>
+                  <WrapPanel IsVisible="{Binding HasDiscoveryProblems}">
+                    <TextBlock Text="{services:Tr ui.could_not_read_ranges}" Foreground="{DynamicResource AmberBrush}" FontSize="11" Margin="0,0,6,0"/>
+                    <TextBlock Text="{services:TrText DiscoveryProblemsText}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
+                  </WrapPanel>
                 </StackPanel>
                 <ComboBox AutomationProperties.Name="{services:Tr ui.service_url}" ItemsSource="{Binding DiscoveredServices}" SelectedItem="{Binding SelectedDiscoveredService}" MinWidth="400">
                   <ComboBox.ItemTemplate>
@@ -3942,6 +4009,13 @@
                 <TextBlock Text="{services:Tr ui.your_chosen_starter_preset_was_applied_automatic_2bc476}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding IsWorldSettingsChoicePreset}"/>
                 <TextBlock Text="{services:Tr ui.customize_world_settings_any_time_from_server_co_1fa64e}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding IsWorldSettingsChoiceCustomize}"/>
                 <TextBlock Text="{services:Tr ui.save_this_profile_to_add_it_to_your_server_list}" Classes="muted" TextWrapping="Wrap"/>
+                <!-- v0.9.6.0: the new server's game port through the firewall, before players try to join. -->
+                <Border Classes="statuscard accentSystem" IsVisible="{Binding HasFirewallStatus}">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <TextBlock Text="{services:TrText FirewallStatusText}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="{services:Tr ui.allow_through_firewall}" AutomationProperties.Name="{services:Tr ui.allow_through_firewall}" Command="{Binding RepairFirewallCommand}" IsVisible="{Binding FirewallNeedsAction}"/>
+                  </Grid>
+                </Border>
               </StackPanel>
               <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
                 <Button Content="{services:Tr ui.back}" Command="{Binding WizardBackCommand}"/>

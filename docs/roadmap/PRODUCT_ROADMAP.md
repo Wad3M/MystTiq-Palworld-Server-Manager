@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.6.0: file reviewed for this release (2026-09-29). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-28. **Current version: v0.9.5.0. Accepted baseline: v0.8.25.0. Next: v0.9.6.0.**
+Updated 2026-09-28. **Current version: v0.9.6.0. Accepted baseline: v0.8.25.0. Next: v0.9.7.0.**
 
-This is the active plan. Version assignments after v0.9.5.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v0.9.6.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Foundation delivered through v0.8.26.0
 
@@ -68,18 +68,26 @@ This is the active plan. Version assignments after v0.9.5.0 are proposed milesto
 
 **Exit evidence met:** a scripted upgrade from v0.8.25.0 and a fresh setup with every value compared, and a server one build behind reported as out of date. **Still to record:** an update from MystTiq through a refused manifest, and a scripted upgrade with accounts.
 
-## v0.9.6.0 — firewall rule for the server's port, and a fast server search
+## v0.9.6.0 — firewall rule for the server's port, and a fast server search (delivered 2026-09-28)
 
 Requested 2026-09-28, after a LAN join to the clone server needed a firewall rule typed by hand.
 
-- **Firewall rule for the current server's port.** Offer "Allow through Windows Firewall" where the server's game port is set (Configuration, the new-server wizard, Fleet clone), not only in Diagnostics. It adds or repairs one inbound UDP rule for that server's own port (`MystTiq Palworld Server - Game UDP <port>`), asks for administrator rights, and follows a port change: the old rule is removed or updated. The rule is shown per server with its state (present, missing, disabled, wrong profile).
-  - Fix first: the firewall check and repair start plain `powershell.exe`, which the service could not find on this machine ("cannot find the file specified"). Resolve it by its full `%SystemRoot%` path, or use the firewall API directly, and report a failure that names the cause.
-  - Linux: say which command to run (ufw/firewalld) rather than changing the firewall, as today.
-- **Fast server search.** Scan for MystTiq services with many parallel probes (a bounded pool of about 128–256, a short connect timeout before the `/healthz` request) and show each result as it answers, with a Cancel button.
-  - Show the IP ranges being scanned (for example "192.168.1.0/24 on Ethernet 2 · 172.20.64.0/24 on vEthernet (WSL)") and the progress (addresses probed / total, found so far).
-  - Scan each subnet once when several adapters share it, and skip virtual adapters (WSL, Hyper-V internal) unless chosen. Let the user add or remove a range.
+- **Firewall rule for each server's own port, where the port is set.** Diagnostics, Settings (beside the launch arguments, where `-port=` is set) and the new-server wizard's last step show whether Windows Firewall lets players reach the port the server binds, with **Allow through Firewall**; Fleet's Clone World card reminds you that a clone needs its own rule. The rule is `MystTiq Palworld Server - Game UDP <port>`, tagged `MystTiq server: <id>`; allowing a port removes that server's rules for any other port, so a port change closes the old one (rules from before this version carry no id and are left alone). When Windows refuses the service (not an administrator), the Desktop runs the same script through Windows' administrator prompt for a server on this computer. The Doctor has a `network-firewall` finding with an `allow-firewall` fix. Linux: the card and the finding show the `ufw` and `firewalld` commands.
+  - Fixed first: the check started a bare `powershell.exe`, which this machine's PATH could not find, so it never ran. Rules are now read through the firewall's COM API (about 0.2 s against 27 s for `Get-NetFirewallPortFilter`), and changes go through Windows PowerShell by its full path.
+  - A rule counts only when it can reach the server: not one limited to another program (the Palworld game client, Steam), a service, or Store apps (an owner or package: Xbox, ChatGPT on this machine), and not one for the `PalServer.exe` launcher, whose child process owns the port. Before, any "Any port" rule read as allowed.
+- **A second server gets its own port.** The wizard copied the first server's launch arguments, `-port=` included, so a second server used the first one's port (or 8211 without a `-port=`), whatever port it was given. It now gets `-port=` with its own port, and the Doctor's `configuration-game-port` finding warns when a server binds one port and advertises another.
+- **Fast server search.** A TCP connect sweep, 256 addresses at a time with a 600 ms timeout, then the `/healthz` probe only where the port answers: 255 addresses in about 0.6 s in the harness. It shows the ranges it searches and its progress, lists each service as it answers, and has Cancel; the window stays usable. Each subnet is searched once; virtual adapters (WSL, Hyper-V, Docker, VMware, VirtualBox, libvirt) without a default gateway are listed as not searched unless ticked (a Hyper-V external switch carrying the real LAN, as on this machine, is searched); typed ranges (single addresses or `/24` to `/32`) are added.
+- **A stop is never taken for a crash.** Found by this version's gate (the v0.9.5.0 fleet smoke, about one run in three): the process inspector dropped a terminating process whose details could not be read, so a stop recorded "Stopped" while the process was still exiting, the next read listed it as "Running", and the supervisor then restarted it as crashed. A process is now listed until Windows reports it has exited and never after, status reads and a stop's state writes are serialised, and a read during a stop keeps the stop request (Windows and Linux); the lifecycle state file retries a replace that something holding it open refused.
+- Recorded checks: the logic harness pins rule matching (with the rules found on this machine), the tagged allow script and its cleanup, the rule state, a real read of this computer's firewall, ranges, virtual adapters and typed ranges, a timed search with a stand-in service, Cancel, and a second server's arguments. `scripts/Test-v0.9.6.0-FirewallRoute.ps1`: two servers in one service, one advertising a port it does not bind; the route and the Doctor report the bound port, and only GET routes are called. The ArtworkHarness checks the 44 new texts in all 12 languages.
+- Still open: counting a rule only when it covers the network profile in use (a Private-only rule reads as allowed on a Public network); adding a rule live (it changes this computer's security settings, so the owner clicks it and confirms Windows' prompt), then changing the port and allowing again, and a join from another PC through the rule; searching more than the `/24` around an address on a wider network; changing a mismatched `-port=` from the Doctor (launch arguments apply when MystTiq restarts).
 
-**Exit evidence:** a rule added and then updated after a port change, on Windows with elevation, and a join from another PC through it; a search of two /24 ranges that finishes in a few seconds, listing its ranges, its progress and each service as found.
+**Exit evidence met:** the firewall state for the port each server binds, read in well under a second; a search of 255 addresses in under a second that lists its ranges, its progress and the service it found. **Still to record:** a rule added and then updated after a port change, with elevation, and a join from another PC through it.
+
+## v0.9.7.0 — Avalonia 12
+
+Move the desktop from Avalonia 11.3 to 12.x as its own version, all four packages together (Avalonia, Avalonia.Desktop, Avalonia.Fonts.Inter, Avalonia.Themes.Fluent) plus `Avalonia.Headless` in the ArtworkHarness and RemoteSignInHarness. Dependabot's split pull requests (#15–#17, 2026-09-27) failed CI because each bumped only half of the set.
+
+**Exit evidence:** clean Windows and Linux builds, both harnesses and the full release gate passing, the real Linux desktop session, and a look at every page in each appearance mode. Then pin the version and have Dependabot group the Avalonia packages.
 
 ## v0.9.x — integration and release stabilization
 
@@ -98,7 +106,7 @@ These are remaining checks or targeted fixes, not a request to rebuild shipped f
 | Distribution | Build the current desktop with its matching headless sidecar, include the Windows native helper, verify clean-machine launch, source parity, version identity and SHA-256 checksums |
 | Documentation | Keep README, site, release notes and supported-platform claims aligned with observed results; publish known limitations |
 | Crash analysis | Add signatures only from real anonymized reports; do not invent coverage for unseen crashes |
-| Avalonia 12 migration | Move the desktop from Avalonia 11.3 to 12.x as its own version, all four packages together (Avalonia, Avalonia.Desktop, Avalonia.Fonts.Inter, Avalonia.Themes.Fluent) plus `Avalonia.Headless` in the ArtworkHarness and RemoteSignInHarness. Dependabot's split pull requests (#15–#17, 2026-09-27) failed CI because each bumped only half of the set. Evidence: clean Windows and Linux builds, both harnesses and the full release gate passing, the real Linux desktop session, and a look at every page in each appearance mode. Then pin the version and have Dependabot group the Avalonia packages |
+| Avalonia 12 migration | Planned as v0.9.7.0 (above). Move the desktop from Avalonia 11.3 to 12.x as its own version, all four packages together (Avalonia, Avalonia.Desktop, Avalonia.Fonts.Inter, Avalonia.Themes.Fluent) plus `Avalonia.Headless` in the ArtworkHarness and RemoteSignInHarness. Dependabot's split pull requests (#15–#17, 2026-09-27) failed CI because each bumped only half of the set. Evidence: clean Windows and Linux builds, both harnesses and the full release gate passing, the real Linux desktop session, and a look at every page in each appearance mode. Then pin the version and have Dependabot group the Avalonia packages |
 
 Use isolated test roots and disposable server data. Live verification needs the relevant test environment, account/channel or online player; missing evidence must remain explicitly open.
 

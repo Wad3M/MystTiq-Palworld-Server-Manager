@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using MystTiq.Desktop.Models;

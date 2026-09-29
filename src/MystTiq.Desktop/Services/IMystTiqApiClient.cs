@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -385,6 +385,7 @@ public interface IMystTiqApiClient
     Task<PortCheckResultDto> CheckPortAsync(ConnectionProfile profile, int port, string protocol, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<NetworkRecoveryResultDto> RestartFromNetworkDiagnosticsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<FirewallRepairResultDto> RepairNetworkFirewallAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<FirewallStatusDto> GetNetworkFirewallAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<WanReachabilityReportDto> GetWanReachabilityAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<UpnpRepairResultDto> RepairUpnpMappingAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
 

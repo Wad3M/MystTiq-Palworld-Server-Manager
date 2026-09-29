@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -243,6 +243,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _networkBinding = "—";
     private string _networkLanEndpoint = "—";
     private string _networkRecommendation = "Run Diagnostics";
+    private string _firewallStatusText = string.Empty;
+    private bool _firewallAllowed;
+    private bool _firewallNeedsAction;
+    private string _firewallCommandsText = string.Empty;
     private string _networkReportText = "";
     private string _wanPublicIpPort = "Not checked";
     private string _wanUpnpState = "Not checked";
@@ -282,6 +286,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _statusBarText = "Ready";
     private string _statusBarObservedText = "Not sampled";
     private string _discoveryStateText = "LAN discovery has not run.";
+    private string _discoveryRangesText = string.Empty;
+    private double _discoveryProgressValue;
+    private bool _isDiscovering;
+    private CancellationTokenSource? _discoveryCancellation;
+    private string _discoverySkippedText = string.Empty;
+    private string _discoveryProblemsText = string.Empty;
+    private bool _discoveryIncludeVirtualAdapters;
+    private string _discoveryExtraRanges = string.Empty;
     private DiscoveredMystTiqService? _selectedDiscoveredService;
     private string _lifecycleStatusText = "No lifecycle operation has been requested.";
     private string _activityState = "Not loaded";
@@ -443,7 +455,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SelectedProfile = Profiles.FirstOrDefault() ?? ConnectionProfile.LocalDefault;
 
         ConnectCommand = new AsyncCommand(RefreshAsync, () => !IsBusy);
-        DiscoverServicesCommand = new AsyncCommand(DiscoverServicesAsync, () => !IsBusy);
+        DiscoverServicesCommand = new AsyncCommand(DiscoverServicesAsync, () => !IsBusy && !IsDiscovering);
+        CancelDiscoveryCommand = new RelayCommand(() => _discoveryCancellation?.Cancel());
         RefreshMonitoringCommand = new AsyncCommand(RefreshMonitoringAsync, () => !IsBusy);
         RefreshConsoleViewCommand = new AsyncCommand(RefreshMonitoringAsync, () => !IsBusy);
         PauseConsoleCommand = new RelayCommand(ToggleConsolePause);
@@ -1542,6 +1555,27 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         set => SetActiveTabField(t => t.TargetServerId, (t, v) => t.TargetServerId = v, value);
     }
     public string DiscoveryStateText { get => _discoveryStateText; private set => SetField(ref _discoveryStateText, value); }
+    // v0.9.6.0: the address ranges the search covers ("127.0.0.1 · 192.168.1.0/24 (Ethernet)"), its progress, and Cancel.
+    public string DiscoveryRangesText { get => _discoveryRangesText; private set { if (SetField(ref _discoveryRangesText, value)) RaisePropertyChanged(nameof(HasDiscoveryRanges)); } }
+    public bool HasDiscoveryRanges => !string.IsNullOrWhiteSpace(DiscoveryRangesText);
+    public double DiscoveryProgressValue { get => _discoveryProgressValue; private set => SetField(ref _discoveryProgressValue, value); }
+    public bool IsDiscovering
+    {
+        get => _isDiscovering;
+        private set
+        {
+            if (!SetField(ref _isDiscovering, value)) return;
+            (DiscoverServicesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        }
+    }
+    public ICommand CancelDiscoveryCommand { get; }
+    // Virtual adapters' ranges left out (WSL, Hyper-V, Docker…), extra ranges typed in, and entries that could not be read.
+    public string DiscoverySkippedText { get => _discoverySkippedText; private set { if (SetField(ref _discoverySkippedText, value)) RaisePropertyChanged(nameof(HasDiscoverySkipped)); } }
+    public bool HasDiscoverySkipped => !string.IsNullOrWhiteSpace(DiscoverySkippedText);
+    public string DiscoveryProblemsText { get => _discoveryProblemsText; private set { if (SetField(ref _discoveryProblemsText, value)) RaisePropertyChanged(nameof(HasDiscoveryProblems)); } }
+    public bool HasDiscoveryProblems => !string.IsNullOrWhiteSpace(DiscoveryProblemsText);
+    public bool DiscoveryIncludeVirtualAdapters { get => _discoveryIncludeVirtualAdapters; set => SetField(ref _discoveryIncludeVirtualAdapters, value); }
+    public string DiscoveryExtraRanges { get => _discoveryExtraRanges; set => SetField(ref _discoveryExtraRanges, value ?? string.Empty); }
     public DiscoveredMystTiqService? SelectedDiscoveredService
     {
         get => _selectedDiscoveredService;
@@ -3017,6 +3051,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string NetworkBinding { get => _networkBinding; private set => SetField(ref _networkBinding, value); }
     public string NetworkLanEndpoint { get => _networkLanEndpoint; private set => SetField(ref _networkLanEndpoint, value); }
     public string NetworkRecommendation { get => _networkRecommendation; private set => SetField(ref _networkRecommendation, value); }
+
+    // v0.9.6.0: whether this server's game port is allowed through the firewall (shown on Diagnostics and in Settings).
+    public string FirewallStatusText { get => _firewallStatusText; private set { if (SetField(ref _firewallStatusText, value)) RaisePropertyChanged(nameof(HasFirewallStatus)); } }
+    public bool HasFirewallStatus => !string.IsNullOrWhiteSpace(FirewallStatusText);
+    public bool FirewallAllowed { get => _firewallAllowed; private set => SetField(ref _firewallAllowed, value); }
+    public bool FirewallNeedsAction { get => _firewallNeedsAction; private set => SetField(ref _firewallNeedsAction, value); }
+    // Linux: the commands that open the port (MystTiq does not change a Linux firewall).
+    public string FirewallCommandsText { get => _firewallCommandsText; private set { if (SetField(ref _firewallCommandsText, value)) RaisePropertyChanged(nameof(HasFirewallCommands)); } }
+    public bool HasFirewallCommands => !string.IsNullOrWhiteSpace(FirewallCommandsText);
     public string NetworkReportText { get => _networkReportText; private set => SetField(ref _networkReportText, value); }
     public string WanPublicIpPort { get => _wanPublicIpPort; private set => SetField(ref _wanPublicIpPort, value); }
     public string WanUpnpState { get => _wanUpnpState; private set => SetField(ref _wanUpnpState, value); }
@@ -3140,6 +3183,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex) { NetworkHealth = "ERROR"; NetworkRecommendation = ex.Message; }
         finally { IsBusy = false; }
+        await RefreshFirewallStatusAsync();
     }
 
     // v0.6.4.0 local-PC diagnostics: runs entirely client-side against SelectedProfile, unlike
@@ -3181,18 +3225,60 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
+    // v0.9.6.0: allows this server's game port (the one it binds) and removes its rules for a port it no longer uses.
+    // When Windows refuses the service (not an administrator) and the server is on this computer, the same change runs
+    // through Windows' administrator prompt instead.
     private async Task RepairFirewallAsync()
     {
-        if (SelectedProfile is null) return;
+        if (FirewallProfile() is not { } profile) return;
         IsBusy = true;
         try
         {
-            var result = await _api.RepairNetworkFirewallAsync(SelectedProfile, BearerToken);
-            NetworkRecommendation = result.Message;
-            await RunNetworkDiagnosticsAsync();
+            var result = await _api.RepairNetworkFirewallAsync(profile, BearerToken);
+            var message = result.Message;
+            if (!result.Success && result.NeedsElevation && !string.IsNullOrWhiteSpace(result.Script))
+            {
+                if (ElevatedFirewall.CanRun(profile))
+                {
+                    FirewallStatusText = "Waiting for Windows to allow administrator rights…";
+                    message = (await ElevatedFirewall.RunAsync(result.Script)).Message;
+                }
+                else message += " Run MystTiq's service as an administrator on the server's computer, or add the rule there yourself.";
+            }
+
+            NetworkRecommendation = message;
+            await RefreshFirewallStatusAsync();
         }
         catch (Exception ex) { NetworkRecommendation = ex.Message; }
         finally { IsBusy = false; }
+    }
+
+    // The wizard has no saved profile yet; it talks to the server through the one its editor builds.
+    private ConnectionProfile? FirewallProfile()
+    {
+        if (SelectedProfile is not null) return SelectedProfile;
+        if (!IsCreatingNewProfile) return null;
+        try { return BuildProfileFromEditor(null); }
+        catch { return null; }
+    }
+
+    private async Task RefreshFirewallStatusAsync()
+    {
+        if (FirewallProfile() is not { } profile) return;
+        try
+        {
+            var status = await _api.GetNetworkFirewallAsync(profile, BearerToken);
+            FirewallAllowed = status.Allowed && status.StaleRules.Count == 0;
+            FirewallNeedsAction = status.Supported && status.Error is null && !status.Blocked && (!status.Allowed || status.StaleRules.Count > 0);
+            FirewallCommandsText = status.Commands is { Count: > 0 } commands ? string.Join(Environment.NewLine, commands) : string.Empty;
+            FirewallStatusText = status.Summary;
+        }
+        catch (Exception ex)
+        {
+            FirewallAllowed = false;
+            FirewallNeedsAction = false;
+            FirewallStatusText = $"The firewall could not be read: {ex.Message}";
+        }
     }
 
     // v0.6.11.0: the genuine gap left after local firewall inspection (above) and v0.6.4.0's Local
@@ -3388,6 +3474,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 await RunNetworkDiagnosticsAsync();
                 break;
             case NavigationPage.Settings:
+                // v0.9.6.0: the firewall state for the port the launch arguments name.
+                if (SelectedProfile is not null) await RefreshFirewallStatusAsync();
                 break;
             case NavigationPage.CrashAnalyzer:
                 await RefreshCrashHistoryAsync();
@@ -3520,6 +3608,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             7 => 8,
             _ => NewServerWizardStep
         };
+        // v0.9.6.0: the last step offers to allow the new server's game port through the firewall.
+        if (IsWizardStepConfirm && IsNewServerSetupFlow) _ = RefreshFirewallStatusAsync();
     }
     private void GoBackWizardStep()
     {
@@ -3676,7 +3766,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 SteamCmdPath = ConfigSteamCmdPath,
                 BackupRoot = Path.Combine(newServerRoot, "Backups"),
                 RuntimeRoot = Path.Combine(Path.GetDirectoryName(ConfigRuntimeRoot) ?? ConfigRuntimeRoot, candidateId),
-                LaunchArguments = ConfigLaunchArguments.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                LaunchArguments = LaunchArgumentsText.WithPort(ConfigLaunchArguments, SetupGamePort),
                 Runtime = runtime
             };
 
@@ -4544,29 +4634,60 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     private async Task DiscoverServicesAsync()
     {
-        IsBusy = true;
+        // v0.9.6.0: the search no longer holds the whole window busy; each service appears the moment it answers, and
+        // the search can be cancelled.
+        using var cancellation = new CancellationTokenSource();
+        _discoveryCancellation = cancellation;
+        IsDiscovering = true;
+        DiscoveryProgressValue = 0;
+        DiscoveredServices.Clear();
         DiscoveryStateText = "Scanning local IPv4 networks for MystTiq services…";
+        var port = ConfigPort is > 0 and <= 65535 ? ConfigPort : 8213;
+        DiscoveryProgress? last = null;
+        var finished = false;
+        var progress = new Progress<DiscoveryProgress>(update =>
+        {
+            // Reports are posted to the window's thread and can arrive after the search has returned.
+            if (finished) return;
+            last = update;
+            DiscoveryRangesText = string.Join(" · ", update.Ranges.Select(r => r.DisplayText));
+            DiscoverySkippedText = string.Join(" · ", update.Plan.Skipped.Select(r => r.DisplayText));
+            DiscoveryProblemsText = string.Join(", ", update.Plan.Problems);
+            DiscoveryProgressValue = update.Total == 0 ? 100 : 100.0 * update.Checked / update.Total;
+            if (update.Found is { } found && !DiscoveredServices.Any(s => s.BaseAddress == found.BaseAddress))
+                DiscoveredServices.Add(found);
+            if (!cancellation.IsCancellationRequested)
+                DiscoveryStateText = DiscoveryRunningText(update.Checked, update.Total, update.Ranges.Count, DiscoveredServices.Count);
+        });
         try
         {
-            var port = ConfigPort is > 0 and <= 65535 ? ConfigPort : 8213;
-            var discovered = await _serviceDiscovery.DiscoverAsync(port);
+            var discovered = await _serviceDiscovery.DiscoverAsync(port, new DiscoveryOptions(DiscoveryIncludeVirtualAdapters, DiscoveryExtraRanges), progress, cancellation.Token);
+            finished = true;
             DiscoveredServices.Clear();
             foreach (var service in discovered)
                 DiscoveredServices.Add(service);
 
+            var seconds = (last?.Elapsed ?? TimeSpan.Zero).TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
             DiscoveryStateText = discovered.Count switch
             {
                 0 => $"No MystTiq services answered /healthz on port {port}.",
-                1 => "1 MystTiq service discovered.",
-                _ => $"{discovered.Count} MystTiq services discovered."
+                1 => $"1 MystTiq service discovered in {seconds} s.",
+                _ => $"{discovered.Count} MystTiq services discovered in {seconds} s."
             };
-
+            DiscoveryProgressValue = 100;
             // The local profile must prefer loopback. LAN services are available for explicit selection
             // in Settings, but must never displace a healthy local sidecar automatically.
             var preferred = SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id
                 ? discovered.FirstOrDefault(item => System.Net.IPAddress.TryParse(item.Address, out var candidateAddress) && System.Net.IPAddress.IsLoopback(candidateAddress)) ?? discovered.FirstOrDefault()
                 : discovered.FirstOrDefault();
-            if (preferred is not null)
+            // v0.9.6.0: a connected tab only shows what was found. Selecting a service rewrites this tab's address and
+            // marks it "Not connected", so every search disconnected the tab it was run from (seen live on the clone tab).
+            if (preferred is not null && ManagementApiConnected)
+            {
+                _selectedDiscoveredService = DiscoveredServices.FirstOrDefault(s => s.BaseAddress.ToString().TrimEnd('/') == ServerUrl.TrimEnd('/')) ?? preferred;
+                RaisePropertyChanged(nameof(SelectedDiscoveredService));
+            }
+            else if (preferred is not null)
             {
                 SelectedDiscoveredService = preferred;
                 var isLoopback = System.Net.IPAddress.TryParse(preferred.Address, out var address) && System.Net.IPAddress.IsLoopback(address);
@@ -4577,15 +4698,25 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 }
             }
         }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            finished = true;
+            DiscoveryStateText = $"Search cancelled after {last?.Checked ?? 0} of {last?.Total ?? 0} addresses; {DiscoveredServices.Count} found.";
+        }
         catch (Exception ex)
         {
+            finished = true;
             DiscoveryStateText = $"LAN discovery failed: {ex.Message}";
         }
         finally
         {
-            IsBusy = false;
+            _discoveryCancellation = null;
+            IsDiscovering = false;
         }
     }
+
+    public static string DiscoveryRunningText(int checkedCount, int total, int ranges, int found) =>
+        $"Scanning {total} address(es) in {ranges} range(s)… {checkedCount} checked, {found} found.";
 
     private async Task<LocalInstallationSnapshot?> RefreshLocalInstallationAsync()
     {

@@ -1,4 +1,34 @@
-<!-- MystTiq v0.9.5.0: file reviewed for this release (2026-09-28). -->
+<!-- MystTiq v0.9.6.0: file reviewed for this release (2026-09-29). -->
+## v0.9.6.0 — Firewall and Server Search
+
+- Firewall rule for each server's own port: `GET /diagnostics/network/firewall` reports whether Windows Firewall lets
+  players reach the port the server binds (`-port=`, else 8211), and repair (Admin) creates or repairs one rule per
+  port, tagged with the server's id, then removes that server's rules for any other port. Diagnostics, Settings (beside
+  the launch arguments) and the wizard's last step show the state with **Allow through Firewall**; when Windows refuses
+  the service, the Desktop runs the same script through Windows' administrator prompt for a server on this computer.
+  New Doctor findings `network-firewall` (with an `allow-firewall` fix) and `configuration-game-port` (bound port against
+  PublicPort). Linux shows the `ufw`/`firewalld` commands.
+- The firewall is read through its COM API (`HNetCfg.FwPolicy2`, about 0.2 s; PowerShell took about 27 s), and a rule
+  counts only when it is not limited to another program, a service or Store apps; the `PalServer.exe` launcher's rule
+  doesn't count, the game binary owns the port. PowerShell and `netstat` start by their full paths (this machine's PATH
+  lacked Windows PowerShell, so the check never ran).
+- A second server set up through the wizard gets its own `-port=` instead of the first server's.
+- A stop is no longer taken for a crash (the v0.9.5.0 fleet smoke failed about one run in three): the process inspector
+  dropped a process whose details could not be read while it was terminating, so a stop's wait saw "no process", recorded
+  "Stopped", and the next read listed the still-exiting process as "Running"; a second later it was gone and the
+  supervisor restarted the server as crashed. A process is now listed until Windows reports it has exited, and never
+  after; status reads and a stop's state writes are serialised, so a read cannot list the server before it exits and
+  read the state after the stop; a read during a stop keeps the stop request (Windows and Linux). The lifecycle state
+  file is written by one writer at a time, and a replace refused because something has the file open is retried.
+- Server search: a TCP sweep of 256 addresses at a time (600 ms), the identity probe only where the port answers;
+  progress with the ranges searched, each service listed as it answers, Cancel; virtual adapters (by name, and without
+  a default gateway, so a Hyper-V external switch carrying the real LAN is searched) only when ticked, and typed ranges.
+  A search no longer disconnects the tab it runs from: it selected the first service found, which rewrote the tab's
+  address and marked it "Not connected" (also in v0.9.5.0); a connected tab now only lists what was found.
+- Checked: new logic-harness scenarios (rule matching, the allow script, the rule state, a real read of this computer's
+  firewall, ranges, a timed search, Cancel, a second server's arguments); `Test-v0.9.6.0-FirewallRoute.ps1`; 44 new texts
+  in all 12 languages.
+
 ## v0.9.5.0 — Upgrade and Recovery
 
 - Servers no longer start each other: a process whose path could not be read (starting or exiting) counted as every

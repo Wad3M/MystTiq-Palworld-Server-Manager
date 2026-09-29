@@ -1,4 +1,4 @@
-// MystTiq v0.9.5.0: file reviewed for this release (2026-09-28).
+// MystTiq v0.9.6.0: file reviewed for this release (2026-09-29).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using MystTiq.Core.Models;
@@ -66,10 +66,17 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         this.rcon = new PalworldRconService(new PalworldSettingsConfigurationService(paths));
     }
 
+    // v0.9.6.0: status reads and a stop's state writes share this lock (see WindowsServerLifecycleService.stateGate).
+    private readonly object stateGate = new();
+
     public Task<ServerLifecycleSnapshot> GetStatusAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        lock (stateGate) return ReadStatus();
+    }
 
+    private Task<ServerLifecycleSnapshot> ReadStatus()
+    {
         var processes = FindManagedServerProcesses();
         var ports = sessionInspector.GetGuardedListeningPorts();
         var persisted = stateStore.Read();
@@ -93,8 +100,10 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                     : $"PalServer process is active; UDP {expectedGamePort} has not been confirmed.");
 
             // Observation is allowed to repair stale state from a previous host invocation.
-            if (persisted?.Phase != ServerLifecyclePhase.Running ||
-                persisted.LastKnownProcessId != native?.ProcessId)
+            // v0.9.6.0: a stop in progress keeps its recorded intent (see WindowsServerLifecycleService.GetStatusAsync).
+            if (persisted is not { Phase: ServerLifecyclePhase.Stopping, StopRequested: true } &&
+                (persisted?.Phase != ServerLifecyclePhase.Running ||
+                persisted.LastKnownProcessId != native?.ProcessId))
             {
                 stateStore.Write(new PersistedServerLifecycleState(
                     ServerLifecyclePhase.Running,
@@ -311,7 +320,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
 
         var native = SelectNativeProcess(processes);
         var transitionAt = DateTimeOffset.UtcNow;
-        stateStore.Write(new PersistedServerLifecycleState(
+        lock (stateGate) stateStore.Write(new PersistedServerLifecycleState(
             ServerLifecyclePhase.Stopping,
             native?.ProcessId,
             transitionAt,
@@ -391,7 +400,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
     private ServerLifecycleOperationResult CompleteStopped(bool forced, string message)
     {
         var now = DateTimeOffset.UtcNow;
-        stateStore.Write(new PersistedServerLifecycleState(
+        lock (stateGate) stateStore.Write(new PersistedServerLifecycleState(
             ServerLifecyclePhase.Stopped,
             null,
             now,
