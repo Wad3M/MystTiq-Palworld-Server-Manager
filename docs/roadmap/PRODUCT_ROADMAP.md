@@ -60,7 +60,11 @@ This is the active plan. Version assignments after v0.9.4.0 are proposed milesto
 
 - Test a fresh setup, an upgrade from the accepted baseline (v0.8.25.0) with its settings, accounts and data kept, backup and restore, and rollback, all on isolated data.
 
-**Exit evidence:** a scripted run from a clean machine state and from a v0.8.25.0 install, with every setting, account and world compared before and after.
+- **Palworld server updates (found 2026-09-28, when a v1.0.5 game could not join a v1.0.4 server):**
+  - The Update Center said "Up to date" for build 25080279 while Steam's public build was 25247047. Steam's `ISteamApps/UpToDateCheck` compares against a developer-set minimum version (1000 for this app), not the build, so it can never report an update. Read the public branch's build from SteamCMD (`+app_info_print 2394010`) instead, and show both builds.
+  - The SteamCMD update failed twice with exit code 8: Steam refused the installed build's manifest ("Failed to get manifest request code, 'Access Denied'"). It worked once the app manifest was moved aside, so SteamCMD validated the files against the new build instead. MystTiq should recognise that failure, retry that way on its own (keeping the old manifest), and show SteamCMD's actual reason instead of "exit code 8".
+
+**Exit evidence:** a scripted run from a clean machine state and from a v0.8.25.0 install, with every setting, account and world compared before and after; a server one build behind reported as out of date and updated from MystTiq without manual steps.
 
 ## v0.9.6.0 — firewall rule for the server's port, and a fast server search
 
