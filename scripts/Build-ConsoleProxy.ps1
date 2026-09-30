@@ -1,4 +1,4 @@
-# MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
+# MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
 #requires -Version 7.0
 <#
 .SYNOPSIS
@@ -42,7 +42,16 @@ $clFlags = if ($Configuration -eq 'Release') { '/O2 /DNDEBUG' } else { '/Od /Zi 
 # Run the actual compile inside a cmd.exe invocation so vcvars64.bat's environment (INCLUDE/LIB/PATH
 # for cl.exe and link.exe) is scoped to this one build, matching how Build-AvaloniaDesktop.ps1 and
 # friends already shell out to native tooling from PowerShell in this project.
-$cmd = "call `"$vcvars`" >nul && cl.exe /nologo /LD /EHsc /std:c++17 $clFlags `"$sourceFile`" /Fe:`"$outputDll`" /Fo:`"$outDir\\`" /link /DEF:`"$defFile`""
+# v1.0.0.0: version information (product name and version, as on the .NET binaries) for code signing. The version comes
+# from Directory.Build.props through a generated header.
+$version = & (Join-Path $root 'scripts\Get-ProjectVersion.ps1')
+$versionHeader = Join-Path $outDir 'MystTiqVersion.h'
+Set-Content -LiteralPath $versionHeader -Encoding ascii -Value @(
+    "#define MYSTTIQ_VERSION_COMMA $($version.Replace('.', ','))",
+    "#define MYSTTIQ_VERSION_TEXT `"$version`"")
+$rcFile = Join-Path $nativeDir 'MystTiqConsoleProxy.rc'
+$resFile = Join-Path $outDir 'MystTiqConsoleProxy.res'
+$cmd = "call `"$vcvars`" >nul && rc.exe /nologo /i `"$outDir`" /fo `"$resFile`" `"$rcFile`" && cl.exe /nologo /LD /EHsc /std:c++17 $clFlags `"$sourceFile`" /Fe:`"$outputDll`" /Fo:`"$outDir\\`" /link /DEF:`"$defFile`" `"$resFile`""
 Write-Host "==> Building MystTiqConsoleProxy.dll ($Configuration)"
 cmd.exe /c $cmd
 if ($LASTEXITCODE -ne 0) { throw "MystTiqConsoleProxy.dll build failed (exit $LASTEXITCODE)." }

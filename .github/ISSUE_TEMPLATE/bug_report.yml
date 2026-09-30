@@ -1,4 +1,4 @@
-# MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
+# MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
 name: Bug report
 description: Report a reproducible application problem
 title: "[Bug]: "
@@ -11,7 +11,7 @@ body:
     id: version
     attributes:
       label: Version
-      placeholder: v0.9.10.0
+      placeholder: v1.0.0.0
     validations:
       required: true
   - type: input

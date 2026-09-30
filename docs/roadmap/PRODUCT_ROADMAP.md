@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.10.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-30. **Current version: v0.9.10.0. Accepted baseline: v0.8.25.0. Next: v0.9.x acceptance.**
+Updated 2026-09-30. **Current version: v1.0.0.0. Accepted baseline: v1.0.0.0. Next: the open items below.**
 
-This is the active plan. Version assignments after v0.9.10.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v1.0.0.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Foundation delivered through v0.8.26.0
 
@@ -124,7 +124,32 @@ An outside review of the v0.9.9.0 source reported six findings; each is fixed an
 - **F6, archive consistency.** The checkpoint notes are stamped, and the source ZIP is checked by its own gate after it is made.
 - Also: the Doctor's port finding allows for port forwarding; the review's translation notes (Pal-edit labels, plurals, German action names, "this app").
 
-## v0.9.x — integration and release stabilization
+## v1.0.0.0 — published as the stable release (2026-09-30)
+
+The owner published v0.9.10.0's code as MystTiq 1.0 and moved the open items and verification notes from the public
+README, site and release notes to this roadmap and `docs/architecture/v1.0.0.0-stable-release.md`. The v1.0 gate below
+was not fully met: native translation review, the remaining live integration checks, a screen-reader pass and Linux
+acceptance stay open as post-1.0 work, tracked in the table that follows. The release workflow now makes full releases
+from v1 on, which MystTiq's own update check requires.
+
+v1.0.0.0 is the accepted baseline (owner, 2026-09-30), replacing v0.8.25.0. From the next version on, the frozen-checkpoint
+regression and the upgrade and accounts smokes start from the v1.0.0.0 checkpoint (`_Backups/MystTiqPalworldServer/v1.0.0.0`)
+as well as v0.8.25.0, so an upgrade from 1.0 is always tested.
+
+## v1.1 — MOD browser (planned, requested 2026-09-30)
+
+A MOD browser connected to Nexus Mods and other online repositories: search, read and install MODs from inside MystTiq.
+It builds on the Nexus Mods catalog (v0.7.93.0), the website-sourced MOD descriptions (Steam Workshop and GitHub,
+v0.7.55.0) and the MOD install, update and rollback paths already in the MOD pages. Repositories to cover and the
+details are to be agreed before work starts.
+
+## Code signing (requested 2026-09-30)
+
+The release workflow signs the Windows download through SignPath once the SignPath Foundation application is approved
+and the repository variables are set (`docs/release/CODE_SIGNING.md`). v1.0.0.0 is published unsigned (the owner's
+decision, 2026-09-30); the first signed release is planned as v1.0.1.
+
+## Open after 1.0 — integration and stabilization (formerly v0.9.x)
 
 These are remaining checks or targeted fixes, not a request to rebuild shipped features.
 
@@ -164,4 +189,4 @@ Per-accent artwork, a separate night HOST illustration, OS-level traffic shaping
 
 ## Current publication work
 
-Publish v0.9.10.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.
+Publish v1.0.0.0 on GitHub as a full release (not a prerelease) with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.

@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.10.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
 # Linux Tested Environment
 
 This document identifies the reference environment used to validate MystTiq's initial Linux/headless implementation.

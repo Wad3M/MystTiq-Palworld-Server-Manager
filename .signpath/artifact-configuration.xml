@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
+<!-- v1.0.0.0: SignPath artifact configuration for the Windows download. Paste it into the SignPath project's artifact
+     configuration (slug: windows-app). The release workflow uploads the unsigned app folder as a GitHub artifact, which is
+     a ZIP whose root is that folder's contents. Only MystTiq's own binaries are signed; every one must carry the product
+     name and the release's version (the workflow passes it as the "version" parameter). -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="MystTiq.Desktop.exe" product-name="MystTiq Palworld Server Manager" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+    <pe-file path="MystTiq.Desktop.dll" product-name="MystTiq Palworld Server Manager" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+    <pe-file path="MystTiq.Core.dll" product-name="MystTiq Palworld Server Manager" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+    <directory path="headless">
+      <pe-file path="mysttiq-server.exe" product-name="MystTiq Palworld Server Manager" product-version="${version}">
+        <authenticode-sign />
+      </pe-file>
+      <pe-file path="mysttiq-server.dll" product-name="MystTiq Palworld Server Manager" product-version="${version}">
+        <authenticode-sign />
+      </pe-file>
+      <pe-file path="MystTiq.Core.dll" product-name="MystTiq Palworld Server Manager" product-version="${version}">
+        <authenticode-sign />
+      </pe-file>
+      <pe-file path="native/MystTiqConsoleProxy.dll" product-name="MystTiq Palworld Server Manager" product-version="${version}">
+        <authenticode-sign />
+      </pe-file>
+    </directory>
+  </zip-file>
+</artifact-configuration>

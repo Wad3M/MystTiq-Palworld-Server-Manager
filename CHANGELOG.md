@@ -1,4 +1,17 @@
-<!-- MystTiq v0.9.10.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
+## v1.0.0.0 — MystTiq 1.0 (accepted baseline)
+
+- Set as the accepted baseline (owner, 2026-09-30), replacing v0.8.25.0.
+- Version 1.0.0.0: the v0.9.10.0 code as the first stable release. No application code changes.
+- Release workflow: a draft full release for v1 and later; v0.x tags stay prereleases.
+- README and site present the stable release; open items and verification notes moved to the roadmap and
+  `docs/architecture/v1.0.0.0-stable-release.md`.
+- Code signing through SignPath: the release workflow stages, uploads, signs (after approval), verifies and packages the
+  Windows app when the SignPath variables are set; artifact configuration, product metadata on every binary, version
+  information for the native helper, code signing and privacy policies.
+- Roadmap: v1.1 MOD browser (planned).
+- `Test-v1.0.0.0-Logic.ps1`.
+
 ## v0.9.10.0 — Review Fixes
 
 From an external review of v0.9.9.0 (six findings, a NAT concern and translation notes):

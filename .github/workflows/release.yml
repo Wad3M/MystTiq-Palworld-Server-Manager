@@ -1,4 +1,4 @@
-# MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
+# MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
 name: Release
 
 on:
@@ -7,12 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag (for example v0.8.25.0)
+        description: Existing release tag (for example v1.0.0.0)
         required: true
         type: string
 
 permissions:
   contents: write
+  # v1.0.0.0: SignPath's action reads this run's job details and downloads the uploaded artifact.
+  actions: read
 
 concurrency:
   group: release-${{ inputs.tag || github.ref_name }}
@@ -39,11 +41,55 @@ jobs:
           git show-ref --verify "refs/tags/$env:RELEASE_TAG"
           if ($LASTEXITCODE -ne 0) { throw 'Release requires an existing tag.' }
           if (-not (Test-Path "release-notes/$env:RELEASE_TAG.md")) { throw 'Release notes missing.' }
+          "RELEASE_VERSION=$version" | Add-Content -LiteralPath $env:GITHUB_ENV
+      # v1.0.0.0: code signing through SignPath (docs/release/CODE_SIGNING.md). It runs when the repository variable
+      # SIGNPATH_ORGANIZATION_ID is set; without it the release is packaged unsigned, as before.
       - name: Build native helper and current desktop with matching service
+        id: build
         shell: pwsh
+        env:
+          SIGN: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
         run: |
           ./scripts/Build-ConsoleProxy.ps1
-          ./scripts/Package-GitHubRelease.ps1 -Runtime win-x64 -RequireNativeProxy
+          if ($env:SIGN -eq 'true') {
+            ./scripts/Package-GitHubRelease.ps1 -Runtime win-x64 -RequireNativeProxy -StageOnly
+          } else {
+            ./scripts/Package-GitHubRelease.ps1 -Runtime win-x64 -RequireNativeProxy
+          }
+      - name: Upload the unsigned app for signing
+        id: upload-unsigned
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-windows-app
+          path: ${{ steps.build.outputs.app-folder }}
+          if-no-files-found: error
+      - name: Sign with SignPath (waits for the release approval)
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 86400
+          output-artifact-directory: artifacts/signed-windows-app
+          parameters: |
+            version: ${{ toJSON(env.RELEASE_VERSION) }}
+      - name: Check the signatures and package the signed app
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        run: |
+          $signed = 'artifacts/signed-windows-app'
+          foreach ($file in 'MystTiq.Desktop.exe', 'MystTiq.Desktop.dll', 'MystTiq.Core.dll', 'headless/mysttiq-server.exe',
+                            'headless/mysttiq-server.dll', 'headless/MystTiq.Core.dll', 'headless/native/MystTiqConsoleProxy.dll') {
+            $signature = Get-AuthenticodeSignature -LiteralPath (Join-Path $signed $file)
+            if ($signature.Status -ne 'Valid') { throw "$file is not signed: $($signature.Status) $($signature.StatusMessage)" }
+          }
+          ./scripts/Package-GitHubRelease.ps1 -Runtime win-x64 -FromFolder $signed
       - name: Archive tagged source and hash all assets
         shell: pwsh
         run: |
@@ -59,7 +105,9 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           name: MystTiq ${{ env.RELEASE_TAG }}
           draft: true
-          prerelease: true
+          # v1.0.0.0: a v0.x tag is a prerelease; v1 and later are full releases (MystTiq's own update check counts only
+          # full releases from 1.0 on).
+          prerelease: ${{ startsWith(env.RELEASE_TAG, 'v0.') }}
           fail_on_unmatched_files: true
           body_path: release-notes/${{ env.RELEASE_TAG }}.md
           files: |

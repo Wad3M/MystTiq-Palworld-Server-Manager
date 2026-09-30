@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.10.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
 # Pre-publication review
 
 - Confirm the tag, `Directory.Build.props`, release notes and binary version all identify the version being released (v0.9.9.0 for this release).

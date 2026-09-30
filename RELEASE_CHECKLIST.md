@@ -1,7 +1,7 @@
-<!-- MystTiq v0.9.10.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
 # Release checklist
 
-**Current version: v0.9.10.0. Accepted baseline: v0.8.25.0. Next: v0.9.x acceptance.** Read the [publishing guide](docs/release/README.md) for commands and asset names. Historical version-specific checks are preserved in [history](docs/history/RELEASE_CHECKLIST_pre_v0.8.25.0.md); the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md) defines the additional v1.0 gates.
+**Current version: v1.0.0.0. Accepted baseline: v1.0.0.0.** Read the [publishing guide](docs/release/README.md) for commands and asset names. Historical version-specific checks are preserved in [history](docs/history/RELEASE_CHECKLIST_pre_v0.8.25.0.md); the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md) defines the additional v1.0 gates.
 
 ## Source and documentation
 
@@ -26,7 +26,7 @@
 - [ ] CI passes on the reviewed commit before tagging; an existing release tag is never moved.
 - [ ] Windows ZIP, FullSource ZIP and SHA256SUMS.txt correspond to the reviewed source and version.
 - [ ] Release notes identify the executable, upgrade guidance, prerequisites and known limitations.
-- [ ] Draft prerelease assets and target commit are reviewed before publishing.
+- [ ] Draft release assets and target commit are reviewed before publishing (a full release for v1 and later, not a prerelease).
 - [ ] Verify the published download links and checksums after publication.
 
 Use isolated working directories. Packaging must not stop live servers or clean unrelated paths.
