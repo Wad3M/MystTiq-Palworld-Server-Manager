@@ -1,73 +1,77 @@
-# MystTiq v0.9.9.0 Checkpoint: One Helper, Crash Causes and Local Formats
+<!-- MystTiq v0.9.10.0: file reviewed for this release (2026-09-30). -->
+# MystTiq v0.9.10.0 Checkpoint: Review Fixes
 
 The accepted baseline stays **v0.8.25.0** until you accept this one.
 
-Full detail: `docs/architecture/v0.9.9.0-helper-crash-formats.md`. This is "continue on any outstanding roadmap and
-fixes": the open items that needed no one but the code, plus two bugs found on the way.
+This version answers the outside review of v0.9.9.0 (`MystTiq_v0.9.9.0_Review.zip`). Full detail:
+`docs/architecture/v0.9.10.0-review-fixes.md`.
 
-## Two bugs found and fixed
+## The six findings
 
-Both showed up on your Linux VM, where port 8213 is held by the older `/opt/mysttiq` service.
+- **F1, a slow helper was forgotten.**
+  - What was wrong: if the helper MystTiq started didn't answer within 750 ms, MystTiq forgot it and started a second
+    one beside it.
+  - Now: a helper that is still running gets up to 8 seconds to answer (4 s per try) and is reused. One that can't be
+    used is replaced only after it has exited. If it won't stop, MystTiq says so and starts nothing.
+  - Proof: the ArtworkHarness starts stand-in helpers that answer after 2 s, or never.
+- **F2, names were translated.**
+  - What was wrong: a server named "Ready" showed as "Bereit".
+  - Now: names in quotes, or after "server", "player", "guild" and similar words, are kept as written, and the
+    Dashboard shows the server name and description untranslated.
+  - Proof: checked with "Ready", "None" and "Backup".
+  - Remaining: a name in an unquoted slot that doesn't follow one of those words can still collide.
+- **F3, unknown MOD state counted as "up to date".**
+  - Now: each MOD records whether it was really checked. The MOD update alert clears only when every MOD it named was
+    checked and is current, or was removed.
+- **F4, the update check missed MystTiq's own releases.**
+  - What was wrong: GitHub's "latest release" skips prereleases, and every MystTiq 0.x release is one.
+  - Now: the check reads the release list. While MystTiq is 0.x, prereleases count; from 1.0 on, only stable releases do.
+- **F5, crash evidence expired.**
+  - What was wrong: the join-crash finding appeared at one minute and was gone at ten.
+  - Now: it no longer depends on when it is read, so it is recorded once and stays in the history. Its title no longer
+    claims timing: "Server session ended on a player joining".
+- **F6, the source ZIP failed its own gate.**
+  - What was wrong: `CHECKPOINT_NOTES.md` was copied in after the files were stamped.
+  - Now: these notes carry the stamp, a contract checks it, and the source ZIP is checked by its own gate after it is
+    made (below).
 
-- **Adding a server could take your running servers down.**
-  - The new-server wizard restarts MystTiq's local helper service to bring the new server online.
-  - That restart killed the helper's whole process tree, which includes every game server it had started. Crash
-    recovery then restarted them, so players would have been disconnected.
-  - Now only the helper stops. Servers keep running and the next helper adopts them.
-- **Helpers piled up.**
-  - When the usual port was held by another MystTiq version, the desktop started a new helper on every launch.
-  - Several then watched the same servers: two within a minute on the VM.
-  - The desktop now records the helper it started and reuses it, across app restarts too.
-  - Found on the VM check: the installed service there has TLS on, so its port read as free and the helper was
-    started on a port it could not have. A port that accepts connections now counts as taken.
+Also:
 
-## Roadmap items closed
-
-- **Crash analysis names a server that dies when a player joins.**
-  - It's built from your own PalDefender 1.8.3 crash on 2026-09-28: that session's log just ends on "connected to the
-    server".
-  - It only reports a session that ended within 5 minutes of the join. It never judges the newest log of a running
-    server, and it leaves the player's address out.
-- **UE4SS is compared automatically.**
-  - The installed `UE4SS.dll` is compared by content with the three newest releases' downloads.
-  - An identical file names its release.
-- **Alerts for every update** (your request of 2026-09-29).
-  - The Alert Center's out-of-date alert now covers a new game server build, a newer UE4SS release, PalDefender, and
-    every installed MOD with an update (named, up to five).
-  - Each sends one alert, reminders while it lasts, and a "Resolved" notice.
-- **The Doctor fixes a port mismatch.** Fix sets the advertised `PublicPort` to the port the server really uses.
-- **Numbers, dates and times follow the language you chose.**
-  - They used to follow Windows' language.
-  - Only the formats change: text comparison stays as it was, which avoids the Turkish "i" problem.
-- **A distribution check.** `Test-v0.9.9.0-Distribution.ps1` verifies the checksums, the ZIP contents, the versions on
-  the binaries, and that the packaged service starts from a clean folder.
-- **Roadmap tidied.** The stale rows and the "publish v0.9.2.0" note are updated.
+- The Doctor's port finding now allows for a router that forwards another outside port on purpose.
+- From the review's translation notes:
+  - Level, Gender and Nickname labels in all 11 languages;
+  - no more "MOD(s)" plurals;
+  - German "Stopp erzwingen" and "Änderungen zurücksetzen";
+  - "this app" instead of "this desktop".
 
 ## Verification
 
-- **Full gate:** 235/235, nothing skipped (`gate990-full.txt`).
-  - The first full run was 234/235: the v0.9.5.0 upgrade smoke's restore was refused once ("Stop PalServer before
-    restoring a backup"). Most likely its stop arrived while the service was still starting the stand-in server; I
-    could not reproduce it. The smoke now repeats the stop until the server stays down. No product code changed for it.
-- **Clean and strict validation:** 0 errors, 0 warnings.
-- **Distribution check:** 4/4 on the packaged ZIPs.
-- **Route smoke:** 3/3.
-- **Windows, live:** one helper; it is recorded and the same one is reused after closing and reopening the app. The
-  clone server was untouched.
-- **Linux VM, live:** four helpers left by v0.9.7.0 and v0.9.8.0 were stopped by hand. v0.9.9.0 then started one
-  helper on a private port (8213 belongs to the installed v0.7.62.0 service), and closing and reopening the app reused
-  that same helper. After the port fix, a first launch with no record also went straight to a private port.
-- **Not checked live:** the UE4SS and MOD alerts firing on a real update. The harness covers the rules; your clone's
-  UE4SS reads "check manually", which by design raises no alert.
+- **Full gate:** 240/240 (`gate9100-full.txt`).
+  - It includes the frozen v0.9.9.0 gate, whose one known archive failure (F6) is set aside by its exact text.
+  - Four Linux VM checks were skipped: the VM at 192.168.1.122 didn't answer SSH (connection timed out), so nothing
+    was checked on Linux this time.
+- **Static gate:** 194/194. **Clean and strict validation:** 0 errors, 0 warnings. **Distribution check:** 4/4.
+- **Both harnesses:**
+  - Logic harness: every scenario passed.
+  - ArtworkHarness: 740 checks passed, including the helpers that answer after 2 s or never, and "Ready", "None" and
+    "Backup" kept as names.
+- **Windows, live:** v0.9.10.0 started one helper (its record now has a start time). After closing and reopening the
+  app, it reused that same helper.
+- **The source ZIP checked on its own:** after this checkpoint was made, its FullSource ZIP was extracted into an empty folder and its own gate run there. The result is `archive9100-gate.txt`, next to the ZIP (it can't be inside the ZIP it checks).
+- Your clone server had already stopped cleanly at 12:34 today, before the review arrived. I didn't restart it.
 
 ## For you
 
-- **Your clone's UE4SS is none of the three newest builds.** The Update Center still reads "check manually" for it, now
-  with that reason. Reinstalling UE4SS through MystTiq's own install flow would make it trackable.
+- **The review's other notes:**
+  - The README's "What's new" now shows only this release, with earlier ones folded away.
+  - The known limitations now separate what was verified in game on 2026-09-28 from what is still open.
+  - English keeping your system's number format is documented as intended.
+- **Not done by me:**
+  - a native-speaker review (the reviewer also says theirs wasn't one);
+  - a check of the port finding on a real NAT setup.
 - **Still yours to do:**
   - click **Allow through Firewall** once;
-  - native review of the translations;
-  - a screen-reader pass;
+  - native review of the translations, and a screen-reader pass;
   - the Discord and email delivery checks;
-  - decide whether to update your main server (one build behind) and what to do with the Frostbound profiles;
-  - push and tag v0.9.0.0 through v0.9.9.0.
+  - decide whether to update your main server and what to do with the Frostbound profiles;
+  - push and tag v0.9.0.0 through v0.9.10.0.

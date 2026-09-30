@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -132,14 +132,15 @@ public static class CrashSignatureCatalog
         // v0.9.9.0: from this project's own live session (2026-09-28): PalDefender v1.8.3 on game v1.0.5 took the server down
         // about 40 s after each join, and its session log simply ended on the "connected to the server" line. The line
         // matched here is written by ExitAfterJoinDetector from such a log, not by the game.
-        new(new("exit-after-join", "Server stopped right after a player joined", "Critical",
+        // v0.9.10.0: the title no longer claims how soon after the join the server stopped; the log cannot tell.
+        new(new("exit-after-join", "Server session ended on a player joining", "Critical",
                 "The last thing in PalDefender's log for that session is a player connecting: nothing was logged after it, not even the shutdown. A server that dies as a player joins usually has an add-on that does not match the current game version. This was seen with a PalDefender not yet updated for a game update; an outdated UE4SS or native mod can do the same.",
                 [
                     "Open the Update Center: check PalDefender's row and its \"not updated for this game version\" warning, and update PalDefender (PalDefender.dll and d3d9.dll in the server's Win64 folder) with the server stopped.",
                     "Update UE4SS and native mods too, or disable them, and have one player join while you watch.",
                     "If it still stops with no add-ons installed, keep the crash report and the log and report it to Pocketpair."
                 ]),
-            [R(@"PalDefender session ended right after a player joined")]),
+            [R(@"PalDefender session (ended right after a player joined|log ends on a player joining)")]),
         // v0.8.9.0: from a real Palworld crash report (UE 5.1.1, LowLevelFatalError in Containers\Array.cpp). Only what the
         // report states is claimed: the check that fired, not which game feature triggered it.
         new(new("engine-array-size", "Engine stopped on an invalid array size", "Critical",
@@ -241,28 +242,28 @@ public static class CrashSignatureCatalog
 // v0.9.9.0: reads PalDefender's session logs (one file per server start) for a session that ended on a player joining.
 // Pure: the caller supplies each log's lines, newest log first, and whether the server is running now (the newest log of
 // a running server has not ended, so it is never judged).
+//
+// v0.9.10.0 (external review): the same log gave a finding when inspected a minute after the join and none ten minutes
+// later, because the end of the newest session was taken as "now". Neither "now" nor the next session's start is when a
+// session really ended, so no timing is claimed or required any more. A session that ended (the server is not running,
+// or a later session started) and whose log's last line is a player joining is reported, with the same line whenever it
+// is read, so it is recorded once and stays in the history. A clean stop logs the REST API stopping after the join.
 public static class ExitAfterJoinDetector
 {
     private static readonly Regex Join = new(@"^\[(\d{2}:\d{2}:\d{2})\]\[info\]\s*(.+\bconnected to the server\.|.+\bhas logged in\.)\s*$", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250));
     private static readonly Regex Address = new(@"\('?\d{1,3}(\.\d{1,3}){3}'?\)|IP=\d{1,3}(\.\d{1,3}){3}", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250));
 
-    // The session must have ended soon after the join: a server stopped hours later with nothing else logged is not this.
-    public static readonly TimeSpan Window = TimeSpan.FromMinutes(5);
-
     /// <summary>
-    /// One evidence line per session whose log's last line is a player connecting or logging in and which ended within
-    /// <see cref="Window"/> of it. A session ended when the next one started (the next log's Started), or, for the newest
-    /// log of a server that is not running, by <paramref name="now"/>.
+    /// One evidence line per ended session whose log's last line is a player connecting or logging in. The newest log is
+    /// judged only when the server is not running; every older log belongs to a session that has ended.
     /// </summary>
-    public static IReadOnlyList<string> Detect(IReadOnlyList<(string Name, DateTimeOffset Started, DateTimeOffset LastWrite, IReadOnlyList<string> Lines)> logsNewestFirst, bool serverRunning, DateTimeOffset now)
+    public static IReadOnlyList<string> Detect(IReadOnlyList<(string Name, DateTimeOffset Started, DateTimeOffset LastWrite, IReadOnlyList<string> Lines)> logsNewestFirst, bool serverRunning)
     {
         var evidence = new List<string>();
         for (var i = 0; i < logsNewestFirst.Count; i++)
         {
             if (i == 0 && serverRunning) continue;
             var (name, _, lastWrite, lines) = logsNewestFirst[i];
-            var endedBy = i == 0 ? now : logsNewestFirst[i - 1].Started;
-            if (endedBy < lastWrite || endedBy - lastWrite > Window) continue;
             var last = lines.LastOrDefault(l => !string.IsNullOrWhiteSpace(l));
             if (last is null) continue;
             Match m;
@@ -270,7 +271,7 @@ public static class ExitAfterJoinDetector
             if (!m.Success) continue;
             // The player's address is left out of the evidence; the id is what identifies the join.
             var what = Address.Replace(m.Groups[2].Value, string.Empty).Replace("  ", " ").Replace(" ,", ",").Trim();
-            evidence.Add($"[{lastWrite.ToLocalTime():yyyy-MM-dd} {m.Groups[1].Value}] PalDefender session ended right after a player joined: {what} (log \"{name}\" has nothing after it, no logout and no shutdown)");
+            evidence.Add($"[{lastWrite.ToLocalTime():yyyy-MM-dd} {m.Groups[1].Value}] PalDefender session log ends on a player joining: {what} (log \"{name}\" has nothing after it, no logout and no shutdown)");
         }
         return evidence;
     }

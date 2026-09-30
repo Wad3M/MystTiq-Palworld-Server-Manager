@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.9.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.10.0: file reviewed for this release (2026-09-30). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-29. **Current version: v0.9.9.0. Accepted baseline: v0.8.25.0. Next: v0.9.x acceptance.**
+Updated 2026-09-30. **Current version: v0.9.10.0. Accepted baseline: v0.8.25.0. Next: v0.9.x acceptance.**
 
-This is the active plan. Version assignments after v0.9.9.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v0.9.10.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Foundation delivered through v0.8.26.0
 
@@ -44,7 +44,7 @@ This is the active plan. Version assignments after v0.9.9.0 are proposed milesto
 - The MystTiq service's own messages (Doctor findings, operation results, crash explanations, network and router checks, recovery steps, validation errors; 1,339 texts), which arrive in English from the server, are translated when shown like the Desktop's own. Commands sent to the game, log patterns, protocol text and the names Windows shows stay English on purpose.
 - `scripts/Export-MystTiqTranslationReview.ps1` writes a review sheet per language and [`docs/i18n/TRANSLATION_REVIEW.md`](../i18n/TRANSLATION_REVIEW.md) is the reviewers' checklist and coverage table.
 - Recorded offline checks cover the round-trip of all 2,492 message templates in every language; a live check showed service messages in Japanese. Catalog coverage does not establish translation quality, and text the service passes on from Windows, Linux or the game stays as it arrives.
-- Still open, and needing people: every language is **awaiting native review** (meaning, terminology, plurals, length, accessibility names). Numbers, dates and times follow the chosen language since v0.9.9.0.
+- Still open, and needing people: every language is **awaiting native review** (meaning, terminology, plurals, length, accessibility names). Numbers, dates and times follow the chosen language since v0.9.9.0 (English keeps the system's regional format). The v0.9.10.0 review fixes applied the outside review's label and wording notes; that was not a native review.
 
 **Exit evidence for the review:** each language's sheet returned with corrections applied, reviewed language samples, and a look at every page in each advertised language.
 
@@ -112,6 +112,18 @@ Requested 2026-09-28, after a LAN join to the clone server needed a firewall rul
 - **Distribution.** `scripts/Test-v0.9.9.0-Distribution.ps1` checks the checksums, what each ZIP holds, the version on the binaries, and that the packaged service starts from a clean folder.
 - Still open: a helper left running by an older version is reported, not stopped (MystTiq only stops helpers it started); UE4SS builds older than the three newest releases still read "check manually".
 
+## v0.9.10.0 — review fixes (delivered 2026-09-30)
+
+An outside review of the v0.9.9.0 source reported six findings; each is fixed and has a check. Details: `docs/architecture/v0.9.10.0-review-fixes.md`.
+
+- **F1, helper ownership.** A live but slow helper is waited for and reused; one that cannot be used is replaced only after it has exited; a failed stop is reported. Proved with stand-in helpers in the ArtworkHarness.
+- **F2, names.** Names inside translated messages stay as written (quoted, or after server/player/guild and the like); the Dashboard's server name and description are untranslated. Remaining: an unquoted name in another slot that equals a known status.
+- **F3, MOD update state.** Unknown is no longer "up to date"; the MOD alert resolves only on checked evidence.
+- **F4, prereleases.** The MystTiq update check reads the release list: 0.x counts prereleases, 1.0 and later stable only.
+- **F5, crash evidence.** The join-crash finding no longer depends on when it is read, so it is recorded once and stays. This replaces v0.9.9.0's 5-minute window.
+- **F6, archive consistency.** The checkpoint notes are stamped, and the source ZIP is checked by its own gate after it is made.
+- Also: the Doctor's port finding allows for port forwarding; the review's translation notes (Pal-edit labels, plurals, German action names, "this app").
+
 ## v0.9.x — integration and release stabilization
 
 These are remaining checks or targeted fixes, not a request to rebuild shipped features.
@@ -152,4 +164,4 @@ Per-accent artwork, a separate night HOST illustration, OS-level traffic shaping
 
 ## Current publication work
 
-Publish v0.9.9.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.
+Publish v0.9.10.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.

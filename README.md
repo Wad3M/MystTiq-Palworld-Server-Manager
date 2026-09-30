@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.9.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.10.0: file reviewed for this release (2026-09-30). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,23 +21,32 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v0.9.9.0 · Accepted baseline: v0.8.25.0**
+**Current version: v0.9.10.0 · Accepted baseline: v0.8.25.0**
 
 This source snapshot is a development release on the way to v1.0. Check the Releases page for published downloads; the version shown here does not imply a binary has been published. Windows is the current release-workflow download target. Linux builds are available from source, with desktop acceptance still in progress.
 
-## What's new in v0.9.9.0
+## What's new in v0.9.10.0
 
-**Safer restarts and clearer causes.** Adding a server no longer restarts the ones already running, and MystTiq keeps one local helper instead of starting more. The Crash Analyzer now recognises a server that dies when a player joins, the Update Center compares UE4SS for you, the Doctor can fix a port mismatch, and numbers, dates and times follow the language you chose.
+**Fixes from an outside review.** A server called "Ready" no longer shows as "Bereit" in German: names stay as you wrote them in every language. MystTiq keeps one local helper even when it is slow to answer, a MOD update warning clears only when the MOD was really checked, the update check sees new MystTiq versions, crash evidence for a server that stops as a player joins no longer disappears after a few minutes, and the Doctor's port check allows for port forwarding.
 
-From v0.9.8.0: **small screens, alerts and a Linux shortcut.** The new-tab "+" stays on narrow windows, the Alert Center tells you (and Discord or email) when the game server or PalDefender falls behind, the firewall check knows which network you're on, the server search covers bigger networks, and a script installs MystTiq on a Linux machine with a desktop shortcut. Upgrades are now tested with accounts and sign-in too.
+<details>
+<summary><strong>Earlier v0.9 releases</strong></summary>
 
-From v0.9.7.0: **a current UI framework underneath.** The desktop now runs on Avalonia 12, the current version of the framework it is built with, so it keeps receiving fixes and platform support. Nothing about how you use MystTiq changes; every page was checked in all 12 languages and each appearance mode.
+v0.9.9.0: **safer restarts and clearer causes.** Adding a server no longer restarts the ones already running, and MystTiq keeps one local helper instead of starting more. The Crash Analyzer recognises a server that dies when a player joins, the Update Center compares UE4SS for you, the Doctor can fix a port mismatch, and numbers, dates and times follow the language you chose (English keeps your system's format).
 
-From v0.9.6.0: **let players in, and find your servers in seconds.** Settings, Diagnostics and the new-server wizard now show whether Windows Firewall lets players reach the port your server really uses, with an **Allow through Firewall** button that asks Windows for administrator rights when needed. The rule follows the port: change it, allow again, and the old port is closed. The check ignores rules that only look like they help (the game client's, Store apps', the launcher's), and a second server set up through the wizard now gets its own port.
+v0.9.8.0: **small screens, alerts and a Linux shortcut.** The new-tab "+" stays on narrow windows, the Alert Center tells you (and Discord or email) when the game server or PalDefender falls behind, the firewall check knows which network you're on, the server search covers bigger networks, and a script installs MystTiq on a Linux machine with a desktop shortcut. Upgrades are now tested with accounts and sign-in too.
 
-The server search checks 256 addresses at a time, shows the ranges it searches and its progress, lists each server as it answers, and can be cancelled; virtual adapters are searched only when you ask, and you can add ranges of your own. v0.9.5.0 made update checks truthful and stopped servers from starting each other; earlier v0.9 releases brought 12 languages and accessible names. The 11 non-English translations are drafts awaiting native-speaker review.
+v0.9.7.0: **a current UI framework underneath.** The desktop now runs on Avalonia 12, the current version of the framework it is built with, so it keeps receiving fixes and platform support. Nothing about how you use MystTiq changes; every page was checked in all 12 languages and each appearance mode.
 
-[Release notes](release-notes/v0.9.9.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+v0.9.6.0: **let players in, and find your servers in seconds.** Settings, Diagnostics and the new-server wizard now show whether Windows Firewall lets players reach the port your server really uses, with an **Allow through Firewall** button that asks Windows for administrator rights when needed. The rule follows the port: change it, allow again, and the old port is closed. The check ignores rules that only look like they help (the game client's, Store apps', the launcher's), and a second server set up through the wizard now gets its own port.
+
+The server search checks 256 addresses at a time, shows the ranges it searches and its progress, lists each server as it answers, and can be cancelled; virtual adapters are searched only when you ask, and you can add ranges of your own. v0.9.5.0 made update checks truthful and stopped servers from starting each other; earlier v0.9 releases brought 12 languages and accessible names.
+
+</details>
+
+The 11 non-English translations are drafts awaiting native-speaker review.
+
+[Release notes](release-notes/v0.9.10.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -113,7 +122,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v0.9.6.0 | Delivered | Firewall rule for each server's own port where the port is set; a second server gets its own port; server search in seconds, showing its ranges |
 | v0.9.7.0 | Delivered | Avalonia 12: the desktop moves to the current UI framework, checked page by page in every appearance mode |
 | v0.9.8.0 | Delivered | The "+" stays on small windows; alerts when the game server or PalDefender falls behind; network-aware firewall check; wider server search; Linux install with a desktop shortcut |
-| v0.9.9.0 | Current | Running servers survive adding a new one; one local helper; crash analysis for a server that dies on a join; UE4SS compared automatically; formats follow your language |
+| v0.9.9.0 | Delivered | Running servers survive adding a new one; one local helper; crash analysis for a server that dies on a join; UE4SS compared automatically; formats follow your language |
+| v0.9.10.0 | Current | Fixes from an outside review: names kept in every language, one helper even when slow, truthful MOD and MystTiq update checks, lasting crash evidence |
 | v0.9.x | Planned | Native translation review, live integration evidence, a screen-reader pass and Linux acceptance |
 | v1.0 | Target | Stable release after the acceptance gates pass; no date committed |
 
@@ -121,8 +131,8 @@ The [full roadmap](docs/roadmap/PRODUCT_ROADMAP.md) separates delivered work, re
 
 ## Known limitations
 
-- Non-English catalogs are draft translations awaiting native review. Text the service passes on from Windows, Linux or the game (error details, log lines) is shown as it arrives, usually in English, and dates and numbers use one fixed format.
-- Item/Pal delivery, live map/teleport calibration and real Discord/email delivery still need live acceptance with a player and configured channels. Test scripts exist; that alone is not evidence of a passed live test.
+- Non-English catalogs are draft translations awaiting native review. Text the service passes on from Windows, Linux or the game (error details, log lines) is shown as it arrives, usually in English. Dates and numbers follow the chosen language, except that English keeps your system's regional format.
+- Recorded in game on 2026-09-28: one Wood delivery through Give Item, and map coordinates and a `tp` teleport matching MystTiq's conversion. Still to verify live: a Pal delivery, a starter kit, refused gives, player markers on the live map, a chat-triggered teleport, and real Discord/email delivery. Test scripts exist; that alone is not evidence of a passed live test.
 - Linux acceptance remains partial. Accessible names and keyboard reach are checked automatically; a pass with a real screen reader and Linux native contrast integration still need work.
 - A browser UI, per-accent artwork, OS-level traffic shaping and per-process network accounting are optional ideas, not v1.0 commitments.
 

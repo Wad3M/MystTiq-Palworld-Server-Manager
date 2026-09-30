@@ -1,4 +1,4 @@
-# MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+# MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 #requires -Version 7.0
 [CmdletBinding()]
 param(
@@ -192,7 +192,8 @@ $displayAttr = @{
     'RadioButton' = @('Content'); 'Label' = @('Content'); 'HyperlinkButton' = @('Content')
     'MenuItem' = @('Header'); 'TabItem' = @('Header'); 'Expander' = @('Header'); 'HeaderedContentControl' = @('Header')
 }
-$dataPath = '(?i)(Name|Names|Id|Ids|Url|Uri|Address|Host|Hostname|Port|Hash|Fingerprint|Token|Key|Line|Lines|Json|Raw|Command|Arguments|Output|Log)$'
+# v0.9.10.0: ...Verbatim marks the user's own text (a server description) that must never be translated.
+$dataPath = '(?i)(Name|Names|Id|Ids|Url|Uri|Address|Host|Hostname|Port|Hash|Fingerprint|Token|Key|Line|Lines|Json|Raw|Command|Arguments|Output|Log|Verbatim)$'
 $simpleBinding = [regex]'^\{Binding (?:Path=)?(?<path>[\w.\[\]]+)(?:\s*,\s*Mode=OneWay)?\}$'
 $bindingRows = [System.Collections.Generic.List[object]]::new()
 $bindingsConverted = 0

@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -20,6 +20,11 @@ namespace MystTiq.Desktop.Services;
 /// v0.9.2.0: a text the code composes from several sentences (the map's summary, a Pal's tooltip) is translated sentence
 /// by sentence, each sentence its own message. When every sentence is known that wins over a whole-text template, whose
 /// first value would otherwise swallow the sentences before it.
+///
+/// v0.9.10.0: a value that is a name stays as it is. A server called "Ready" showed as "Bereit" in German because the value
+/// of "Restarted. '{0}' is now online." was itself a known message. A placeholder in quotes ('{0}', "{0}", “{0}”) or right
+/// after a word that names a thing (server, world, player, guild, profile, kit, mod, rule, channel, account, user, member)
+/// holds a name, and its value is never translated. Other values still are ("Status: {0}").
 /// </summary>
 public sealed class MessageCatalog
 {
@@ -162,6 +167,7 @@ public sealed class MessageCatalog
             {
                 for (var i = 0; i < values.Length; i++)
                 {
+                    if (template.IsVerbatim(i)) continue;
                     if (values[i] is { Length: > 0 } value && value.Trim() is { Length: > 0 } v && TranslateWhole(v, depth + 1) is { } inner) values[i] = Reedge(value, v, inner);
                 }
             }
@@ -188,10 +194,12 @@ public sealed class MessageCatalog
         private readonly string suffix;
         private readonly int count;
         private readonly string translation;
+        private readonly HashSet<int> verbatim;
 
-        private Template(Regex regex, string prefix, string suffix, int count, string translation, int literalLength, bool isOpen)
+        private Template(Regex regex, string prefix, string suffix, int count, string translation, int literalLength, bool isOpen, HashSet<int> verbatim)
         {
             IsOpen = isOpen;
+            this.verbatim = verbatim;
             this.regex = regex;
             this.prefix = prefix;
             this.suffix = suffix;
@@ -203,6 +211,23 @@ public sealed class MessageCatalog
         public int LiteralLength { get; }
         public bool IsOpen { get; }
 
+        // v0.9.10.0: whether placeholder n holds a name (see the class summary).
+        public bool IsVerbatim(int n) => verbatim.Contains(n);
+
+        private const string OpeningQuotes = "'\"“‘«„「『";
+        private const string ClosingQuotes = "'\"”’»“」』";
+        private static readonly Regex NameNoun = new(@"(?i)\b(server|world|player|guild|profile|tab|kit|mod|rule|channel|account|user|member|named)\s$",
+            RegexOptions.CultureInvariant);
+
+        private static bool HoldsName(string english, Match placeholder)
+        {
+            var before = placeholder.Index > 0 ? english[placeholder.Index - 1] : '\0';
+            var afterIndex = placeholder.Index + placeholder.Length;
+            var after = afterIndex < english.Length ? english[afterIndex] : '\0';
+            if (OpeningQuotes.Contains(before) && ClosingQuotes.Contains(after)) return true;
+            return NameNoun.IsMatch(english[..placeholder.Index]);
+        }
+
         public static Template? TryCreate(string english, string translated)
         {
             var en = english.Trim();
@@ -213,6 +238,7 @@ public sealed class MessageCatalog
 
             var pattern = new StringBuilder("^");
             var seen = new HashSet<int>();
+            var names = new HashSet<int>();
             var last = 0;
             var literal = 0;
             var letters = 0;
@@ -225,6 +251,7 @@ public sealed class MessageCatalog
                 pattern.Append(Regex.Escape(piece));
                 var n = int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
                 max = Math.Max(max, n);
+                if (HoldsName(en, m)) names.Add(n);
                 pattern.Append(seen.Add(n) ? $"(?<p{n}>.*?)" : $@"\k<p{n}>");
                 last = m.Index + m.Length;
             }
@@ -253,7 +280,7 @@ public sealed class MessageCatalog
             var suffix = open || matches.Count == 0 ? string.Empty : en[(matches[^1].Index + matches[^1].Length)..];
             return new Template(
                 new Regex(pattern.ToString(), RegexOptions.Singleline | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50)),
-                prefix, suffix, max + 1, tr, literal, open);
+                prefix, suffix, max + 1, tr, literal, open, names);
         }
 
         public string[]? Match(string text)

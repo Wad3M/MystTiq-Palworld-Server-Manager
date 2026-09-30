@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -64,14 +64,22 @@ public sealed class HeadlessComponentUpdateService
     private async Task<ComponentVersionInfo> CheckMystTiqAsync(DateTimeOffset now, CancellationToken ct)
     {
         var installed = typeof(HeadlessComponentUpdateService).Assembly.GetName().Version?.ToString(4) ?? "unknown";
-        var release = await TryGetJsonAsync<GitHubReleaseDto>($"https://api.github.com/repos/{MystTiqRepo}/releases/latest", ct);
-        if (release?.TagName is not { Length: > 0 } tag)
+        // v0.9.10.0 (external review): /releases/latest skips prereleases, and every MystTiq release so far is published as
+        // one, so a newer version was never seen. The release list is read instead, and ReleaseChannel picks the newest one
+        // this installation should consider.
+        var releases = await TryGetJsonAsync<List<GitHubReleaseDto>>($"https://api.github.com/repos/{MystTiqRepo}/releases?per_page=30", ct);
+        if (releases is null)
             return Unavailable("Core Server", "MystTiq Server Manager", installed, $"GitHub: {MystTiqRepo}", now,
                 "Could not reach the GitHub releases API to check for a newer version.");
+        var candidates = releases.Select(r => new ReleaseCandidate(r.TagName ?? string.Empty, r.Prerelease, r.Draft, r.HtmlUrl)).ToArray();
+        if (ReleaseChannel.PickNewest(candidates, installed) is not { } release)
+            return Unavailable("Core Server", "MystTiq Server Manager", installed, $"GitHub: {MystTiqRepo}", now,
+                $"No published release was found ({ReleaseChannel.Describe(installed)}).");
 
+        var tag = release.Tag;
         var latest = tag.TrimStart('v', 'V');
         return Compare("Core Server", "MystTiq Server Manager", installed, latest, $"GitHub: {MystTiqRepo}", now,
-            $"Latest published release: {tag}." + (release.HtmlUrl is { Length: > 0 } url ? $" {url}" : string.Empty),
+            $"Latest published release: {tag} ({ReleaseChannel.Describe(installed)})." + (release.Url is { Length: > 0 } url ? $" {url}" : string.Empty),
             updateIsInformationalOnly: true);
     }
 
@@ -725,6 +733,8 @@ public sealed class HeadlessComponentUpdateService
         [JsonPropertyName("tag_name")] public string? TagName { get; init; }
         [JsonPropertyName("html_url")] public string? HtmlUrl { get; init; }
         [JsonPropertyName("published_at")] public DateTimeOffset? PublishedAt { get; init; }
+        [JsonPropertyName("prerelease")] public bool Prerelease { get; init; }
+        [JsonPropertyName("draft")] public bool Draft { get; init; }
         [JsonPropertyName("assets")] public List<GitHubAssetDto>? Assets { get; init; }
     }
 
@@ -800,3 +810,29 @@ public sealed record ComponentVersionSnapshot(IReadOnlyList<ComponentVersionInfo
 // v0.7.82.0: result of an actual in-place component update (currently only pip) -- distinct from
 // ComponentVersionInfo, which is read-only comparison data.
 public sealed record ComponentUpdateResult(bool Success, string Message);
+
+public sealed record ReleaseCandidate(string Tag, bool Prerelease, bool Draft, string? Url);
+
+// v0.9.10.0: which published MystTiq release counts as "latest". A development version (0.x) considers prereleases too,
+// since that is how 0.x releases are published; from 1.0 on only stable releases count. Drafts never do. The newest is
+// chosen by version number, not by publish date or list order.
+public static class ReleaseChannel
+{
+    public static bool IncludesPrereleases(string installed) =>
+        !Version.TryParse(installed, out var v) || v.Major < 1;
+
+    public static string Describe(string installed) =>
+        IncludesPrereleases(installed) ? "development versions count prereleases" : "stable releases only";
+
+    public static ReleaseCandidate? PickNewest(IEnumerable<ReleaseCandidate> releases, string installed)
+    {
+        var prereleases = IncludesPrereleases(installed);
+        return releases
+            .Where(r => !r.Draft && (prereleases || !r.Prerelease))
+            .Select(r => (Release: r, Version: Version.TryParse(r.Tag.TrimStart('v', 'V'), out var v) ? v : null))
+            .Where(x => x.Version is not null)
+            .OrderByDescending(x => x.Version)
+            .Select(x => x.Release)
+            .FirstOrDefault();
+    }
+}

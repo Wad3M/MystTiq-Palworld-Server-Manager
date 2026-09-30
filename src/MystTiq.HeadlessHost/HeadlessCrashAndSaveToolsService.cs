@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -83,7 +83,7 @@ public sealed class HeadlessCrashAndSaveToolsService
                 .ToArray();
             var running = true;
             try { running = serverRunning?.Invoke() ?? true; } catch { }
-            return ExitAfterJoinDetector.Detect(logs, running, DateTimeOffset.UtcNow);
+            return ExitAfterJoinDetector.Detect(logs, running);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return []; }
     }

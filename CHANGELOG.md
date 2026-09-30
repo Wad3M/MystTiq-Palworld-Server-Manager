@@ -1,4 +1,27 @@
-<!-- MystTiq v0.9.9.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.10.0: file reviewed for this release (2026-09-30). -->
+## v0.9.10.0 — Review Fixes
+
+From an external review of v0.9.9.0 (six findings, a NAT concern and translation notes):
+
+- F1, desktop helper: a recorded helper that is alive is waited for (each answer allowed 4 s, up to 8 s) and reused; one
+  that cannot be used is replaced only after it has exited, and a failed stop is reported instead of starting another;
+  the record is matched by path and start time (`SidecarState.StartedUtc`).
+- F2, translation: a placeholder in quotes or after server/world/player/guild/profile/tab/kit/mod/rule/channel/account/
+  user/member/named keeps its value; the Dashboard's server name and description are untranslated.
+- F3, MOD alert: `UpdateChecked` per MOD; `ComponentAlerts.ModsBehind` resolves only when every MOD the alert named is
+  checked and current, or removed.
+- F4, update check: the release list with `ReleaseChannel` (0.x counts prereleases, 1.0+ stable only, never drafts,
+  newest by version) instead of `releases/latest`.
+- F5, crash analysis: `ExitAfterJoinDetector` has no time window and gives the same line whenever it reads a session;
+  the signature is now "Server session ended on a player joining" (v0.9.9.0 lines still match).
+- F6, archive: the checkpoint notes carry the review stamp; the FullSource ZIP is checked by its own gate after it is
+  made.
+- Doctor: the port finding allows for a router that forwards another outside port on purpose.
+- Translations: Pal-edit labels in all 11 languages, a count-neutral MOD message, German Force Stop and Rollback, "this
+  app" in the helper message; 5 new texts and 6 reworded in all 12 languages.
+- Tests: `Test-v0.9.10.0-Logic.ps1`; ArtworkHarness stand-in helpers and name checks; logic-harness MOD alert, release
+  channel and stable-evidence scenarios; the v0.9.5.0 upgrade smoke repeats its stop until the stand-in stays down.
+
 ## v0.9.9.0 — One Helper, Crash Causes and Local Formats
 
 - The desktop's local helper: the one it started is recorded (`desktop-sidecar.json`) and reused, instead of one more

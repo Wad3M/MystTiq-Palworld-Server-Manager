@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -723,13 +723,15 @@ public sealed class HeadlessModManagementService
         {
             var check = await CheckModUpdateAsync(mods[i].Type, mods[i].Package, cancellationToken);
             var installedVersion = ReadWorkshopManifestVersion(mods[i].InstallPath);
-            if ((check.HasKnownSource && check.UpdateAvailable) || installedVersion is not null)
-                mods[i] = mods[i] with
-                {
-                    UpdateAvailable = check.HasKnownSource && check.UpdateAvailable,
-                    UpdateHint = check.HasKnownSource && check.UpdateAvailable ? "Update available locally" : "",
-                    InstalledVersion = installedVersion,
-                };
+            // v0.9.10.0: UpdateChecked says whether the answer is real. A MOD with no Workshop source (or on Linux, or whose
+            // timestamps could not be read) is unknown, not "up to date"; the Alert Center must not resolve on it.
+            mods[i] = mods[i] with
+            {
+                UpdateAvailable = check.HasKnownSource && check.UpdateAvailable,
+                UpdateChecked = check.HasKnownSource && check.Compared,
+                UpdateHint = check.HasKnownSource && check.UpdateAvailable ? "Update available locally" : "",
+                InstalledVersion = installedVersion ?? mods[i].InstalledVersion,
+            };
         }
 
         var issues = mods.Count(m => m.Health is "Failed" or "Missing" or "Misconfigured" or "Attention");
@@ -1639,7 +1641,7 @@ public sealed class HeadlessModManagementService
 
         if (installedAt is null || workshopAt is null)
             return Task.FromResult(new HeadlessModUpdateCheckResult(true, false, match.WorkshopId,
-                $"Matched local Steam Workshop item \"{match.Name}\", but could not read file timestamps to compare."));
+                $"Matched local Steam Workshop item \"{match.Name}\", but could not read file timestamps to compare.", Compared: false));
 
         var updateAvailable = workshopAt.Value > installedAt.Value.AddSeconds(2);
         var detail = updateAvailable
@@ -2051,7 +2053,7 @@ public sealed record HeadlessModItem(
     string Type, string Package, string Name, string InstallPath, bool Enabled,
     string Health, string RuntimeState, string Evidence, int FileCount,
     bool RuntimeConfirmed, string Attention,
-    bool UpdateAvailable = false, string UpdateHint = "", string? InstalledVersion = null);
+    bool UpdateAvailable = false, string UpdateHint = "", string? InstalledVersion = null, bool UpdateChecked = false);
 
 public sealed record HeadlessModInventory(
     string Platform, bool ServerRunning, int Installed, int RuntimeConfirmed,
@@ -2076,7 +2078,7 @@ public sealed record HeadlessModMutationResult(
 // WorkshopId, when present, is what the client passes to the existing ImportWorkshopItemAsync
 // route to actually apply the update -- Update reuses that already-built import logic unchanged.
 public sealed record HeadlessModUpdateCheckResult(
-    bool HasKnownSource, bool UpdateAvailable, string? WorkshopId, string Detail);
+    bool HasKnownSource, bool UpdateAvailable, string? WorkshopId, string Detail, bool Compared = true);
 
 // v0.7.55.0: website-sourced MOD descriptions. Source is a display label ("Steam Workshop",
 // "GitHub Repository", "Manual Link", or "None"), never a machine-parsed enum -- the desktop only

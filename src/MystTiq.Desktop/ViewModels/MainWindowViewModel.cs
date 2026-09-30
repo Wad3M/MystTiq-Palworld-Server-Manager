@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1648,8 +1648,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string DashboardRconText { get => _dashboardRconText; private set => SetField(ref _dashboardRconText, value); }
     public string DashboardModsStripText { get => _dashboardModsStripText; private set => SetField(ref _dashboardModsStripText, value); }
     public string DashboardBackupStripText { get => _dashboardBackupStripText; private set => SetField(ref _dashboardBackupStripText, value); }
-    public string DashboardServerNameText { get => _dashboardServerNameText; private set => SetField(ref _dashboardServerNameText, value); }
-    public string DashboardServerDescriptionText { get => _dashboardServerDescriptionText; private set => SetField(ref _dashboardServerDescriptionText, value); }
+    public string DashboardServerName { get => _dashboardServerNameText; private set => SetField(ref _dashboardServerNameText, value); }
+    public string DashboardServerDescriptionVerbatim { get => _dashboardServerDescriptionText; private set => SetField(ref _dashboardServerDescriptionText, value); }
     public string DashboardSessionText { get => _dashboardSessionText; private set => SetField(ref _dashboardSessionText, value); }
     public string DashboardPlayersSessionText { get => _dashboardPlayersSessionText; private set => SetField(ref _dashboardPlayersSessionText, value); }
     public string DashboardLastActivityText { get => _dashboardLastActivityText; private set => SetField(ref _dashboardLastActivityText, value); }
@@ -5918,8 +5918,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         var serverName = snapshot.PalworldSettings.Settings.FirstOrDefault(x => x.Name.Equals("ServerName", StringComparison.OrdinalIgnoreCase))?.Value;
         var description = snapshot.PalworldSettings.Settings.FirstOrDefault(x => x.Name.Equals("ServerDescription", StringComparison.OrdinalIgnoreCase))?.Value;
-        DashboardServerNameText = string.IsNullOrWhiteSpace(serverName) ? "—" : serverName;
-        DashboardServerDescriptionText = string.IsNullOrWhiteSpace(description) ? "—" : description;
+        DashboardServerName = string.IsNullOrWhiteSpace(serverName) ? "—" : serverName;
+        DashboardServerDescriptionVerbatim = string.IsNullOrWhiteSpace(description) ? "—" : description;
         var rconEnabled = snapshot.PalworldSettings.Settings.FirstOrDefault(x => x.Name.Equals("RCONEnabled", StringComparison.OrdinalIgnoreCase))?.Value;
         var rconPort = snapshot.PalworldSettings.Settings.FirstOrDefault(x => x.Name.Equals("RCONPort", StringComparison.OrdinalIgnoreCase))?.Value?.Trim('"');
         DashboardRconText = string.Equals(rconEnabled?.Trim('"'), "True", StringComparison.OrdinalIgnoreCase)

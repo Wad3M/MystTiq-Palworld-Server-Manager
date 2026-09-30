@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -471,16 +471,18 @@ try
         ];
         string[] loggedIn = ["[18:46:14][info] 'Wadetest' (UserId=steam_7656119, IP=127.0.0.1) has logged in."];
         var at = new DateTimeOffset(2026, 9, 28, 18, 39, 21, TimeSpan.Zero);
-        var soon = at.AddSeconds(53);
-        var found = ExitAfterJoinDetector.Detect([("28.09 18.35.55.log", at.AddMinutes(-4), at, crashed)], serverRunning: false, soon);
-        Assert(found.Count == 1 && found[0].Contains("PalDefender session ended right after a player joined: steam_7656119 connected to the server.", StringComparison.Ordinal) && found[0].Contains("18:39:21", StringComparison.Ordinal), $"the join is named with its time: {string.Join(" | ", found)}");
+        var found = ExitAfterJoinDetector.Detect([("28.09 18.35.55.log", at.AddMinutes(-4), at, crashed)], serverRunning: false);
+        Assert(found.Count == 1 && found[0].Contains("PalDefender session log ends on a player joining: steam_7656119 connected to the server.", StringComparison.Ordinal) && found[0].Contains("18:39:21", StringComparison.Ordinal), $"the join is named with its time: {string.Join(" | ", found)}");
         Assert(!found[0].Contains("127.0.0.1", StringComparison.Ordinal), "the player's address is left out of the evidence");
-        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, crashed)], serverRunning: true, soon).Count == 0, "the newest log of a running server has not ended");
-        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, crashed)], serverRunning: false, at.AddHours(3)).Count == 0, "a server found stopped hours after the join is not blamed on the join");
-        Assert(ExitAfterJoinDetector.Detect([("new.log", at.AddSeconds(53), at.AddHours(1), clean), ("old.log", at.AddMinutes(-4), at, crashed)], serverRunning: true, at.AddHours(2)).Count == 1, "an older session whose successor started 53 s after the join is reported even while the server runs");
-        Assert(ExitAfterJoinDetector.Detect([("new.log", at.AddHours(6), at.AddHours(7), clean), ("old.log", at.AddMinutes(-4), at, crashed)], serverRunning: true, at.AddHours(8)).Count == 0, "a session followed by the next one six hours later is not blamed on the join");
-        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, clean)], serverRunning: false, soon).Count == 0, "a session that ended with the REST API stopping is a clean end");
-        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, loggedIn)], serverRunning: false, soon).Count == 1, "ending on the login itself counts too");
+        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, crashed)], serverRunning: true).Count == 0, "the newest log of a running server has not ended");
+        // v0.9.10.0 (external review): the evidence no longer depends on when it is read. The same stopped session gives the
+        // same line a minute or ten minutes after the join, and after the next session starts, so it is recorded once.
+        var later = ExitAfterJoinDetector.Detect([("new.log", at.AddHours(6), at.AddHours(7), clean), ("28.09 18.35.55.log", at.AddMinutes(-4), at, crashed)], serverRunning: true);
+        Assert(later.Count == 1 && later[0] == found[0], "the same session gives the same evidence line after the next one starts, whenever it is read");
+        Assert(ExitAfterJoinDetector.Detect([("new.log", at.AddSeconds(53), at.AddHours(1), clean), ("old.log", at.AddMinutes(-4), at, crashed)], serverRunning: true).Count == 1, "an older session is reported even while the server runs");
+        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, clean)], serverRunning: false).Count == 0, "a session that ended with the REST API stopping is a clean end");
+        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, loggedIn)], serverRunning: false).Count == 1, "ending on the login itself counts too");
+        Assert(CrashSignatureCatalog.Match(["[2026-09-28 18:39:21] PalDefender session ended right after a player joined: x (log \"a\" has nothing after it, no logout and no shutdown)"]).Count == 1, "evidence recorded by v0.9.9.0 is still claimed by the signature");
         var matches = CrashSignatureCatalog.Match(found);
         Assert(matches.Count == 1 && matches[0].Signature.Id == "exit-after-join" && matches[0].Signature.Severity == "Critical" && matches[0].Lines[0].At is not null, "the evidence line is claimed by the exit-after-join signature, with its time");
         Assert(CrashSignatureCatalog.Find("exit-after-join")!.Fixes.Any(f => f.Contains("PalDefender", StringComparison.Ordinal)), "the fixes name PalDefender");
@@ -518,8 +520,30 @@ try
         // v0.9.9.0: UE4SS and MODs alert too; only a definite Update Center answer decides for UE4SS.
         Assert(ComponentAlerts.Ue4ssBehind("UpdateAvailable") == true && ComponentAlerts.Ue4ssBehind("UpToDate") == false, "a definite answer decides");
         Assert(ComponentAlerts.Ue4ssBehind("CheckManually") is null && ComponentAlerts.Ue4ssBehind("Unavailable") is null && ComponentAlerts.Ue4ssBehind(null) is null, "check manually, unreachable and not checked yet decide nothing");
-        Assert(ComponentAlerts.ModsMessage(["A", "B"]) == "2 installed MOD(s) have an update: A, B. Update them from the MOD Library with the server stopped.", ComponentAlerts.ModsMessage(["A", "B"]));
-        Assert(ComponentAlerts.ModsMessage(["A", "B", "C", "D", "E", "F", "G"]).Contains("A, B, C, D, E, and 2 more.", StringComparison.Ordinal), "five are named, the rest counted");
+        Assert(ComponentAlerts.ModsMessage(["A", "B"]) == "Installed MODs with an update: 2 (A, B). Update them from the MOD Library with the server stopped.", ComponentAlerts.ModsMessage(["A", "B"]));
+        Assert(ComponentAlerts.ModsMessage(["A", "B", "C", "D", "E", "F", "G"]).Contains("A, B, C, D, E, and 2 more).", StringComparison.Ordinal), "five are named, the rest counted");
+    }, failures);
+    // v0.9.10.0 (external review): an unknown MOD update state (no Workshop source, Linux, unreadable timestamps) is not
+    // "up to date": the alert resolves only on checked evidence.
+    RunScenario("MOD update alert: an unknown update state never resolves the alert; every MOD it named must be checked and current, or removed", () =>
+    {
+        ModUpdateState Mod(string name, bool update, bool checkedNow) => new(name, update, checkedNow);
+        Assert(ComponentAlerts.ModsBehind([Mod("A", true, true), Mod("B", false, false)], []) == true, "a MOD with an update opens the alert");
+        Assert(ComponentAlerts.ModsBehind([Mod("A", false, false), Mod("B", false, true)], ["A"]) is null, "the MOD the alert named is now unknown (its Workshop copy was removed): the alert stays open");
+        Assert(ComponentAlerts.ModsBehind([Mod("A", false, true), Mod("B", false, false)], ["A"]) == false, "the MOD the alert named is checked and current: resolved, whatever the unknown others");
+        Assert(ComponentAlerts.ModsBehind([Mod("B", false, true)], ["A"]) == false, "the MOD the alert named was removed: resolved");
+        Assert(ComponentAlerts.ModsBehind([Mod("A", false, true), Mod("B", false, false)], []) is null, "names not known (after a restart) and a MOD unknown: nothing decided");
+        Assert(ComponentAlerts.ModsBehind([Mod("A", false, true), Mod("B", false, true)], []) == false, "names not known and every MOD checked and current: resolved");
+    }, failures);
+    // v0.9.10.0 (external review): /releases/latest skips prereleases, and MystTiq publishes 0.x releases as prereleases.
+    RunScenario("MystTiq release check: a development version counts prereleases, 1.0 and later only stable releases; drafts never; newest by version", () =>
+    {
+        ReleaseCandidate R(string tag, bool pre = false, bool draft = false) => new(tag, pre, draft, null);
+        var list = new[] { R("v0.9.8.0", pre: true), R("v0.9.10.0", pre: true), R("v0.9.9.0", pre: true), R("v0.9.11.0", pre: true, draft: true), R("v0.8.25.0") };
+        Assert(ReleaseChannel.PickNewest(list, "0.9.9.0")?.Tag == "v0.9.10.0", "a 0.x installation sees the newest prerelease, by version (0.9.10 after 0.9.9), never a draft");
+        Assert(ReleaseChannel.PickNewest(list, "1.0.0.0")?.Tag == "v0.8.25.0", "1.0 and later see stable releases only");
+        Assert(ReleaseChannel.PickNewest([R("v0.9.9.0", draft: true), R("not-a-version", pre: true)], "0.9.9.0") is null, "no eligible release: none");
+        Assert(ReleaseChannel.IncludesPrereleases("0.9.10.0") && !ReleaseChannel.IncludesPrereleases("1.2.0.0"), "the channel follows the installed version");
     }, failures);
     // v0.9.8.0: a rule counts only on the network profiles it covers; a Private-only rule used to read as "allowed" on a
     // Public network (the clone's rule on this machine is Private-only).

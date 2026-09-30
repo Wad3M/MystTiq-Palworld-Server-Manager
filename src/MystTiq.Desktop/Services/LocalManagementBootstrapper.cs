@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
@@ -45,6 +45,10 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
     private readonly SemaphoreSlim gate = new(1, 1);
     private int? ownedSidecarProcessId;
     private string? ownedSidecarExecutable;
+    private readonly string? runtimeRootOverride;
+
+    // v0.9.10.0: runtimeRoot is for tests (the ArtworkHarness's slow-helper check), so they never touch this computer's record.
+    public LocalManagementBootstrapper(string? runtimeRoot = null) => runtimeRootOverride = runtimeRoot;
 
     public async Task<LocalManagementBootstrapResult> EnsureAvailableAsync(LocalInstallationSnapshot snapshot, string expectedServerProfileId = "default", CancellationToken cancellationToken = default)
     {
@@ -85,19 +89,24 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
             var owned = SidecarState.Read(GetLocalRuntimeRoot());
             if (owned is not null)
             {
+                // v0.9.10.0 (external review): a recorded helper that is still running but did not answer the 750 ms probe
+                // (starting, or busy) was forgotten, and a second one started beside it. A live helper now gets time to
+                // answer, and is replaced only once it has been stopped and has exited.
+                var alive = IsRecordedHelper(owned);
                 var ownedProbe = await ProbeAsync(owned.Endpoint, cancellationToken);
-                if (ownedProbe.Compatible && !ownedProbe.AuthenticationEnabled && !ownedProbe.TlsEnabled && VersionMatches(ownedProbe.Version) && HasExpectedProfile(ownedProbe, expectedServerProfileId))
+                if (alive && !ownedProbe.Reachable) ownedProbe = await WaitForAnswerAsync(owned.Endpoint, StartupTimeout, cancellationToken);
+                if (alive && ownedProbe.Compatible && !ownedProbe.AuthenticationEnabled && !ownedProbe.TlsEnabled && VersionMatches(ownedProbe.Version) && HasExpectedProfile(ownedProbe, expectedServerProfileId))
                 {
                     ownedSidecarProcessId = owned.ProcessId;
                     ownedSidecarExecutable = owned.Executable;
-                    return new(true, false, owned.Endpoint, $"Reusing the MystTiq helper this desktop started earlier ({ownedProbe.Version ?? "unknown version"}).", ownedProbe.Version,
+                    return new(true, false, owned.Endpoint, $"Reusing the MystTiq helper this app started earlier ({ownedProbe.Version ?? "unknown version"}).", ownedProbe.Version,
                         staleDetected, staleEndpoint, staleVersion);
                 }
 
-                // It answers but cannot be used (an older version after an upgrade, or it does not know a newly added
+                // It is running but cannot be used (it does not answer, is an older version after an upgrade, or does not know a newly added
                 // server yet): it is this desktop's own, so it is stopped and replaced rather than left beside a new one.
                 // Game servers it started keep running and are adopted by the new helper.
-                if (ownedProbe.Reachable && ownedProbe.Compatible)
+                if (alive)
                 {
                     // A helper of this version that was started moments ago and still lacks the server will lack it after
                     // another restart too (the tab names a server this configuration does not have). Restarting it again
@@ -105,7 +114,10 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                     if (VersionMatches(ownedProbe.Version) && !HasExpectedProfile(ownedProbe, expectedServerProfileId) && StartedWithin(owned.ProcessId, TimeSpan.FromSeconds(30)))
                         return new(false, false, owned.Endpoint, $"This computer's MystTiq helper has no server '{expectedServerProfileId}'.", ownedProbe.Version,
                             staleDetected, staleEndpoint, staleVersion);
-                    StopHelperProcess(owned.ProcessId, owned.Executable);
+                    if (!StopHelperProcess(owned))
+                        return new(false, false, owned.Endpoint,
+                            $"This computer's MystTiq helper (process {owned.ProcessId}) cannot be used and could not be stopped. End that process, then connect again.",
+                            ownedProbe.Version, staleDetected, staleEndpoint, staleVersion);
                     // The port it held may be the configured one, free again now.
                     existing = await ProbeAsync(requestedEndpoint, cancellationToken);
                 }
@@ -167,7 +179,9 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                 {
                     ownedSidecarProcessId = started.Id;
                     ownedSidecarExecutable = executable;
-                    SidecarState.Write(GetLocalRuntimeRoot(), new SidecarState(started.Id, endpoint, executable));
+                    DateTimeOffset? startedAt = null;
+                    try { startedAt = started.StartTime.ToUniversalTime(); } catch { }
+                    SidecarState.Write(GetLocalRuntimeRoot(), new SidecarState(started.Id, endpoint, executable, startedAt));
                 }
             }
 
@@ -259,20 +273,52 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
         catch { return false; }
     }
 
-    // Stops a helper recorded by an earlier session, only when that process id still is a MystTiq helper at the same path.
-    private static void StopHelperProcess(int processId, string expectedExecutable)
+    // v0.9.10.0: whether the recorded process is still running and still is that helper: the same executable and, when the
+    // record has it, the same start time (a process id can be reused by an unrelated process).
+    private static bool IsRecordedHelper(SidecarState state)
     {
         try
         {
-            using var process = Process.GetProcessById(processId);
+            using var process = Process.GetProcessById(state.ProcessId);
+            if (process.HasExited) return false;
             string? actualPath = null;
             try { actualPath = process.MainModule?.FileName; } catch { }
-            if (string.IsNullOrWhiteSpace(actualPath) || !Path.GetFullPath(actualPath).Equals(Path.GetFullPath(expectedExecutable), StringComparison.OrdinalIgnoreCase))
-                return;
-            process.Kill(entireProcessTree: false);
-            process.WaitForExit(5000);
+            if (string.IsNullOrWhiteSpace(actualPath) || !Path.GetFullPath(actualPath).Equals(Path.GetFullPath(state.Executable), StringComparison.OrdinalIgnoreCase))
+                return false;
+            return state.StartedUtc is not { } recorded || (process.StartTime.ToUniversalTime() - recorded.UtcDateTime).Duration() < TimeSpan.FromSeconds(5);
         }
-        catch { }
+        catch { return false; }
+    }
+
+    // Asks a helper that did not answer at once again, allowing each answer SlowProbeTimeout, until it answers or the time
+    // is up. A busy helper can take longer than the quick probe allows for every request, not just the first.
+    private static readonly TimeSpan SlowProbeTimeout = TimeSpan.FromSeconds(4);
+
+    private static async Task<ProbeResult> WaitForAnswerAsync(string endpoint, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        var deadline = DateTimeOffset.UtcNow + timeout;
+        ProbeResult probe;
+        do
+        {
+            await Task.Delay(250, cancellationToken);
+            probe = await ProbeAsync(endpoint, cancellationToken, SlowProbeTimeout);
+        } while (!probe.Reachable && DateTimeOffset.UtcNow < deadline);
+        return probe;
+    }
+
+    // Stops a helper recorded by an earlier session, only when that process still is that helper. True when it is no longer
+    // running (stopped, or already gone); false when it is still running after the stop.
+    private static bool StopHelperProcess(SidecarState state)
+    {
+        if (!IsRecordedHelper(state)) return true;
+        try
+        {
+            using var process = Process.GetProcessById(state.ProcessId);
+            process.Kill(entireProcessTree: false);
+            return process.WaitForExit(10000);
+        }
+        catch (ArgumentException) { return true; }
+        catch { return !IsRecordedHelper(state); }
     }
 
     private static void AddOverride(ProcessStartInfo info, string option, string? value)
@@ -282,8 +328,9 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
         info.ArgumentList.Add(value);
     }
 
-    private static string GetLocalRuntimeRoot()
+    private string GetLocalRuntimeRoot()
     {
+        if (!string.IsNullOrWhiteSpace(runtimeRootOverride)) return runtimeRootOverride;
         if (OperatingSystem.IsWindows())
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MystTiq", "runtime");
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -322,7 +369,7 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
 
     private sealed record ProbeResult(bool Reachable, bool Compatible, string? Version, bool AuthenticationEnabled, bool TlsEnabled, string Detail, IReadOnlyList<string>? ServerProfileIds = null);
 
-    private static async Task<ProbeResult> ProbeAsync(string endpoint, CancellationToken cancellationToken)
+    private static async Task<ProbeResult> ProbeAsync(string endpoint, CancellationToken cancellationToken, TimeSpan? timeout = null)
     {
         try
         {
@@ -330,7 +377,7 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
             {
                 ServerCertificateCustomValidationCallback = static (_, _, _, _) => true
             };
-            using var client = new HttpClient(handler) { Timeout = ProbeTimeout };
+            using var client = new HttpClient(handler) { Timeout = timeout ?? ProbeTimeout };
             using var response = await client.GetAsync(endpoint.TrimEnd('/') + "/healthz", cancellationToken);
             if (response.StatusCode != HttpStatusCode.OK)
                 return new(false, false, null, false, false, $"Health probe returned HTTP {(int)response.StatusCode}.");

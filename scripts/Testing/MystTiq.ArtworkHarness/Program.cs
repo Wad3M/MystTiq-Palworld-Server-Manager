@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -15,6 +15,33 @@ using NavigationPage = MystTiq.Desktop.Models.NavigationPage;
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 using MystTiq.Desktop.ViewModels;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+
+// v0.9.10.0: this harness started again as a stand-in helper for the slow-helper check below: it answers /healthz like a
+// MystTiq helper of this version, after the given delay.
+if (args is ["--slow-helper", var helperPortText, var helperDelayText, var helperVersion])
+{
+    var helperListener = new TcpListener(IPAddress.Loopback, int.Parse(helperPortText));
+    helperListener.Start();
+    var helperBody = $"{{\"status\":\"ok\",\"component\":\"mysttiq-headless\",\"api\":\"local\",\"apiVersion\":1,\"version\":\"{helperVersion}\",\"authentication\":false,\"tls\":false,\"serverProfileIds\":[\"default\"]}}";
+    while (true)
+    {
+        var helperClient = helperListener.AcceptTcpClient();
+        _ = Task.Run(async () =>
+        {
+            using (helperClient)
+            {
+                var stream = helperClient.GetStream();
+                if (await stream.ReadAsync(new byte[4096]) == 0) return;
+                await Task.Delay(int.Parse(helperDelayText));
+                await stream.WriteAsync(Encoding.UTF8.GetBytes($"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {Encoding.UTF8.GetByteCount(helperBody)}\r\nConnection: close\r\n\r\n{helperBody}"));
+            }
+        });
+    }
+}
 
 // No live API, server discovery, bootstrap or Nexus client is used by this visual harness.
 var output = Path.GetFullPath(args.FirstOrDefault() ?? "artwork-render-checks");
@@ -326,6 +353,17 @@ Check(Localizer.T("Up 3 d 4 h") == jaText[MsgKey("Up {0} d {1} h")].Replace("{0}
 Check(Localizer.T("Version 1.2. Build 5") == "Version 1.2. Build 5", "Sentences that are no known message stay as they are");
 Check(Localizer.T("Frostbound Frontier") == "Frostbound Frontier" && Localizer.T("") == "" && Localizer.T(null) == "",
     "Text that is no known message (a server name) is shown unchanged");
+// v0.9.10.0 (external review): a name that is also a known message ("Ready", "None", "Backup") stays a name inside a
+// message: quoted, or right after "server", "player", "guild" and the like. Other values are still translated.
+foreach (var name in new[] { "Ready", "None", "Backup" })
+{
+    Check(Localizer.T($"Restarted. '{name}' is now online.") == jaText[MsgKey("Restarted. '{0}' is now online.")].Replace("{0}", name) &&
+          Localizer.T($"This computer's MystTiq helper has no server '{name}'.") == jaText[MsgKey("This computer's MystTiq helper has no server '{0}'.")].Replace("{0}", name) &&
+          Localizer.T($"Player {name} failed") == jaText[MsgKey("Player {0} failed")].Replace("{0}", name),
+        $"A server or player named \"{name}\" keeps its name inside a translated message");
+}
+Check(Localizer.T("Ready") != "Ready" && Localizer.T("Status: Stopped / Not ready") != "Status: Stopped / Not ready",
+    "A status value on its own, or in a status slot, is still translated");
 Check(!string.IsNullOrEmpty(vm.ServerState) && !vm.ServerState.Any(c => c >= 0x2E80),
     "The view model itself keeps English while Japanese is shown (logic compares English)");
 // v0.9.3.0: the service's own messages (sent in English over the API) are in the catalog too; commands it reports are not.
@@ -1060,6 +1098,58 @@ foreach (var page in Enum.GetValues<NavigationPage>())
 }
 Check(unreachable.Count == 0, $"on every page every enabled control can be reached with Tab [{string.Join(", ", unreachable.Distinct().Take(8))}]");
 Check(unnamed.Count == 0, $"on every page every reachable control has an accessible name ({namedCount} named) [{string.Join(", ", unnamed.Distinct().Take(8))}]");
+
+// v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
+// Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.
+{
+    var helperRoot = Path.Combine(Path.GetTempPath(), "mysttiq-helper-check-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(helperRoot);
+    var appVersion = typeof(LocalManagementBootstrapper).Assembly.GetName().Version!.ToString(4);
+    var self = Environment.ProcessPath!;
+    int FreePort() { var l = new TcpListener(IPAddress.Loopback, 0); l.Start(); var p = ((IPEndPoint)l.LocalEndpoint).Port; l.Stop(); return p; }
+    Process StartHelper(int port, int delayMs)
+    {
+        var info = new ProcessStartInfo(self) { UseShellExecute = false, CreateNoWindow = true };
+        // Started through the dotnet host (not the apphost), the harness's own assembly is the first argument.
+        if (Path.GetFileNameWithoutExtension(self).Equals("dotnet", StringComparison.OrdinalIgnoreCase)) info.ArgumentList.Add(typeof(MemoryProfiles).Assembly.Location);
+        foreach (var a in new[] { "--slow-helper", port.ToString(), delayMs.ToString(), appVersion }) info.ArgumentList.Add(a);
+        var p = Process.Start(info)!;
+        for (var i = 0; i < 40; i++) { try { using var c = new TcpClient(); c.Connect(IPAddress.Loopback, port); break; } catch { Thread.Sleep(250); } }
+        return p;
+    }
+    LocalInstallationSnapshot Snapshot(int port) => new(DateTimeOffset.UtcNow, "test", LocalMystTiqServiceState.NotInstalled, false, null, LocalPalServerInstallationState.NotFound,
+        null, null, false, false, null, null, false, null, null, null, null, $"http://127.0.0.1:{port}", false, false, "test", "test");
+    // Off the UI thread: the bootstrapper's awaits would otherwise wait for the dispatcher this thread is blocking.
+    LocalManagementBootstrapResult Ensure() { var port = FreePort(); return Task.Run(() => new LocalManagementBootstrapper(helperRoot).EnsureAvailableAsync(Snapshot(port))).GetAwaiter().GetResult(); }
+    var slowPort = FreePort();
+    using var slow = StartHelper(slowPort, 2000);
+    var stuckPort = FreePort();
+    using var stuck = StartHelper(stuckPort, 600000);
+    try
+    {
+        SidecarState.Write(helperRoot, new SidecarState(slow.Id, $"http://127.0.0.1:{slowPort}", self, slow.StartTime.ToUniversalTime()));
+        var reuse = Ensure();
+        Check(reuse.Available && !reuse.Started && reuse.Endpoint == $"http://127.0.0.1:{slowPort}" && !slow.HasExited,
+            $"A recorded helper that answers only after 2 s (the probe waits 750 ms) is waited for and reused, not replaced [{reuse.Detail}]");
+
+        SidecarState.Write(helperRoot, new SidecarState(slow.Id, $"http://127.0.0.1:{slowPort}", self, slow.StartTime.ToUniversalTime().AddMinutes(-10)));
+        var reused = Ensure();
+        Check(!slow.HasExited && reused.Endpoint != $"http://127.0.0.1:{slowPort}",
+            "A record whose process started at another time (a process id reused by another program) is neither reused nor stopped");
+        if (SidecarState.Read(helperRoot) is { } startedByCheck && startedByCheck.ProcessId != slow.Id) { try { Process.GetProcessById(startedByCheck.ProcessId).Kill(); } catch { } }
+
+        SidecarState.Write(helperRoot, new SidecarState(stuck.Id, $"http://127.0.0.1:{stuckPort}", self, stuck.StartTime.ToUniversalTime()));
+        var replaced = Ensure();
+        Check(stuck.HasExited && replaced.Endpoint != $"http://127.0.0.1:{stuckPort}",
+            $"A recorded helper that never answers is stopped, and has exited before a replacement is tried [{replaced.Detail}]");
+        if (SidecarState.Read(helperRoot) is { } replacement) { try { Process.GetProcessById(replacement.ProcessId).Kill(); } catch { } }
+    }
+    finally
+    {
+        foreach (var p in new[] { slow, stuck }) { try { if (!p.HasExited) p.Kill(); } catch { } }
+        try { Directory.Delete(helperRoot, true); } catch { }
+    }
+}
 
 Console.WriteLine($"PASS {checks} checks. Offline headless rendering only; no live server acceptance.");
 

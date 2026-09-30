@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using System.Text.Json;
 
 namespace MystTiq.Desktop.Services;
@@ -7,8 +7,9 @@ namespace MystTiq.Desktop.Services;
 /// v0.9.9.0: the local helper (headless sidecar) this desktop started: its process id, the loopback endpoint it was given
 /// and its executable. Kept in the desktop's local runtime folder so the next call, and the next app start, reuse that
 /// helper instead of starting another one beside it.
+/// v0.9.10.0: and when it started, so a reused process id is not taken for it.
 /// </summary>
-public sealed record SidecarState(int ProcessId, string Endpoint, string Executable)
+public sealed record SidecarState(int ProcessId, string Endpoint, string Executable, DateTimeOffset? StartedUtc = null)
 {
     private const string FileName = "desktop-sidecar.json";
 

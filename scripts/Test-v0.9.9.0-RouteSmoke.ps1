@@ -1,4 +1,4 @@
-# MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+# MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -84,7 +84,7 @@ try {
             '[18:36:09][info] Running Palworld dedicated server on :8311',
             "[18:39:21][info] steam_7656119 ('127.0.0.1') connected to the server.")
         $second = Invoke-RestMethod "$base/crash-analyzer/analyze" -Method Post -TimeoutSec 60
-        $hit = @($second.findings | Where-Object { $_.title -eq 'Server stopped right after a player joined' }) | Select-Object -First 1
+        $hit = @($second.findings | Where-Object { $_.title -in @('Server stopped right after a player joined', 'Server session ended on a player joining') }) | Select-Object -First 1
         if (-not $hit) { throw "not reported: $(($second.findings | ForEach-Object title) -join ', ')" }
         if ($hit.severity -ne 'Critical' -or -not $hit.isNew) { throw "severity $($hit.severity), new $($hit.isNew)" }
         if (($hit.evidence -join ' ') -notmatch 'steam_7656119 connected to the server' -or ($hit.evidence -join ' ') -match '127\.0\.0\.1') { throw "evidence: $($hit.evidence -join ' | ')" }

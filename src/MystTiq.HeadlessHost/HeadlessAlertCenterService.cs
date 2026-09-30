@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using System.Text.Json;
 using MystTiq.Core.Services;
 
@@ -228,10 +228,18 @@ public sealed class HeadlessAlertCenterService
                     "UE4SS is on the latest release.", component.CooldownMinutes);
             }
 
+            // v0.9.10.0 (external review): a MOD whose update state is unknown (no Workshop source, Linux, unreadable
+            // timestamps) no longer counts as up to date. The alert resolves only when every MOD it named is checked again
+            // and current, or removed.
             var modInventory = await modManagement.GetInventoryAsync(token);
-            var outdated = modInventory.Mods.Where(m => m.UpdateAvailable).Select(m => m.Name).ToArray();
-            Track("mods-outdated", "Warning", "MOD updates available", outdated.Length > 0,
-                ComponentAlerts.ModsMessage(outdated), "Every installed MOD is up to date.", component.CooldownMinutes);
+            var modStates = modInventory.Mods.Select(m => new ModUpdateState(m.Name, m.UpdateAvailable, m.UpdateChecked)).ToArray();
+            var outdated = modStates.Where(m => m.UpdateAvailable).Select(m => m.Name).ToArray();
+            if (ComponentAlerts.ModsBehind(modStates, modsAlertNames) is { } modsBehind)
+            {
+                Track("mods-outdated", "Warning", "MOD updates available", modsBehind,
+                    ComponentAlerts.ModsMessage(outdated), "Every MOD that had an update now matches Steam's local Workshop copy.", component.CooldownMinutes);
+                modsAlertNames = modsBehind ? [.. outdated] : [];
+            }
         }
         else
         {
@@ -239,8 +247,12 @@ public sealed class HeadlessAlertCenterService
             Unpin(episodes.Close("paldefender-outdated"));
             Unpin(episodes.Close("ue4ss-outdated"));
             Unpin(episodes.Close("mods-outdated"));
+            modsAlertNames = [];
         }
     }
+
+    // The MODs the open "MOD updates available" alert named (in memory; after a restart every MOD must be checked to resolve).
+    private string[] modsAlertNames = [];
 
     // The low-disk percentage the Doctor should use so both agree, or null when the rule is switched off.
     public double? LowDiskCriticalPercent()
@@ -373,8 +385,19 @@ public static class ComponentAlerts
 
     // Names up to five MODs with an update, then counts the rest.
     public static string ModsMessage(IReadOnlyList<string> names) =>
-        $"{names.Count} installed MOD(s) have an update: {string.Join(", ", names.Take(5))}{(names.Count > 5 ? $", and {names.Count - 5} more" : string.Empty)}. Update them from the MOD Library with the server stopped.";
+        $"Installed MODs with an update: {names.Count} ({string.Join(", ", names.Take(5))}{(names.Count > 5 ? $", and {names.Count - 5} more" : string.Empty)}). Update them from the MOD Library with the server stopped.";
+
+    // v0.9.10.0: true when a MOD has an update; false only when every MOD the open alert named (or, with no names known,
+    // every MOD) has been checked and is current, or is no longer installed; null when that cannot be told.
+    public static bool? ModsBehind(IReadOnlyList<ModUpdateState> mods, IReadOnlyCollection<string> alertNames)
+    {
+        if (mods.Any(m => m.UpdateAvailable)) return true;
+        var mustBeChecked = alertNames.Count > 0 ? mods.Where(m => alertNames.Contains(m.Name)) : mods;
+        return mustBeChecked.All(m => m.Checked) ? false : null;
+    }
 }
+
+public sealed record ModUpdateState(string Name, bool UpdateAvailable, bool Checked);
 
 // v0.7.111.0: pure, so the logic harness covers every case.
 public static class AlertMutePolicy

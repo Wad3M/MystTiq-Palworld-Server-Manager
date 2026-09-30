@@ -1,4 +1,4 @@
-// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.10.0: file reviewed for this release (2026-09-30).
 using MystTiq.Core.Automation;
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
@@ -643,12 +643,14 @@ public sealed class HeadlessDiagnosticsService
                 Location: palworldConfiguration.ConfigurationPath,
                 Evidence: same
                     ? $"The server binds UDP {bound}, the port PalWorldSettings.ini advertises."
-                    : $"The server binds UDP {bound} (its -port= launch argument, or 8211 without one), but PalWorldSettings.ini's PublicPort says {advertised}. Players given port {advertised} cannot join.",
+                    : $"The server binds UDP {bound} (its -port= launch argument, or 8211 without one), but PalWorldSettings.ini's PublicPort says {advertised}. Unless your router forwards outside port {advertised} to {bound}, players given port {advertised} cannot join.",
                 // v0.9.9.0: Fix sets PublicPort to the port the server binds (an ini change, no MystTiq restart). Moving the
                 // server to the advertised port instead means changing -port=, which only applies when MystTiq restarts.
+                // v0.9.10.0 (external review): a router that maps another outside port to the server's port makes the
+                // difference intentional, so the finding says so and Fix is offered, never applied on its own.
                 Recommendation: same
                     ? "Nothing to do."
-                    : $"Fix sets PublicPort to {bound}, the port players reach. To use {advertised} instead, set the launch argument -port={advertised} in Settings and restart MystTiq.",
+                    : $"If your router forwards outside port {advertised} to {bound} on purpose, leave this as it is. Otherwise Fix sets PublicPort to {bound}, the port the server binds; or, to use {advertised}, set the launch argument -port={advertised} in Settings and restart MystTiq.",
                 ActionKind: same ? null : "align-public-port",
                 ActionSupported: !same,
                 UnavailableReason: null,

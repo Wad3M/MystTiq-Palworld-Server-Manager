@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.9.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.10.0: file reviewed for this release (2026-09-30). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -485,9 +485,9 @@
 
           <Border Classes="card accentHome" Padding="8">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="10">
-              <StackPanel><TextBlock Text="{services:Tr dashboard.serverName}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText DashboardServerNameText}" FontSize="13" FontWeight="Bold"/></StackPanel>
+              <StackPanel><TextBlock Text="{services:Tr dashboard.serverName}" Classes="muted" FontSize="9"/><TextBlock Text="{Binding DashboardServerName}" FontSize="13" FontWeight="Bold"/></StackPanel>
               <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderSoftBrush}" Margin="4,0"/>
-              <StackPanel Grid.Column="2"><TextBlock Text="{services:Tr dashboard.description}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText DashboardServerDescriptionText}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{services:TrText DashboardServerDescriptionText}"/></StackPanel>
+              <StackPanel Grid.Column="2"><TextBlock Text="{services:Tr dashboard.description}" Classes="muted" FontSize="9"/><TextBlock Text="{Binding DashboardServerDescriptionVerbatim}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding DashboardServerDescriptionVerbatim}"/></StackPanel>
               <Border Grid.Column="3" Width="1" Background="{DynamicResource BorderSoftBrush}" Margin="4,0"/>
               <StackPanel Grid.Column="4"><TextBlock Text="{services:Tr dashboard.currentOperation}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText LifecycleStatusText}" FontSize="10" Foreground="{DynamicResource BlueBrush}" MaxWidth="300" TextTrimming="CharacterEllipsis"/></StackPanel>
             </Grid>
