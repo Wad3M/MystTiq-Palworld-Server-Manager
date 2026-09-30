@@ -1,4 +1,4 @@
-# MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+# MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -157,9 +157,18 @@ try {
         if ($v.Status -ne 200 -or $v.Body.success -eq $false) { throw "verify failed: $($v.Status) $($v.Body | ConvertTo-Json -Compress -Depth 3)" }
     }
     Test-RouteSmoke 'a world changed after a backup is restored byte for byte' {
-        $null = Invoke-Api POST '/server/stop' @{}
-        if (-not (Wait-Until { @(Fake).Count -eq 0 } 20)) { throw 'the stand-in server did not stop' }
-        $name = @((Invoke-Api GET '/backups' $null).Body.items)[0].fileName
+        # The service may still be starting the stand-in when the stop arrives (seen once in the v0.9.9.0 gate: the stop
+        # found nothing to stop, the stand-in came up a moment later and the restore was refused). The stop is repeated
+        # until the server stays down.
+        $down = $false
+        for ($try = 0; $try -lt 4 -and -not $down; $try++) {
+            $null = Invoke-Api POST '/server/stop' @{}
+            if (-not (Wait-Until { @(Fake).Count -eq 0 } 20)) { throw 'the stand-in server did not stop' }
+            Start-Sleep -Seconds 3
+            $down = @(Fake).Count -eq 0
+        }
+        if (-not $down) { throw 'the stand-in server kept coming back after a stop' }
+        $name =@((Invoke-Api GET '/backups' $null).Body.items)[0].fileName
         [IO.File]::WriteAllBytes($levelSav, [byte[]](1..50))
         $r = Invoke-Api POST "/backups/$name/restore" @{ confirmed = $true }
         if ($r.Status -ne 200 -or -not $r.Body.success) { throw "restore failed: $($r.Status) $($r.Body.message)" }

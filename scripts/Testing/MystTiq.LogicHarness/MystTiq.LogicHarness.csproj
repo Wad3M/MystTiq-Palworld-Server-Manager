@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.8.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.9.0: file reviewed for this release (2026-09-29). -->
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- v0.7.12.0: a standalone, throwaway C# harness for business logic that genuinely needs a real
@@ -37,6 +37,8 @@
     <!-- v0.9.6.0: the server search's ranges and a new server's launch arguments, same reasoning. -->
     <Compile Include="..\..\..\src\MystTiq.Desktop\Services\MystTiqServiceDiscoveryService.cs" Link="Desktop\MystTiqServiceDiscoveryService.cs" />
     <Compile Include="..\..\..\src\MystTiq.Desktop\Services\LaunchArgumentsText.cs" Link="Desktop\LaunchArgumentsText.cs" />
+    <!-- v0.9.9.0: the desktop's record of the helper it started. -->
+    <Compile Include="..\..\..\src\MystTiq.Desktop\Services\SidecarState.cs" Link="Desktop\SidecarState.cs" />
   </ItemGroup>
 
   <ItemGroup>

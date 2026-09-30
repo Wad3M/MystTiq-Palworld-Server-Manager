@@ -1,4 +1,4 @@
-// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
@@ -78,10 +78,49 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                 staleVersion = existing.Version;
             }
 
+            // v0.9.9.0: the helper this desktop already started (in this session or an earlier one) is reused. Before, every
+            // call that found the configured port held by another version started one more helper on a new port, and
+            // every app start did too: several helpers then supervised the same servers (seen on the Linux VM, whose
+            // port 8213 is held by an older installed service).
+            var owned = SidecarState.Read(GetLocalRuntimeRoot());
+            if (owned is not null)
+            {
+                var ownedProbe = await ProbeAsync(owned.Endpoint, cancellationToken);
+                if (ownedProbe.Compatible && !ownedProbe.AuthenticationEnabled && !ownedProbe.TlsEnabled && VersionMatches(ownedProbe.Version) && HasExpectedProfile(ownedProbe, expectedServerProfileId))
+                {
+                    ownedSidecarProcessId = owned.ProcessId;
+                    ownedSidecarExecutable = owned.Executable;
+                    return new(true, false, owned.Endpoint, $"Reusing the MystTiq helper this desktop started earlier ({ownedProbe.Version ?? "unknown version"}).", ownedProbe.Version,
+                        staleDetected, staleEndpoint, staleVersion);
+                }
+
+                // It answers but cannot be used (an older version after an upgrade, or it does not know a newly added
+                // server yet): it is this desktop's own, so it is stopped and replaced rather than left beside a new one.
+                // Game servers it started keep running and are adopted by the new helper.
+                if (ownedProbe.Reachable && ownedProbe.Compatible)
+                {
+                    // A helper of this version that was started moments ago and still lacks the server will lack it after
+                    // another restart too (the tab names a server this configuration does not have). Restarting it again
+                    // on every attempt would keep cutting off the other tabs that use it.
+                    if (VersionMatches(ownedProbe.Version) && !HasExpectedProfile(ownedProbe, expectedServerProfileId) && StartedWithin(owned.ProcessId, TimeSpan.FromSeconds(30)))
+                        return new(false, false, owned.Endpoint, $"This computer's MystTiq helper has no server '{expectedServerProfileId}'.", ownedProbe.Version,
+                            staleDetected, staleEndpoint, staleVersion);
+                    StopHelperProcess(owned.ProcessId, owned.Executable);
+                    // The port it held may be the configured one, free again now.
+                    existing = await ProbeAsync(requestedEndpoint, cancellationToken);
+                }
+                SidecarState.Delete(GetLocalRuntimeRoot());
+            }
+
             // If the configured loopback port is occupied by an older/incompatible/mismatched-version
             // process, do not reuse it merely because /healthz answers. Launch this packaged sidecar
             // on a private free loopback port and return that exact endpoint to the GUI instead.
-            endpoint = existing.Reachable ? FindAvailableLoopbackEndpoint() : NormalizePrivateLoopbackEndpoint(requestedEndpoint);
+            // A port that accepts connections is occupied even when the health probe got no answer from it: a service
+            // with TLS on does not answer this plain-HTTP probe (the Linux VM's installed service). The helper could not
+            // bind that port, so it would exit at once and leave a record naming a dead process.
+            endpoint = existing.Reachable || PortAcceptsConnections(requestedEndpoint)
+                ? FindAvailableLoopbackEndpoint()
+                : NormalizePrivateLoopbackEndpoint(requestedEndpoint);
 
             var executable = FindPackagedHeadlessExecutable();
             if (executable is null)
@@ -128,6 +167,7 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                 {
                     ownedSidecarProcessId = started.Id;
                     ownedSidecarExecutable = executable;
+                    SidecarState.Write(GetLocalRuntimeRoot(), new SidecarState(started.Id, endpoint, executable));
                 }
             }
 
@@ -146,6 +186,13 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                 await Task.Delay(250, cancellationToken);
             }
 
+            // A helper that exited (it could not bind its port, or failed on its configuration) is not recorded as owned.
+            if (ownedSidecarProcessId is { } failedId && !ProcessIsRunning(failedId))
+            {
+                ownedSidecarProcessId = null;
+                ownedSidecarExecutable = null;
+                SidecarState.Delete(GetLocalRuntimeRoot());
+            }
             return new(false, true, endpoint, "The packaged headless process was started, but its health endpoint did not become reachable before timeout.",
                 null, staleDetected, staleEndpoint, staleVersion);
         }
@@ -174,10 +221,14 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                 !Path.GetFullPath(actualPath).Equals(Path.GetFullPath(expectedExecutable), StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            process.Kill(entireProcessTree: true);
+            // v0.9.9.0: the helper only, not its process tree. A game server the helper started is its child, so the tree
+            // kill took running servers down with it (the new-server wizard restarts the helper to bring a new profile
+            // online) and crash recovery then restarted them. A server left running is adopted by the next helper.
+            process.Kill(entireProcessTree: false);
             await process.WaitForExitAsync(cancellationToken);
             ownedSidecarProcessId = null;
             ownedSidecarExecutable = null;
+            SidecarState.Delete(GetLocalRuntimeRoot());
             return true;
         }
         catch (ArgumentException)
@@ -196,6 +247,32 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
     {
         await StopOwnedSidecarAsync(cancellationToken);
         return await EnsureAvailableAsync(snapshot, expectedServerProfileId, cancellationToken);
+    }
+
+    private static bool StartedWithin(int processId, TimeSpan window)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            return DateTime.Now - process.StartTime < window;
+        }
+        catch { return false; }
+    }
+
+    // Stops a helper recorded by an earlier session, only when that process id still is a MystTiq helper at the same path.
+    private static void StopHelperProcess(int processId, string expectedExecutable)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            string? actualPath = null;
+            try { actualPath = process.MainModule?.FileName; } catch { }
+            if (string.IsNullOrWhiteSpace(actualPath) || !Path.GetFullPath(actualPath).Equals(Path.GetFullPath(expectedExecutable), StringComparison.OrdinalIgnoreCase))
+                return;
+            process.Kill(entireProcessTree: false);
+            process.WaitForExit(5000);
+        }
+        catch { }
     }
 
     private static void AddOverride(ProcessStartInfo info, string option, string? value)
@@ -288,6 +365,27 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
         if (Uri.TryCreate(requestedEndpoint, UriKind.Absolute, out var requested) && requested.Port is > 0 and <= 65535)
             return $"http://127.0.0.1:{requested.Port}";
         return "http://127.0.0.1:8213";
+    }
+
+    private static bool ProcessIsRunning(int processId)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            return !process.HasExited;
+        }
+        catch { return false; }
+    }
+
+    private static bool PortAcceptsConnections(string endpoint)
+    {
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) || uri.Port is <= 0 or > 65535) return false;
+        try
+        {
+            using var client = new TcpClient();
+            return client.ConnectAsync(IPAddress.Loopback, uri.Port).Wait(TimeSpan.FromMilliseconds(750)) && client.Connected;
+        }
+        catch { return false; }
     }
 
     private static string FindAvailableLoopbackEndpoint()

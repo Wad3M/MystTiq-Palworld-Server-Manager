@@ -1,9 +1,9 @@
-<!-- MystTiq v0.9.8.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.9.0: file reviewed for this release (2026-09-29). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-29. **Current version: v0.9.8.0. Accepted baseline: v0.8.25.0. Next: v0.9.x acceptance.**
+Updated 2026-09-29. **Current version: v0.9.9.0. Accepted baseline: v0.8.25.0. Next: v0.9.x acceptance.**
 
-This is the active plan. Version assignments after v0.9.8.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
+This is the active plan. Version assignments after v0.9.9.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
 ## Foundation delivered through v0.8.26.0
 
@@ -44,7 +44,7 @@ This is the active plan. Version assignments after v0.9.8.0 are proposed milesto
 - The MystTiq service's own messages (Doctor findings, operation results, crash explanations, network and router checks, recovery steps, validation errors; 1,339 texts), which arrive in English from the server, are translated when shown like the Desktop's own. Commands sent to the game, log patterns, protocol text and the names Windows shows stay English on purpose.
 - `scripts/Export-MystTiqTranslationReview.ps1` writes a review sheet per language and [`docs/i18n/TRANSLATION_REVIEW.md`](../i18n/TRANSLATION_REVIEW.md) is the reviewers' checklist and coverage table.
 - Recorded offline checks cover the round-trip of all 2,492 message templates in every language; a live check showed service messages in Japanese. Catalog coverage does not establish translation quality, and text the service passes on from Windows, Linux or the game stays as it arrives.
-- Still open, and needing people: every language is **awaiting native review** (meaning, terminology, plurals, length, accessibility names), and dates and numbers are still one fixed format for every language.
+- Still open, and needing people: every language is **awaiting native review** (meaning, terminology, plurals, length, accessibility names). Numbers, dates and times follow the chosen language since v0.9.9.0.
 
 **Exit evidence for the review:** each language's sheet returned with corrections applied, reviewed language samples, and a look at every page in each advertised language.
 
@@ -64,7 +64,7 @@ This is the active plan. Version assignments after v0.9.8.0 are proposed milesto
 - **A refused manifest no longer stops an update.** When Steam refuses the installed build's manifest ("Access Denied"), MystTiq moves the app manifest aside and checks every file against the new build instead, keeping the old manifest (or putting it back if that fails too), and a failure names SteamCMD's reason instead of "exit code 8".
 - **Upgrade and recovery tested.** `scripts/Test-v0.9.5.0-Upgrade.ps1`: the accepted baseline (v0.8.25.0) takes settings and data, this version keeps every value, the baseline's backup verifies and a restore is byte for byte, rolling back to v0.8.25.0 still reads everything, and a fresh setup starts. `scripts/Test-v0.9.5.0-FleetRecovery.ps1`: two servers in one service; restarting or killing one never starts the other.
 - Recorded checks: the logic harness pins the unreadable-process rule, the expected port, SteamCMD's app info and failures, and PalDefender's warning; live on this machine, stopping and starting the real clone server under the new build started no other server and logged no crash, the Update Center reported the main server one build behind (25080279 against 25247047) and the clone current, and the Doctor warned on the main server. The fleet smoke also passes on the old build (the stand-in server's path is readable at once), so the logic harness and the live run are the evidence for the fix. Not yet recorded live: an update from MystTiq that meets a refused manifest (the clone was updated by hand before this version).
-- Still open: linking a server exit to the player join just before it; UE4SS's installed release is still compared by hand. (Accounts in the upgrade test and an alert when a component falls behind: delivered in v0.9.8.0.)
+- Delivered later: accounts in the upgrade test and an alert when a component falls behind (v0.9.8.0); linking a server exit to the player join before it, and UE4SS compared automatically (v0.9.9.0).
 
 **Exit evidence met:** a scripted upgrade from v0.8.25.0 and a fresh setup with every value compared, and a server one build behind reported as out of date. **Still to record:** an update from MystTiq through a refused manifest (a scripted upgrade with accounts: v0.9.8.0).
 
@@ -79,7 +79,7 @@ Requested 2026-09-28, after a LAN join to the clone server needed a firewall rul
 - **Fast server search.** A TCP connect sweep, 256 addresses at a time with a 600 ms timeout, then the `/healthz` probe only where the port answers: 255 addresses in about 0.6 s in the harness. It shows the ranges it searches and its progress, lists each service as it answers, and has Cancel; the window stays usable. Each subnet is searched once; virtual adapters (WSL, Hyper-V, Docker, VMware, VirtualBox, libvirt) without a default gateway are listed as not searched unless ticked (a Hyper-V external switch carrying the real LAN, as on this machine, is searched); typed ranges (single addresses or `/24` to `/32`) are added.
 - **A stop is never taken for a crash.** Found by this version's gate (the v0.9.5.0 fleet smoke, about one run in three): the process inspector dropped a terminating process whose details could not be read, so a stop recorded "Stopped" while the process was still exiting, the next read listed it as "Running", and the supervisor then restarted it as crashed. A process is now listed until Windows reports it has exited and never after, status reads and a stop's state writes are serialised, and a read during a stop keeps the stop request (Windows and Linux); the lifecycle state file retries a replace that something holding it open refused.
 - Recorded checks: the logic harness pins rule matching (with the rules found on this machine), the tagged allow script and its cleanup, the rule state, a real read of this computer's firewall, ranges, virtual adapters and typed ranges, a timed search with a stand-in service, Cancel, and a second server's arguments. `scripts/Test-v0.9.6.0-FirewallRoute.ps1`: two servers in one service, one advertising a port it does not bind; the route and the Doctor report the bound port, and only GET routes are called. The ArtworkHarness checks the 44 new texts in all 12 languages.
-- Still open: adding a rule live (it changes this computer's security settings, so the owner clicks it and confirms Windows' prompt), then changing the port and allowing again, and a join from another PC through the rule; changing a mismatched `-port=` from the Doctor (launch arguments apply when MystTiq restarts).
+- Still open: adding a rule live (it changes this computer's security settings, so the owner clicks it and confirms Windows' prompt), then changing the port and allowing again, and a join from another PC through the rule. (The Doctor's fix for a mismatched port: v0.9.9.0.)
 
 **Exit evidence met:** the firewall state for the port each server binds, read in well under a second; a search of 255 addresses in under a second that lists its ranges, its progress and the service it found. **Still to record:** a rule added and then updated after a port change, with elevation, and a join from another PC through it.
 
@@ -100,7 +100,17 @@ Requested 2026-09-28, after a LAN join to the clone server needed a firewall rul
 - **Wider server search.** Each adapter's own subnet, capped at /22, instead of always the /24; typed ranges accept /22 (closes v0.9.6.0's open item).
 - **Linux install with a desktop shortcut.** `scripts/Install-MystTiqDesktopLinux.ps1` (`.\Build.ps1 DeployDesktopLinux`) installs the Linux download in the user's home over SSH, with a trusted launcher on the desktop and in the applications menu; used on the test VM on 2026-09-29.
 - **Accounts across an upgrade.** `scripts/Test-v0.9.8.0-UpgradeAccounts.ps1`: accounts, roles, a changed password and a disabled account from v0.8.25.0 to this version and back (closes v0.9.5.0's open item).
-- Still open: linking a server exit to the player join just before it; UE4SS's installed release is still compared by hand.
+
+## v0.9.9.0 — one helper, crash causes and local formats (delivered 2026-09-29)
+
+- **The desktop's local helper.** Found on the Linux VM (its port 8213 is held by an older installed service): the desktop started one more helper on every call and app start, all supervising the same servers, and stopping a helper killed its whole process tree, so the new-server wizard's restart ended running game servers. The helper the desktop started is now recorded and reused, and only the helper process is stopped; servers keep running and are adopted.
+- **A server that stops when a player joins.** The `exit-after-join` crash signature, from the live case of 2026-09-28 (PalDefender v1.8.3 on game v1.0.5): a PalDefender session log that ends on a player connecting, the session over within 5 minutes (closes v0.9.5.0's open item).
+- **UE4SS compared automatically.** Without a recorded install, the installed `UE4SS.dll` is compared by content with the three newest releases' downloads and names the release it is identical to (closes v0.9.5.0's open item). Live on the clone: it matches none of them, so it still reads "check manually", with the reason.
+- **Alerts for UE4SS and MOD updates** (requested 2026-09-29). The out-of-date alert also covers a newer UE4SS release (from a cached check) and installed MODs with an update (named), alongside the game server and PalDefender.
+- **The Doctor fixes a port mismatch.** Fix sets PublicPort to the port the server binds (closes v0.9.6.0's open item).
+- **Numbers, dates and times per language.** Formats follow the language chosen in MystTiq, not the operating system's; text comparison and casing are unchanged (closes the v0.9.0.0 open item on formats; the native review of the texts themselves stays open).
+- **Distribution.** `scripts/Test-v0.9.9.0-Distribution.ps1` checks the checksums, what each ZIP holds, the version on the binaries, and that the packaged service starts from a clean folder.
+- Still open: a helper left running by an older version is reported, not stopped (MystTiq only stops helpers it started); UE4SS builds older than the three newest releases still read "check manually".
 
 ## v0.9.x — integration and release stabilization
 
@@ -115,11 +125,11 @@ These are remaining checks or targeted fixes, not a request to rebuild shipped f
 | Linux service priority | Install the new unit in a test environment and verify eco-to-normal priority recovery; unit syntax/headless checks alone are insufficient |
 | Permissions and accessibility | Delivered in v0.9.4.0 (above); a real screen-reader pass remains |
 | Themes | Verify supported modes throughout the app; with a Windows contrast theme on, run `scripts/Test-v0.8.26.0-ContrastTheme.ps1`; document Linux native contrast limitations |
-| Upgrade and recovery | Delivered in v0.9.5.0 (above); accounts in the upgrade test and an update through a refused manifest remain |
-| Distribution | Build the current desktop with its matching headless sidecar, include the Windows native helper, verify clean-machine launch, source parity, version identity and SHA-256 checksums |
+| Upgrade and recovery | Delivered in v0.9.5.0 and v0.9.8.0 (accounts) (above); an update from MystTiq through a refused manifest remains |
+| Distribution | `scripts/Test-v0.9.9.0-Distribution.ps1` checks the ZIPs' contents (desktop, headless service, Windows native helper), version identity, SHA-256 checksums and a start from a clean folder; the Linux download was installed and started on the test VM (v0.9.8.0). Still open: a launch on a machine that never had MystTiq or .NET, and source parity against the tag |
 | Documentation | Keep README, site, release notes and supported-platform claims aligned with observed results; publish known limitations |
 | Crash analysis | Add signatures only from real anonymized reports; do not invent coverage for unseen crashes |
-| Avalonia 12 migration | Delivered in v0.9.7.0 (above); the Linux desktop session on Avalonia 12 remains |
+| Avalonia 12 migration | Delivered in v0.9.7.0 (above); the Linux desktop session passed on Avalonia 12 in the v0.9.8.0 gate |
 
 Use isolated test roots and disposable server data. Live verification needs the relevant test environment, account/channel or online player; missing evidence must remain explicitly open.
 
@@ -142,4 +152,4 @@ Per-accent artwork, a separate night HOST illustration, OS-level traffic shaping
 
 ## Current publication work
 
-Publish v0.9.2.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.
+Publish v0.9.9.0 on GitHub with current source, the Windows package, release notes and checksums, following [the publishing guide](../release/README.md). A Linux package can be built locally (`Package-GitHubRelease.ps1 -Runtime linux-x64`) but stays unpublished until Linux desktop acceptance is complete. Keep public-release coordination (including any desired Nexus contact or asset permissions) separate from implementation status. No messages are sent on the user's behalf by this roadmap.

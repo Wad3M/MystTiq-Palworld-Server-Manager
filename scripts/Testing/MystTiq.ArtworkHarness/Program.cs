@@ -1,4 +1,4 @@
-// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -273,6 +273,24 @@ Check(Localizer.Instance.LanguageCode == "ja" && vm.SelectedUiLanguage.Code == "
 titlePicker.SelectedItem = Localizer.Languages[0];
 Dispatcher.UIThread.RunJobs();
 Check(Localizer.Instance.LanguageCode == "en", "Choosing English in the title bar switches back");
+// v0.9.9.0: numbers, dates and times follow the chosen language (they followed the operating system's before); how text is
+// compared and cased does not change with it.
+{
+    var system = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+    var german = DisplayCulture.Build("de", system);
+    Check((1234.5).ToString("N1", german) == "1.234,5" && new DateTime(2026, 9, 29, 14, 5, 0).ToString("t", german) == "14:05",
+        $"German formats: 1.234,5 and 14:05 (got {(1234.5).ToString("N1", german)} and {new DateTime(2026, 9, 29, 14, 5, 0).ToString("t", german)})");
+    var turkish = DisplayCulture.Build("tr", system);
+    Check((0.5).ToString("F1", turkish) == "0,5" && "FILE".ToLower(turkish) == "file" && "file".ToUpper(turkish) == "FILE",
+        "Turkish decimals use a comma, while upper- and lower-casing keep the system's rules (no dotless i in names and ids)");
+    Check(ReferenceEquals(DisplayCulture.Build("en", system), system) && ReferenceEquals(DisplayCulture.Build("xx", system), system), "English, and an unknown code, keep the system's own formats");
+    var before = System.Globalization.CultureInfo.CurrentCulture;
+    Localizer.Instance.SetLanguage("fr");
+    var french = $"{1.5:F1}";
+    Localizer.Instance.SetLanguage("en");
+    Dispatcher.UIThread.RunJobs();
+    Check(french == "1,5" && $"{1.5:F1}" == (1.5).ToString("F1", before), $"choosing Français formats 1.5 as 1,5, and English puts the system's format back (got {french}, then {1.5:F1})");
+}
 
 // v0.9.1.0: status and error messages built in code are shown in the chosen language. The view models keep English;
 // MessageCatalog translates on the way to the screen ({services:TrText} in XAML, Localizer.T in dialogs).

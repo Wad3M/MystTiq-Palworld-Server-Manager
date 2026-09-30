@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.8.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.9.0: file reviewed for this release (2026-09-29). -->
 # v0.8.0.0 Changed Files
 
 Source of the artwork: `MystTiqPalworldServer_v0.7.110.1_Complete_Windows.zip` (user-supplied; branched from v0.7.110.0).

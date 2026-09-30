@@ -1,4 +1,4 @@
-// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 using System.Text.Json;
 using MystTiq.Core.Services;
 
@@ -216,11 +216,29 @@ public sealed class HeadlessAlertCenterService
                     $"PalDefender says it is not updated for this game version: \"{warning}\". Players may be disconnected, or the server may stop, when they join.",
                     "PalDefender no longer reports that it is out of date.", component.CooldownMinutes);
             }
+
+            // v0.9.9.0 (requested 2026-09-29): UE4SS and installed MODs too. UE4SS is the cached result (never a GitHub call
+            // here), and only a definite answer decides: "check manually" or "could not reach GitHub" leaves the episode
+            // as it is.
+            if (ComponentAlerts.Ue4ssBehind(componentUpdates.PeekUe4ssStatus()?.Status) is { } ue4ssBehind)
+            {
+                var ue4ss = componentUpdates.PeekUe4ssStatus()!;
+                Track("ue4ss-outdated", "Warning", "UE4SS update available", ue4ssBehind,
+                    $"UE4SS: installed {ue4ss.InstalledVersion}, latest {ue4ss.LatestVersion}. Update it from the MOD pages with the server stopped; mods may need the matching UE4SS.",
+                    "UE4SS is on the latest release.", component.CooldownMinutes);
+            }
+
+            var modInventory = await modManagement.GetInventoryAsync(token);
+            var outdated = modInventory.Mods.Where(m => m.UpdateAvailable).Select(m => m.Name).ToArray();
+            Track("mods-outdated", "Warning", "MOD updates available", outdated.Length > 0,
+                ComponentAlerts.ModsMessage(outdated), "Every installed MOD is up to date.", component.CooldownMinutes);
         }
         else
         {
             Unpin(episodes.Close("game-server-outdated"));
             Unpin(episodes.Close("paldefender-outdated"));
+            Unpin(episodes.Close("ue4ss-outdated"));
+            Unpin(episodes.Close("mods-outdated"));
         }
     }
 
@@ -343,6 +361,19 @@ public static class ComponentAlerts
 {
     public static bool? GameServerBehind(string? installed, string? steamBuild) =>
         long.TryParse(installed, out var have) && long.TryParse(steamBuild, out var latest) ? have < latest : null;
+
+    // v0.9.9.0: only a definite Update Center answer decides; anything else (not checked yet, check manually, GitHub
+    // unreachable, not installed) is null.
+    public static bool? Ue4ssBehind(string? status) => status switch
+    {
+        "UpdateAvailable" => true,
+        "UpToDate" => false,
+        _ => null
+    };
+
+    // Names up to five MODs with an update, then counts the rest.
+    public static string ModsMessage(IReadOnlyList<string> names) =>
+        $"{names.Count} installed MOD(s) have an update: {string.Join(", ", names.Take(5))}{(names.Count > 5 ? $", and {names.Count - 5} more" : string.Empty)}. Update them from the MOD Library with the server stopped.";
 }
 
 // v0.7.111.0: pure, so the logic harness covers every case.

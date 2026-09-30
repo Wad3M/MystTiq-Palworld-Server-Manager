@@ -1,4 +1,4 @@
-// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -229,7 +229,36 @@ public sealed class HeadlessComponentUpdateService
         catch { return null; }
     }
 
+    // v0.9.9.0: the last UE4SS result, for the Alert Center. It is refreshed in the background at most every six hours (and
+    // whenever the Update Center checks), so an alert evaluation never waits on GitHub. Null until the first check finishes.
+    private static readonly TimeSpan Ue4ssRefresh = TimeSpan.FromHours(6);
+    private ComponentVersionInfo? ue4ssCached;
+    private DateTimeOffset ue4ssCheckedAt = DateTimeOffset.MinValue;
+    private int ue4ssRefreshing;
+
+    public ComponentVersionInfo? PeekUe4ssStatus()
+    {
+        if (DateTimeOffset.UtcNow - ue4ssCheckedAt > Ue4ssRefresh && Interlocked.CompareExchange(ref ue4ssRefreshing, 1, 0) == 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                try { await CheckUe4ssAsync(DateTimeOffset.UtcNow, CancellationToken.None); }
+                catch { ue4ssCheckedAt = DateTimeOffset.UtcNow; }
+                finally { Interlocked.Exchange(ref ue4ssRefreshing, 0); }
+            });
+        }
+        return ue4ssCached;
+    }
+
     private async Task<ComponentVersionInfo> CheckUe4ssAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        var result = await CheckUe4ssCoreAsync(now, ct);
+        ue4ssCached = result;
+        ue4ssCheckedAt = DateTimeOffset.UtcNow;
+        return result;
+    }
+
+    private async Task<ComponentVersionInfo> CheckUe4ssCoreAsync(DateTimeOffset now, CancellationToken ct)
     {
         var inventory = await modManagement.GetInventoryAsync(ct);
         var installed = inventory.Ue4ss.InstalledVersion;
@@ -274,13 +303,91 @@ public sealed class HeadlessComponentUpdateService
                       (release.HtmlUrl is { Length: > 0 } releaseUrl ? $" {releaseUrl}" : string.Empty));
         }
 
+        // v0.9.9.0: without a recorded tag, the installed UE4SS.dll is compared by content with the one inside each of the
+        // newest releases' downloads (hashed once per asset and cached). An identical file names the release exactly; file
+        // dates cannot (they are when the files were extracted here, not when UE4SS was built).
+        var matched = await MatchInstalledUe4ssAsync(releases!.Where(r => r.TagName is { Length: > 0 }).OrderByDescending(r => r.PublishedAt).Take(3).ToArray(), ct);
+        if (matched is not null)
+        {
+            var isLatest = string.Equals(matched.Tag, release.TagName, StringComparison.OrdinalIgnoreCase);
+            return new ComponentVersionInfo("Core Server", "UE4SS Runtime", $"{matched.Tag} ({matched.Asset})", latestDisplay,
+                isLatest ? "UpToDate" : "UpdateAvailable", $"GitHub: {Ue4ssRepo}", now,
+                isLatest
+                    ? $"The installed UE4SS.dll is identical to the one in the latest release ({matched.Tag}, {matched.Asset})."
+                    : $"The installed UE4SS.dll is identical to the one in release {matched.Tag} ({matched.Asset}); the latest release is {release.TagName}." +
+                      (release.HtmlUrl is { Length: > 0 } latestUrl ? $" {latestUrl}" : string.Empty));
+        }
+
         // This fork's tags are commit-hash-style identifiers, not incrementing version numbers, so
-        // without a recorded install tag there is no reliable way to compare "installed" vs "latest"
-        // as an ordered version pair -- this is reported for the user to judge, not auto-compared.
+        // without a recorded install tag or an identical file there is no reliable way to compare
+        // "installed" vs "latest" -- this is reported for the user to judge, not auto-compared.
         return new ComponentVersionInfo("Core Server", "UE4SS Runtime", installed,
             latestDisplay, "CheckManually", $"GitHub: {Ue4ssRepo}", now,
-            "No record of which release was installed through MystTiq exists for this install (installed before this tracking existed, or files were copied in manually) -- installed vs. latest cannot be safely auto-compared. Compare dates/notes manually, or reinstall through MystTiq's own UE4SS install flow to enable automatic comparison going forward." +
+            "No record of which release was installed through MystTiq exists for this install, and its UE4SS.dll is not identical to the one in any of the three newest releases (an older release, a custom build, or the downloads could not be read) -- installed vs. latest cannot be safely auto-compared. Compare dates/notes manually, or reinstall through MystTiq's own UE4SS install flow to enable automatic comparison going forward." +
             (release.HtmlUrl is { Length: > 0 } url ? $" {url}" : string.Empty));
+    }
+
+    private sealed record Ue4ssMatch(string Tag, string Asset);
+
+    // The active UE4SS.dll (the modern ue4ss folder first, then the legacy layout beside the game binary).
+    private string? InstalledUe4ssDll() => new[] { Path.Combine(paths.RuntimeBinaryRoot, "ue4ss", "UE4SS.dll"), Path.Combine(paths.RuntimeBinaryRoot, "UE4SS.dll") }.FirstOrDefault(File.Exists);
+
+    private async Task<Ue4ssMatch?> MatchInstalledUe4ssAsync(IReadOnlyList<GitHubReleaseDto> releases, CancellationToken ct)
+    {
+        try
+        {
+            if (InstalledUe4ssDll() is not { } dll) return null;
+            string installedHash;
+            await using (var stream = File.OpenRead(dll)) installedHash = Convert.ToHexString(await System.Security.Cryptography.SHA256.HashDataAsync(stream, ct));
+
+            var cachePath = Path.Combine(paths.ManagerRuntimeRoot, "ue4ss-release-hashes.json");
+            Dictionary<string, string[]> cache;
+            try { cache = File.Exists(cachePath) ? JsonSerializer.Deserialize<Dictionary<string, string[]>>(File.ReadAllText(cachePath)) ?? [] : []; }
+            catch { cache = []; }
+
+            var known = new List<(string Tag, string Asset, IReadOnlyList<string> Hashes)>();
+            var changed = false;
+            foreach (var release in releases)
+            {
+                foreach (var asset in release.Assets ?? [])
+                {
+                    if (asset.Name is not { Length: > 0 } name || !name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) || asset.DownloadUrl is not { Length: > 0 } url || asset.Size > Ue4ssReleaseFiles.MaximumDownloadBytes) continue;
+                    var key = $"{asset.Id}:{asset.UpdatedAt:O}";
+                    if (!cache.TryGetValue(key, out var hashes))
+                    {
+                        using var response = await Downloads.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+                        if (!response.IsSuccessStatusCode) continue;
+                        await using var body = await response.Content.ReadAsStreamAsync(ct);
+                        using var buffer = new MemoryStream();
+                        await body.CopyToAsync(buffer, ct);
+                        buffer.Position = 0;
+                        hashes = [.. Ue4ssReleaseFiles.DllHashes(buffer)];
+                        cache[key] = hashes;
+                        changed = true;
+                    }
+
+                    known.Add((release.TagName!, name, hashes));
+                }
+            }
+
+            if (changed)
+            {
+                Directory.CreateDirectory(paths.ManagerRuntimeRoot);
+                File.WriteAllText(cachePath, JsonSerializer.Serialize(cache));
+            }
+
+            return Ue4ssReleaseFiles.Match(installedHash, known) is { } hit ? new Ue4ssMatch(hit.Tag, hit.Asset) : null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException) { return null; }
+    }
+
+    // A release download is a few megabytes; the ordinary client's 10 s would cut a slow connection off.
+    private static readonly HttpClient Downloads = BuildDownloadClient();
+    private static HttpClient BuildDownloadClient()
+    {
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("MystTiq-Palworld-Server-Manager");
+        return client;
     }
 
     // ------------------------------------------------------------------
@@ -618,6 +725,16 @@ public sealed class HeadlessComponentUpdateService
         [JsonPropertyName("tag_name")] public string? TagName { get; init; }
         [JsonPropertyName("html_url")] public string? HtmlUrl { get; init; }
         [JsonPropertyName("published_at")] public DateTimeOffset? PublishedAt { get; init; }
+        [JsonPropertyName("assets")] public List<GitHubAssetDto>? Assets { get; init; }
+    }
+
+    private sealed class GitHubAssetDto
+    {
+        [JsonPropertyName("id")] public long Id { get; init; }
+        [JsonPropertyName("name")] public string? Name { get; init; }
+        [JsonPropertyName("size")] public long Size { get; init; }
+        [JsonPropertyName("updated_at")] public DateTimeOffset? UpdatedAt { get; init; }
+        [JsonPropertyName("browser_download_url")] public string? DownloadUrl { get; init; }
     }
 
     private sealed class PyPiPackageDto
@@ -639,6 +756,32 @@ public sealed class HeadlessComponentUpdateService
     {
         [JsonPropertyName("latest-runtime")] public string? LatestRuntime { get; init; }
         [JsonPropertyName("support-phase")] public string? SupportPhase { get; init; }
+    }
+}
+
+// v0.9.9.0: pure, so the logic harness covers it: the SHA-256 of every UE4SS.dll inside a release download, and which
+// release (newest first) holds a file identical to the installed one.
+public static class Ue4ssReleaseFiles
+{
+    public const long MaximumDownloadBytes = 200L * 1024 * 1024;
+
+    public static IReadOnlyList<string> DllHashes(Stream zip)
+    {
+        using var archive = new System.IO.Compression.ZipArchive(zip, System.IO.Compression.ZipArchiveMode.Read, leaveOpen: true);
+        var hashes = new List<string>();
+        foreach (var entry in archive.Entries.Where(e => e.Name.Equals("UE4SS.dll", StringComparison.OrdinalIgnoreCase)))
+        {
+            using var stream = entry.Open();
+            hashes.Add(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)));
+        }
+        return hashes;
+    }
+
+    public static (string Tag, string Asset)? Match(string installedHash, IEnumerable<(string Tag, string Asset, IReadOnlyList<string> Hashes)> releases)
+    {
+        foreach (var (tag, asset, hashes) in releases)
+            if (hashes.Any(h => h.Equals(installedHash, StringComparison.OrdinalIgnoreCase))) return (tag, asset);
+        return null;
     }
 }
 

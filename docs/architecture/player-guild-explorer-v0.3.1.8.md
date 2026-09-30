@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.8.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.9.0: file reviewed for this release (2026-09-29). -->
 # v0.3.1.8 Player & Guild Explorer Architecture
 
 ## Player identity evidence

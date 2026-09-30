@@ -1,4 +1,4 @@
-// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -141,7 +141,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var activity = new HeadlessActivityLogService(paths);
             var notificationRouting = new HeadlessNotificationRoutingService(paths, activity);
             var notifications = new HeadlessNotificationService(paths, activity, notificationRouting);
-            var crashAndSaveTools = new HeadlessCrashAndSaveToolsService(paths, activity);
+            var crashAndSaveTools = new HeadlessCrashAndSaveToolsService(paths, activity, () => lifecycle.GetStatusAsync().GetAwaiter().GetResult().Processes.Count > 0);
             var playerAdmin = new HeadlessPalworldAdminService(paths, activity);
             var playerMetadata = new HeadlessPlayerMetadataService(paths, activity);
             var playerRegistry = new HeadlessPlayerRegistryService(paths);

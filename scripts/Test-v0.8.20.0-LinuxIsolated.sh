@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+# MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 # v0.8.20.0: an isolated MystTiq on the Linux test VM, run by Test-v0.8.20.0-LinuxIsolated.ps1. Own config, FleetRoot,
 # runtime and port (18420); never touches /etc/mysttiq or the installed mysttiq-palworld service. Checks that the host
 # history records on Linux (/proc readings), is kept in the fleet folder and survives a restart.

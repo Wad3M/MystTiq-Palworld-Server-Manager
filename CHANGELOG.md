@@ -1,4 +1,24 @@
-<!-- MystTiq v0.9.8.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.9.0: file reviewed for this release (2026-09-29). -->
+## v0.9.9.0 — One Helper, Crash Causes and Local Formats
+
+- The desktop's local helper: the one it started is recorded (`desktop-sidecar.json`) and reused, instead of one more
+  being started on every call and app start when the configured port is held by another MystTiq version; and a helper
+  is stopped without its process tree, so the new-server wizard's restart no longer ends running game servers.
+  A configured port that accepts connections counts as occupied even when the health probe gets no answer (a
+  service with TLS on), and a helper that exited at start is not recorded.
+- Crash analysis: the `exit-after-join` signature. A PalDefender session log that ends on a player connecting, with the
+  session over within 5 minutes, is reported with its cause and fixes (from the live case of 2026-09-28).
+- Update Center: UE4SS without a recorded install is compared by content with the `UE4SS.dll` inside the three newest
+  releases' downloads (hashed once per asset, cached) and names the release it is identical to.
+- Alert Center: the out-of-date rule also alerts on a UE4SS update (from a cached check, refreshed at most every six
+  hours, never a GitHub call per evaluation; only a definite answer decides) and on installed MODs with an update
+  (named, up to five).
+- Doctor: `configuration-game-port` has a fix (`align-public-port`) that sets PublicPort to the port the server binds.
+- Numbers, dates and times follow the language chosen in MystTiq (formats only; text comparison and casing unchanged).
+- Checked: `Test-v0.9.9.0-RouteSmoke.ps1` (the port fix end to end, crash analysis on real log lines),
+  `Test-v0.9.9.0-Distribution.ps1` (checksums, ZIP contents, versions, the packaged service from a clean folder), new
+  logic-harness and ArtworkHarness scenarios; 18 new texts in all 12 languages.
+
 ## v0.9.8.0 — Small Screens, Alerts and Linux Install
 
 - The title bar keeps the "+" on narrow windows (reported): the "»" and "+" have their own columns after the tabs, the

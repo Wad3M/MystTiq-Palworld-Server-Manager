@@ -1,4 +1,4 @@
-// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 using System.ComponentModel;
 using System.Text.Json;
 using Avalonia.Data;
@@ -111,6 +111,8 @@ public sealed class Localizer : INotifyPropertyChanged
         if (language.Code == LanguageCode && current.Count > 0) return;
         current = language.Code == "en" ? english : LoadAsset(language.Code);
         LanguageCode = language.Code;
+        // v0.9.9.0: numbers, dates and times follow the chosen language (formats only; see DisplayCulture).
+        DisplayCulture.Apply(language.Code);
         Messages = MessageCatalog.Build(english, current);
         Strings = new LocalizedStrings(k => this[k]);
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Strings)));

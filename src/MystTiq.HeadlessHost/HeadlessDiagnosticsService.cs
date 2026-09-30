@@ -1,4 +1,4 @@
-// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 using MystTiq.Core.Automation;
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
@@ -591,6 +591,21 @@ public sealed class HeadlessDiagnosticsService
                 var result = await serverDistribution.UpdateAsync(validate: true, cancellationToken);
                 return new HeadlessDiagnosticFixResult(result.Success, result.Message);
 
+            case "align-public-port":
+                if (!canAdminister)
+                    return HeadlessDiagnosticFixResult.Failure("Changing the server's settings needs the Admin role.");
+                var boundPort = ServerGamePort.Expected(paths, launchArguments);
+                var current = palworldConfiguration.Load();
+                if (!current.Exists)
+                    return HeadlessDiagnosticFixResult.Failure("PalWorldSettings.ini was not found.");
+                var updated = current.Settings.Select(s => s.Name.Equals("PublicPort", StringComparison.OrdinalIgnoreCase)
+                    ? s with { Value = boundPort.ToString(System.Globalization.CultureInfo.InvariantCulture) }
+                    : s).ToArray();
+                var saved = palworldConfiguration.Save(updated);
+                return new HeadlessDiagnosticFixResult(saved.Success, saved.Success
+                    ? $"PublicPort is now {boundPort}, the port the server binds. It is advertised from the next server start."
+                    : saved.ValidationErrors.Count > 0 ? string.Join(" ", saved.ValidationErrors) : saved.Message);
+
             case "allow-firewall":
                 if (!canAdminister)
                     return HeadlessDiagnosticFixResult.Failure("Changing the firewall needs the Admin role.");
@@ -629,12 +644,14 @@ public sealed class HeadlessDiagnosticsService
                 Evidence: same
                     ? $"The server binds UDP {bound}, the port PalWorldSettings.ini advertises."
                     : $"The server binds UDP {bound} (its -port= launch argument, or 8211 without one), but PalWorldSettings.ini's PublicPort says {advertised}. Players given port {advertised} cannot join.",
+                // v0.9.9.0: Fix sets PublicPort to the port the server binds (an ini change, no MystTiq restart). Moving the
+                // server to the advertised port instead means changing -port=, which only applies when MystTiq restarts.
                 Recommendation: same
                     ? "Nothing to do."
-                    : $"Make them match: set the launch argument -port={advertised} in Settings (then restart MystTiq), or set PublicPort to {bound}.",
-                ActionKind: null,
-                ActionSupported: false,
-                UnavailableReason: same ? null : "Launch arguments take effect when MystTiq restarts, so this is not changed automatically.",
+                    : $"Fix sets PublicPort to {bound}, the port players reach. To use {advertised} instead, set the launch argument -port={advertised} in Settings and restart MystTiq.",
+                ActionKind: same ? null : "align-public-port",
+                ActionSupported: !same,
+                UnavailableReason: null,
                 ObservedAt: now,
                 Duration: TimeSpan.Zero));
         }

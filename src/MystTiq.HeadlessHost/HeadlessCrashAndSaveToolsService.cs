@@ -1,4 +1,4 @@
-// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -19,8 +19,13 @@ public sealed class HeadlessCrashAndSaveToolsService
     // each marks its findings as reported; running them together could report the same crash twice.
     private readonly object analyzeGate = new();
 
-    public HeadlessCrashAndSaveToolsService(IServerPathProfile paths, HeadlessActivityLogService activity)
+    // v0.9.9.0: whether the game server is running now, so the newest PalDefender session log (still being written while
+    // the server runs) is only judged once the server is gone. Without it the newest log is never judged.
+    private readonly Func<bool>? serverRunning;
+
+    public HeadlessCrashAndSaveToolsService(IServerPathProfile paths, HeadlessActivityLogService activity, Func<bool>? serverRunning = null)
     {
+        this.serverRunning = serverRunning;
         this.paths = paths;
         this.activity = activity;
         historyRoot = Path.Combine(paths.ManagerRuntimeRoot, "crash-analyzer");
@@ -63,13 +68,42 @@ public sealed class HeadlessCrashAndSaveToolsService
         return reports;
     }
 
+    // v0.9.9.0: PalDefender writes one log per server start; a session whose log ends on a player joining stopped as they
+    // joined (ExitAfterJoinDetector). The newest four logs from the last 7 days are read.
+    private IReadOnlyList<string> ReadExitAfterJoinEvidence()
+    {
+        try
+        {
+            var root = Path.Combine(paths.RuntimeBinaryRoot, "PalDefender", "Logs");
+            if (!Directory.Exists(root)) return [];
+            var logs = new DirectoryInfo(root).EnumerateFiles("*.log", SearchOption.TopDirectoryOnly)
+                .Where(f => f.LastWriteTimeUtc > DateTime.UtcNow.AddDays(-7))
+                .OrderByDescending(f => f.LastWriteTimeUtc).Take(4)
+                .Select(f => (f.Name, (DateTimeOffset)f.CreationTimeUtc, (DateTimeOffset)f.LastWriteTimeUtc, (IReadOnlyList<string>)ReadSharedLines(f.FullName)))
+                .ToArray();
+            var running = true;
+            try { running = serverRunning?.Invoke() ?? true; } catch { }
+            return ExitAfterJoinDetector.Detect(logs, running, DateTimeOffset.UtcNow);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return []; }
+    }
+
+    // PalDefender keeps its current log open; read it without asking for exclusive access.
+    private static string[] ReadSharedLines(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd().Split('\n').Select(l => l.TrimEnd('\r')).ToArray();
+    }
+
     private HeadlessCrashAnalysisSnapshot AnalyzeLocked(IReadOnlyCollection<string>? installedModNames)
     {
         var logEvidence = ReadRecentLogEvidence();
         var reports = ReadCrashReports();
         // Report lines go after the (already capped) log lines: a finding keeps its newest evidence lines, so a busy log can
         // never push a crash report out of what the finding shows.
-        var evidence = (Lines: logEvidence.Lines.Concat(reports.OrderBy(r => r.WrittenAt).Select(UnrealCrashReportParser.ToEvidenceLine)).ToArray(),
+        var joins = ReadExitAfterJoinEvidence();
+        var evidence = (Lines: logEvidence.Lines.Concat(joins).Concat(reports.OrderBy(r => r.WrittenAt).Select(UnrealCrashReportParser.ToEvidenceLine)).ToArray(),
             FilesScanned: logEvidence.FilesScanned + reports.Count, LinesScanned: logEvidence.LinesScanned + reports.Count);
         var previousKeys = History(30)
             .SelectMany(r => r.Findings)

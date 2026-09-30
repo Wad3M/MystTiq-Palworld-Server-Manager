@@ -1,4 +1,4 @@
-<!-- MystTiq v0.9.8.0: file reviewed for this release (2026-09-29). -->
+<!-- MystTiq v0.9.9.0: file reviewed for this release (2026-09-29). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,13 +21,15 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v0.9.8.0 · Accepted baseline: v0.8.25.0**
+**Current version: v0.9.9.0 · Accepted baseline: v0.8.25.0**
 
 This source snapshot is a development release on the way to v1.0. Check the Releases page for published downloads; the version shown here does not imply a binary has been published. Windows is the current release-workflow download target. Linux builds are available from source, with desktop acceptance still in progress.
 
-## What's new in v0.9.8.0
+## What's new in v0.9.9.0
 
-**Small screens, alerts and a Linux shortcut.** The new-tab "+" stays on narrow windows, the Alert Center tells you (and Discord or email) when the game server or PalDefender falls behind, the firewall check knows which network you're on, the server search covers bigger networks, and a script installs MystTiq on a Linux machine with a desktop shortcut. Upgrades are now tested with accounts and sign-in too.
+**Safer restarts and clearer causes.** Adding a server no longer restarts the ones already running, and MystTiq keeps one local helper instead of starting more. The Crash Analyzer now recognises a server that dies when a player joins, the Update Center compares UE4SS for you, the Doctor can fix a port mismatch, and numbers, dates and times follow the language you chose.
+
+From v0.9.8.0: **small screens, alerts and a Linux shortcut.** The new-tab "+" stays on narrow windows, the Alert Center tells you (and Discord or email) when the game server or PalDefender falls behind, the firewall check knows which network you're on, the server search covers bigger networks, and a script installs MystTiq on a Linux machine with a desktop shortcut. Upgrades are now tested with accounts and sign-in too.
 
 From v0.9.7.0: **a current UI framework underneath.** The desktop now runs on Avalonia 12, the current version of the framework it is built with, so it keeps receiving fixes and platform support. Nothing about how you use MystTiq changes; every page was checked in all 12 languages and each appearance mode.
 
@@ -35,7 +37,7 @@ From v0.9.6.0: **let players in, and find your servers in seconds.** Settings, D
 
 The server search checks 256 addresses at a time, shows the ranges it searches and its progress, lists each server as it answers, and can be cancelled; virtual adapters are searched only when you ask, and you can add ranges of your own. v0.9.5.0 made update checks truthful and stopped servers from starting each other; earlier v0.9 releases brought 12 languages and accessible names. The 11 non-English translations are drafts awaiting native-speaker review.
 
-[Release notes](release-notes/v0.9.8.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v0.9.9.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -110,7 +112,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v0.9.5.0 | Delivered | Servers no longer start each other; true update checks (Steam's public build, PalDefender); upgrade, restore and rollback tested |
 | v0.9.6.0 | Delivered | Firewall rule for each server's own port where the port is set; a second server gets its own port; server search in seconds, showing its ranges |
 | v0.9.7.0 | Delivered | Avalonia 12: the desktop moves to the current UI framework, checked page by page in every appearance mode |
-| v0.9.8.0 | Current | The "+" stays on small windows; alerts when the game server or PalDefender falls behind; network-aware firewall check; wider server search; Linux install with a desktop shortcut |
+| v0.9.8.0 | Delivered | The "+" stays on small windows; alerts when the game server or PalDefender falls behind; network-aware firewall check; wider server search; Linux install with a desktop shortcut |
+| v0.9.9.0 | Current | Running servers survive adding a new one; one local helper; crash analysis for a server that dies on a join; UE4SS compared automatically; formats follow your language |
 | v0.9.x | Planned | Native translation review, live integration evidence, a screen-reader pass and Linux acceptance |
 | v1.0 | Target | Stable release after the acceptance gates pass; no date committed |
 

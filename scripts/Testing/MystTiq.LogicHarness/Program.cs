@@ -1,4 +1,4 @@
-// MystTiq v0.9.8.0: file reviewed for this release (2026-09-29).
+// MystTiq v0.9.9.0: file reviewed for this release (2026-09-29).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -437,6 +437,74 @@ try
         Assert(!FirewallRules.Evaluate(8212, "UDP", "alpha", [], [], supported: false).Supported, "unsupported platform");
     }, failures);
 
+    // v0.9.9.0: the desktop remembers the local helper it started, so it is reused instead of started again.
+    RunScenario("Desktop helper record: it is written, read back and removed, and a record that is not a loopback address is ignored", () =>
+    {
+        var root = Path.Combine(tempRoot, "sidecar-state");
+        Assert(MystTiq.Desktop.Services.SidecarState.Read(root) is null, "no record before one is written");
+        MystTiq.Desktop.Services.SidecarState.Write(root, new MystTiq.Desktop.Services.SidecarState(4242, "http://127.0.0.1:41925", @"C:\App\headless\mysttiq-server.exe"));
+        Assert(MystTiq.Desktop.Services.SidecarState.Read(root) is { ProcessId: 4242, Endpoint: "http://127.0.0.1:41925" }, "the record is read back");
+        File.WriteAllText(Path.Combine(root, "desktop-sidecar.json"), "{\"ProcessId\":4242,\"Endpoint\":\"http://203.0.113.9:8213\",\"Executable\":\"x\"}");
+        Assert(MystTiq.Desktop.Services.SidecarState.Read(root) is null, "an address that is not this computer is never trusted");
+        File.WriteAllText(Path.Combine(root, "desktop-sidecar.json"), "not json");
+        Assert(MystTiq.Desktop.Services.SidecarState.Read(root) is null, "a damaged record reads as none");
+        MystTiq.Desktop.Services.SidecarState.Delete(root);
+        Assert(!File.Exists(Path.Combine(root, "desktop-sidecar.json")), "the record is removed");
+    }, failures);
+    // v0.9.9.0: a server that stops as a player joins (PalDefender v1.8.3 on game v1.0.5, live on 2026-09-28) is named by
+    // the crash analysis. The log lines below are that session's own, with the player id shortened.
+    RunScenario("Crash analysis: a PalDefender session log that ends on a player joining is reported; a running server's newest log, a clean end and a logout are not", () =>
+    {
+        string[] crashed =
+        [
+            "[18:35:55][info] Starting PalDefender Anti Cheat v1.8.3 (console)",
+            "[18:36:09][info] Running Palworld dedicated server on :8311",
+            "[18:39:21][info] steam_7656119 ('127.0.0.1') connected to the server.",
+            "",
+        ];
+        string[] clean =
+        [
+            "[18:44:26][info] steam_7656119 ('127.0.0.1') connected to the server.",
+            "[18:46:14][info] 'Wadetest' (UserId=steam_7656119, IP=127.0.0.1) has logged in.",
+            "[18:47:30][info] 'Wadetest' (UserId=steam_7656119, IP=127.0.0.1) has logged out.",
+            "[19:30:32][info] REST API stopped",
+        ];
+        string[] loggedIn = ["[18:46:14][info] 'Wadetest' (UserId=steam_7656119, IP=127.0.0.1) has logged in."];
+        var at = new DateTimeOffset(2026, 9, 28, 18, 39, 21, TimeSpan.Zero);
+        var soon = at.AddSeconds(53);
+        var found = ExitAfterJoinDetector.Detect([("28.09 18.35.55.log", at.AddMinutes(-4), at, crashed)], serverRunning: false, soon);
+        Assert(found.Count == 1 && found[0].Contains("PalDefender session ended right after a player joined: steam_7656119 connected to the server.", StringComparison.Ordinal) && found[0].Contains("18:39:21", StringComparison.Ordinal), $"the join is named with its time: {string.Join(" | ", found)}");
+        Assert(!found[0].Contains("127.0.0.1", StringComparison.Ordinal), "the player's address is left out of the evidence");
+        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, crashed)], serverRunning: true, soon).Count == 0, "the newest log of a running server has not ended");
+        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, crashed)], serverRunning: false, at.AddHours(3)).Count == 0, "a server found stopped hours after the join is not blamed on the join");
+        Assert(ExitAfterJoinDetector.Detect([("new.log", at.AddSeconds(53), at.AddHours(1), clean), ("old.log", at.AddMinutes(-4), at, crashed)], serverRunning: true, at.AddHours(2)).Count == 1, "an older session whose successor started 53 s after the join is reported even while the server runs");
+        Assert(ExitAfterJoinDetector.Detect([("new.log", at.AddHours(6), at.AddHours(7), clean), ("old.log", at.AddMinutes(-4), at, crashed)], serverRunning: true, at.AddHours(8)).Count == 0, "a session followed by the next one six hours later is not blamed on the join");
+        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, clean)], serverRunning: false, soon).Count == 0, "a session that ended with the REST API stopping is a clean end");
+        Assert(ExitAfterJoinDetector.Detect([("a.log", at.AddMinutes(-4), at, loggedIn)], serverRunning: false, soon).Count == 1, "ending on the login itself counts too");
+        var matches = CrashSignatureCatalog.Match(found);
+        Assert(matches.Count == 1 && matches[0].Signature.Id == "exit-after-join" && matches[0].Signature.Severity == "Critical" && matches[0].Lines[0].At is not null, "the evidence line is claimed by the exit-after-join signature, with its time");
+        Assert(CrashSignatureCatalog.Find("exit-after-join")!.Fixes.Any(f => f.Contains("PalDefender", StringComparison.Ordinal)), "the fixes name PalDefender");
+    }, failures);
+
+    // v0.9.9.0: UE4SS installed without a recorded release is matched by content against the releases' downloads.
+    RunScenario("UE4SS release match: the DLL inside a release download is hashed, and an identical installed file names its release", () =>
+    {
+        byte[] Zip(params (string Name, byte[] Data)[] files)
+        {
+            using var buffer = new MemoryStream();
+            using (var archive = new System.IO.Compression.ZipArchive(buffer, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+                foreach (var (name, data) in files) { using var entry = archive.CreateEntry(name).Open(); entry.Write(data); }
+            return buffer.ToArray();
+        }
+        var newer = new byte[] { 1, 2, 3, 4 }; var older = new byte[] { 9, 9, 9 };
+        var newerHashes = Ue4ssReleaseFiles.DllHashes(new MemoryStream(Zip(("ue4ss/UE4SS.dll", newer), ("ue4ss/UE4SS-settings.ini", [7]), ("dwmapi.dll", [8]))));
+        var olderHashes = Ue4ssReleaseFiles.DllHashes(new MemoryStream(Zip(("UE4SS.dll", older))));
+        Assert(newerHashes.Count == 1 && newerHashes[0] == Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(newer)), "only UE4SS.dll is hashed, whatever folder it is in");
+        (string, string, IReadOnlyList<string>)[] releases = [("2281fa31", "UE4SS-Palworld-g2281fa31.zip", newerHashes), ("experimental-palworld", "UE4SS-Palworld.zip", olderHashes)];
+        Assert(Ue4ssReleaseFiles.Match(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(older)).ToLowerInvariant(), releases) is { Tag: "experimental-palworld" }, "an installed file identical to an older release names that release");
+        Assert(Ue4ssReleaseFiles.Match(newerHashes[0], releases) is { Tag: "2281fa31", Asset: "UE4SS-Palworld-g2281fa31.zip" }, "the latest release is named with its download");
+        Assert(Ue4ssReleaseFiles.Match("00", releases) is null, "a file in no release matches nothing, so nothing is claimed");
+    }, failures);
     // v0.9.8.0: a component that falls behind raises an Alert Center alert (it was only a Doctor warning).
     RunScenario("Component alert: the game server is behind only when both builds are known and the installed one is older; old rules files keep the alert on", () =>
     {
@@ -447,6 +515,11 @@ try
         Assert(old.ComponentOutdated is { Enabled: true }, "a rules file from before v0.9.8.0 reads with the alert on");
         var off = System.Text.Json.JsonSerializer.Deserialize<AlertRuleSet>("{\"ComponentOutdated\":{\"Enabled\":false,\"CooldownMinutes\":1440}}")!;
         Assert(off.ComponentOutdated is { Enabled: false }, "switched off stays off");
+        // v0.9.9.0: UE4SS and MODs alert too; only a definite Update Center answer decides for UE4SS.
+        Assert(ComponentAlerts.Ue4ssBehind("UpdateAvailable") == true && ComponentAlerts.Ue4ssBehind("UpToDate") == false, "a definite answer decides");
+        Assert(ComponentAlerts.Ue4ssBehind("CheckManually") is null && ComponentAlerts.Ue4ssBehind("Unavailable") is null && ComponentAlerts.Ue4ssBehind(null) is null, "check manually, unreachable and not checked yet decide nothing");
+        Assert(ComponentAlerts.ModsMessage(["A", "B"]) == "2 installed MOD(s) have an update: A, B. Update them from the MOD Library with the server stopped.", ComponentAlerts.ModsMessage(["A", "B"]));
+        Assert(ComponentAlerts.ModsMessage(["A", "B", "C", "D", "E", "F", "G"]).Contains("A, B, C, D, E, and 2 more.", StringComparison.Ordinal), "five are named, the rest counted");
     }, failures);
     // v0.9.8.0: a rule counts only on the network profiles it covers; a Private-only rule used to read as "allowed" on a
     // Public network (the clone's rule on this machine is Private-only).
