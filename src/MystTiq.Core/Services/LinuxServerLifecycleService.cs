@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using MystTiq.Core.Models;
@@ -86,6 +86,8 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         {
             var native = SelectNativeProcess(processes);
             var ready = ports.Contains(expectedGamePort);
+            // v1.0.0.1: how long it has been starting (see StartupWatch).
+            var startedAt = StartupWatch.ProcessStartedAt(native?.ProcessId);
             var snapshot = new ServerLifecycleSnapshot(
                 ServerLifecyclePhase.Running,
                 native?.ProcessId,
@@ -97,7 +99,8 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                 persisted?.LastTransitionAt,
                 ready
                     ? $"PalServer process and UDP {expectedGamePort} are active."
-                    : $"PalServer process is active; UDP {expectedGamePort} has not been confirmed.");
+                    : StartupWatch.NotReadyDetail(expectedGamePort, startedAt, now))
+            { NativeStartedAt = startedAt, StartupStuck = StartupWatch.IsStuck(ready, startedAt, now) };
 
             // Observation is allowed to repair stale state from a previous host invocation.
             // v0.9.6.0: a stop in progress keeps its recorded intent (see WindowsServerLifecycleService.GetStatusAsync).
@@ -541,7 +544,9 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         catch (UnauthorizedAccessException) { }
 
         var commandArguments = new[] { paths.ServerExecutable }
-            .Concat(serverArguments)
+            // @mysttiq:* entries are launcher metadata for the Windows diagnostic editor; never
+            // forward them to PalServer on Linux if a shared profile/configuration contains them.
+            .Concat(serverArguments.Where(argument => !argument.Trim().StartsWith("@mysttiq:", StringComparison.OrdinalIgnoreCase)))
             .Select(ShellQuote);
 
         var script = string.Join('\n',

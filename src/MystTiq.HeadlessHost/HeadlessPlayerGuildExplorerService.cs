@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using MystTiq.Core.Services;
@@ -15,15 +15,18 @@ public sealed class HeadlessPlayerGuildExplorerService
     private readonly IServerPathProfile paths;
     private readonly HeadlessMonitoringService monitoring;
     private readonly HeadlessGameNameService? gameNames;
+    private readonly HeadlessPlayerRegistryService? playerRegistry;
 
     public HeadlessPlayerGuildExplorerService(
         IServerPathProfile paths,
         HeadlessMonitoringService monitoring,
-        HeadlessGameNameService? gameNames = null)
+        HeadlessGameNameService? gameNames = null,
+        HeadlessPlayerRegistryService? playerRegistry = null)
     {
         this.paths = paths;
         this.monitoring = monitoring;
         this.gameNames = gameNames;
+        this.playerRegistry = playerRegistry;
     }
 
     // v0.9.2.0: language is the asking Desktop's display language, for the map's Pal species names.
@@ -96,6 +99,12 @@ public sealed class HeadlessPlayerGuildExplorerService
             semanticWarnings.Add($"Live REST enrichment unavailable: {ex.Message}");
         }
 
+        var registryByPlayerId = playerRegistry?.Snapshot()
+            .Where(record => !string.IsNullOrWhiteSpace(record.PlayerId))
+            .GroupBy(record => NormalizeId(record.PlayerId), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(record => record.LastSeenUtc).First(), StringComparer.OrdinalIgnoreCase)
+            ?? new Dictionary<string, PlayerRegistryRecord>(StringComparer.OrdinalIgnoreCase);
+
         var guildByMember = new Dictionary<string, SemanticGuildRecord>(
             StringComparer.OrdinalIgnoreCase);
         foreach (var guild in guildRecords)
@@ -139,6 +148,7 @@ public sealed class HeadlessPlayerGuildExplorerService
 
             var liveMatch = live?.Players.FirstOrDefault(player =>
                 NormalizeId(player.PlayerId).Equals(playerId, StringComparison.OrdinalIgnoreCase));
+            registryByPlayerId.TryGetValue(playerId, out var registryMatch);
 
             var name = !string.IsNullOrWhiteSpace(liveMatch?.Name)
                 ? liveMatch.Name
@@ -159,8 +169,10 @@ public sealed class HeadlessPlayerGuildExplorerService
                 save?.SizeBytes ?? 0,
                 save?.LastWriteUtc,
                 liveMatch is not null,
-                liveMatch?.Platform ?? string.Empty,
+                !string.IsNullOrWhiteSpace(liveMatch?.Platform) ? liveMatch!.Platform : (!string.IsNullOrWhiteSpace(registryMatch?.SteamId) ? "Steam" : string.Empty),
                 liveMatch?.Ping ?? string.Empty,
+                !string.IsNullOrWhiteSpace(liveMatch?.SteamId) ? liveMatch!.SteamId : registryMatch?.SteamId ?? string.Empty,
+                !string.IsNullOrWhiteSpace(liveMatch?.UserId) ? liveMatch!.UserId : registryMatch?.UserId ?? string.Empty,
                 BuildPlayerEvidence(save, guild, liveMatch, semanticAvailable)));
         }
 
@@ -841,6 +853,8 @@ public sealed record HeadlessPlayerExplorerItem(
     bool Online,
     string Platform,
     string Ping,
+    string SteamId,
+    string UserId,
     string Evidence);
 
 public sealed record HeadlessGuildExplorerItem(

@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -14,6 +14,9 @@ public sealed class ServerStatusDto
     [JsonPropertyName("crashDetected")] public bool CrashDetected { get; init; }
     [JsonPropertyName("observedAt")] public DateTimeOffset ObservedAt { get; init; }
     [JsonPropertyName("lastTransitionAt")] public DateTimeOffset? LastTransitionAt { get; init; }
+    // v1.0.0.1: when the process started, and whether it has been starting too long without opening its port.
+    [JsonPropertyName("nativeStartedAt")] public DateTimeOffset? NativeStartedAt { get; init; }
+    [JsonPropertyName("startupStuck")] public bool StartupStuck { get; init; }
 
     // v0.7.88.0 bug fix: NativeProcessId alone is not "a process is alive right now" -- both
     // WindowsServerLifecycleService and LinuxServerLifecycleService (MystTiq.Core) deliberately keep

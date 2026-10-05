@@ -1,4 +1,4 @@
-# MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+# MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 #requires -Version 7.0
 [CmdletBinding()]
 param(
@@ -59,7 +59,9 @@ function Get-OutsideComments([string]$Text) {
     $parts
 }
 
-function Test-Translatable([string]$Phrase) { $Phrase -match '\p{L}' }
+# v1.0.0.1: launch arguments (-port=, -unattended…) and the process options UseShellExecute/CreateNoWindow on Server > Launcher
+# are command-line tokens shown exactly as PalServer and .NET spell them, not text to translate.
+function Test-Translatable([string]$Phrase) { $Phrase -match '\p{L}' -and $Phrase -notmatch '^-{1,2}[A-Za-z][\w.=-]*$' -and $Phrase -cnotmatch '^(UseShellExecute|CreateNoWindow)$' }
 
 function Get-LineNumber([string]$Text, [int]$Index) { ([regex]::Matches($Text.Substring(0, $Index), "`n")).Count + 1 }
 

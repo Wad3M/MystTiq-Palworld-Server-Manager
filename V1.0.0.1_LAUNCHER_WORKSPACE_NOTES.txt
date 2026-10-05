@@ -1,0 +1,24 @@
+MystTiq Palworld Server Manager v1.0.0.1
+Launcher Workspace + Troubleshooting Presets
+
+Changes in this build:
+- Moved Launcher / Advanced Startup from System > Settings to Server > Launcher.
+- Launcher appears directly below Workspace in the Server navigation.
+- Added troubleshooting presets:
+  * Default: PalServer.exe, server-root working directory, mods enabled, diagnostic logging, hidden managed window.
+  * No Mods: Default + -NoMods.
+  * Show Window: Default process/arguments, but WindowStyle=Normal and post-launch hiding disabled.
+- Presets preserve the current game port and -abslog path.
+- Presets clear custom launcher arguments so comparison tests are reproducible.
+- All individual launch controls remain editable.
+- Effective PalServer command and process settings remain visible on the Launcher page.
+- Version advanced to 1.0.0.1 in Directory.Build.props and the Windows application manifest.
+
+Important testing workflow:
+1. Open Server > Launcher.
+2. Apply one preset (or change individual options).
+3. Click Save Launcher Settings.
+4. Restart the MystTiq service so the headless host reloads the saved launcher configuration.
+5. Start PalServer and compare behavior/logs.
+
+This environment does not contain the .NET 10 SDK, so the source was structurally validated but not compiled here.

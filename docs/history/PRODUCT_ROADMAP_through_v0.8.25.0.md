@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
 # MystTiq Product Roadmap
 
 This document captures forward-looking product direction. Version-specific implementation detail belongs in `release-notes/` and completed history belongs in `CHANGELOG.md` / `docs/history/`.

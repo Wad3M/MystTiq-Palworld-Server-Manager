@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Text.Json.Serialization;
 namespace MystTiq.Desktop.Models;
 
@@ -123,6 +123,8 @@ public sealed class SafeStartStatusDto
     [JsonPropertyName("results")] public IReadOnlyList<SafeStartModResultDto> Results { get; init; } = [];
     [JsonPropertyName("finalMessage")] public string FinalMessage { get; init; } = string.Empty;
     [JsonPropertyName("startedAtUtc")] public DateTime StartedAtUtc { get; init; }
+    // v1.0.0.1: "TestLoad" (one start with every MOD off) or "OneAtATime".
+    [JsonPropertyName("mode")] public string Mode { get; init; } = "OneAtATime";
     public string ProgressText => TotalCandidates > 0 ? $"{TestedCount} / {TotalCandidates} tested" : string.Empty;
     public bool CompletedUnsuccessfully => Completed && !Success;
 }

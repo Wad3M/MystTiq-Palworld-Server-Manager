@@ -1,11 +1,11 @@
-# MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+# MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 #requires -Version 7.0
 [CmdletBinding()]
 param(
     [ValidateSet('win-x64','linux-x64')][string]$Runtime = 'win-x64',
     [switch]$RequireNativeProxy,
     [string]$RestoreSource,
-    # v1.0.0.0, code signing: -StageOnly publishes the app folder and prints its path without making the ZIP (the release
+    # v1.0.0.0: code signing. -StageOnly publishes the app folder and prints its path without making the ZIP (the release
     # workflow sends that folder to SignPath); -FromFolder makes the ZIP from an existing app folder (the signed one).
     [switch]$StageOnly,
     [string]$FromFolder

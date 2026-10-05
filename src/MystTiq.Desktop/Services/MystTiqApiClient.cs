@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -112,6 +112,36 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         var count = Math.Clamp(lines, 10, 500);
         var snapshot = await client.GetFromJsonAsync<LogTailSnapshotDto>($"/api/v1/logs/tail?lines={count}", cancellationToken);
         return snapshot ?? throw new InvalidOperationException("MystTiq returned an empty log-tail snapshot.");
+    }
+
+    public async Task<ConsoleCaptureStatusDto> GetConsoleCaptureStatusAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        return await client.GetFromJsonAsync<ConsoleCaptureStatusDto>("/api/v1/server/console-capture", cancellationToken)
+            ?? throw new InvalidOperationException("MystTiq returned an empty console-capture status.");
+    }
+
+    public async Task<ConsoleCaptureOperationResultDto> InstallConsoleCaptureAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/server/console-capture/install", null, cancellationToken);
+        return await ReadOperationAsync<ConsoleCaptureOperationResultDto>(response, cancellationToken);
+    }
+
+    public async Task<ConsoleCaptureOperationResultDto> UninstallConsoleCaptureAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/server/console-capture/uninstall", null, cancellationToken);
+        return await ReadOperationAsync<ConsoleCaptureOperationResultDto>(response, cancellationToken);
     }
 
     public async Task<ActivityLogSnapshotDto> GetActivityLogTailAsync(
@@ -1100,6 +1130,21 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         using var client = BuildClient(profile, bearerToken);
         using var response = await client.PostAsync("/api/v1/mods/safe-start", null, cancellationToken);
         return await ReadOperationAsync<ModMutationResultDto>(response, cancellationToken);
+    }
+
+    public async Task<ModMutationResultDto> BeginModTestLoadAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/mods/safe-start?mode=testload", null, cancellationToken);
+        return await ReadOperationAsync<ModMutationResultDto>(response, cancellationToken);
+    }
+
+    public async Task<HostAddressesDto?> GetHostAddressesAsync(ConnectionProfile profile, bool refresh = false, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.GetAsync(refresh ? "/api/v1/network/addresses?refresh=true" : "/api/v1/network/addresses", cancellationToken);
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<HostAddressesDto>(cancellationToken);
     }
 
     public async Task<SafeStartStatusDto?> GetModSafeStartStatusAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)

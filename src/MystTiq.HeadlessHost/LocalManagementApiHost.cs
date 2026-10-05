@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -137,7 +137,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             // v0.8.24.0: starts apply the resource policy at once (see PolicyApplyingLifecycle).
             var policyLifecycle = new PolicyApplyingLifecycle(lifecycleFactory(serverConfig, paths));
             IServerLifecycleService lifecycle = policyLifecycle;
-            var monitoring = new HeadlessMonitoringService(paths, lifecycle);
+            var monitoring = new HeadlessMonitoringService(paths, lifecycle, serverConfig.LaunchArguments);
             var activity = new HeadlessActivityLogService(paths);
             var notificationRouting = new HeadlessNotificationRoutingService(paths, activity);
             var notifications = new HeadlessNotificationService(paths, activity, notificationRouting);
@@ -155,7 +155,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var worldTransactions = new HeadlessWorldTransactionService(paths, lifecycle, backups, activity, worldExplorer, operations, profileId);
             // v0.8.13.0: item and Pal display names from this server's own game pak, shared by the explorer and the Give Item picker.
             var gameNames = new HeadlessGameNameService(paths);
-            var playerGuildExplorer = new HeadlessPlayerGuildExplorerService(paths, monitoring, gameNames);
+            var playerGuildExplorer = new HeadlessPlayerGuildExplorerService(paths, monitoring, gameNames, playerRegistry);
             var saveCodec = new HeadlessSaveCodecService(crashAndSaveTools);
             var guildOwnership = new HeadlessGuildOwnershipService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var baseOwnership = new HeadlessBaseOwnershipService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
@@ -191,6 +191,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var rconModeration = new RconPlayerModerationProvider(rcon, activity);
             var playerModeration = new PlayerModerationCoordinator([playerAdmin, rconModeration]);
             var whitelist = new HeadlessWhitelistService(paths, activity, playerModeration);
+            // v1.0.0.1: notices a Steam player who was not given their own character (see HeadlessIdentityGuardService).
+            var identityGuard = new HeadlessIdentityGuardService(paths, activity, notifications, playerModeration);
             var kits = new HeadlessKitService(paths, activity, playerRegistry, new RconKitCommandRunner(paths, rcon));
             // v0.8.3.0: the Give Item picker's item/Pal ids (world save, kits, earlier gives).
             var gameIds = new HeadlessGameIdCatalogService(paths, kits, gameNames);
@@ -263,6 +265,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 Automation = automation,
                 WorldClone = worldClone,
                 WanReachability = wanReachability,
+            Addresses = new HeadlessAddressService(wanReachability),
                 CrashRecovery = crashRecovery,
                 CrashAlerts = crashAlerts,
                 RecoveryState = recoveryState,
@@ -272,6 +275,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 DiscordBot = discordBot,
                 AntiCheat = antiCheat,
                 Whitelist = whitelist,
+            IdentityGuard = identityGuard,
                 Kits = kits,
                 GameIds = gameIds,
                 Teleport = teleport,
@@ -552,7 +556,16 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         }).RequireRole(MystTiqRole.Viewer, p.Id);
         // v0.8.18.0: bandwidth. Saving while the server runs waits for the next start (the engine rewrites Engine.ini on exit).
         // v0.8.20.0: the machine's history for the HOST tab (1 hour to 7 days, at most 600 points).
-        routes.MapGet("/host/history", (double? hours, int? points) => Results.Ok(p.HostHistory.Snapshot(hours ?? 24, points ?? 600)))
+        // v1.0.0.1: the addresses players use to reach this server (the Dashboard's addresses line); ?refresh=true asks for
+        // the public address again instead of using the hour-old answer.
+        // v1.0.0.1: the identity guard's settings and the players it caught.
+        routes.MapGet("/players/identity-guard", () => Results.Ok(new { config = p.IdentityGuard.GetConfig(), events = p.IdentityGuard.RecentEvents() }))
+            .RequireRole(MystTiqRole.Viewer, p.Id);
+        routes.MapPut("/players/identity-guard", (IdentityGuardConfig updated) => Results.Ok(p.IdentityGuard.SaveConfig(updated)))
+            .RequireRole(MystTiqRole.Admin, p.Id);
+        routes.MapGet("/network/addresses", async (bool? refresh, CancellationToken token) =>
+            Results.Ok(await p.Addresses.GetAsync(ServerGamePort.Expected(p.Paths, p.ServerProfile.LaunchArguments), refresh == true, token)))
+            .RequireRole(MystTiqRole.Viewer, p.Id);        routes.MapGet("/host/history", (double? hours, int? points) => Results.Ok(p.HostHistory.Snapshot(hours ?? 24, points ?? 600)))
             .RequireRole(MystTiqRole.Viewer, p.Id);
         routes.MapGet("/network/policy", async (CancellationToken token) => Results.Ok(await p.NetworkPolicy.GetSnapshotAsync(token)))
             .RequireRole(MystTiqRole.Viewer, p.Id);
@@ -588,6 +601,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             // v0.7.10.0: whitelist enforcement runs from the same poll cadence the player registry
             // above already uses -- see HeadlessWhitelistService's own comment for why.
             await p.Whitelist.EnforceAsync(players, token);
+            // v1.0.0.1: a Steam player not given their own character is caught on the same poll, before they make a new one.
+            await p.IdentityGuard.EnforceAsync(players, token);
             // v0.7.94.0: starter-kit auto-gift, same poll-driven cadence (the registry's Observe above
             // has already stamped a brand-new player's first-seen time by now).
             await p.Kits.EnforceAsync(players, token);
@@ -1184,9 +1199,12 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         // implicitly (HeadlessModSafeStartService.BeginAsync itself acquires and holds the handle
         // for the whole background job, not just this call) -- status polling does not, since reads
         // never need serialization against lifecycle mutation.
-        routes.MapPost("/mods/safe-start", async (CancellationToken token) =>
+        // v1.0.0.1: ?mode=testload starts once with every MOD off and switches them back on (the stuck-start protocol's first
+        // step); without it, MODs are tested one at a time as before.
+        routes.MapPost("/mods/safe-start", async (string? mode, CancellationToken token) =>
         {
-            var result = await p.ModSafeStart.BeginAsync(token);
+            var result = await p.ModSafeStart.BeginAsync(
+                string.Equals(mode, "testload", StringComparison.OrdinalIgnoreCase) ? SafeStartMode.TestLoad : SafeStartMode.OneAtATime, token);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         }).RequireRole(MystTiqRole.Operator, p.Id);
 

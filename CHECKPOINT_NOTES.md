@@ -1,45 +1,63 @@
-<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
-# MystTiq v1.0.0.0 Checkpoint: MystTiq 1.0
+<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
+# MystTiq v1.0.0.1 Checkpoint: Launcher, Identity Guard, Tray and Stuck Starts
 
-You asked to publish v0.9.10.0 as version 1.0, set it as the accepted baseline, and keep the open items in the internal docs. Signing through SignPath comes with v1.0.1.0.
+This is your v1.0.0.1 (from `MystTiqPalworldServer_v1.0.0.1_UIConsoleSteamPolish_FULL_SOURCE.zip`) merged with today's
+fixes, and the features from 30 September. It is not published or pushed.
 
-## What changed
+## Your v1.0.0.1, merged
 
-- **Version:** 1.0.0.0. There are no application code changes from v0.9.10.0.
-- **Full release:** the release workflow now makes a draft full release for v1 and later. v0.x tags stay prereleases.
-  - This matters to the app: from 1.0 on, MystTiq's update check counts only full releases, so a 1.x published as a
-    prerelease would never be offered.
-- **Public docs:** the README, the site and the release notes present the stable release.
-  - Removed from them: the known limitations, the site's "What still needs verification" section and the draft
-    translation notes.
-  - The accepted baseline is now v1.0.0.0 (it was v0.8.25.0). From the next version on, the upgrade tests also start from this checkpoint.
-- **Internal docs keep the open items:** `docs/architecture/v1.0.0.0-stable-release.md` and the roadmap's "Open after
-  1.0" section.
-  - Translations have no native-speaker review.
-  - Live checks not yet done: Pal delivery, kits, refused gives, live map markers, chat teleport, Discord and email.
-  - No screen-reader pass.
-  - Linux acceptance is incomplete, and the Linux download is not published.
-  - The code limits noted in v0.9.10.0.
+- Merged against v1.0.0.0 with no conflicts; it compiles.
+  - Your other tool renamed "1.0.0.0" to "1.0.0.1" everywhere, including history comments such as "v1.0.0.0: code
+    signing". Lines whose only change was that rename were left as they were.
+- Fixed on the way:
+  - Launcher-page inputs had no accessible names (the ArtworkHarness stops on that).
+  - The effective command line was passed through the translator; it is now shown as is, and the notes under it are
+    translated.
+- Your 112-check gate dropped every earlier regression check. The v1.0.0.1 gate is generated from the full v1.0.0.0 gate
+  instead, with your Launcher checks added.
 
-- **Code signing, ready but not active:**
-  - When the SignPath repository variables exist, the release workflow uploads the Windows app to SignPath, waits for your approval, checks each MystTiq file's signature and zips the signed files. Without them it packages unsigned.
-  - All seven MystTiq binaries now carry the product name and version, including a new version resource on the native helper.
-  - Setup steps: `docs/release/CODE_SIGNING.md`. Policy pages: `CODE_SIGNING_POLICY.md` and `PRIVACY.md`.
-- **v1.1 planned:** a MOD browser connected to Nexus Mods and other online repositories.
+## Bug: launching through MystTiq changed players' characters
+
+- **What happened:**
+  - Palworld derives each Steam player's ID from their Steam ID: Wade is 67D8D355 and Melly is A3835C7B.
+  - In some sessions the server gave them other IDs, so they got the new-character screen. Their real characters were
+    never touched.
+- **The cause is the launch arguments.** You confirmed it: double-clicking `PalServer.exe` keeps the characters, and a
+  script with MystTiq's arguments gave the same wrong ones.
+  - Which argument does it is not known. Every bad start had `-port=8211`, `-stdout` and `-FullStdOutLogOutput` in common.
+- **The fix:**
+  - **No arguments by default.** A server without saved Launcher settings starts with no arguments at all, just like a
+    double-click. `-port=` is added only for a server that isn't on 8211.
+  - **A Like double-click preset** on Server > Launcher. It also starts the server through Windows with a normal window,
+    the way a double-click does.
+- **Your main server has saved Launcher settings** (Show Window, saved today at 12:41) that still pass `-port=8211 -log
+  -stdout -FullStdOutLogOutput -abslog=…`. Saved settings win over the default. After installing this build, open
+  **Server > Launcher**, click **Apply Like double-click**, then **Save Launcher Settings**.
+- **Safety net:** the identity guard, on by default, catches any player who still doesn't get their character. It kicks
+  them before a duplicate is made and records it.
+- **The extra characters** (E290DA9A, 014308E2, 1467C601, 84544311) are still in the world, for you to keep or delete.
+## Bug: mysttiq-server.exe left running after closing
+
+- Closing the window now always goes to the tray.
+- **Exit** (or Force Exit) in the tray stops every server the helper runs, then the helper, then the app.
+- "Exit GUI only" is gone.
+
+## From 30 September
+
+- **Stuck starts:** after two minutes without its port, the Dashboard says how long it has been starting and offers
+  **Test without MODs** or **Find the MOD** (one at a time).
+- **Addresses:** the Dashboard lists the local addresses and the public address, each with the port.
 
 ## Verification
 
-- **Full gate:** 246/246 (`gate1000-full.txt`), including the frozen v0.9.10.0 gate.
-  - Four Linux VM checks were skipped: the VM stopped answering SSH during the run.
-- **Static gate:** 200/200. **Clean and strict validation:** 0 errors, 0 warnings. **Distribution check:** 4/4.
-- **Signing path:** staging, then zipping from the staged folder, tested locally. All seven MystTiq binaries read "MystTiq
-  Palworld Server Manager" 1.0.0.0. The SignPath step itself can't run until the project exists.
-- **Windows, live:** `/healthz` reports 1.0.0.0. One helper was reused after restarting the app.
-- **The source ZIP on its own:** after this checkpoint, its FullSource ZIP was extracted into an empty folder and its own
-  gate run there (`archive1000-gate.txt`, next to the ZIP).
+- **Full gate** `scripts\Test-v1.0.0.1-Logic.ps1`: 257 / 257 passed; the 4 Linux VM checks were skipped because 192.168.1.122 could not be reached.
+- **Static gate:** 210 / 210. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** 4 / 4.
+- **Stuck-start smoke** `Test-v1.0.0.1-RouteSmoke.ps1`: 4 / 4. This includes the check that the stand-in server received only `-port=18711`.
+- **ArtworkHarness:** 752 checks passed, including Dashboard addresses, the stuck panel and German.
+- **Live check:** closing the published desktop window sent it to the tray. The process stayed alive with its window hidden, its helper stayed up and healthz reported 1.0.0.1. **Exit** from the tray menu was not clicked live. The logic gate covers it: every running fleet server is stopped, then the owned helper.
+- **Not yet verified:** a player joining after **Like double-click** is saved. This needs you.
 
-## Publishing
+## For you
 
-With your go-ahead, I pushed `main` (v0.9.0.0 through v1.0.0.0) and the `v1.0.0.0` tag. The release workflow builds the
-Windows ZIP, the source ZIP and the checksums, and creates an unsigned **draft release**. On GitHub, check that **Set as a
-pre-release** is unticked and **Set as the latest release** is ticked, then press **Publish release**.
+- **Apply Like double-click** on Server > Launcher for the main server and save, as above. Then have a player join.
+- **Next bad join:** the identity guard records it with the details needed to find the cause.

@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -20,7 +20,7 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
     private readonly object consoleLogGate = new();
     private readonly PalworldRconService rcon;
     private Process? ownedProcess;
-    private CancellationTokenSource? consoleCaptureCancellation;
+    private CancellationTokenSource? windowPolicyCancellation;
 
     public WindowsServerLifecycleService(
         ServerPlatformProfile platform,
@@ -65,10 +65,13 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
         {
             var native = SelectNativeProcess(processes);
             var ready = ports.Contains(expectedGamePort);
+            // v1.0.0.1: how long it has been starting (see StartupWatch).
+            var startedAt = StartupWatch.ProcessStartedAt(native?.ProcessId);
             var snapshot = new ServerLifecycleSnapshot(
                 ServerLifecyclePhase.Running, native?.ProcessId, processes, ports, ready, false, now,
                 persisted?.LastTransitionAt,
-                ready ? $"PalServer process and UDP {expectedGamePort} are active." : $"PalServer process is active; UDP {expectedGamePort} has not been confirmed.");
+                ready ? $"PalServer process and UDP {expectedGamePort} are active." : StartupWatch.NotReadyDetail(expectedGamePort, startedAt, now))
+            { NativeStartedAt = startedAt, StartupStuck = StartupWatch.IsStuck(ready, startedAt, now) };
             // v0.9.6.0: a stop in progress keeps its recorded intent. A status read while the process was still exiting
             // rewrote "Stopping (stop requested)" as "Running", so a poll a second later found no process, no stop request,
             // and restarted the server as crashed (found by the v0.9.5.0 fleet smoke: about one run in three).
@@ -119,9 +122,20 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
     public async Task<ServerLifecycleOperationResult> StartAsync(IReadOnlyList<string> serverArguments, TimeSpan startupTimeout, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(serverArguments);
-        if (!File.Exists(paths.ServerExecutable))
+        var launcher = LauncherRuntimeOptions.Parse(serverArguments);
+        var executable = launcher.ResolveExecutable(paths);
+        var workingDirectory = launcher.ResolveWorkingDirectory(paths, executable);
+
+        if (!File.Exists(executable))
             return new ServerLifecycleOperationResult(HeadlessExitCode.ServerExecutableMissing, await GetStatusAsync(cancellationToken), false,
-                $"Server entry point was not found: {paths.ServerExecutable}");
+                $"Configured server entry point was not found: {executable}");
+        if (!Directory.Exists(workingDirectory))
+            return new ServerLifecycleOperationResult(HeadlessExitCode.LaunchFailed, await GetStatusAsync(cancellationToken), false,
+                $"Configured launcher working directory was not found: {workingDirectory}");
+        if (launcher.UseShellExecute && (launcher.RedirectStandardOutput || launcher.RedirectStandardError))
+            return new ServerLifecycleOperationResult(HeadlessExitCode.LaunchFailed, await GetStatusAsync(cancellationToken), false,
+                "UseShellExecute=true cannot be combined with redirected standard output or error. Disable redirection or turn UseShellExecute off.");
+
         if (FindManagedServerProcesses().Count > 0)
             return new ServerLifecycleOperationResult(HeadlessExitCode.AlreadyRunning, await GetStatusAsync(cancellationToken), false,
                 "PalServer is already running; duplicate start was blocked.");
@@ -147,27 +161,32 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
         {
             var startInfo = new ProcessStartInfo
             {
-                FileName = paths.ServerExecutable,
-                WorkingDirectory = paths.ServerRoot,
-                // PalServer is intentionally launched without a visible console window.
-                // Unreal stdout/stderr is redirected into MystTiq-PalServer-Console.log and surfaced by Live Console.
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
+                FileName = executable,
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = launcher.UseShellExecute,
+                CreateNoWindow = launcher.CreateNoWindow,
+                WindowStyle = launcher.WindowStyle,
+                RedirectStandardOutput = launcher.RedirectStandardOutput,
+                RedirectStandardError = launcher.RedirectStandardError
             };
-            foreach (var argument in BuildHiddenConsoleArguments(serverArguments))
+            foreach (var argument in BuildLauncherArguments(serverArguments, launcher.ExplicitConfiguration))
                 startInfo.ArgumentList.Add(argument);
             ownedProcess?.Dispose();
-            consoleCaptureCancellation?.Cancel();
-            consoleCaptureCancellation?.Dispose();
+            windowPolicyCancellation?.Cancel();
+            windowPolicyCancellation?.Dispose();
             ownedProcess = Process.Start(startInfo) ?? throw new InvalidOperationException("PalServer process could not be created.");
-            consoleCaptureCancellation = new CancellationTokenSource();
-            StartConsoleCapture(ownedProcess, consoleCaptureCancellation.Token);
-            AppendLifecycleConsoleLine($"Launching: {paths.ServerExecutable}");
-            AppendLifecycleConsoleLine($"Working directory: {paths.ServerRoot}");
+            // One lifetime token covers optional redirected-stream readers and the optional
+            // post-launch window-hiding policy. It is cancelled on stop/restart/next launch.
+            windowPolicyCancellation = new CancellationTokenSource();
+            if (startInfo.RedirectStandardOutput)
+                _ = PumpRedirectedStreamAsync(ownedProcess.StandardOutput, "PAL STDOUT", launcher.CaptureRedirectedOutput, windowPolicyCancellation.Token);
+            if (startInfo.RedirectStandardError)
+                _ = PumpRedirectedStreamAsync(ownedProcess.StandardError, "PAL STDERR", launcher.CaptureRedirectedOutput, windowPolicyCancellation.Token);
+
+            AppendLifecycleConsoleLine($"Launching: {executable}");
+            AppendLifecycleConsoleLine($"Working directory: {workingDirectory}");
             AppendLifecycleConsoleLine("Arguments: " + string.Join(" ", startInfo.ArgumentList));
+            AppendLifecycleConsoleLine($"Launcher: UseShellExecute={startInfo.UseShellExecute}; CreateNoWindow={startInfo.CreateNoWindow}; WindowStyle={startInfo.WindowStyle}; RedirectStdOut={startInfo.RedirectStandardOutput}; RedirectStdErr={startInfo.RedirectStandardError}; HideManagedWindows={launcher.HideManagedWindows}; ExplicitOptions={launcher.ExplicitConfiguration}.");
             if (networkLine is not null) AppendLifecycleConsoleLine(networkLine);
             AppendLifecycleConsoleLine($"PalServer bootstrap PID {ownedProcess.Id} created; waiting for UDP {expectedGamePort} readiness.");
             // v0.7.83.0 bugfix: reported live -- this previously ran for a fixed startupTimeout+30s
@@ -178,12 +197,13 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
             // WindowsTerminal.exe, never one of platform.ProcessNames) -- see that method's own
             // updated comment for the title-matching fallback this pass added for that case. Even
             // with that fallback, a fixed window risked missing a console that only appears later
-            // (e.g. after this method's own catch-up sweep gives up). consoleCaptureCancellation
+            // (e.g. after this method's own catch-up sweep gives up). windowPolicyCancellation
             // already lives for the managed process' full lifetime (only cancelled on the next
             // launch/stop), so reusing it here for the sweep loop itself -- instead of a fixed
             // duration -- means "ideally this window would never popup at all" for as long as
             // MystTiq is managing this server, not just its first couple of minutes.
-            _ = ApplyPostLaunchWindowPolicyAsync(consoleCaptureCancellation.Token);
+            if (launcher.HideManagedWindows)
+                _ = ApplyPostLaunchWindowPolicyAsync(windowPolicyCancellation.Token);
         }
         catch (Exception ex)
         {
@@ -298,9 +318,9 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
 
     private ServerLifecycleOperationResult CompleteStopped(bool forced, string message)
     {
-        consoleCaptureCancellation?.Cancel();
-        consoleCaptureCancellation?.Dispose();
-        consoleCaptureCancellation = null;
+        windowPolicyCancellation?.Cancel();
+        windowPolicyCancellation?.Dispose();
+        windowPolicyCancellation = null;
         ownedProcess?.Dispose();
         ownedProcess = null;
         var now = DateTimeOffset.UtcNow;
@@ -454,68 +474,163 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
 
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
-    private static IReadOnlyList<string> BuildHiddenConsoleArguments(IReadOnlyList<string> serverArguments)
+    private const string LauncherOptionPrefix = "@mysttiq:";
+    private const int DefaultGamePort = 8211;
+
+    private IReadOnlyList<string> BuildLauncherArguments(IReadOnlyList<string> serverArguments, bool explicitConfiguration)
     {
-        // Unreal's exact -log flag creates a separate logging window on Windows.
-        // MystTiq is headless-first, so preserve all other custom arguments while routing log output to stdout.
-        var arguments = serverArguments
-            .Where(argument => !string.Equals(argument?.Trim(), "-log", StringComparison.OrdinalIgnoreCase))
+        var clean = serverArguments
             .Where(argument => !string.IsNullOrWhiteSpace(argument))
+            .Select(argument => argument.Trim())
+            .Where(argument => !argument.StartsWith(LauncherOptionPrefix, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        if (!arguments.Any(argument => string.Equals(argument, "-stdout", StringComparison.OrdinalIgnoreCase)))
-            arguments.Add("-stdout");
-        if (!arguments.Any(argument => string.Equals(argument, "-FullStdOutLogOutput", StringComparison.OrdinalIgnoreCase)))
-            arguments.Add("-FullStdOutLogOutput");
-
-        return arguments;
-    }
-
-    // v0.7.51.0 bug fix: found live, diagnosing a real stuck-server incident. The reader tasks below
-    // MUST start unconditionally, regardless of whether the log directory/file is writable.
-    // RedirectStandardOutput/RedirectStandardError back this process with small anonymous pipes --
-    // if nothing ever reads them (because an earlier exception here aborted before scheduling the
-    // Task.Run calls), PalServer itself blocks solid the moment its own output fills that pipe
-    // buffer: alive, 0% CPU, "responding" (the block is in a worker thread), and no further progress
-    // -- including never reaching the point where it binds its UDP game port. Confirmed live: a
-    // restrictive ACL on MystTiq-PalServer-Console.log (SYSTEM/Administrators-only write, no access
-    // for the account actually running the manager) threw UnauthorizedAccessException on the very
-    // first banner-line write, which used to abort this whole method before the two Task.Run calls
-    // ever ran. A logging failure must never prevent draining the pipes -- so directory/file writes
-    // are now individually best-effort (TryAppendConsoleLine) and the capture tasks always start.
-    private void StartConsoleCapture(Process process, CancellationToken token)
-    {
-        var logDirectory = paths.LogsRoot;
-        try { Directory.CreateDirectory(logDirectory); }
-        catch
+        // Backward compatibility: configurations saved before the launcher-options UI existed do
+        // not contain @mysttiq:launcherVersion=1. Keep the current manual-parity behavior for those
+        // profiles until the user opens Settings and saves explicit launcher choices.
+        if (!explicitConfiguration)
         {
-            logDirectory = Path.Combine(paths.ManagerRuntimeRoot, "logs");
-            try { Directory.CreateDirectory(logDirectory); } catch { }
+            var suppressedManualParityFlags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "-unattended",
+                "-useperfthreads",
+                "-NoAsyncLoadingThread",
+                "-UseMultithreadForDS"
+            };
+
+            // v1.0.0.1 (the owner, 2026-10-04: "I double click PalServer.exe from the folder", which keeps players' characters):
+            // a double-click passes no arguments at all, so neither does this, beyond -port= for a server not on 8211 (the
+            // game's own default, which a double-click gets). The diagnostic logging flags the first v1.0.0.1 added are left
+            // out too; the native console capture still sees the server's log.
+            var diagnosticFlags = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "-log", "-stdout", "-FullStdOutLogOutput" };
+            clean = clean
+                .Where(argument => !suppressedManualParityFlags.Contains(argument) && !diagnosticFlags.Contains(argument))
+                .Where(argument => !argument.StartsWith("-logformat=", StringComparison.OrdinalIgnoreCase))
+                .Where(argument => !argument.StartsWith("-abslog=", StringComparison.OrdinalIgnoreCase))
+                .Where(argument => !(expectedGamePort == DefaultGamePort && argument.Equals($"-port={DefaultGamePort}", StringComparison.OrdinalIgnoreCase)))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (expectedGamePort != DefaultGamePort && !clean.Any(argument => argument.StartsWith("-port=", StringComparison.OrdinalIgnoreCase)))
+                clean.Add($"-port={expectedGamePort}");
         }
-        var logPath = Path.Combine(logDirectory, "MystTiq-PalServer-Console.log");
-        TryAppendConsoleLine(logPath, $"===== MystTiq PalServer redirected console session started {DateTimeOffset.Now:O} PID {process.Id} =====");
-        _ = Task.Run(() => CaptureStreamAsync(process.StandardOutput, "OUT", logPath, token));
-        _ = Task.Run(() => CaptureStreamAsync(process.StandardError, "ERR", logPath, token));
+
+        return clean.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private async Task CaptureStreamAsync(StreamReader reader, string streamName, string logPath, CancellationToken token)
+    private async Task PumpRedirectedStreamAsync(StreamReader reader, string source, bool capture, CancellationToken token)
     {
         try
         {
             while (!token.IsCancellationRequested)
             {
-                var line = await reader.ReadLineAsync(token);
+                var line = await reader.ReadLineAsync(token).ConfigureAwait(false);
                 if (line is null) break;
-                // The read above is what actually drains the pipe and keeps PalServer unblocked --
-                // whether the line successfully makes it to disk is a separate, non-critical concern.
-                TryAppendConsoleLine(logPath, $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}] [{streamName}] {line}");
+                if (capture) AppendLifecycleConsoleLine($"[{source}] {line}");
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (ObjectDisposedException) { }
-        catch (IOException ex) { TryAppendConsoleLine(logPath, $"[CAPTURE] {streamName} reader stopped: {ex.Message}"); }
+        catch (IOException ex)
+        {
+            if (capture) AppendLifecycleConsoleLine($"[{source}] stream ended: {ex.Message}");
+        }
     }
 
+    private sealed record LauncherRuntimeOptions(
+        bool ExplicitConfiguration,
+        string ExecutableMode,
+        string CustomExecutablePath,
+        string WorkingDirectoryMode,
+        string CustomWorkingDirectory,
+        bool UseShellExecute,
+        bool CreateNoWindow,
+        ProcessWindowStyle WindowStyle,
+        bool RedirectStandardOutput,
+        bool RedirectStandardError,
+        bool CaptureRedirectedOutput,
+        bool HideManagedWindows)
+    {
+        public static LauncherRuntimeOptions Parse(IReadOnlyList<string> arguments)
+        {
+            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var argument in arguments.Where(a => !string.IsNullOrWhiteSpace(a)))
+            {
+                var trimmed = argument.Trim();
+                if (!trimmed.StartsWith(LauncherOptionPrefix, StringComparison.OrdinalIgnoreCase)) continue;
+                var payload = trimmed[LauncherOptionPrefix.Length..];
+                var separator = payload.IndexOf('=');
+                if (separator < 0) values[payload] = "true";
+                else values[payload[..separator]] = payload[(separator + 1)..];
+            }
+
+            var explicitConfiguration = values.ContainsKey("launcherVersion");
+            var style = ProcessWindowStyle.Hidden;
+            if (values.TryGetValue("windowStyle", out var styleText) &&
+                Enum.TryParse<ProcessWindowStyle>(styleText, ignoreCase: true, out var parsedStyle))
+                style = parsedStyle;
+
+            return new LauncherRuntimeOptions(
+                explicitConfiguration,
+                Read(values, "executable", "PalServer.exe"),
+                Read(values, "customExecutablePath", string.Empty),
+                Read(values, "workingDirectory", "Server root"),
+                Read(values, "customWorkingDirectory", string.Empty),
+                ReadBool(values, "useShellExecute", false),
+                ReadBool(values, "createNoWindow", false),
+                style,
+                ReadBool(values, "redirectStandardOutput", false),
+                ReadBool(values, "redirectStandardError", false),
+                ReadBool(values, "captureRedirectedOutput", true),
+                ReadBool(values, "hideManagedWindows", true));
+        }
+
+        public string ResolveExecutable(IServerPathProfile paths)
+        {
+            var mode = ExecutableMode.Trim();
+            if (mode.Equals("Shipping-Cmd.exe", StringComparison.OrdinalIgnoreCase))
+                return Path.Combine(paths.RuntimeBinaryRoot, "PalServer-Win64-Shipping-Cmd.exe");
+            if (mode.Equals("Shipping.exe", StringComparison.OrdinalIgnoreCase))
+                return Path.Combine(paths.RuntimeBinaryRoot, "PalServer-Win64-Shipping.exe");
+            if (mode.Equals("Test-Cmd.exe", StringComparison.OrdinalIgnoreCase))
+                return Path.Combine(paths.RuntimeBinaryRoot, "PalServer-Win64-Test-Cmd.exe");
+            if (mode.Equals("Test.exe", StringComparison.OrdinalIgnoreCase))
+                return Path.Combine(paths.RuntimeBinaryRoot, "PalServer-Win64-Test.exe");
+            if (mode.Equals("Custom path", StringComparison.OrdinalIgnoreCase))
+                return ExpandPath(CustomExecutablePath, paths.ServerRoot, paths.LogsRoot);
+            return paths.ServerExecutable;
+        }
+
+        public string ResolveWorkingDirectory(IServerPathProfile paths, string executable)
+        {
+            if (WorkingDirectoryMode.Equals("Executable folder", StringComparison.OrdinalIgnoreCase))
+                return Path.GetDirectoryName(executable) ?? paths.ServerRoot;
+            if (WorkingDirectoryMode.Equals("Custom path", StringComparison.OrdinalIgnoreCase))
+                return ExpandPath(CustomWorkingDirectory, paths.ServerRoot, paths.LogsRoot);
+            return paths.ServerRoot;
+        }
+
+        private static string Read(IReadOnlyDictionary<string, string> values, string key, string fallback) =>
+            values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value.Trim() : fallback;
+
+        private static bool ReadBool(IReadOnlyDictionary<string, string> values, string key, bool fallback) =>
+            values.TryGetValue(key, out var value) && bool.TryParse(value, out var parsed) ? parsed : fallback;
+
+        private static string ExpandPath(string value, string serverRoot, string logsRoot)
+        {
+            var expanded = Environment.ExpandEnvironmentVariables(value ?? string.Empty)
+                .Replace("%SERVERROOT%", serverRoot, StringComparison.OrdinalIgnoreCase)
+                .Replace("%LOGSROOT%", logsRoot, StringComparison.OrdinalIgnoreCase)
+                .Trim().Trim('"');
+            if (string.IsNullOrWhiteSpace(expanded)) return expanded;
+            return Path.IsPathRooted(expanded) ? Path.GetFullPath(expanded) : Path.GetFullPath(Path.Combine(serverRoot, expanded));
+        }
+    }
+
+    // PalServer output is intentionally not consumed through redirected process streams.
+    // MystTiq lifecycle/admin messages still use the manager-owned console log below, while
+    // the game server's own output comes from the native console capture (and Identity-Diagnostic.log when the Launcher
+    // passes -abslog=; the default, like a double-click, passes no arguments).
     private void TryAppendConsoleLine(string path, string line)
     {
         try { AppendConsoleLine(path, line); }

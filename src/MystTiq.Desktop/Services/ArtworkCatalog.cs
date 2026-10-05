@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -14,7 +14,7 @@ public static class ArtworkCatalog
     public static string Category(NavigationPage page) => page switch
     {
         NavigationPage.Dashboard => "home",
-        NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Console or NavigationPage.Workspace => "server",
+        NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Console or NavigationPage.Workspace or NavigationPage.Launcher => "server",
         NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds or NavigationPage.Map => "world",
         NavigationPage.Backups => "backups",
         NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.Ue4ss => "mods",

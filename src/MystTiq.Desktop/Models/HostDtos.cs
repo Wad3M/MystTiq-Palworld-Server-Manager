@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -220,4 +220,22 @@ public static class HostFormat
         1 => items[0],
         _ => string.Join(", ", items.Take(items.Count - 1)) + " and " + items[^1],
     };
+}
+
+// v1.0.0.1: GET /network/addresses -- the addresses players use to reach this server (the Dashboard's addresses line).
+public sealed class HostAddressesDto
+{
+    [JsonPropertyName("gamePort")] public int GamePort { get; init; }
+    [JsonPropertyName("local")] public IReadOnlyList<LocalAddressDto> Local { get; init; } = [];
+    [JsonPropertyName("publicAddress")] public string? PublicAddress { get; init; }
+    [JsonPropertyName("publicSource")] public string? PublicSource { get; init; }
+    [JsonPropertyName("publicCheckedAt")] public DateTimeOffset? PublicCheckedAt { get; init; }
+    [JsonPropertyName("publicError")] public string? PublicError { get; init; }
+}
+
+public sealed class LocalAddressDto
+{
+    [JsonPropertyName("adapter")] public string Adapter { get; init; } = string.Empty;
+    [JsonPropertyName("address")] public string Address { get; init; } = string.Empty;
+    [JsonPropertyName("hasGateway")] public bool HasGateway { get; init; }
 }

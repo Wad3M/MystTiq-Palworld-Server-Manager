@@ -1,4 +1,4 @@
-# MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+# MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 [CmdletBinding()]
 # v0.7.115.0: -AllowBuildOutputs skips ONLY the hygiene check for build output (bin, obj, artifacts, publish and
 # anything inside them). The logic gates validate mid-run, after they themselves have built, published and
@@ -72,16 +72,27 @@ $activeFiles = Get-ChildItem $root -File -Recurse -Include *.cs,*.xaml,*.csproj,
     -not ($relativePath -like 'scripts\Test-v*-LinuxIsolated.ps1') -and
     # v0.8.15.0: so does the remote sign-in test (its '-RemoteSignIn' suffix reads like a pre-release tag).
     -not ($relativePath -like 'scripts\Test-v*-RemoteSignIn.ps1') -and
-    -not ($relativePath -like 'scripts\Test-v*-ProductionReadiness.sh')
+    -not ($relativePath -like 'scripts\Test-v*-ProductionReadiness.sh') -and
+    # v1.0.0.1: the harnesses' test data names versions on purpose (the release channel at 0.x and at 1.0, for example).
+    -not ($relativePath -like 'scripts\Testing\*')
 }
 $versionParts = $version.Split('.')
 $releaseLinePrefix = [regex]::Escape(($versionParts[0..2] -join '.'))
 $versionPattern = "(?<!\d)$releaseLinePrefix\.\d+(?:-[0-9A-Za-z.-]+)?(?!\d)"
 foreach ($file in $activeFiles) {
     foreach ($lineMatch in Select-String -Path $file.FullName -Pattern $versionPattern -AllMatches -ErrorAction SilentlyContinue) {
+        # Release-review stamps intentionally record the release in which a file was last reviewed. They are
+        # provenance, not an active application-version value, so a patch release must not report every older
+        # review stamp as a stale-version warning.
+        if ($lineMatch.Line -match 'file reviewed for this release') { continue }
         # v0.8.26.0: compare the four-part number only. A script named after the version ("Test-v0.8.26.0-InGame.ps1",
         # "mysttiq-v0.8.26.0-alerts-...") reads like a pre-release tag but is the current version.
-        $stale = @($lineMatch.Matches | Where-Object { ($_.Value -replace '-.*$', '') -ne ($version -replace '-.*$', '') })
+        # v1.0.0.1: a history marker ("# v1.0.0.0: code signing…", "v1.0.0.0:" before a note) says when something was added;
+        # it is not the application's version and stays as written in a later release.
+        $line = $lineMatch.Line
+        $stale = @($lineMatch.Matches | Where-Object {
+            $isHistoryMarker = $_.Index -gt 0 -and $line[$_.Index - 1] -eq 'v' -and ($_.Index + $_.Length) -lt $line.Length -and $line[$_.Index + $_.Length] -eq ':'
+            -not $isHistoryMarker -and ($_.Value -replace '-.*$', '') -ne ($version -replace '-.*$', '') })
         if ($stale.Count -gt 0) {
             Add-Issue Warning 'Version consistency' "Possible stale version in $($file.FullName.Substring($root.Length + 1)):$($lineMatch.LineNumber): $($lineMatch.Line.Trim())"
         }

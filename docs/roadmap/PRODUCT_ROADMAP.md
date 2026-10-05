@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
 # Product roadmap to v1.0
 
-Updated 2026-09-30. **Current version: v1.0.0.0. Accepted baseline: v1.0.0.0. Next: the open items below.**
+Updated 2026-10-04. **Current version: v1.0.0.1. Accepted baseline: v1.0.0.0. Next: the open items below.**
 
 This is the active plan. Version assignments after v1.0.0.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
@@ -136,6 +136,23 @@ v1.0.0.0 is the accepted baseline (owner, 2026-09-30), replacing v0.8.25.0. From
 regression and the upgrade and accounts smokes start from the v1.0.0.0 checkpoint (`_Backups/MystTiqPalworldServer/v1.0.0.0`)
 as well as v0.8.25.0, so an upgrade from 1.0 is always tested.
 
+## v1.0.0.1 — Launcher, identity guard, tray and stuck starts (2026-10-04)
+
+The owner's Launcher workspace (Server > Launcher with Default / No Mods / Show Window presets, manual-parity launch,
+startup-window capture, Steam identity on the Players page) and four changes. Details:
+`docs/architecture/v1.0.0.1-launcher-identity-tray.md`.
+
+- **Identity guard and argument-free starts.** Players were given new characters in sessions started with MystTiq's
+  arguments (also from a script); a double-click, with no arguments, kept them. Servers now start with no arguments by
+  default (a Like double-click preset too), and a Steam player not given their own character is caught on join, recorded
+  and kicked before a duplicate is made. Which argument was responsible is not known. Real characters were never touched.
+- **Close to tray, full Exit.** No `mysttiq-server` is left behind after Exit.
+- **Stuck starts.** Detected after two minutes; test without MODs, or find the MOD one at a time, from the Dashboard.
+- **Addresses on the Dashboard.** Local and public, with the port.
+- Recorded checks cover the stuck-start smoke (a stand-in that hangs on one MOD), the identity rule against the real
+  characters' IDs, and both harnesses. They do not replace a player joining after a MystTiq launch, which is what shows
+  whether the identity problem is gone.
+
 ## v1.1 — MOD browser (planned, requested 2026-09-30)
 
 A MOD browser connected to Nexus Mods and other online repositories: search, read and install MODs from inside MystTiq.
@@ -147,7 +164,7 @@ details are to be agreed before work starts.
 
 The release workflow signs the Windows download through SignPath once the SignPath Foundation application is approved
 and the repository variables are set (`docs/release/CODE_SIGNING.md`). v1.0.0.0 is published unsigned (the owner's
-decision, 2026-09-30); the first signed release is planned as v1.0.1.
+decision, 2026-09-30); the first signed release is planned as v1.0.1 (v1.0.0.1 is also unsigned).
 
 ## Open after 1.0 — integration and stabilization (formerly v0.9.x)
 

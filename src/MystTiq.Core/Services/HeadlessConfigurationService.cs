@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Net;
 using System.Text.Json;
 using MystTiq.Core.Models;
@@ -36,21 +36,19 @@ public sealed class HeadlessConfigurationService
             : EnsureUnattendedFlag(configuration);
     }
 
-    // v0.7.61.0: -unattended is not a discretionary launch argument -- without it, PalServer can
-    // silently pop a native Win32 MessageBox on certain Unreal/Steamworks error conditions, and
-    // since a headless-launched process has no interactive desktop to show it on, that dialog
-    // blocks forever (confirmed live via a Process Explorer thread-stack capture: the blocked
-    // thread sat in USER32.dll!MessageBoxW). Every profile created before this fix is missing the
-    // flag and would hit this exact freeze the moment that condition occurs, with zero visible
-    // symptom, so it's backfilled here on every load rather than left as an opt-in the user would
-    // have no way to know to make.
+    // Manual-parity hotfix: do not force -unattended onto Windows PalServer profiles. The
+    // known-good direct PowerShell launch does not use it, and the Windows lifecycle service now
+    // starts PalServer with a normal console creation path (hidden via WindowStyle instead of
+    // CREATE_NO_WINDOW). Linux retains the existing unattended safety behavior.
     private static HeadlessConfiguration EnsureUnattendedFlag(HeadlessConfiguration configuration) =>
         configuration with
         {
             Servers = configuration.Servers
-                .Select(server => server.LaunchArguments.Any(a => a.Equals("-unattended", StringComparison.OrdinalIgnoreCase))
+                .Select(server => server.Runtime == ServerRuntimeKind.WindowsNative
                     ? server
-                    : server with { LaunchArguments = new[] { "-unattended" }.Concat(server.LaunchArguments).ToArray() })
+                    : server.LaunchArguments.Any(a => a.Equals("-unattended", StringComparison.OrdinalIgnoreCase))
+                        ? server
+                        : server with { LaunchArguments = new[] { "-unattended" }.Concat(server.LaunchArguments).ToArray() })
                 .ToArray()
         };
 

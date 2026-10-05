@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -124,6 +124,16 @@ public sealed class WanReachabilityService(INetworkDiagnosticsPlatformService pl
   if(!success)return(null,true);
   var value=XDocument.Parse(xml).Descendants().FirstOrDefault(e=>e.Name.LocalName=="NewExternalIPAddress")?.Value?.Trim();
   return(string.IsNullOrEmpty(value)?null:value,false);
+ }
+
+ // v1.0.0.1: the router's internet-side address over UPnP, for the Dashboard's addresses; null when no router answers.
+ public async Task<string?> GetRouterWanAddressAsync(CancellationToken token=default)
+ {
+  var igd=await DiscoverAsync(token);
+  if(igd is null) return null;
+  var (address,refused)=await GetExternalIpAsync(igd.Value,token);
+  if(refused){await Task.Delay(500,token);(address,_)=await GetExternalIpAsync(igd.Value,token);}
+  return address;
  }
 
  public async Task<UpnpRepairResult> RepairUpnpMappingAsync(int gamePort,CancellationToken token=default)

@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 namespace MystTiq.Core.Services;
 
 // v0.7.93.0: pure parsing/validation helpers for the Nexus Mods catalog feature. Kept in Core (not

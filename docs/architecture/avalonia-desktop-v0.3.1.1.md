@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
 # v0.3.1.1 — Avalonia Desktop Foundation
 
 `MystTiq.Desktop` is the first executable cross-platform GUI foundation. It is an API client, not the owner of PalServer lifecycle.

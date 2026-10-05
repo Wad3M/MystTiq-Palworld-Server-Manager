@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -62,6 +62,21 @@ public interface IMystTiqApiClient
     Task<LogTailSnapshotDto> GetLogTailAsync(
         ConnectionProfile profile,
         int lines = 120,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ConsoleCaptureStatusDto> GetConsoleCaptureStatusAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ConsoleCaptureOperationResultDto> InstallConsoleCaptureAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ConsoleCaptureOperationResultDto> UninstallConsoleCaptureAsync(
+        ConnectionProfile profile,
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
 
@@ -404,6 +419,10 @@ public interface IMystTiqApiClient
     Task<ModDescriptionResultDto> GetModDescriptionAsync(ConnectionProfile profile, string type, string package, bool refresh, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> SetModDescriptionSourceAsync(ConnectionProfile profile, string type, string package, string sourceUrl, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> BeginModSafeStartAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v1.0.0.1: the stuck-start protocol's test load (one start with every MOD off, then they are switched back on).
+    Task<ModMutationResultDto> BeginModTestLoadAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v1.0.0.1: the addresses players use to reach this server.
+    Task<HostAddressesDto?> GetHostAddressesAsync(ConnectionProfile profile, bool refresh = false, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<SafeStartStatusDto?> GetModSafeStartStatusAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> CancelModSafeStartAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
 }

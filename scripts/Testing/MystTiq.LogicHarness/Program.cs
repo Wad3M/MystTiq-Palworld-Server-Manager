@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -535,7 +535,43 @@ try
         Assert(ComponentAlerts.ModsBehind([Mod("A", false, true), Mod("B", false, false)], []) is null, "names not known (after a restart) and a MOD unknown: nothing decided");
         Assert(ComponentAlerts.ModsBehind([Mod("A", false, true), Mod("B", false, true)], []) == false, "names not known and every MOD checked and current: resolved");
     }, failures);
-    // v0.9.10.0 (external review): /releases/latest skips prereleases, and MystTiq publishes 0.x releases as prereleases.
+    // v1.0.0.1 (reported 2026-10-04): a Palworld server finds a Steam player's character by the ID their Steam ID gives. On
+    // some days it gave this project's players other IDs and they were sent to make a new character.
+    RunScenario("Identity guard: the player ID a Steam ID gives is computed like Palworld does, and a player who did not get their existing character is caught (a new or co-op player is not)", () =>
+    {
+        Assert(SteamPlayerUid.FromUserId("steam_76561197962020201") == "67D8D355000000000000000000000000", "Wade's Steam ID gives 67D8D355, the ID of his real character");
+        Assert(SteamPlayerUid.FromUserId("steam_76561198653223616") == "A3835C7B000000000000000000000000", "Melly's Steam ID gives A3835C7B, the ID of her real character");
+        Assert(SteamPlayerUid.FromUserId("76561197962020201") == SteamPlayerUid.FromUserId("steam_76561197962020201") && SteamPlayerUid.FromUserId("xbox_2535405290") is null && SteamPlayerUid.FromUserId("") is null,
+            "the steam_ prefix is optional; a non-Steam or empty id has no expected ID");
+        Assert(SteamPlayerUid.CityHash64(System.Text.Encoding.Latin1.GetBytes("abcd")) == 0x1A5502DE4A1F8101UL &&
+               SteamPlayerUid.CityHash64(System.Text.Encoding.Latin1.GetBytes("seventeen bytes!!")) == 0x507A9D6592469765UL &&
+               SteamPlayerUid.CityHash64(System.Text.Encoding.Latin1.GetBytes(new string('y', 40))) == 0xF30D55860A0801C8UL,
+            "CityHash64 matches the reference values in each length range");
+        var wade = "steam_76561197962020201";
+        bool Exists(string id) => id == "67D8D355000000000000000000000000";
+        Assert(IdentityGuard.Judge(wade, "67D8D355000000000000000000000000", Exists) is null, "the right character: nothing to do");
+        Assert(IdentityGuard.Judge(wade, "E290DA9A000000000000000000000000", Exists) is { Assigned: "E290DA9A000000000000000000000000" } v1 && v1.AssignedDisplay == "E290DA9A",
+            "another ID while his character exists (the 2026-10-03 'WadeeRROR'): caught");
+        Assert(IdentityGuard.Judge(wade, "None", Exists) is { Assigned: "None" } v2 && v2.AssignedDisplay.StartsWith("no character", StringComparison.Ordinal),
+            "the new-character screen while his character exists: caught before a duplicate is made");
+        Assert(IdentityGuard.Judge(wade, "None", _ => false) is null && IdentityGuard.Judge(wade, "00000000000000000000000000000001", _ => false) is null,
+            "a new player, or a co-op host moved to the server (…0001) whose Steam character does not exist: left alone");
+        Assert(IdentityGuard.Judge("xbox_2535405290", "1234ABCD000000000000000000000000", _ => true) is null, "a non-Steam player is not judged");
+    }, failures);
+    RunScenario("Stuck start: a start is stuck after two minutes without its port; the status says how long it has been starting; the addresses rules", () =>
+    {
+        var now = DateTimeOffset.Parse("2026-10-04T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+        Assert(!StartupWatch.IsStuck(false, now.AddSeconds(-90), now) && StartupWatch.IsStuck(false, now.AddMinutes(-2), now) && !StartupWatch.IsStuck(true, now.AddHours(-1), now) && !StartupWatch.IsStuck(false, null, now),
+            "stuck only when not ready for two minutes, and only with a known start time");
+        Assert(StartupWatch.NotReadyDetail(8211, now.AddSeconds(-45), now) == "PalServer is starting (45 s); UDP 8211 is not open yet.", StartupWatch.NotReadyDetail(8211, now.AddSeconds(-45), now));
+        Assert(StartupWatch.NotReadyDetail(8211, now.AddMinutes(-6).AddSeconds(-12), now).StartsWith("PalServer has been starting for 6 min 12 s without opening UDP 8211. It looks stuck", StringComparison.Ordinal), "after two minutes it says stuck");
+        Assert(StartupWatch.NotReadyDetail(8211, null, now) == "PalServer process is active; UDP 8211 has not been confirmed.", "without a start time, the old wording");
+        Assert(StartupWatch.Describe(TimeSpan.FromSeconds(9)) == "9 s" && StartupWatch.Describe(TimeSpan.FromMinutes(75)) == "1 h 15 min", "durations read naturally");
+        Assert(HostAddresses.IsPublic("203.0.113.7") && !HostAddresses.IsPublic("192.168.1.50") && !HostAddresses.IsPublic("10.0.0.2") && !HostAddresses.IsPublic("172.20.1.1") &&
+               !HostAddresses.IsPublic("100.72.1.1") && !HostAddresses.IsPublic("169.254.3.3") && !HostAddresses.IsPublic("not an address"),
+            "only a public IPv4 counts (private, carrier-grade NAT and link-local do not)");
+        Assert(HostAddresses.Local().All(a => !a.Address.StartsWith("127.", StringComparison.Ordinal) && !a.Address.StartsWith("169.254.", StringComparison.Ordinal)), "local addresses leave out loopback and link-local");
+    }, failures);    // v0.9.10.0 (external review): /releases/latest skips prereleases, and MystTiq publishes 0.x releases as prereleases.
     RunScenario("MystTiq release check: a development version counts prereleases, 1.0 and later only stable releases; drafts never; newest by version", () =>
     {
         ReleaseCandidate R(string tag, bool pre = false, bool draft = false) => new(tag, pre, draft, null);

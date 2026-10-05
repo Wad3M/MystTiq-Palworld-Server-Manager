@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -16,7 +16,15 @@ public sealed class PlayerExplorerItemDto
     [JsonPropertyName("online")] public bool Online { get; init; }
     [JsonPropertyName("platform")] public string Platform { get; init; } = string.Empty;
     [JsonPropertyName("ping")] public string Ping { get; init; } = string.Empty;
+    [JsonPropertyName("steamId")] public string SteamId { get; init; } = string.Empty;
+    [JsonPropertyName("userId")] public string UserId { get; init; } = string.Empty;
     [JsonPropertyName("evidence")] public string Evidence { get; init; } = string.Empty;
+
+    public bool HasSteamId => !string.IsNullOrWhiteSpace(SteamId);
+    public string SteamIdVerbatim => HasSteamId ? SteamId : "—";
+    public string UserIdVerbatim => string.IsNullOrWhiteSpace(UserId) ? "—" : UserId;
+    public string SteamIdentityVerbatim => HasSteamId ? SteamId : (string.IsNullOrWhiteSpace(UserId) ? "—" : UserId);
+    public string SteamProfileUrl => HasSteamId ? $"https://steamcommunity.com/profiles/{SteamId.Trim()}" : string.Empty;
 
     public string SaveStateText => SaveExists ? "Save found" : "Missing save";
     public string OnlineText => Online ? "Online" : "Offline / Unknown";

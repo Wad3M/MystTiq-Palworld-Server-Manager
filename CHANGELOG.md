@@ -1,4 +1,27 @@
-<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
+## v1.0.0.1 — Launcher, Identity Guard, Tray and Stuck Starts
+
+- Moved the advanced PalServer launcher editor out of System > Settings into its own **Server > Launcher** page, directly below Workspace.
+- Added one-click troubleshooting presets: **Default**, **No Mods**, and **Show Window**. Presets preserve the server's current game port and absolute log path while resetting launch mechanics/custom arguments for reproducible tests.
+- Launcher page keeps the exact effective command preview plus executable, working-directory, Windows process-creation, log, MOD, and custom-argument controls.
+- Version advanced to 1.0.0.1.
+- Startup-window capture on Server > Console (opt in); Steam ID and Palworld user ID in the Player Directory, with search,
+  CSV and an Open Steam Profile action; a single-click title-bar language picker (the owner's v1.0.0.1 polish).
+- Launch like a double-click (the owner: double-click keeps characters, a script with MystTiq's arguments did not): a
+  profile without saved Launcher choices starts PalServer.exe with no arguments (`-port=` only off 8211); the Like
+  double-click preset (shell start, normal window, no arguments).
+- Identity guard: a Steam player not given the character their Steam ID owns (CityHash64 of the SteamID64) is recorded,
+  notified and kicked before a duplicate is made (default on); `/players/identity-guard`.
+- Close goes to the tray; Exit and Force Exit stop every server the owned helper runs, then the helper, then the app.
+  "Exit GUI only" and the close-confirm dialog are removed.
+- Stuck starts: the status says how long a start has run and calls it stuck after two minutes; a test-load mode next to the
+  one-at-a-time test, from a stuck start too, with checked MOD switches and timings; the Dashboard's stuck-start panel.
+- Dashboard addresses: local IPv4s and the public address (router over UPnP, else api.ipify.org, kept an hour) with the
+  port; `/network/addresses`.
+- Accessible names on the Launcher page; the effective command is shown untranslated.
+- Tests: the v1.0.0.1 gate regenerated from v1.0.0.0 (every earlier check kept), `Test-v1.0.0.1-RouteSmoke.ps1`, the
+  stand-in server's "HangsStartup" MOD, logic and artwork scenarios; 40 new texts in all 12 languages.
+
 ## v1.0.0.0 — MystTiq 1.0 (accepted baseline)
 
 - Set as the accepted baseline (owner, 2026-09-30), replacing v0.8.25.0.

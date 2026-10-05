@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,15 +21,15 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.0.0 · Accepted baseline: v1.0.0.0**
+**Current version: v1.0.0.1 · Accepted baseline: v1.0.0.0**
 
 MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.0.0
+## What's new in v1.0.0.1
 
-**MystTiq 1.0.** Everything from the v0.9 series in one stable release: 12 display languages, servers that never start each other, firewall rules for the port each server really uses, a server search that finishes in seconds, alerts when the game server, PalDefender, UE4SS or a MOD falls behind, crash analysis that names the cause, and one local helper that keeps your servers running while you add new ones. Names you give servers and players stay exactly as you wrote them in every language.
+**Launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
 
-[Release notes](release-notes/v1.0.0.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v1.0.0.1.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -99,7 +99,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v0.9.0.0 – v0.9.4.0 | Delivered | 12 display languages for labels, messages and game names; roles explained; accessible names and keyboard reach |
 | v0.9.5.0 – v0.9.8.0 | Delivered | Servers never start each other; true update checks; firewall per server port; fast server search; Avalonia 12; alerts when a component falls behind; Linux install |
 | v0.9.9.0 – v0.9.10.0 | Delivered | One local helper; running servers survive adding one; crash causes for joins; UE4SS compared automatically; names kept in every language |
-| v1.0.0.0 | Current | The first stable release |
+| v1.0.0.1 | Current | Server > Launcher; characters protected on join; help for stuck starts; addresses on the Dashboard; a clean Exit from the tray |
+| v1.0.0.0 | Stable baseline | The first stable release |
 | v1.1 | Planned | A MOD browser connected to Nexus Mods and other online repositories |
 
 What comes next is in the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md). Release history lives in the [changelog](CHANGELOG.md).

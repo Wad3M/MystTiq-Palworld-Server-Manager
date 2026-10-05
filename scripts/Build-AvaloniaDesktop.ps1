@@ -1,4 +1,4 @@
-# MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+# MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 [CmdletBinding()]
 param(
     [ValidateSet('Debug','Release')][string]$Configuration='Release',
@@ -57,22 +57,27 @@ if($Publish){
     Write-Host "Desktop publish: $output" -ForegroundColor Green
     Write-Host "Headless sidecar: $sidecarExe" -ForegroundColor Green
 
-    # v0.7.72.0: MystTiqConsoleProxy.dll (native/MystTiqConsoleProxy, built separately via
-    # scripts/Build-ConsoleProxy.ps1 -- it needs the MSVC toolchain, not part of the normal dotnet
-    # publish graph) rides alongside the headless sidecar so HeadlessServerDistributionService's
-    # install action has something to copy into a server's RuntimeBinaryRoot. Best-effort: a
-    # from-scratch checkout that hasn't run Build-ConsoleProxy.ps1 yet still publishes a working
-    # desktop/headless build, just without native console-capture install available until that
-    # separate build step runs -- never a hard failure here.
+    # v1.0.0.1: the Console page can opt in to native startup-window capture. Try to build the
+    # small Windows proxy automatically whenever a Windows desktop package is published so the
+    # feature is normally ready out of the box. It remains best-effort: machines without the MSVC
+    # C++ toolchain still get a fully working MystTiq build, just without startup-window capture.
     if($Runtime -eq 'win-x64'){
         $nativeProxySource=Join-Path $root 'artifacts\native\MystTiqConsoleProxy.dll'
+        if(-not (Test-Path $nativeProxySource -PathType Leaf)){
+            try {
+                Write-Host '==> Building optional PalServer startup-window capture proxy...' -ForegroundColor Cyan
+                & (Join-Path $PSScriptRoot 'Build-ConsoleProxy.ps1') -ProjectRoot $root -Configuration $Configuration
+            } catch {
+                Write-Warning "Optional native console-capture build was skipped: $($_.Exception.Message)"
+            }
+        }
         if(Test-Path $nativeProxySource -PathType Leaf){
             $nativeProxyDestDir=Join-Path $sidecarOutput 'native'
             New-Item -ItemType Directory -Force -Path $nativeProxyDestDir | Out-Null
             Copy-Item $nativeProxySource (Join-Path $nativeProxyDestDir 'MystTiqConsoleProxy.dll') -Force
             Write-Host "Native console proxy staged: $nativeProxyDestDir\MystTiqConsoleProxy.dll" -ForegroundColor Green
         } else {
-            Write-Host "Native console proxy not found at $nativeProxySource -- run scripts\Build-ConsoleProxy.ps1 first if you want console-capture install available. Skipping (non-fatal)." -ForegroundColor Yellow
+            Write-Host "Native console proxy unavailable in this build. The rest of MystTiq is unaffected." -ForegroundColor Yellow
         }
     }
 

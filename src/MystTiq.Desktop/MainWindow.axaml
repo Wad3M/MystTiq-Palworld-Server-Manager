@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -281,6 +281,7 @@
                 <ToggleButton Classes="nav" IsChecked="{Binding IsServerPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Configuration"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt configuration}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Configuration}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsChecked="{Binding IsConsolePage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Console"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt console}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Console}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsChecked="{Binding IsWorkspacePage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Workspace"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt workspace}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Workspace}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsChecked="{Binding IsLauncherPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Launcher"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt launcher}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Launcher}"/></Grid></Border></ToggleButton>
               </StackPanel>
               <StackPanel IsVisible="{Binding IsV5WorldCategory}" VerticalAlignment="Top" Spacing="3">
                 <ToggleButton Classes="nav" IsChecked="{Binding IsWorldExplorerPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Inspector"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt inspector}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Inspector}"/></Grid></Border></ToggleButton>
@@ -351,6 +352,24 @@
               <TextBlock Text="{services:Tr dashboard.lifecycle}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" FontSize="11"/>
               <TextBlock Grid.Column="1" Text="{services:TrText LifecycleStatusText}" TextWrapping="Wrap" FontSize="11"/>
             </Grid>
+          </Border>
+
+          <!-- v1.0.0.1: the stuck-start protocol. Shown when a start has run two minutes without opening its port, and while a
+               test runs or its result is on screen: test once with every MOD off, or find the MOD by testing one at a time. -->
+          <Border x:Name="StuckStartPanel" Classes="statuscard" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" Padding="10,7" IsVisible="{Binding ShowStuckStartPanel}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="{services:Tr dashboard.stuckStartTitle}" FontWeight="SemiBold" Foreground="{DynamicResource AmberBrush}"/>
+              <TextBlock Text="{services:Tr dashboard.stuckStartHint}" TextWrapping="Wrap" FontSize="11" IsVisible="{Binding IsStartupStuck}"/>
+              <WrapPanel Orientation="Horizontal" IsVisible="{Binding IsStartupStuck}">
+                <Button Content="{services:Tr dashboard.stuckTestLoad}" Command="{Binding BeginStuckTestLoadCommand}" Margin="0,0,8,0" AutomationProperties.Name="{services:Tr dashboard.stuckTestLoad}"/>
+                <Button Content="{services:Tr dashboard.stuckOneAtATime}" Command="{Binding BeginModSafeStartCommand}" AutomationProperties.Name="{services:Tr dashboard.stuckOneAtATime}"/>
+              </WrapPanel>
+              <TextBlock Text="{services:TrText StuckStartStatusText}" TextWrapping="Wrap" FontSize="11" IsVisible="{Binding HasModSafeStartStatus}"/>
+              <WrapPanel Orientation="Horizontal">
+                <Button Content="{services:Tr dashboard.stuckCancelTest}" Command="{Binding CancelModSafeStartCommand}" IsVisible="{Binding IsModSafeStartRunning}" Margin="0,0,8,0" AutomationProperties.Name="{services:Tr dashboard.stuckCancelTest}"/>
+                <Button Content="{services:Tr dashboard.stuckDismiss}" Command="{Binding DismissModSafeStartCommand}" IsVisible="{Binding HasModSafeStartStatus}" AutomationProperties.Name="{services:Tr dashboard.stuckDismiss}"/>
+              </WrapPanel>
+            </StackPanel>
           </Border>
 
           <Grid ColumnDefinitions="1.15*,1.15*,1.15*,1.15*" ColumnSpacing="8">
@@ -490,6 +509,20 @@
               <StackPanel Grid.Column="2"><TextBlock Text="{services:Tr dashboard.description}" Classes="muted" FontSize="9"/><TextBlock Text="{Binding DashboardServerDescriptionVerbatim}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding DashboardServerDescriptionVerbatim}"/></StackPanel>
               <Border Grid.Column="3" Width="1" Background="{DynamicResource BorderSoftBrush}" Margin="4,0"/>
               <StackPanel Grid.Column="4"><TextBlock Text="{services:Tr dashboard.currentOperation}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText LifecycleStatusText}" FontSize="10" Foreground="{DynamicResource BlueBrush}" MaxWidth="300" TextTrimming="CharacterEllipsis"/></StackPanel>
+            </Grid>
+          </Border>
+
+          <!-- v1.0.0.1 (requested 2026-09-30): the addresses players use. Local ones for the same network, the public one for the
+               internet; selectable so they can be copied. -->
+          <Border x:Name="DashboardAddresses" Classes="card accentHome" Padding="8">
+            <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="10">
+              <TextBlock Text="{services:Tr dashboard.localAddresses}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
+              <SelectableTextBlock Grid.Column="1" Text="{Binding LocalAddressesVerbatim}" FontFamily="Consolas, monospace" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="2" Text="{services:Tr dashboard.publicAddress}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <SelectableTextBlock Text="{Binding PublicAddressVerbatim}" FontFamily="Consolas, monospace" FontSize="12"/>
+                <TextBlock Text="{services:TrText PublicAddressNote}" Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
+              </StackPanel>
             </Grid>
           </Border>
         </StackPanel>
@@ -1393,14 +1426,18 @@
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:PlayerExplorerItemDto">
                       <Border BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,0,1" Padding="3,10">
-                        <Grid ColumnDefinitions="2*,*,*,*" ColumnSpacing="12">
+                        <Grid ColumnDefinitions="2*,1.35*,*,*,*" ColumnSpacing="12">
                           <StackPanel Spacing="2">
                             <TextBlock Text="{Binding PlayerName}" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding PlayerId}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
+                            <TextBlock Text="{Binding PlayerId}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                           </StackPanel>
-                          <StackPanel Grid.Column="1"><TextBlock Text="{services:TrText OnlineText}" Foreground="{DynamicResource GreenBrush}"/><TextBlock Text="{services:TrText Platform}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/></StackPanel>
-                          <StackPanel Grid.Column="2"><TextBlock Text="{services:TrText SaveStateText}"/><TextBlock Text="{services:TrText SaveSizeText}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/></StackPanel>
-                          <StackPanel Grid.Column="3"><TextBlock Text="{Binding GuildName}"/><TextBlock Text="{services:TrText Ping}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/></StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="{services:Tr ui.steam_identity}" FontSize="10" Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="{Binding SteamIdentityVerbatim}" FontFamily="Consolas, monospace" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                          </StackPanel>
+                          <StackPanel Grid.Column="2"><TextBlock Text="{services:TrText OnlineText}" Foreground="{DynamicResource GreenBrush}"/><TextBlock Text="{services:TrText Platform}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/></StackPanel>
+                          <StackPanel Grid.Column="3"><TextBlock Text="{services:TrText SaveStateText}"/><TextBlock Text="{services:TrText SaveSizeText}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/></StackPanel>
+                          <StackPanel Grid.Column="4"><TextBlock Text="{Binding GuildName}"/><TextBlock Text="{services:TrText Ping}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/></StackPanel>
                         </Grid>
                       </Border>
                     </DataTemplate>
@@ -1415,6 +1452,13 @@
                   <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr ui.selected_player}" FontSize="17" FontWeight="SemiBold"/><Button Grid.Column="1" Content="{services:Tr ui.load_metadata}" Command="{Binding LoadPlayerMetadataCommand}"/></Grid>
                   <TextBlock Text="{Binding SelectedPlayerRecord.PlayerName}" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource VioletBrush}"/>
                   <TextBlock Text="{Binding SelectedPlayerRecord.PlayerId}" Foreground="{DynamicResource MutedBrush}"/>
+                  <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="3">
+                    <TextBlock Text="{services:Tr ui.steam_id}" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding SelectedPlayerRecord.SteamIdVerbatim}" FontFamily="Consolas, monospace" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Row="1" Text="{services:Tr ui.palworld_user_id}" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedPlayerRecord.UserIdVerbatim}" FontFamily="Consolas, monospace" TextTrimming="CharacterEllipsis"/>
+                  </Grid>
+                  <Button Content="{services:Tr ui.open_steam_profile}" HorizontalAlignment="Left" IsVisible="{Binding SelectedPlayerRecord.HasSteamId}" Tag="{Binding SelectedPlayerRecord.SteamId}" Click="OpenSteamProfile_OnClick"/>
                   <TextBlock Text="{services:TrText SelectedPlayerRecord.OnlineText}"/>
                   <TextBlock Text="{services:TrText SelectedPlayerRecord.SaveStateText}"/>
                   <TextBlock Text="{services:TrText SelectedPlayerRecord.UpdatedText}" Foreground="{DynamicResource MutedBrush}"/>
@@ -1816,6 +1860,23 @@
           </Border>
 
           <TextBlock IsVisible="{Binding IsActivityAuditPage}" Text="{services:Tr ui.audit_retention_is_append_only_from_the_gui_pers_92a532}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap"/>
+
+          <Border Classes="card accentServer" IsVisible="{Binding IsConsolePage}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+              <StackPanel Spacing="5">
+                <TextBlock Text="{services:Tr ui.startup_console_capture}" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock Text="{services:Tr ui.startup_console_capture_desc}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText ConsoleCaptureState}" Foreground="{DynamicResource BlueBrush}" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText ConsoleCaptureDetail}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:Tr ui.startup_capture_restart_note}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center" MinWidth="150">
+                <Button Content="{services:Tr ui.refresh_capture_status}" Command="{Binding RefreshConsoleCaptureCommand}"/>
+                <Button Classes="success" Content="{services:Tr ui.enable_startup_capture}" Command="{Binding InstallConsoleCaptureCommand}" IsEnabled="{Binding CanInstallConsoleCapture}"/>
+                <Button Content="{services:Tr ui.remove_startup_capture}" Command="{Binding UninstallConsoleCaptureCommand}" IsEnabled="{Binding CanRemoveConsoleCapture}"/>
+              </StackPanel>
+            </Grid>
+          </Border>
 
           <!-- v0.7.26.0: RCON moved above Console Log (was below); Refresh View/Pause/Clear/Export
                moved from this card's own header into the ribbon (BuildRibbonGroupsForActivePage). -->
@@ -2712,6 +2773,124 @@
           </Border>
         </StackPanel>
 
+
+        <!-- LAUNCHER / ADVANCED STARTUP (v1.0.0.1) -->
+        <StackPanel IsVisible="{Binding IsLauncherPage}" Spacing="12">
+          <Border Classes="card accentServer">
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="{services:Tr ui.launcher_advanced_startup}" FontSize="20" FontWeight="SemiBold"/>
+                  <TextBlock Text="{services:Tr ui.launcher_intro}" Classes="muted" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <Button Content="{services:Tr ui.launcher_load_saved}" Command="{Binding LoadConfigurationCommand}"/>
+                  <Button Classes="success" Content="{services:Tr ui.launcher_save_settings}" Command="{Binding SaveConfigurationCommand}"/>
+                </StackPanel>
+              </Grid>
+
+              <TextBlock Text="{services:Tr ui.launcher_troubleshooting_presets}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}"/>
+              <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                <Border Classes="statuscard accentServer">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{services:Tr ui.launcher_preset_default}" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock Text="{services:Tr ui.launcher_preset_default_desc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                    <Button Content="{services:Tr ui.launcher_apply_default}" Command="{Binding ApplyLauncherPresetCommand}" CommandParameter="Default" HorizontalAlignment="Left"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Classes="statuscard accentServer">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{services:Tr ui.launcher_preset_no_mods}" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock Text="{services:Tr ui.launcher_preset_no_mods_desc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                    <Button Content="{services:Tr ui.launcher_apply_no_mods}" Command="{Binding ApplyLauncherPresetCommand}" CommandParameter="NoMods" HorizontalAlignment="Left"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Classes="statuscard accentServer">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{services:Tr ui.launcher_preset_show_window}" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock Text="{services:Tr ui.launcher_preset_show_window_desc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                    <Button Content="{services:Tr ui.launcher_apply_show_window}" Command="{Binding ApplyLauncherPresetCommand}" CommandParameter="ShowWindow" HorizontalAlignment="Left"/>
+                  </StackPanel>
+                </Border>
+                  <!-- v1.0.0.1 (2026-10-04): the start the owner found keeps players' characters, exactly. -->
+                  <Border Grid.Column="3" Classes="statuscard accentServer">
+                    <StackPanel Spacing="6">
+                      <TextBlock Text="{services:Tr ui.launcher_preset_double_click}" FontSize="16" FontWeight="SemiBold"/>
+                      <TextBlock Text="{services:Tr ui.launcher_preset_double_click_desc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                      <Button Content="{services:Tr ui.launcher_apply_double_click}" Command="{Binding ApplyLauncherPresetCommand}" CommandParameter="DoubleClick" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                  </Border>
+              </Grid>
+              <TextBlock Text="{services:TrText ConfigLauncherPresetStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:Tr ui.launcher_preset_preserve_note}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card accentServer">
+            <StackPanel Spacing="10">
+              <TextBlock Text="{services:Tr ui.launcher_executable_and_working_directory}" FontWeight="SemiBold"/>
+              <Grid ColumnDefinitions="180,220,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+                <TextBlock Text="{services:Tr ui.launcher_executable}" VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="1" AutomationProperties.Name="{services:Tr ui.launcher_executable}" ItemsSource="{Binding ConfigLauncherExecutableOptions}" SelectedItem="{Binding ConfigLauncherExecutable, Mode=TwoWay}"/>
+                <TextBox Grid.Column="2" AutomationProperties.Name="{services:Tr ui.launcher_custom_executable_path}" Text="{Binding ConfigLauncherCustomExecutablePath, Mode=TwoWay}" PlaceholderText="{services:Tr ui.launcher_custom_executable_path}"/>
+
+                <TextBlock Grid.Row="1" Text="{services:Tr ui.launcher_working_directory}" VerticalAlignment="Center"/>
+                <ComboBox Grid.Row="1" Grid.Column="1" AutomationProperties.Name="{services:Tr ui.launcher_working_directory}" ItemsSource="{Binding ConfigLauncherWorkingDirectoryOptions}" SelectedItem="{Binding ConfigLauncherWorkingDirectory, Mode=TwoWay}"/>
+                <TextBox Grid.Row="1" Grid.Column="2" AutomationProperties.Name="{services:Tr ui.launcher_custom_working_directory}" Text="{Binding ConfigLauncherCustomWorkingDirectory, Mode=TwoWay}" PlaceholderText="{services:Tr ui.launcher_custom_working_directory}"/>
+
+                <TextBlock Grid.Row="2" Text="{services:Tr ui.launcher_window_style}" VerticalAlignment="Center"/>
+                <ComboBox Grid.Row="2" Grid.Column="1" AutomationProperties.Name="{services:Tr ui.launcher_window_style}" ItemsSource="{Binding ConfigLauncherWindowStyleOptions}" SelectedItem="{Binding ConfigLauncherWindowStyle, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="{services:Tr ui.launcher_palserver_normal_launcher_note}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+
+                <TextBlock Grid.Row="3" Text="{services:Tr ui.launcher_path_macros}" VerticalAlignment="Center"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{services:Tr ui.launcher_path_macros_note}" Classes="muted" FontSize="11"/>
+              </Grid>
+
+              <TextBlock Text="{services:Tr ui.launcher_windows_process_creation}" FontWeight="SemiBold"/>
+              <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="16">
+                <CheckBox Content="UseShellExecute" IsChecked="{Binding ConfigLauncherUseShellExecute, Mode=TwoWay}"/>
+                <CheckBox Grid.Column="1" Content="CreateNoWindow" IsChecked="{Binding ConfigLauncherCreateNoWindow, Mode=TwoWay}"/>
+                <CheckBox Grid.Column="2" Content="{services:Tr ui.launcher_hide_managed_windows}" IsChecked="{Binding ConfigLauncherHideManagedWindows, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Content="{services:Tr ui.launcher_redirect_stdout}" IsChecked="{Binding ConfigLauncherRedirectStandardOutput, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Grid.Column="1" Content="{services:Tr ui.launcher_redirect_stderr}" IsChecked="{Binding ConfigLauncherRedirectStandardError, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Grid.Column="2" Content="{services:Tr ui.launcher_copy_redirected_output}" IsChecked="{Binding ConfigLauncherCaptureRedirectedOutput, Mode=TwoWay}"/>
+              </Grid>
+
+              <TextBlock Text="{services:Tr ui.launcher_command_line_switches}" FontWeight="SemiBold"/>
+              <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="16">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <CheckBox Content="-port=" IsChecked="{Binding ConfigLauncherPortEnabled, Mode=TwoWay}" VerticalAlignment="Center"/>
+                  <NumericUpDown Width="100" AutomationProperties.Name="{services:Tr ui.port}" Value="{Binding ConfigLauncherPort, Mode=TwoWay}" Minimum="1" Maximum="65535"/>
+                </StackPanel>
+                <CheckBox Grid.Column="1" Content="-log" IsChecked="{Binding ConfigLauncherLog, Mode=TwoWay}"/>
+                <CheckBox Grid.Column="2" Content="-logformat=text" IsChecked="{Binding ConfigLauncherLogFormatText, Mode=TwoWay}"/>
+
+                <CheckBox Grid.Row="1" Content="-stdout" IsChecked="{Binding ConfigLauncherStdout, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Grid.Column="1" Content="-FullStdOutLogOutput" IsChecked="{Binding ConfigLauncherFullStdOutLogOutput, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Grid.Column="2" Content="-unattended" IsChecked="{Binding ConfigLauncherUnattended, Mode=TwoWay}"/>
+
+                <CheckBox Grid.Row="2" Content="-useperfthreads" IsChecked="{Binding ConfigLauncherUsePerfThreads, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="2" Grid.Column="1" Content="-NoAsyncLoadingThread" IsChecked="{Binding ConfigLauncherNoAsyncLoadingThread, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="2" Grid.Column="2" Content="-UseMultithreadForDS" IsChecked="{Binding ConfigLauncherUseMultithreadForDs, Mode=TwoWay}"/>
+
+                <CheckBox Grid.Row="3" Content="-abslog=" IsChecked="{Binding ConfigLauncherAbsLog, Mode=TwoWay}" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" AutomationProperties.Name="{services:Tr ui.launcher_log_path}" Text="{Binding ConfigLauncherAbsLogPath, Mode=TwoWay}" PlaceholderText="{services:Tr ui.launcher_log_path}"/>
+
+                <CheckBox Grid.Row="4" Content="{services:Tr ui.launcher_no_mods}" IsChecked="{Binding ConfigLauncherNoMods, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Text="{services:Tr ui.launcher_no_mods_note}" Classes="muted" FontSize="11" VerticalAlignment="Center"/>
+              </Grid>
+
+              <TextBlock Text="{services:Tr ui.launcher_custom_arguments}" FontWeight="SemiBold"/>
+              <TextBox AutomationProperties.Name="{services:Tr ui.launcher_custom_arguments}" Text="{Binding ConfigLauncherCustomArguments, Mode=TwoWay}" AcceptsReturn="True" MinHeight="90" PlaceholderText="{services:Tr ui.launcher_custom_arguments_example}"/>
+
+              <TextBlock Text="{services:Tr ui.launcher_effective_command}" FontWeight="SemiBold"/>
+              <TextBox AutomationProperties.Name="{services:Tr ui.launcher_effective_command}" Text="{Binding ConfigLauncherEffectiveCommand, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="62"/>
+              <TextBlock Text="{services:TrText ConfigLauncherProcessSummary}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText ConfigLauncherWarning}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
         <!-- WORLD VALIDATOR / REPAIR / RECOVERY / TRANSACTION CENTER -->
         <StackPanel IsVisible="{Binding IsWorldTransactionsPage}" Spacing="12">
           <Border Classes="card accentWorld">
@@ -3485,8 +3664,6 @@
               <TextBlock Text="{Binding ConfigRuntimeRoot, StringFormat='Runtime root: {0}'}" Classes="muted" TextWrapping="Wrap"/>
               <TextBlock Text="{services:Tr ui.editable_on_the_workspace_page_which_is_the_one_29c1bc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
 
-              <TextBlock Text="{services:Tr ui.launch_arguments_one_per_line}" FontWeight="SemiBold" />
-              <TextBox AutomationProperties.Name="{services:Tr ui.launch_arguments_one_per_line}" Text="{Binding ConfigLaunchArguments}" AcceptsReturn="True" MinHeight="110" />
               <!-- v0.9.6.0: the firewall rule for the -port= above, beside where the port is set. -->
               <Border Classes="statuscard accentSystem" IsVisible="{Binding HasFirewallStatus}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">

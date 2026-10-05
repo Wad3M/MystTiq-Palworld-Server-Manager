@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 namespace MystTiq.Desktop.Models;
 
 // v0.6.2.0 Multi-Server Fleet: mirrors the anonymous JSON shapes LocalManagementApiHost's
@@ -8,6 +8,9 @@ public sealed class ServerLifecycleStatusDto
     public bool Ready { get; set; }
     public int? NativeProcessId { get; set; }
     public bool CrashDetected { get; set; }
+    // v1.0.0.1: 3 = Running (a process is alive, ready or still starting); NativeProcessId alone can be a stale last-known id.
+    public int Phase { get; set; }
+    public bool IsProcessLive => Phase == 3 || Ready;
 }
 
 public sealed class ServerProfileSummaryDto

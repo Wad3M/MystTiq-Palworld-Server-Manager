@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -14,14 +14,16 @@ public sealed class HeadlessMonitoringService
 {
     private readonly IServerPathProfile paths;
     private readonly IServerLifecycleService lifecycle;
+    private readonly IReadOnlyList<string> launchArguments;
     private readonly object metricsGate = new();
 
     private readonly Dictionary<int, (DateTimeOffset ObservedAt, TimeSpan CpuTime)> previousProcessSamples = new();
 
-    public HeadlessMonitoringService(IServerPathProfile paths, IServerLifecycleService lifecycle)
+    public HeadlessMonitoringService(IServerPathProfile paths, IServerLifecycleService lifecycle, IReadOnlyList<string>? launchArguments = null)
     {
         this.paths = paths;
         this.lifecycle = lifecycle;
+        this.launchArguments = launchArguments ?? [];
     }
 
     public async Task<HeadlessPlayersSnapshot> GetPlayersAsync(CancellationToken cancellationToken)
@@ -176,7 +178,7 @@ public sealed class HeadlessMonitoringService
                 string.Join(" + ", sources.Select(x => x.Label)),
                 merged,
                 DateTimeOffset.UtcNow,
-                "Combined MystTiq lifecycle/stdout, Pal.log, and available server-mod log evidence into the in-app console.");
+                "Combined Palworld Identity-Diagnostic.log, MystTiq lifecycle, and available server-mod log evidence into the in-app console.");
         }
         catch (Exception ex)
         {
@@ -201,7 +203,13 @@ public sealed class HeadlessMonitoringService
         }
 
         var result = new List<(string Label, string Path)>();
-        Add(result, "MystTiq redirected stdout/stderr + lifecycle", Path.Combine(paths.LogsRoot, "MystTiq-PalServer-Console.log"));
+        // Launcher-options mode may point -abslog anywhere. Prefer the explicitly configured path
+        // when present, then retain Identity-Diagnostic.log as the compatibility/default source.
+        var configuredAbsLog = ResolveConfiguredAbsLogPath();
+        if (configuredAbsLog is not null) Add(result, "Palworld configured -abslog", configuredAbsLog);
+        Add(result, "Palworld Identity Diagnostic", Path.Combine(paths.LogsRoot, "Identity-Diagnostic.log"));
+        // Keep MystTiq's own structured lifecycle/admin messages as a separate source.
+        Add(result, "MystTiq lifecycle", Path.Combine(paths.LogsRoot, "MystTiq-PalServer-Console.log"));
         Add(result, "Pal.log", Path.Combine(paths.LogsRoot, "Pal.log"));
         // v0.7.50.0: Pal.log is where these lines assumed real PalServer/UE4SS activity would land,
         // but confirmed live against a real, actively-modded production install that this file is
@@ -430,8 +438,15 @@ public sealed class HeadlessMonitoringService
         if (!Directory.Exists(paths.LogsRoot))
             return null;
 
-        // MystTiq-owned stdout/stderr capture is the canonical Live Console source when present.
-        // This keeps the Windows PalServer console hidden while preserving the same output in the GUI.
+        // Prefer an explicitly configured -abslog target, then the compatibility/default path.
+        var configuredAbsLog = ResolveConfiguredAbsLogPath();
+        if (configuredAbsLog is not null && File.Exists(configuredAbsLog))
+            return configuredAbsLog;
+
+        var identityDiagnostic = Path.Combine(paths.LogsRoot, "Identity-Diagnostic.log");
+        if (File.Exists(identityDiagnostic))
+            return identityDiagnostic;
+
         var capturedConsole = Path.Combine(paths.LogsRoot, "MystTiq-PalServer-Console.log");
         if (File.Exists(capturedConsole))
             return capturedConsole;
@@ -447,6 +462,28 @@ public sealed class HeadlessMonitoringService
                 .OrderByDescending(info => info.LastWriteTimeUtc)
                 .FirstOrDefault()
                 ?.FullName;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+
+    private string? ResolveConfiguredAbsLogPath()
+    {
+        var argument = launchArguments
+            .LastOrDefault(a => !string.IsNullOrWhiteSpace(a) && a.Trim().StartsWith("-abslog=", StringComparison.OrdinalIgnoreCase));
+        if (argument is null) return null;
+
+        var value = argument.Trim()["-abslog=".Length..].Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        value = Environment.ExpandEnvironmentVariables(value)
+            .Replace("%SERVERROOT%", paths.ServerRoot, StringComparison.OrdinalIgnoreCase)
+            .Replace("%LOGSROOT%", paths.LogsRoot, StringComparison.OrdinalIgnoreCase);
+        try
+        {
+            return Path.IsPathRooted(value) ? Path.GetFullPath(value) : Path.GetFullPath(Path.Combine(paths.ServerRoot, value));
         }
         catch
         {

@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -609,6 +609,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SetSelectedModDescriptionSourceCommand = new AsyncCommand(SetSelectedModDescriptionSourceAsync, () => !IsBusy && SelectedMod is not null);
         BeginModSafeStartCommand = new AsyncCommand(BeginModSafeStartAsync, () => !IsBusy && ModSafeStartStatus is not { IsRunning: true });
         CancelModSafeStartCommand = new AsyncCommand(CancelModSafeStartAsync, () => ModSafeStartStatus is { IsRunning: true });
+        // v1.0.0.1: the stuck-start protocol's test load, and clearing a finished test from the Dashboard.
+        BeginStuckTestLoadCommand = new AsyncCommand(() => BeginModSafeStartAsync(testLoad: true), () => !IsBusy && ModSafeStartStatus is not { IsRunning: true });
+        DismissModSafeStartCommand = new RelayCommand(() => ModSafeStartStatus = null, () => ModSafeStartStatus is { IsRunning: false });
         ExportDoctorCommand = new RelayCommand(ExportDoctorReport, () => DoctorChecks.Count > 0);
         StartCommand = new AsyncCommand(StartServerAsync, () => !IsBusy && (ManagementApiConnected || LocalPalServerStatus == "Found") && !ServerIsRunning);
         StopCommand = new AsyncCommand(StopServerAsync, () => !IsBusy && ManagementApiConnected && ServerIsRunning);
@@ -2091,7 +2094,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public int RecoveryBackoffSeconds { get => _recoveryBackoffSeconds; set => SetField(ref _recoveryBackoffSeconds, value); }
     public int MaximumRecoveryAttempts { get => _maximumRecoveryAttempts; set => SetField(ref _maximumRecoveryAttempts, value); }
     public int RecoveryWindowSeconds { get => _recoveryWindowSeconds; set => SetField(ref _recoveryWindowSeconds, value); }
-    public string ConfigServerRoot { get => _configServerRoot; set => SetField(ref _configServerRoot, value); }
+    public string ConfigServerRoot { get => _configServerRoot; set { if (SetField(ref _configServerRoot, value)) LauncherConfigurationChanged(); } }
     public string ConfigSteamCmdPath { get => _configSteamCmdPath; set => SetField(ref _configSteamCmdPath, value); }
     public string ConfigBackupRoot { get => _configBackupRoot; set => SetField(ref _configBackupRoot, value); }
     public string ConfigRuntimeRoot { get => _configRuntimeRoot; set => SetField(ref _configRuntimeRoot, value); }
@@ -2436,7 +2439,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public SafeStartStatusDto? ModSafeStartStatus
     {
         get => _modSafeStartStatus;
-        private set { if (SetField(ref _modSafeStartStatus, value)) RaisePropertyChanged(nameof(HasModSafeStartStatus)); }
+        private set
+        {
+            if (!SetField(ref _modSafeStartStatus, value)) return;
+            RaisePropertyChanged(nameof(HasModSafeStartStatus));
+            // v1.0.0.1: the Dashboard's stuck-start panel shows the test while it runs and its result afterwards.
+            RaisePropertyChanged(nameof(ShowStuckStartPanel));
+            RaisePropertyChanged(nameof(IsModSafeStartRunning));
+            RaisePropertyChanged(nameof(StuckStartStatusText));
+            (BeginStuckTestLoadCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (DismissModSafeStartCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        }
     }
     public bool HasModSafeStartStatus => ModSafeStartStatus is not null;
     private DispatcherTimer? _modSafeStartPollTimer;
@@ -2661,6 +2674,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool IsFleetPage => SelectedPage == NavigationPage.Fleet;
     public bool IsBackupsPage => SelectedPage == NavigationPage.Backups;
     public bool IsWorkspacePage => SelectedPage == NavigationPage.Workspace;
+    public bool IsLauncherPage => SelectedPage == NavigationPage.Launcher;
     public bool IsModsPage => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.Ue4ss;
     public bool IsModDashboardPage => SelectedPage == NavigationPage.ModDashboard;
     public bool IsModLibraryPage => SelectedPage == NavigationPage.ModLibrary;
@@ -2673,13 +2687,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool IsCrashAnalyzerPage => SelectedPage == NavigationPage.CrashAnalyzer;
     public bool IsSaveToolsPage => SelectedPage == NavigationPage.SaveTools;
     public bool IsHomeGroupSelected => SelectedPage == NavigationPage.Dashboard;
-    public bool IsServerGroupSelected => SelectedPage is NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Backups or NavigationPage.Console or NavigationPage.Workspace;
+    public bool IsServerGroupSelected => SelectedPage is NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Backups or NavigationPage.Console or NavigationPage.Workspace or NavigationPage.Launcher;
     public bool IsWorldGroupSelected => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds or NavigationPage.Map;
     public bool IsModsGroupSelected => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.Ue4ss;
     public bool IsToolsGroupSelected => SelectedPage is NavigationPage.UpdateCenter or NavigationPage.Doctor or NavigationPage.CrashAnalyzer or NavigationPage.SaveTools or NavigationPage.DiagnosticsCenter;
     public bool IsSystemGroupSelected => SelectedPage is NavigationPage.Settings or NavigationPage.Notifications or NavigationPage.ActivityAudit or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter or NavigationPage.Fleet;
     public bool IsV5HomeCategory => SelectedPage == NavigationPage.Dashboard;
-    public bool IsV5ServerCategory => SelectedPage is NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Console or NavigationPage.Workspace;
+    public bool IsV5ServerCategory => SelectedPage is NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Console or NavigationPage.Workspace or NavigationPage.Launcher;
     public bool IsV5WorldCategory => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds or NavigationPage.Map;
     public bool IsV5BackupsCategory => SelectedPage == NavigationPage.Backups;
     public bool IsV5ModsCategory => IsModsGroupSelected;
@@ -2825,6 +2839,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand SetSelectedModDescriptionSourceCommand { get; }
     public ICommand BeginModSafeStartCommand { get; }
     public ICommand CancelModSafeStartCommand { get; }
+    public ICommand BeginStuckTestLoadCommand { get; }
+    public ICommand DismissModSafeStartCommand { get; }
     public ICommand ExportDoctorCommand { get; }
     public ICommand StartCommand { get; }
     public ICommand StopCommand { get; }
@@ -3413,6 +3429,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 if (!IsBusy) await LoadPalworldConfigurationAsync();
                 break;
             case NavigationPage.Workspace:
+                await LoadConfigurationAsync();
+                break;
+            case NavigationPage.Launcher:
                 await LoadConfigurationAsync();
                 break;
             case NavigationPage.Backups:
@@ -4890,6 +4909,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             if (!ReferenceEquals(requestTab, ActiveTab)) return;
             ApplyStatus(snapshot.Status);
             ApplyServiceStatus(snapshot.Service);
+            // v1.0.0.1: the addresses line (at most once a minute; the service keeps the public address for an hour).
+            _ = RefreshHostAddressesAsync(profile, requestTab, force: false);
             ApplyPlayers(snapshot.Players);
             ApplyMetrics(snapshot.Metrics);
             ApplyLogs(snapshot.LogTail);
@@ -5133,6 +5154,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             if (!string.IsNullOrWhiteSpace(search) &&
                 !player.PlayerId.Contains(search, StringComparison.OrdinalIgnoreCase) &&
                 !player.PlayerName.Contains(search, StringComparison.OrdinalIgnoreCase) &&
+                !player.SteamId.Contains(search, StringComparison.OrdinalIgnoreCase) &&
+                !player.UserId.Contains(search, StringComparison.OrdinalIgnoreCase) &&
                 !player.GuildName.Contains(search, StringComparison.OrdinalIgnoreCase) &&
                 !player.Platform.Contains(search, StringComparison.OrdinalIgnoreCase))
                 return false;
@@ -5307,12 +5330,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         static string Csv(string? value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
         var builder = new StringBuilder();
-        builder.AppendLine("PlayerId,PlayerName,Online,Platform,Ping,GuildId,GuildName,Role,SaveExists,SaveSizeBytes,SaveLastWriteUtc,Evidence");
+        builder.AppendLine("PlayerId,PlayerName,SteamId,UserId,Online,Platform,Ping,GuildId,GuildName,Role,SaveExists,SaveSizeBytes,SaveLastWriteUtc,Evidence");
         foreach (var player in FilteredPlayerRecords)
         {
             builder.AppendLine(string.Join(',', new[]
             {
-                Csv(player.PlayerId), Csv(player.PlayerName), Csv(player.Online.ToString()), Csv(player.Platform), Csv(player.Ping),
+                Csv(player.PlayerId), Csv(player.PlayerName), Csv(player.SteamId), Csv(player.UserId), Csv(player.Online.ToString()), Csv(player.Platform), Csv(player.Ping),
                 Csv(player.GuildId), Csv(player.GuildName), Csv(player.Role), Csv(player.SaveExists.ToString()),
                 Csv(player.SaveSizeBytes.ToString()), Csv(player.SaveLastWriteUtc?.ToString("O")), Csv(player.Evidence)
             }));
@@ -5355,6 +5378,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ApplyPlayers(await playersTask);
             ApplyLogs(await logsTask);
             ApplyMetrics(await metricsTask);
+            if (IsConsolePage)
+                await RefreshConsoleCaptureStatusCoreAsync(profile);
         }
         catch (Exception ex)
         {
@@ -8560,7 +8585,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ConfigSteamCmdPath = config.Server.SteamCmdPath;
             ConfigBackupRoot = config.Server.BackupRoot;
             ConfigRuntimeRoot = config.Server.RuntimeRoot;
-            ConfigLaunchArguments = string.Join(Environment.NewLine, config.Server.LaunchArguments);
+            LoadLauncherConfiguration(config.Server.LaunchArguments);
 
             ConfigSecurityText =
                 $"Authentication: {(config.AuthenticationEnabled ? "Enabled" : "Disabled")} · TLS: {(config.TlsEnabled ? "Enabled" : "Disabled")}";
@@ -8612,8 +8637,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 SteamCmdPath = ConfigSteamCmdPath,
                 BackupRoot = ConfigBackupRoot,
                 RuntimeRoot = ConfigRuntimeRoot,
-                LaunchArguments = ConfigLaunchArguments
-                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                LaunchArguments = BuildLauncherConfigurationArguments()
             }
         };
 
@@ -10063,7 +10087,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     // diagnostic itself runs server-side over many minutes, so a dedicated poll loop (not IsBusy)
     // tracks it independently, matching the "don't hold IsBusy for a genuinely long background
     // operation" discipline this ViewModel already applies to UE4SS install preview/apply.
-    private async Task BeginModSafeStartAsync()
+    private Task BeginModSafeStartAsync() => BeginModSafeStartAsync(testLoad: false);
+
+    private async Task BeginModSafeStartAsync(bool testLoad)
     {
         ConnectionProfile profile;
         try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
@@ -10071,7 +10097,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         IsBusy = true;
         try
         {
-            var result = await _api.BeginModSafeStartAsync(profile, BearerToken);
+            var result = testLoad
+                ? await _api.BeginModTestLoadAsync(profile, BearerToken)
+                : await _api.BeginModSafeStartAsync(profile, BearerToken);
             if (!result.Success)
             {
                 ModSafeStartStatus = new SafeStartStatusDto { Completed = true, FinalMessage = result.Message };
@@ -10376,6 +10404,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 : status.IsProcessLive
                     ? "Starting / Not Ready"
                     : "Stopped / Not ready";
+        // v1.0.0.1: a start that has run for StartupWatch.StuckAfter without opening its port offers the stuck-start test.
+        IsStartupStuck = status.StartupStuck && status.IsProcessLive;
 
         NativePidText = status.NativeProcessId?.ToString() ?? "—";
         ListenerText = status.GuardedListeningPorts.Count > 0
@@ -10517,6 +10547,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(IsMonitoringPage));
         RaisePropertyChanged(nameof(IsBackupsPage));
         RaisePropertyChanged(nameof(IsWorkspacePage));
+        RaisePropertyChanged(nameof(IsLauncherPage));
         RaisePropertyChanged(nameof(IsModsPage));
         RaisePropertyChanged(nameof(IsDoctorPage));
         RaisePropertyChanged(nameof(IsDiagnosticsPage));

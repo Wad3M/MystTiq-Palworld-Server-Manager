@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
@@ -20,6 +20,10 @@ public interface ILocalManagementBootstrapper
     // connection profile could silently attach to a different already-running MystTiq instance.
     Task<LocalManagementBootstrapResult> EnsureAvailableAsync(LocalInstallationSnapshot snapshot, string expectedServerProfileId = "default", CancellationToken cancellationToken = default);
     Task<bool> StopOwnedSidecarAsync(CancellationToken cancellationToken = default);
+
+    // v1.0.0.1: the endpoint of the helper this desktop owns (started, or reused from its record), or null. Exit uses it to
+    // stop every server that helper runs before stopping the helper itself.
+    string? OwnedHelperEndpoint { get; }
 
     // v0.7.82.0: composes the two methods above so a newly fleet-registered profile (added via
     // POST /api/v1/servers, which only takes effect after the management process restarts --
@@ -45,6 +49,9 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
     private readonly SemaphoreSlim gate = new(1, 1);
     private int? ownedSidecarProcessId;
     private string? ownedSidecarExecutable;
+    private string? ownedSidecarEndpoint;
+
+    public string? OwnedHelperEndpoint => ownedSidecarProcessId is null ? null : ownedSidecarEndpoint;
     private readonly string? runtimeRootOverride;
 
     // v0.9.10.0: runtimeRoot is for tests (the ArtworkHarness's slow-helper check), so they never touch this computer's record.
@@ -99,6 +106,7 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                 {
                     ownedSidecarProcessId = owned.ProcessId;
                     ownedSidecarExecutable = owned.Executable;
+                    ownedSidecarEndpoint = owned.Endpoint;
                     return new(true, false, owned.Endpoint, $"Reusing the MystTiq helper this app started earlier ({ownedProbe.Version ?? "unknown version"}).", ownedProbe.Version,
                         staleDetected, staleEndpoint, staleVersion);
                 }
@@ -179,6 +187,7 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                 {
                     ownedSidecarProcessId = started.Id;
                     ownedSidecarExecutable = executable;
+                    ownedSidecarEndpoint = endpoint;
                     DateTimeOffset? startedAt = null;
                     try { startedAt = started.StartTime.ToUniversalTime(); } catch { }
                     SidecarState.Write(GetLocalRuntimeRoot(), new SidecarState(started.Id, endpoint, executable, startedAt));

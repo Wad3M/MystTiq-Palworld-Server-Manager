@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
 <Application xmlns="https://github.com/avaloniaui"
         xmlns:services="using:MystTiq.Desktop.Services" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="MystTiq.Desktop.App" RequestedThemeVariant="Dark">
 
@@ -15,7 +15,6 @@
             <NativeMenuItemSeparator/>
             <NativeMenuItem Header="{services:Tr ui.safe_exit_stop_server_and_management_backend}" Click="SafeExit_OnClick"/>
             <NativeMenuItem Header="{services:Tr ui.force_exit_terminate_server_and_management_backe_529aef}" Click="ForceExit_OnClick"/>
-            <NativeMenuItem Header="{services:Tr ui.exit_gui_only_keep_services_running}" Click="ExitGui_OnClick"/>
           </NativeMenu>
         </TrayIcon.Menu>
       </TrayIcon>

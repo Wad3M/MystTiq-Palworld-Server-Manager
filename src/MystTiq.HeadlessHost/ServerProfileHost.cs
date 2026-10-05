@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Providers;
@@ -55,6 +55,7 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required HeadlessAutomationService Automation { get; init; }
     public required HeadlessWorldCloneService WorldClone { get; init; }
     public required WanReachabilityService WanReachability { get; init; }
+    public required HeadlessAddressService Addresses { get; init; }
     public required HeadlessFleetCrashRecoveryService CrashRecovery { get; init; }
     // v0.8.2.0: exposed so service-run's own supervisor (which owns this profile's crash recovery in service mode)
     // sends the same alerts and keeps the same persisted recovery state.
@@ -66,6 +67,7 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required HeadlessDiscordBotService DiscordBot { get; init; }
     public required HeadlessAntiCheatService AntiCheat { get; init; }
     public required HeadlessWhitelistService Whitelist { get; init; }
+    public required HeadlessIdentityGuardService IdentityGuard { get; init; }
     public required HeadlessKitService Kits { get; init; }
     public required HeadlessGameIdCatalogService GameIds { get; init; }
     public required HeadlessTeleportService Teleport { get; init; }

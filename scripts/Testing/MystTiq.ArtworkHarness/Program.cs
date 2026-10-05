@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -148,10 +148,12 @@ Render("setup-wizard-dark");
 Check(!vm.IsLightMode && ReferenceEquals(vm.SetupArtwork, ArtworkCatalog.Page(NavigationPage.ServerSetup, false)), "Wizard retains dark theme without a profile");
 
 var iconUris = AssetLoader.GetAssets(new Uri("avares://MystTiq.Desktop/Assets/Icons/"), null).OrderBy(u => u.AbsolutePath).ToArray();
-// v0.8.25.0: 27 with the HOST icon the user supplied.
-Check(iconUris.Length == 27, "All 27 navigation illustrations are embedded");
+// v1.0.0.1: Launcher now has its own navigation illustration instead of reusing Workspace.
+Check(iconUris.Length == 28, "All 28 navigation illustrations are embedded");
 Check(ArtworkCatalog.Category(NavigationPage.Host) == "host" && iconUris.Any(u => u.AbsolutePath.EndsWith("/icon-host.png")) && !ReferenceEquals(ArtworkCatalog.Page(NavigationPage.Host, false), ArtworkCatalog.Page(NavigationPage.Settings, false)),
     "the HOST tab has its own art and navigation icon (no longer the System art and diagnostics icon)");
+Check(iconUris.Any(u => u.AbsolutePath.EndsWith("/icon-launcher.png")),
+    "the Launcher page has its own navigation icon instead of reusing Workspace");
 foreach (var light in new[] { false, true })
 {
     var panel = new WrapPanel { Width = 1040 };
@@ -1099,6 +1101,35 @@ foreach (var page in Enum.GetValues<NavigationPage>())
 Check(unreachable.Count == 0, $"on every page every enabled control can be reached with Tab [{string.Join(", ", unreachable.Distinct().Take(8))}]");
 Check(unnamed.Count == 0, $"on every page every reachable control has an accessible name ({namedCount} named) [{string.Join(", ", unnamed.Distinct().Take(8))}]");
 
+// v1.0.0.1: the Dashboard's addresses line and stuck-start panel, and the text they show.
+{
+    var addressesDto = new HostAddressesDto
+    {
+        GamePort = 8211,
+        Local = [new LocalAddressDto { Adapter = "Ethernet", Address = "192.168.1.50", HasGateway = true }, new LocalAddressDto { Adapter = "vEthernet", Address = "172.20.0.1" }],
+        PublicAddress = "203.0.113.7", PublicSource = "router"
+    };
+    var (localText, publicText, noteText) = HostAddressText.Describe(addressesDto);
+    Check(localText == "192.168.1.50:8211  ·  172.20.0.1:8211" && publicText == "203.0.113.7:8211" && noteText == "from your router",
+        $"The addresses line shows every local address and the public one with the server's port, and where it came from [{localText} | {publicText} | {noteText}]");
+    var missing = HostAddressText.Describe(new HostAddressesDto { GamePort = 8211, PublicError = "The public address could not be found: timeout" });
+    Check(missing.Local == "—" && missing.Public == "—" && missing.Note.StartsWith("The public address could not be found", StringComparison.Ordinal), "Without addresses the line says why");
+    var stuckText = StuckStartText.Describe(new SafeStartStatusDto
+    {
+        Completed = true, Success = true, Mode = "OneAtATime", FinalMessage = "Left off: HangsStartup. The server is running with the other MODs.",
+        Results = [new SafeStartModResultDto { Package = "(no MODs)", Ok = true, Detail = "Ready in 6 s." }, new SafeStartModResultDto { Package = "HangsStartup", Ok = false, Detail = "Timed out without becoming ready (hang, not a crash)." }]
+    });
+    Check(stuckText == "Without MODs: Ready in 6 s.\nHangsStartup: Timed out without becoming ready (hang, not a crash).\nLeft off: HangsStartup. The server is running with the other MODs.", $"The stuck-start panel lists each start and the outcome [{stuckText}]");
+    Localizer.Instance.SetLanguage("de");
+    Check(Localizer.T("Without MODs: Ready in 6 s.") != "Without MODs: Ready in 6 s." && Localizer.T("from your router") == Localizer.Parse(ReadLanguage("de"))["msg.from_your_router"],
+        "German: the panel's and the addresses line's texts are translated");
+    Localizer.Instance.SetLanguage("en");
+    vm.NavigateCommand.Execute(NavigationPage.Dashboard);
+    Dispatcher.UIThread.RunJobs();
+    var panel = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "StuckStartPanel");
+    var addressesCard = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "DashboardAddresses");
+    Check(panel is { IsVisible: false } && addressesCard is { IsVisible: true }, "The Dashboard has the addresses line, and the stuck-start panel stays hidden while no start is stuck");
+}
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
 // Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.
 {

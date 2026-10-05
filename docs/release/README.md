@@ -1,23 +1,23 @@
-<!-- MystTiq v1.0.0.0: file reviewed for this release (2026-09-30). -->
+<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
 # Publishing a MystTiq release on GitHub
 
-This guide publishes **v1.0.0.0**; for a later version, replace the version everywhere below. The version always comes from `Directory.Build.props`, and the release workflow refuses a tag that does not match it. v1.0.0.0 is the accepted baseline.
+This guide publishes **v1.0.0.1**; for a later version, replace the version everywhere below. The version always comes from `Directory.Build.props`, and the release workflow refuses a tag that does not match it. v1.0.0.0 is the accepted baseline.
 
-A GitHub release is three things: a **tag** on a commit (`v1.0.0.0`), the **release page** (title and notes), and the **assets** attached to it (the ZIPs and their checksums). You create and push the tag. The release workflow builds the assets and creates a *draft release* for review (a v0.x tag makes a draft prerelease). The pushed tag and source commit are already public in a public repository; the release page and attached downloads remain draft until you press **Publish release**.
+A GitHub release is three things: a **tag** on a commit (`v1.0.0.1`), the **release page** (title and notes), and the **assets** attached to it (the ZIPs and their checksums). You create and push the tag. The release workflow builds the assets and creates a *draft release* for review (a v0.x tag makes a draft prerelease). The pushed tag and source commit are already public in a public repository; the release page and attached downloads remain draft until you press **Publish release**.
 
 Code signing through SignPath: see [CODE_SIGNING.md](CODE_SIGNING.md). With the SignPath variables set, the workflow waits for you to approve the signing request in SignPath before it makes the draft.
 
 ## 1. Get the source onto GitHub
 
-The v1.0.0.0 tree must be committed to `main` first. From your clone (for example `E:\Projects\MystTiq-Palworld-Server-Manager`):
+The v1.0.0.1 tree must be committed to `main` first. From your clone (for example `E:\Projects\MystTiq-Palworld-Server-Manager`):
 
 ```powershell
 git switch main
 git pull --ff-only                      # take any Dependabot or web edits first
-# apply the reviewed v1.0.0.0 changes, including explicit obsolete-file removals, then:
+# apply the reviewed v1.0.0.1 changes, including explicit obsolete-file removals, then:
 git add --all                           # stages new files AND the removals
 git status                              # review: no bin/, obj/, artifacts/, saves, logs or secrets
-git commit -m "v1.0.0.0: MystTiq 1.0"
+git commit -m "v1.0.0.1: launcher, identity guard, tray and stuck starts"
 git push origin main
 ```
 
@@ -36,11 +36,11 @@ pwsh ./Build.ps1 Package                # builds, then packages Windows and Linu
 
 `Build.ps1 Release` does the same after the full release gate (about 50 minutes). The packages land in `artifacts/`:
 
-- `MystTiqPalworldServer_v1.0.0.0_Windows-x64.zip`: the Avalonia desktop with the headless service in `headless\`, self-contained (no .NET install needed).
-- `MystTiqPalworldServer_v1.0.0.0_Linux-x64.zip`: the same for Linux (after extracting: `chmod +x MystTiq.Desktop headless/mysttiq-server`).
+- `MystTiqPalworldServer_v1.0.0.1_Windows-x64.zip`: the Avalonia desktop with the headless service in `headless\`, self-contained (no .NET install needed).
+- `MystTiqPalworldServer_v1.0.0.1_Linux-x64.zip`: the same for Linux (after extracting: `chmod +x MystTiq.Desktop headless/mysttiq-server`).
 - `SHA256SUMS.txt`: their hashes.
 
-Extract the Windows ZIP into an empty folder, start `MystTiq.Desktop.exe`, and check the title bar shows v1.0.0.0 and it connects. Keep live server data outside the extracted folder. The packager never overwrites an existing ZIP: delete old ones from `artifacts/` first if you rebuild.
+Extract the Windows ZIP into an empty folder, start `MystTiq.Desktop.exe`, and check the title bar shows v1.0.0.1 and it connects. Keep live server data outside the extracted folder. The packager never overwrites an existing ZIP: delete old ones from `artifacts/` first if you rebuild.
 
 For the Windows native console helper (`headless\native\MystTiqConsoleProxy.dll`), run `pwsh ./scripts/Build-ConsoleProxy.ps1` first (needs the MSVC x64 build tools); the release workflow always does.
 
@@ -49,25 +49,25 @@ For the Windows native console helper (`headless\native\MystTiqConsoleProxy.dll`
 ```powershell
 git switch main
 git pull --ff-only
-git tag -a v1.0.0.0 -m "MystTiq v1.0.0.0"
-git push origin v1.0.0.0
+git tag -a v1.0.0.1 -m "MystTiq v1.0.0.1"
+git push origin v1.0.0.1
 ```
 
 Pushing the tag starts the **Release** workflow (`.github/workflows/release.yml`). It:
 
-1. checks the tag equals `v` + the version in `Directory.Build.props`, and that `release-notes/v1.0.0.0.md` exists;
+1. checks the tag equals `v` + the version in `Directory.Build.props`, and that `release-notes/v1.0.0.1.md` exists;
 2. builds the native console helper and the Windows package (`Package-GitHubRelease.ps1 -Runtime win-x64 -RequireNativeProxy`);
-3. archives the tagged source as `MystTiqPalworldServer_v1.0.0.0_FullSource.zip`;
+3. archives the tagged source as `MystTiqPalworldServer_v1.0.0.1_FullSource.zip`;
 4. writes `SHA256SUMS.txt`;
-5. creates a **draft release** (a prerelease for a v0.x tag) named "MystTiq v1.0.0.0" with the release notes as its text and those files attached.
+5. creates a **draft release** (a prerelease for a v0.x tag) named "MystTiq v1.0.0.1" with the release notes as its text and those files attached.
 
-If a source change is needed, commit the fix and prepare a new version/tag; changing `main` does not change an existing tag. For a transient failure that needs no source change, rerun from **Actions → Release → Run workflow** with the tag `v1.0.0.0`. Never move or re-use a published tag.
+If a source change is needed, commit the fix and prepare a new version/tag; changing `main` does not change an existing tag. For a transient failure that needs no source change, rerun from **Actions → Release → Run workflow** with the tag `v1.0.0.1`. Never move or re-use a published tag.
 
 ## 4. Review and publish
 
 1. Open **Releases**; the draft is at the top.
 2. Check the title, the notes, the target commit and the three assets (Windows ZIP, FullSource ZIP, SHA256SUMS.txt).
-3. Optionally download the Windows ZIP and compare its hash: `Get-FileHash .\MystTiqPalworldServer_v1.0.0.0_Windows-x64.zip -Algorithm SHA256`.
+3. Optionally download the Windows ZIP and compare its hash: `Get-FileHash .\MystTiqPalworldServer_v1.0.0.1_Windows-x64.zip -Algorithm SHA256`.
 4. Leave **Set as a pre-release** unticked and **Set as the latest release** ticked (v1.0 and later are full releases; MystTiq's own update check counts only those).
 5. Press **Publish release**. Then check the download links work.
 
@@ -75,9 +75,9 @@ If a source change is needed, commit the fix and prepare a new version/tag; chan
 
 Prefer the workflow above. For manual assets, coordinate with the repository maintainer so the tag-triggered workflow and manual upload do not both edit the same release.
 
-1. Build the ZIPs locally (step 2) and make the source ZIP: `git archive --format=zip --output=artifacts/MystTiqPalworldServer_v1.0.0.0_FullSource.zip HEAD`.
+1. Build the ZIPs locally (step 2) and make the source ZIP: `git archive --format=zip --output=artifacts/MystTiqPalworldServer_v1.0.0.1_FullSource.zip HEAD`.
 2. Recompute `artifacts/SHA256SUMS.txt` so it covers all the ZIPs: `pwsh ./scripts/Build-Checksums.ps1 -Include '*.zip'`.
-3. On GitHub: **Releases → Draft a new release**, choose or create the tag `v1.0.0.0` on the reviewed commit, title **MystTiq v1.0.0.0**, paste [`release-notes/v1.0.0.0.md`](../../release-notes/v1.0.0.0.md).
+3. On GitHub: **Releases → Draft a new release**, choose or create the tag `v1.0.0.1` on the reviewed commit, title **MystTiq v1.0.0.1**, paste [`release-notes/v1.0.0.1.md`](../../release-notes/v1.0.0.1.md).
 4. Attach the Windows ZIP, the FullSource ZIP and `SHA256SUMS.txt`, leave **Set as a pre-release** unticked, **Save draft**, review, then **Publish release**.
 
 ## What not to upload

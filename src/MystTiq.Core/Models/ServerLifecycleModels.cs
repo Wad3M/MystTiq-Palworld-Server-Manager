@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 namespace MystTiq.Core.Models;
 
 public enum ServerLifecyclePhase
@@ -40,7 +40,13 @@ public sealed record ServerLifecycleSnapshot(
     bool CrashDetected,
     DateTimeOffset ObservedAt,
     DateTimeOffset? LastTransitionAt,
-    string Detail);
+    string Detail)
+{
+    // v1.0.0.1: when the server's process started (null when unknown), and whether it has been starting for longer than
+    // StartupWatch.StuckAfter without opening its game port. A stuck start is what the stuck-start test is for.
+    public DateTimeOffset? NativeStartedAt { get; init; }
+    public bool StartupStuck { get; init; }
+}
 
 public sealed record ServerLifecycleOperationResult(
     HeadlessExitCode ExitCode,

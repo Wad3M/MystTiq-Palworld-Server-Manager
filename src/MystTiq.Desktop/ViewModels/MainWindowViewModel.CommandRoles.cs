@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -16,7 +16,7 @@ public sealed partial class MainWindowViewModel
         var roles = new Dictionary<ICommand, string>(ReferenceEqualityComparer.Instance);
         void Need(string role, params ICommand?[] commands) { foreach (var c in commands) if (c is not null) roles[c] = role; }
         Need("Operator", _loadGameIdsCommand, AddPlayerWarningCommand, AnalyzeCrashesCommand,
-            ApplyBackupRetentionCommand, BackupAllCommand, BeginModSafeStartCommand, CancelModSafeStartCommand,
+            ApplyBackupRetentionCommand, BackupAllCommand, BeginModSafeStartCommand, BeginStuckTestLoadCommand, CancelModSafeStartCommand,
             CreateBackupCommand, DeleteBackupCommand, DismissNotificationCommand, DoctorAllCommand,
             EnvironmentActionCommand, ForceStopServerCommand, InstallMissingEnvironmentCommand,
             InstallPalworldServerFromWizardCommand, MarkAllNotificationsReadCommand, NotificationSelfTestCommand,

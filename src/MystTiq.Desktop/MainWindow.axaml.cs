@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 using MystTiq.Desktop.ViewModels;
@@ -153,6 +154,13 @@ public sealed partial class MainWindow : Window
 
     private void TitleBar_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        // v1.0.0.1: interactive controls live inside the custom draggable title bar. Do not turn
+        // their first click into BeginMoveDrag -- that was why the language picker only opened on
+        // a second click. Let ComboBox/Button handle the click normally, including click-to-close.
+        if (e.Source is Avalonia.Visual source &&
+            source.GetVisualAncestors().Prepend(source).Any(visual => visual is Button or ComboBox))
+            return;
+
         if (e.ClickCount == 2)
         {
             ToggleMaximize();
@@ -225,49 +233,15 @@ public sealed partial class MainWindow : Window
             MaximizeGlyph.Data = WindowState == WindowState.Maximized ? RestoreIcon : MaximizeIcon;
     }
 
-    // v0.7.11.0: previously always cancelled the close and hid to tray, regardless of whether
-    // anything was actually running -- so there was no way to fully quit by pressing the window's
-    // own close button, ever. Now checks every open tab (not just the active one; Fleet supports
-    // several servers running at once) rather than just the currently-focused tab's state.
-    //
-    // v0.7.73.0: minimizing to tray in this case previously happened silently -- reported live as
-    // surprising ("why is the server still running, I closed it"). Now confirms first via
-    // ConfirmMinimizeToTrayDialog, same pattern as CloseTabButton_OnClick's own confirm dialog.
-    // e.Cancel is set synchronously (Avalonia reads it right after this handler returns, not after
-    // the awaited dialog resolves), so the close is always blocked while the dialog decides what
-    // happens next; on confirmation this calls HideMainWindowToTray() directly rather than Close()
-    // again, which would just re-enter this same handler.
-    private async void MainWindow_Closing(object? sender, WindowClosingEventArgs e)
+    // v0.7.11.0 and v0.7.73.0 exited when nothing ran and asked first (ConfirmMinimizeToTrayDialog) when a server ran.
+    // v1.0.0.1 (reported 2026-10-04): closing the window used to exit the GUI when nothing was running and leave the
+    // helper (mysttiq-server.exe) behind. Now the close button always hides MystTiq to the tray, and Exit from the tray
+    // stops every running component: the servers the helper runs, then the helper, then the app.
+    private void MainWindow_Closing(object? sender, WindowClosingEventArgs e)
     {
         if (Application.Current is not App app || app.IsExplicitExitRequested) return;
-
-        var runningCount = DataContext is MainWindowViewModel vm ? vm.Tabs.Count(t => t.ServerIsRunning) : 0;
-        if (runningCount == 0)
-        {
-            app.ExitGuiOnlyIfNothingIsRunning();
-            return;
-        }
-
         e.Cancel = true;
-
-        var dialog = new Views.ConfirmMinimizeToTrayDialog(runningCount);
-        var result = await dialog.ShowDialog<Views.ConfirmMinimizeToTrayResult>(this);
-        switch (result)
-        {
-            case Views.ConfirmMinimizeToTrayResult.MinimizeToTray:
-                app.HideMainWindowToTray();
-                app.ShowTrayStillRunningReminder("A Palworld server is still running. MystTiq will keep managing it in the background -- open the tray icon to bring the window back, or to stop the server and exit.");
-                break;
-            // v0.7.74.0: same real exit paths the tray menu's own Safe Exit/Force Exit already use,
-            // now reachable directly from the close-confirm dialog instead of requiring an extra
-            // minimize-then-find-the-tray-icon round trip.
-            case Views.ConfirmMinimizeToTrayResult.SafeExit:
-                await app.SafeExitAsync();
-                break;
-            case Views.ConfirmMinimizeToTrayResult.ForceExit:
-                await app.ForceExitAsync();
-                break;
-        }
+        app.CloseToTray();
     }
 
     // v0.7.11.0: closing a tab whose server is running previously left it running silently with
@@ -652,6 +626,28 @@ public sealed partial class MainWindow : Window
         stream.SetLength(0);
         using var writer = new StreamWriter(stream);
         foreach (var line in vm.FilteredLogLines) await writer.WriteLineAsync(line);
+    }
+
+    private void OpenSteamProfile_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control { Tag: string steamId } || string.IsNullOrWhiteSpace(steamId))
+            return;
+
+        var normalized = steamId.Trim();
+        if (!normalized.All(char.IsDigit))
+            return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo($"https://steamcommunity.com/profiles/{normalized}")
+            {
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // Browser launch is convenience-only; Steam identity remains visible/copyable in the UI.
+        }
     }
 
     private async void ExportPlayersCsv_Click(object? sender, RoutedEventArgs e)

@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.0: file reviewed for this release (2026-09-30).
+// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
 namespace MystTiq.Core.Models;
 
 public sealed record HeadlessApiAuthenticationConfiguration(
@@ -94,7 +94,7 @@ public sealed record HeadlessConfiguration(
                     @"C:\GameServers\Palworld\SteamCMD\steamcmd.exe",
                     @"C:\GameServers\Palworld\Server\Backups",
                     Path.Combine(root, "runtime"),
-                    ["-unattended", "-useperfthreads", "-NoAsyncLoadingThread", "-UseMultithreadForDS", "-stdout", "-FullStdOutLogOutput", "-logformat=text"],
+                    ["-port=8211"],
                     ServerRuntimeKind.WindowsNative)
             ],
             Path.Combine(root, "fleet"));
