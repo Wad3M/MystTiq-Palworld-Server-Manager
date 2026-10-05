@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 namespace MystTiq.Core.Services;
 
 // v0.7.101.0: what the crash-recovery loop tells the outside world. Until now it restarted a crashed

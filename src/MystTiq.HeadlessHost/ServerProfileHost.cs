@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Providers;
@@ -69,6 +69,7 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required HeadlessWhitelistService Whitelist { get; init; }
     public required HeadlessIdentityGuardService IdentityGuard { get; init; }
     public required HeadlessNameGuardService NameGuard { get; init; }
+    public required HeadlessWorldClockService WorldClock { get; init; }
     public required HeadlessKitService Kits { get; init; }
     public required HeadlessGameIdCatalogService GameIds { get; init; }
     public required HeadlessTeleportService Teleport { get; init; }

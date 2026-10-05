@@ -1,51 +1,67 @@
-<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
-# MystTiq v1.0.0.3 Checkpoint: PalDefender on the MODs Page, Drag and Drop Fixed
+<!-- MystTiq v1.0.0.4: file reviewed for this release (2026-10-05). -->
+# MystTiq v1.0.0.4 Checkpoint: Restores You Can Check by the Day
 
-You reported that PalDefender doesn't show on the MODs page, and that dragging a ZIP onto the MODs page didn't install it.
+You reported that backup and restore didn't work correctly, and asked me to verify it using the in-game day after a restore.
 
-## What was wrong on your server
+## What I found, by day
 
-- **PalDefender and UE4SS weren't loading at all.** Their loaders had been renamed by hand to `d3d9.dll.disabled-test`
-  and `dwmapi.dll.disabled-test`, most likely during the 2026-10-01 stuck-server troubleshooting. PalDefender's last log
-  was 2026-10-01 09:40. Since then Give Item, kits and teleports wouldn't have worked, and none of your UE4SS MODs loaded.
-- With your go-ahead, I renamed both back with the server stopped. An older July `dwmapi.dll.myst-disabled` sits next to
-  them; I left it alone.
-- You have PalDefender 1.9.2. 1.9.3 came out on 2026-10-03.
+I read the day straight from each `Level.sav` (not from MystTiq's copy):
 
-## What's new
+| | Day |
+|---|---|
+| Your live world (`Level.sav`, Oct 4) | **Day 248 21:08** |
+| What MystTiq's Dashboard showed | Day 210 16:49, from a copy decoded on Oct 1 |
+| Your 36 backups, Aug 25 → Oct 1 | each holds its own correct day, 109 → 211 |
 
-- **NATIVE MODs on the MODs page:** PalDefender and the UE4SS loader, with their version, whether they loaded since the
-  server started, and an on/off switch. Switching off renames the loader to `*.mysttiq-disabled`. Switching on restores
-  that copy first, otherwise the newest switched-off copy, which handles your hand-renamed files and never picks the
-  July one.
-- If the UE4SS loader is off, every enabled UE4SS MOD is marked "UE4SS loader is off" instead of looking fine.
-- Disable All, Enable All and the stuck-start tests include them, so "Test without MODs" now also leaves PalDefender
-  and UE4SS out. That's the same test that was done by hand on 2026-10-01.
-- Delete, rollback and repair don't apply to them. Dropping PalDefender's ZIP explains where its files go, rather than
-  installing it as a UE4SS folder that would never load.
+The backups themselves are good. Two things made restore look broken:
 
-## Drag and drop
+1. **Every restore on Oct 1 failed, because Windows wouldn't let MystTiq replace the save folder.** Your `SaveGames`
+   folder (and the decoded copy in it) belong to the **Administrators** group: something that once ran as administrator
+   created it. MystTiq runs as you without administrator rights, so Windows lets it read and add files there but not
+   move or replace the folder. The error said "Access to the path …\SaveGames is denied", which looked like a file in
+   use. Nothing was changed, and none of it reached the activity log.
+2. **The day shown was stale.** The Dashboard read it from a decoded copy MystTiq only refreshed after its own world
+   edits, and couldn't refresh anyway for the same permission reason. Every backup since Oct 1 carries that old copy.
 
-The drop box had no background. The app only registers a drop where something is painted, so it worked only right on
-the button or the caption under it. Drops anywhere else went to the card behind it. Now the whole box takes the drop.
-The test harness drops a real ZIP on the box's empty corner. It failed before the fix and passes now.
+(On Oct 1 the world also went from Day 211 at 07:57 to Day 173 at 10:24. That looks like the Sep 2 backup copied in by
+hand, since no MystTiq restore succeeded.)
+
+## What's fixed
+
+- **Backups page → Fix Save Folder Access:** an amber card appears when restores can't replace the save folder. The
+  button gives your Windows account change rights on the server's `Pal\Saved` folder. Windows shows its administrator
+  prompt first. **You** click it; I didn't change any permissions.
+- **Restores report the day:** "Backup restored: … The world is now Day 211 18:48, as in the backup." It's read from the
+  restored `Level.sav` and compared with the backup's day.
+- **Each backup shows its world day** in the Backups list. These are already read for all 36 of yours.
+- **The Dashboard's day is current:** re-read whenever the world has been saved. If the copy next to the world can't be
+  written, MystTiq keeps its own. Until then it says it's showing an older save instead of "exact".
+- **Restore waits** up to 5 seconds for a briefly held file, names a program that keeps one open, refuses while a
+  PalServer started outside MystTiq is running, and logs every outcome.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.0.0.3-Logic.ps1 -RunBuild`: 269 / 269 passed. The 4 Linux VM checks were skipped because 192.168.1.122 could not be reached. Every v1.0.0.2 check is carried, and the frozen v1.0.0.2 gate passes on its own checkpoint.
-- **Static gate:** 220 / 220. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-- **NATIVE MOD smoke** `Test-v1.0.0.3-RouteSmoke.ps1`: 4 / 4. It covers your layout: both loaders renamed by hand, the July copy left alone, MystTiq's own copy restored first, disable/enable all, and delete and ZIP install refused.
-- **Logic harness:** the NATIVE MOD scenario passes. **ArtworkHarness:** 759 checks pass, including a ZIP dropped on the empty corner of the drop box. That check failed before the fix.
-- **Live, read-only on your data:** the published v1.0.0.3 MOD Dashboard and MOD Library list PalDefender (v1.9.2, `Win64\PalDefender.dll`) and the UE4SS loader as enabled NATIVE MODs.
-- **Not verified live:** a real drag from Explorer (it would install into your server), and PalDefender loading on the next server start. Both need you.
-- **Tray Exit, live (yours):** after Exit, no MystTiq process of yours was left. The `mysttiq-server.exe` you saw was the gate's own test server (parent: the gate's PowerShell; config under `artifacts\runtime-smoke`).
+- **Full gate** `scripts\Test-v1.0.0.4-Logic.ps1 -RunBuild`: 276 / 276 passed. The 4 Linux VM checks were skipped because 192.168.1.122 could not be reached. Every v1.0.0.3 check is carried, and the frozen v1.0.0.3 gate passes on its own checkpoint.
+- **Static gate:** 226 / 226. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **Restore smoke** `Test-v1.0.0.4-RouteSmoke.ps1`: 7 / 7, run on copies of your real backups in an isolated server:
+  1. every backup's day is read;
+  2. a restore gives the backup's day and the Dashboard shows it as current;
+  3. a held file is named, with nothing changed, and a brief hold is waited out;
+  4. a PalServer started outside MystTiq blocks a restore;
+  5. a save folder MystTiq may not replace (your permissions, reproduced) is reported and blocks the restore;
+  6. a newer save is read again through MystTiq's own copy when the one beside it is read-only;
+  7. the activity log has every outcome.
+- **Logic harness:** the world-clock scenario passes. **ArtworkHarness:** 764 checks pass, including the World day column, the German restore message and the fix command's exact text.
+- **Live on your data (read-only):** the Dashboard shows **Day 248 • 21:08**, matching what I read straight from `Level.sav`. The Backups list shows each backup's day (for example Day 211 • 18:48 for Oct 1 14:58), and the amber **Fix Save Folder Access** card shows `C:\GameServers\Palworld\Server\Pal\Saved`.
+- **Not done by me:** clicking Fix Save Folder Access (it changes Windows permissions; that's yours), a restore of your live world, and checking the day in the game.
 
 ## For you
 
-- **Start the main server once** and check the MODs page: PalDefender and UE4SS-Loader should be NATIVE and "Healthy"
-  (loaded). If the server hangs on start, the Dashboard's stuck-start test will now include them.
-- **Try dragging a MOD ZIP** onto the install box from Explorer. Don't run MystTiq with "Run as administrator": Windows
-  blocks drag and drop from a normal Explorer window into an elevated one.
-- **Queued for v1.0.1.0** (roadmap): an Update button for every Update Center component, greyed out where the
-  component updates itself. PalDefender's would bring it to 1.9.3.
-- **Pushing:** v1.0.0.3 hasn't been pushed. Say when.
+1. Open **Backups**, click **Fix Save Folder Access**, and say Yes to Windows. The card should go away.
+2. Restore a backup (or try it on a cloned server first). MystTiq reports the day; start the server and check that day in
+   the game.
+3. The Dashboard should now show Day 248 (or later), not Day 210.
+
+- **Next:** v1.0.0.5 (separate-looking Bases and Guilds), then v1.0.1.0 (an Update button on every Update Center row,
+  and the first signed release).
+- **Pushing:** v1.0.0.3 and v1.0.0.4 haven't been pushed. Say when.

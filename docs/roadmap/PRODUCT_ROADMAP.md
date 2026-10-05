@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.4: file reviewed for this release (2026-10-05). -->
 # Product roadmap to v1.0
 
-Updated 2026-10-04. **Current version: v1.0.0.3. Accepted baseline: v1.0.0.0. Next: the open items below.**
+Updated 2026-10-04. **Current version: v1.0.0.4. Accepted baseline: v1.0.0.0. Next: the open items below.**
 
 This is the active plan. Version assignments after v1.0.0.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
@@ -135,6 +135,23 @@ from v1 on, which MystTiq's own update check requires.
 v1.0.0.0 is the accepted baseline (owner, 2026-09-30), replacing v0.8.25.0. From the next version on, the frozen-checkpoint
 regression and the upgrade and accounts smokes start from the v1.0.0.0 checkpoint (`_Backups/MystTiqPalworldServer/v1.0.0.0`)
 as well as v0.8.25.0, so an upgrade from 1.0 is always tested.
+
+## v1.0.0.4 — Restore checked by the world's day (2026-10-05)
+
+Restores report the restored world's day, every backup shows its day, the Dashboard's day is re-read when the world has
+been saved, and a restore waits for a briefly held file or names the holder. Details:
+`docs/architecture/v1.0.0.4-restore-world-day.md`.
+
+- Found: the Dashboard's day was three days old (Day 210 vs Day 248); every 2026-10-01 restore failed (two while the
+  server ran, two on a held file); no restore was logged.
+- Not covered by a recorded check: the in-game day after the server loads a restored world (the owner's to confirm).
+
+## v1.0.0.5 — Distinct Bases and Guilds pages (planned, asked 2026-10-05)
+
+"The bases and guilds sections look too similar and have redundant data." Both share the same summary, count cards and
+Evidence Model block, and their lists repeat guild name, ID and leader. Plan: Bases shows each base with its location
+(the coordinates the Map already decodes) and owner; Guilds shows a roster (leader, members by name, bases); the shared
+block becomes one line of provenance per page.
 
 ## v1.0.0.3 — NATIVE MODs and the MOD drop zone (2026-10-05)
 

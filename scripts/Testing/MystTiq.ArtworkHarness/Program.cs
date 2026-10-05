@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1189,6 +1189,26 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Check(vm.ModSummary != "before the drop",
         $"A ZIP dropped on the empty part of the MOD drop zone reaches the install [{corner} in {zone.Bounds}; summary: {vm.ModSummary}]");
     try { File.Delete(zipPath); } catch { }
+}
+// v1.0.0.4: each backup's world day, the Dashboard's word for an older decode, and the restore message in German.
+{
+    var item = new BackupItemDto { FileName = "Palworld_2026-10-01_14-58-15-965.zip", WorldDayNumber = 211, WorldTimeText = "18:48" };
+    Check(item.WorldDayText == "Day 211 • 18:48" && new BackupItemDto().WorldDayText == "—", $"A backup shows its world day, or a dash until it is read [{item.WorldDayText}]");
+    var restored = "Backup restored: Palworld_2026-10-01_14-58-15-965.zip. Safety backup: Palworld_2026-10-05_16-00-00-000.zip. The world is now Day 211 18:48, as in the backup.";
+    Localizer.Instance.SetLanguage("de");
+    var german = Localizer.T(restored);
+    Check(german.Contains("Tag 211 18:48", StringComparison.Ordinal) && german.Contains("Palworld_2026-10-05_16-00-00-000.zip", StringComparison.Ordinal) && !german.Contains("The world is now", StringComparison.Ordinal),
+        $"German: the restore message with the world's day is translated, the file names kept [{german}]");
+    Localizer.Instance.SetLanguage("en");
+    var worldDayHeader = window.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == Localizer.Instance["ui.world_day"]);
+    Check(worldDayHeader, "The backups list has a World day column");
+    // The save-folder access fix (found live: SaveGames belonged to administrators): Modify for this account by SID, inherited
+    // and recursive, the path quoted for PowerShell; the card stays hidden while restores can replace the folder.
+    var fixScript = SaveFolderAccessFix.Script(@"C:\Game Servers\O'Neil\Pal\Saved", "S-1-5-21-1000");
+    var accessCard = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "SaveFolderAccessCard");
+    Check(fixScript == @"& icacls.exe 'C:\Game Servers\O''Neil\Pal\Saved' /grant '*S-1-5-21-1000:(OI)(CI)M' /T /C /Q; exit $LASTEXITCODE" &&
+          accessCard is not null && !vm.ShowSaveFolderAccessFix,
+        $"Fix Save Folder Access grants this account Modify on Pal\\Saved (quoted), and its card is hidden while restores work [{fixScript}]");
 }
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
 // Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.

@@ -1,4 +1,23 @@
-<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.4: file reviewed for this release (2026-10-05). -->
+## v1.0.0.4 — Restore Checked by the World's Day
+
+- The world's day (reported 2026-10-05): the decoded `Level.sav.json` the day is read from is re-decoded from a copy of
+  `Level.sav` whenever the world has been saved since (at most every two minutes per world); both world views report
+  whether the day is current (`WorldClockCurrent`, `WorldClockAsOfUtc`), and the Dashboard says so instead of "exact".
+- Restore: the save folder is moved aside with ten tries half a second apart, then the program holding a file is named
+  (Restart Manager) and nothing is changed; a PalServer started outside MystTiq from the server's folder blocks it; the
+  restored world's day is reported against the backup's; restores are in the activity log as refused, failed or done.
+- Backups list: each backup's world day, read from its own `Level.sav` in the background (`world-days.json`).
+- Save folder access (the real cause of the 2026-10-01 restore failures): a SaveGames folder owned by administrators,
+  which MystTiq running as the user may not move, is detected (DELETE access check, nothing changed), reported in the
+  backups list (`saveFolderReplaceable`, `savedFolderPath`) and before a restore. The Backups page's Fix Save Folder
+  Access grants the user Modify on `Pal\Saved` through Windows' administrator prompt (local servers only; shared runner
+  `ElevatedPowerShell`, also used by the firewall fix). The world clock keeps its own decoded copy when the one beside
+  `Level.sav` cannot be written.
+- Tests: the v1.0.0.4 gate regenerated from v1.0.0.3 (every earlier check kept), `Test-v1.0.0.4-RouteSmoke.ps1` (real
+  backups restored into an isolated server), logic and artwork checks; 11 new texts in all 12 languages.
+- Version advanced to 1.0.0.4.
+
 ## v1.0.0.3 — NATIVE MODs and the MOD Drop Zone
 
 - NATIVE MODs (reported 2026-10-05: PalDefender did not show on the MODs page): PalDefender (`d3d9.dll` with

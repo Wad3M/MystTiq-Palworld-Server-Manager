@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.4: file reviewed for this release (2026-10-05). -->
 # MystTiq Palworld Server Manager
 ## Consolidated v0.6 Development Roadmap - Grouped Revision Plan
 

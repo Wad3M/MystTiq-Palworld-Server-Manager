@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 namespace MystTiq.Core.Operations;
 
 // A resource key (e.g. "world-mutation") held by one in-flight operation blocks

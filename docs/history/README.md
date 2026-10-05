@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.4: file reviewed for this release (2026-10-05). -->
 # Historical MystTiq Documentation
 
 These documents preserve version-specific architecture, behavior, and feature-design notes that are no longer appropriate at the repository root.

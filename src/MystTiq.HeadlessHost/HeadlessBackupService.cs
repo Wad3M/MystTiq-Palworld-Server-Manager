@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -21,13 +21,20 @@ public sealed class HeadlessBackupService
     private readonly object classificationGate = new();
     private readonly Dictionary<string, HeadlessBackupClassificationEntry> classifications;
     private readonly Dictionary<string, HeadlessBackupRetentionPreview> retentionPreviews = new(StringComparer.Ordinal);
+    // v1.0.0.4: each backup's world day, read from its own Level.sav (world-days.json), and the reader filling it in.
+    private readonly HeadlessWorldClockService? worldClock;
+    private readonly string worldDaysPath;
+    private readonly object worldDaysGate = new();
+    private readonly Dictionary<string, HeadlessBackupWorldDay> worldDays;
+    private int worldDayReaderRunning;
 
     public HeadlessBackupService(
         IServerPathProfile paths,
         IServerLifecycleService lifecycle,
         HeadlessActivityLogService activity,
         IOperationCoordinator coordinator,
-        ServerProfileId profile)
+        ServerProfileId profile,
+        HeadlessWorldClockService? worldClock = null)
     {
         this.paths = paths;
         this.lifecycle = lifecycle;
@@ -39,6 +46,9 @@ public sealed class HeadlessBackupService
         verificationPath = Path.Combine(stateRoot, "verification.json");
         classificationPath = Path.Combine(stateRoot, "classification.json");
         classifications = LoadClassifications();
+        this.worldClock = worldClock;
+        worldDaysPath = Path.Combine(stateRoot, "world-days.json");
+        worldDays = LoadWorldDays();
     }
 
     public HeadlessBackupInventory GetInventory()
@@ -48,13 +58,14 @@ public sealed class HeadlessBackupService
         var items = Directory.EnumerateFiles(paths.BackupRoot, $"{Prefix}*.zip", SearchOption.TopDirectoryOnly)
             .Select(path => new FileInfo(path))
             .OrderByDescending(file => file.LastWriteTimeUtc)
-            .Select(file => new HeadlessBackupItem(
+            .Select(file => WithWorldDay(new HeadlessBackupItem(
                 file.Name,
                 file.Length,
                 file.LastWriteTimeUtc,
                 IsArchiveReadable(file.FullName),
-                ClassOf(file.Name)))
+                ClassOf(file.Name))))
             .ToList();
+        QueueWorldDays();
 
         return new HeadlessBackupInventory(
             items.Count,
@@ -62,7 +73,12 @@ public sealed class HeadlessBackupService
             items,
             DateTimeOffset.UtcNow,
             paths.BackupRoot,
-            $"{items.Count} managed backup(s) in {paths.BackupRoot}.");
+            $"{items.Count} managed backup(s) in {paths.BackupRoot}.")
+        {
+            // v1.0.0.4: restores need to replace SaveGames; the Desktop offers to fix the Saved folder's access when they cannot.
+            SaveFolderReplaceable = SaveFolderAccess.CanReplace(paths.SaveRoot),
+            SavedFolderPath = Path.GetDirectoryName(paths.SaveRoot.TrimEnd(Path.DirectorySeparatorChar)),
+        };
     }
 
     // Unclassified/legacy backups (created before this milestone, or by manual file operations)
@@ -165,7 +181,18 @@ public sealed class HeadlessBackupService
             {
                 const string busyMessage = "Stop PalServer before restoring a backup.";
                 coordinator.Fail(operation.Id, busyMessage);
+                activity.Record("Warning", "Backups", "Restore refused", $"file={fileName}; {busyMessage}");
                 return HeadlessBackupOperationResult.Failure(busyMessage);
+            }
+
+            // v1.0.0.4: a PalServer started outside MystTiq (double-clicked, or from a script) is not in the status above.
+            var outside = ServerProcessesOutsideMystTiq();
+            if (outside.Count > 0)
+            {
+                var outsideMessage = $"PalServer is running from this server's folder (process {string.Join(", ", outside)}), started outside MystTiq. Stop it before restoring.";
+                coordinator.Fail(operation.Id, outsideMessage);
+                activity.Record("Warning", "Backups", "Restore refused", $"file={fileName}; {outsideMessage}");
+                return HeadlessBackupOperationResult.Failure(outsideMessage);
             }
 
             var archivePath = ResolveManagedBackup(fileName, requireExists: true);
@@ -174,6 +201,14 @@ public sealed class HeadlessBackupService
                 const string unreadableMessage = "The selected backup archive could not be verified.";
                 coordinator.Fail(operation.Id, unreadableMessage);
                 return HeadlessBackupOperationResult.Failure(unreadableMessage);
+            }
+
+            // v1.0.0.4: the 2026-10-01 failures were this, not a file in use: SaveGames belonged to administrators.
+            if (!SaveFolderAccess.CanReplace(paths.SaveRoot))
+            {
+                coordinator.Fail(operation.Id, SaveFolderAccess.NoAccessMessage);
+                activity.Record("Warning", "Backups", "Restore refused", $"file={fileName}; {SaveFolderAccess.NoAccessMessage}");
+                return HeadlessBackupOperationResult.Failure(SaveFolderAccess.NoAccessMessage);
             }
 
             string? safetyBackup = null;
@@ -202,7 +237,7 @@ public sealed class HeadlessBackupService
                     throw new InvalidDataException("The selected backup contains no save files.");
 
                 if (Directory.Exists(paths.SaveRoot))
-                    Directory.Move(paths.SaveRoot, rollback);
+                    await MoveSaveRootAsideAsync(rollback, cancellationToken);
 
                 Directory.Move(staging, paths.SaveRoot);
             }
@@ -236,12 +271,23 @@ public sealed class HeadlessBackupService
             if (leftoverRollback is not null)
                 message += $" Note: a temporary rollback copy could not be cleaned up automatically ({Path.GetFileName(leftoverRollback)}) -- safe to delete manually.";
 
+            // v1.0.0.4: the proof the owner asked for: the restored world's day, read from the restored Level.sav itself (this
+            // also refreshes the decoded copy the Dashboard reads, which the backup carried in its old state).
+            var (dayText, restoredTicks) = await DescribeRestoredWorldAsync(fileName, cancellationToken);
+            message += " " + dayText;
+
             coordinator.Complete(operation.Id, message);
-            return new HeadlessBackupOperationResult(true, fileName, safetyBackup, message);
+            activity.Record("Information", "Backups", "Restored backup", $"file={fileName}; safety={safetyBackup ?? "none"}; {dayText}");
+            return new HeadlessBackupOperationResult(true, fileName, safetyBackup, message)
+            {
+                RestoredWorldDayNumber = restoredTicks is { } rt ? WorldClock.Split(rt).Day : null,
+                RestoredWorldTimeText = restoredTicks is { } t2 ? WorldClock.Split(t2).Time : null,
+            };
         }
         catch (Exception ex)
         {
             coordinator.Fail(operation.Id, ex.Message);
+            activity.Record("Warning", "Backups", "Restore failed", $"file={fileName}; {ex.Message}");
             return HeadlessBackupOperationResult.Failure(ex.Message);
         }
         finally
@@ -249,6 +295,120 @@ public sealed class HeadlessBackupService
             operation.Dispose();
             backupGate.Release();
         }
+    }
+
+    // v1.0.0.4: the 2026-10-01 restores failed at once with "Access to the path …\SaveGames is denied": something still had a
+    // file in it open (moments after the server stopped, a window, a scan). Now: up to ten tries half a second apart, and if it
+    // is still held, a message that names the program and says nothing was changed.
+    private async Task MoveSaveRootAsideAsync(string rollback, CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                Directory.Move(paths.SaveRoot, rollback);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (attempt < 10) { await Task.Delay(500, cancellationToken); continue; }
+                if (!SaveFolderAccess.CanReplace(paths.SaveRoot)) throw new IOException(SaveFolderAccess.NoAccessMessage, ex);
+                var holders = FileLockers.UnderFolder(paths.SaveRoot);
+                throw new IOException(holders.Count > 0
+                    ? $"The save folder is in use and could not be replaced, so nothing was restored. Open in: {string.Join(", ", holders)}. Close it and restore again."
+                    : $"The save folder is in use and could not be replaced, so nothing was restored. Close any program or Explorer window using {paths.SaveRoot} and restore again.", ex);
+            }
+        }
+    }
+
+    // A PalServer process whose executable lives under this server's folder, which the lifecycle status does not know.
+    private IReadOnlyList<string> ServerProcessesOutsideMystTiq()
+    {
+        var root = Path.GetFullPath(paths.ServerRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var found = new List<string>();
+        foreach (var process in System.Diagnostics.Process.GetProcesses())
+        {
+            try
+            {
+                if (!process.ProcessName.StartsWith("PalServer", StringComparison.OrdinalIgnoreCase)) continue;
+                var path = process.MainModule?.FileName;
+                if (path is not null && Path.GetFullPath(path).StartsWith(root, StringComparison.OrdinalIgnoreCase)) found.Add(process.Id.ToString());
+            }
+            catch { }
+            finally { process.Dispose(); }
+        }
+        return found;
+    }
+
+    private async Task<(string Text, long? Ticks)> DescribeRestoredWorldAsync(string fileName, CancellationToken cancellationToken)
+    {
+        if (worldClock is null) return (string.Empty, null);
+        var level = Directory.Exists(paths.SaveRoot)
+            ? Directory.EnumerateFiles(paths.SaveRoot, "Level.sav", SearchOption.AllDirectories)
+                .Where(f => !f.Split(Path.DirectorySeparatorChar).Any(p => p.Equals("backup", StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault()
+            : null;
+        if (level is null) return ("The world's day could not be read: the restored save has no Level.sav.", null);
+        var result = await worldClock.RefreshAsync(Path.GetDirectoryName(level)!, cancellationToken);
+        if (!result.Success || result.Ticks is null) return ($"The world's day could not be read: {result.Error}", null);
+        var (day, time) = WorldClock.Split(result.Ticks.Value);
+        HeadlessBackupWorldDay? expected;
+        lock (worldDaysGate) worldDays.TryGetValue(fileName, out expected);
+        if (expected?.Ticks is { } backupTicks && backupTicks != result.Ticks.Value)
+        {
+            var (bd, bt) = WorldClock.Split(backupTicks);
+            return ($"The world is now Day {day} {time}; the backup was read as Day {bd} {bt}.", result.Ticks);
+        }
+        return (expected?.Ticks is null ? $"The world is now Day {day} {time}." : $"The world is now Day {day} {time}, as in the backup.", result.Ticks);
+    }
+
+    private HeadlessBackupItem WithWorldDay(HeadlessBackupItem item)
+    {
+        HeadlessBackupWorldDay? day;
+        lock (worldDaysGate) worldDays.TryGetValue(item.FileName, out day);
+        if (day?.Ticks is not { } ticks) return item;
+        var (number, time) = WorldClock.Split(ticks);
+        return item with { WorldDayNumber = number, WorldTimeText = time };
+    }
+
+    // Reads the day of every backup not read yet (newest first), one at a time in the background; a failure is retried after
+    // an hour (for example once the save tools are installed).
+    private void QueueWorldDays()
+    {
+        if (worldClock is null || Interlocked.Exchange(ref worldDayReaderRunning, 1) == 1) return;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(paths.BackupRoot, $"{Prefix}*.zip", SearchOption.TopDirectoryOnly)
+                             .Select(f => new FileInfo(f)).OrderByDescending(f => f.LastWriteTimeUtc))
+                {
+                    HeadlessBackupWorldDay? known;
+                    lock (worldDaysGate) worldDays.TryGetValue(file.Name, out known);
+                    if (known is not null && (known.Ticks is not null || DateTimeOffset.UtcNow - known.ReadUtc < TimeSpan.FromHours(1))) continue;
+                    var result = await worldClock.ReadBackupAsync(file.FullName, CancellationToken.None);
+                    lock (worldDaysGate)
+                    {
+                        worldDays[file.Name] = new HeadlessBackupWorldDay(result.Ticks, result.Error, DateTimeOffset.UtcNow);
+                        try { File.WriteAllText(worldDaysPath, JsonSerializer.Serialize(worldDays)); } catch { }
+                    }
+                }
+            }
+            catch { }
+            finally { Interlocked.Exchange(ref worldDayReaderRunning, 0); }
+        });
+    }
+
+    private Dictionary<string, HeadlessBackupWorldDay> LoadWorldDays()
+    {
+        try
+        {
+            if (File.Exists(worldDaysPath))
+                return new Dictionary<string, HeadlessBackupWorldDay>(
+                    JsonSerializer.Deserialize<Dictionary<string, HeadlessBackupWorldDay>>(File.ReadAllText(worldDaysPath)) ?? [], StringComparer.OrdinalIgnoreCase);
+        }
+        catch { }
+        return new Dictionary<string, HeadlessBackupWorldDay>(StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task<HeadlessBackupVerificationResult> VerifyAsync(string fileName, CancellationToken cancellationToken)
@@ -534,7 +694,14 @@ public sealed record HeadlessBackupItem(
     long SizeBytes,
     DateTimeOffset CreatedAt,
     bool Verified,
-    BackupClass Class);
+    BackupClass Class)
+{
+    // v1.0.0.4: the world's in-game day inside this backup (from its own Level.sav), once read.
+    public long? WorldDayNumber { get; init; }
+    public string? WorldTimeText { get; init; }
+}
+
+public sealed record HeadlessBackupWorldDay(long? Ticks, string? Error, DateTimeOffset ReadUtc);
 
 public sealed record HeadlessBackupInventory(
     int Count,
@@ -542,7 +709,11 @@ public sealed record HeadlessBackupInventory(
     IReadOnlyList<HeadlessBackupItem> Items,
     DateTimeOffset ObservedAt,
     string RootPath,
-    string Detail);
+    string Detail)
+{
+    public bool SaveFolderReplaceable { get; init; } = true;
+    public string? SavedFolderPath { get; init; }
+}
 
 public sealed record HeadlessBackupOperationResult(
     bool Success,
@@ -550,6 +721,10 @@ public sealed record HeadlessBackupOperationResult(
     string? SafetyBackupFileName,
     string Message)
 {
+    // v1.0.0.4: after a restore, the restored world's day read from its Level.sav.
+    public long? RestoredWorldDayNumber { get; init; }
+    public string? RestoredWorldTimeText { get; init; }
+
     public static HeadlessBackupOperationResult Failure(string message) =>
         new(false, null, null, message);
 

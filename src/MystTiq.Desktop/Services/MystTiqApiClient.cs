@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;

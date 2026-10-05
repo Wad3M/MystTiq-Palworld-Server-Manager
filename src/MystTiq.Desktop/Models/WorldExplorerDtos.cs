@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -44,6 +44,9 @@ public sealed class WorldExplorerSnapshotDto
     [JsonPropertyName("lastWorldSaveUtc")] public DateTimeOffset? LastWorldSaveUtc { get; init; }
     [JsonPropertyName("worldDayNumber")] public long? WorldDayNumber { get; init; }
     [JsonPropertyName("worldTimeText")] public string? WorldTimeText { get; init; }
+    // v1.0.0.4: whether that day comes from a decode as new as Level.sav, and when the decode was made.
+    [JsonPropertyName("worldClockCurrent")] public bool WorldClockCurrent { get; init; } = true;
+    [JsonPropertyName("worldClockAsOfUtc")] public DateTimeOffset? WorldClockAsOfUtc { get; init; }
     [JsonPropertyName("worlds")] public IReadOnlyList<WorldCandidateDto> Worlds { get; init; } = [];
     [JsonPropertyName("files")] public IReadOnlyList<WorldFileDto> Files { get; init; } = [];
     [JsonPropertyName("statistics")] public WorldStatisticsDto Statistics { get; init; } = new();

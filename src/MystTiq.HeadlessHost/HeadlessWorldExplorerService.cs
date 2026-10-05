@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using MystTiq.Core.Services;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,10 +8,6 @@ namespace MystTiq.HeadlessHost;
 public sealed class HeadlessWorldExplorerService
 {
     private const int MaximumFiles = 5000;
-    private const long TicksPerDay = 864_000_000_000L;
-    private static readonly byte[] WorldClockNeedle = Encoding.UTF8.GetBytes("\"GameDateTimeTicks\"");
-    private static readonly Regex WrappedWorldClockValue = new("\"value\"\\s*:\\s*\"?(?<ticks>-?\\d+)\"?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex DirectWorldClockValue = new("^\\s*:\\s*\"?(?<ticks>-?\\d+)\"?", RegexOptions.Compiled);
     private readonly IServerPathProfile paths;
 
     public HeadlessWorldExplorerService(IServerPathProfile paths)
@@ -77,7 +73,9 @@ public sealed class HeadlessWorldExplorerService
             file.RelativePath.StartsWith("Players/", StringComparison.OrdinalIgnoreCase));
         var totalBytes = files.Sum(file => file.SizeBytes);
         var lastWorldSaveUtc = active.LevelLastWriteUtc;
-        var (worldDayNumber, worldTimeText) = ReadAuthoritativeWorldClock(active.WorldPath, lastWorldSaveUtc);
+        // v1.0.0.4: one clock reader (HeadlessWorldClockService), which also says whether the decoded copy is current.
+        var clock = HeadlessWorldClockService.Read(active.WorldPath, HeadlessWorldClockService.CacheRootFor(paths));
+        (long Day, string Time)? split = clock.Ticks is { } ticks and >= 0 ? WorldClock.Split(ticks) : null;
         var statistics = BuildStatistics(files);
         var integrity = BuildIntegrity(files);
 
@@ -91,14 +89,18 @@ public sealed class HeadlessWorldExplorerService
             playerSaveCount,
             totalBytes,
             lastWorldSaveUtc,
-            worldDayNumber,
-            worldTimeText,
+            split?.Day,
+            split?.Time,
             worlds,
             files,
             statistics,
             integrity,
             DateTimeOffset.UtcNow,
-            $"Active world {active.WorldId}: {files.Count} file(s), {playerSaveCount} player save(s).");
+            $"Active world {active.WorldId}: {files.Count} file(s), {playerSaveCount} player save(s).")
+        {
+            WorldClockCurrent = clock.Current,
+            WorldClockAsOfUtc = clock.DecodedUtc is { } at ? new DateTimeOffset(at, TimeSpan.Zero) : null,
+        };
     }
 
     public HeadlessWorldExplorerSnapshot ExploreDashboard()
@@ -118,68 +120,19 @@ public sealed class HeadlessWorldExplorerService
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
 
-        var (worldDayNumber, worldTimeText) = ReadAuthoritativeWorldClock(active.WorldPath, active.LevelLastWriteUtc);
+        // v1.0.0.4: the day comes from the decoded copy; say whether it is as new as Level.sav (it was three days old live).
+        var clock = HeadlessWorldClockService.Read(active.WorldPath, HeadlessWorldClockService.CacheRootFor(paths));
+        (long Day, string Time)? split = clock.Ticks is { } ticks and >= 0 ? WorldClock.Split(ticks) : null;
         return new HeadlessWorldExplorerSnapshot(
             true, paths.SaveRoot, active.WorldId, active.WorldPath, worlds.Count, 1, playerSaveCount,
-            active.LevelSizeBytes, active.LevelLastWriteUtc, worldDayNumber, worldTimeText,
+            active.LevelSizeBytes, active.LevelLastWriteUtc, split?.Day, split?.Time,
             worlds, [], new HeadlessWorldStatistics(1, playerSaveCount, 0, 0, 0, active.LevelLastWriteUtc, active.LevelLastWriteUtc),
             new HeadlessWorldIntegrity("Dashboard Summary", [], true), DateTimeOffset.UtcNow,
-            $"Dashboard world summary for {active.WorldId}.");
-    }
-
-    private static (long? DayNumber, string? TimeText) ReadAuthoritativeWorldClock(string worldPath, DateTimeOffset sourceWriteUtc)
-    {
-        var candidates = new[]
+            $"Dashboard world summary for {active.WorldId}.")
         {
-            Path.Combine(worldPath, "Level.sav.json"),
-            Path.Combine(worldPath, "Level.json"),
-            Path.Combine(worldPath, "Level.sav.decoded.json")
+            WorldClockCurrent = clock.Current,
+            WorldClockAsOfUtc = clock.DecodedUtc is { } at ? new DateTimeOffset(at, TimeSpan.Zero) : null,
         };
-        var decodedPath = candidates.FirstOrDefault(File.Exists);
-        if (decodedPath is null) return (null, null);
-
-        var ticks = TryReadGameDateTimeTicks(decodedPath);
-        if (ticks is null || ticks < 0) return (null, null);
-        var day = ticks.Value / TicksPerDay;
-        var time = TimeSpan.FromTicks(ticks.Value % TicksPerDay);
-        return (day, $"{(int)time.TotalHours:00}:{time.Minutes:00}");
-    }
-
-    private static long? TryReadGameDateTimeTicks(string path)
-    {
-        try
-        {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            var buffer = new byte[64 * 1024];
-            var matched = 0;
-            while (true)
-            {
-                var read = stream.Read(buffer, 0, buffer.Length);
-                if (read <= 0) return null;
-                for (var i = 0; i < read; i++)
-                {
-                    var value = buffer[i];
-                    if (value == WorldClockNeedle[matched])
-                    {
-                        matched++;
-                        if (matched != WorldClockNeedle.Length) continue;
-                        var tail = new byte[4096];
-                        var copied = Math.Min(tail.Length, read - (i + 1));
-                        if (copied > 0) Buffer.BlockCopy(buffer, i + 1, tail, 0, copied);
-                        if (copied < tail.Length) copied += stream.Read(tail, copied, tail.Length - copied);
-                        var text = Encoding.UTF8.GetString(tail, 0, copied);
-                        var wrapped = WrappedWorldClockValue.Match(text);
-                        if (wrapped.Success && long.TryParse(wrapped.Groups["ticks"].Value, out var wrappedTicks)) return wrappedTicks;
-                        var direct = DirectWorldClockValue.Match(text);
-                        if (direct.Success && long.TryParse(direct.Groups["ticks"].Value, out var directTicks)) return directTicks;
-                        return null;
-                    }
-                    matched = value == WorldClockNeedle[0] ? 1 : 0;
-                }
-            }
-        }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
     }
 
     private IReadOnlyList<HeadlessWorldCandidate> DiscoverWorlds()
@@ -394,7 +347,12 @@ public sealed record HeadlessWorldExplorerSnapshot(
     HeadlessWorldStatistics Statistics,
     HeadlessWorldIntegrity Integrity,
     DateTimeOffset ObservedAt,
-    string Detail);
+    string Detail)
+{
+    // v1.0.0.4: whether the day above comes from a decoded copy as new as Level.sav, and when that copy was made.
+    public bool WorldClockCurrent { get; init; } = true;
+    public DateTimeOffset? WorldClockAsOfUtc { get; init; }
+}
 
 public sealed record HeadlessWorldStatistics(int SaveDataFiles, int PlayerFiles, int DiagnosticFiles, int OtherFiles, int EmptyFiles, DateTimeOffset? OldestFileUtc, DateTimeOffset? NewestFileUtc);
 public sealed record HeadlessWorldIntegrity(string State, IReadOnlyList<string> Findings, bool RequiredFilesPresent);

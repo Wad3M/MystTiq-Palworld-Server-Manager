@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -145,7 +145,10 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var playerAdmin = new HeadlessPalworldAdminService(paths, activity);
             var playerMetadata = new HeadlessPlayerMetadataService(paths, activity);
             var playerRegistry = new HeadlessPlayerRegistryService(paths);
-            var backups = new HeadlessBackupService(paths, lifecycle, activity, operations, profileId);
+            // v1.0.0.4: the world's day from Level.sav (decoded), for the Dashboard, the backups list and every restore.
+            var saveCodec = new HeadlessSaveCodecService(crashAndSaveTools);
+            var worldClock = new HeadlessWorldClockService(paths, saveCodec);
+            var backups = new HeadlessBackupService(paths, lifecycle, activity, operations, profileId, worldClock);
             var configurationApi = new HeadlessConfigurationApiService(effectiveConfigurationPath, configuration, profileId);
             var doctor = new HeadlessDoctorService(configuration, effectiveConfigurationPath, paths, lifecycle, linuxServiceManager);
             var distribution = ServerDistributionPlatformService.ForCurrentPlatform();
@@ -156,7 +159,6 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             // v0.8.13.0: item and Pal display names from this server's own game pak, shared by the explorer and the Give Item picker.
             var gameNames = new HeadlessGameNameService(paths);
             var playerGuildExplorer = new HeadlessPlayerGuildExplorerService(paths, monitoring, gameNames, playerRegistry);
-            var saveCodec = new HeadlessSaveCodecService(crashAndSaveTools);
             var guildOwnership = new HeadlessGuildOwnershipService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var baseOwnership = new HeadlessBaseOwnershipService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var characterMigration = new HeadlessCharacterMigrationService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
@@ -250,6 +252,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 ServerDistribution = serverDistribution,
                 ConsoleCaptureProxy = consoleCaptureProxy,
                 WorldExplorer = worldExplorer,
+                WorldClock = worldClock,
                 WorldTransactions = worldTransactions,
                 PlayerGuildExplorer = playerGuildExplorer,
                 SaveCodec = saveCodec,
@@ -599,6 +602,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             await Task.WhenAll(statusTask, serviceTask, playersTask, metricsTask);
 
             var world = p.WorldExplorer.ExploreDashboard();
+            // v1.0.0.4: re-decode the world when Level.sav is newer than the copy the day is read from.
+            if (world.ActiveWorldPath is not null) p.WorldClock.RefreshInBackgroundIfStale(world.ActiveWorldPath);
             var backupInventory = p.Backups.GetInventory();
             var palworldSettings = p.PalworldConfiguration.Load();
             var status = await statusTask;

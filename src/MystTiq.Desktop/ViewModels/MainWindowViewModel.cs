@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -495,6 +495,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SaveWhitelistCommand = new AsyncCommand(SaveWhitelistAsync, () => !IsBusy);
         AddWhitelistEntryCommand = new RelayCommand(AddWhitelistEntry);
         RemoveWhitelistEntryCommand = new RelayCommand(RemoveSelectedWhitelistEntry);
+        // v1.0.0.4: the save-folder access fix (MainWindowViewModel.SaveAccess.cs).
+        FixSaveFolderAccessCommand = new AsyncCommand(FixSaveFolderAccessAsync, () => !IsBusy);
         // v1.0.0.2: unique player names (MainWindowViewModel.NameGuard.cs).
         ToggleNameGuardCommand = new RelayCommand(ToggleNameGuard);
         RefreshNameGuardCommand = new AsyncCommand(RefreshNameGuardAsync, () => !IsBusy);
@@ -3048,10 +3050,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     // many backups actually existed, even though the list itself (which observes BackupItems'
     // CollectionChanged directly) rendered correctly. All three call sites now go through this one
     // helper so the notification can't be forgotten a fourth time.
-    private void PopulateBackupItems(IEnumerable<BackupItemDto> items)
+    private void PopulateBackupItems(BackupInventoryDto inventory)
     {
+        ApplySaveFolderAccess(inventory);
         BackupItems.Clear();
-        foreach (var item in items) BackupItems.Add(item);
+        foreach (var item in inventory.Items) BackupItems.Add(item);
         RaisePropertyChanged(nameof(BackupArchiveCountText));
         RaisePropertyChanged(nameof(BackupVerifiedCountText));
         RaisePropertyChanged(nameof(BackupPendingCountText));
@@ -4834,7 +4837,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         try
         {
             var backups = await _api.GetBackupsAsync(profile, BearerToken);
-            PopulateBackupItems(backups.Items);
+            PopulateBackupItems(backups);
             SelectedBackup = BackupItems.FirstOrDefault();
             BackupState = $"{backups.Count} backup(s)";
             BackupTotalSizeText = $"{backups.TotalSizeBytes / 1024d / 1024d:F2} MB";
@@ -5911,9 +5914,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             DashboardWorldClockText = world.WorldDayNumber.HasValue
                 ? $"Day {world.WorldDayNumber.Value:N0} • {world.WorldTimeText ?? "--:--"}"
                 : "Day — • --:--";
-            DashboardWorldClockDetailText = world.WorldDayNumber.HasValue
-                ? "Exact saved world clock from GameTimeSaveData.GameDateTimeTicks"
-                : "Decoded Level.sav JSON unavailable — MystTiq will not estimate the day";
+            // v1.0.0.4: the day is read from a decoded copy of Level.sav; when the world was saved after that decode, say so
+            // (live, the Dashboard showed Day 210 for three days while the world was at Day 248).
+            DashboardWorldClockDetailText = !world.WorldDayNumber.HasValue
+                ? "Decoded Level.sav JSON unavailable — MystTiq will not estimate the day"
+                : world.WorldClockCurrent || world.WorldClockAsOfUtc is null
+                    ? "Exact saved world clock from GameTimeSaveData.GameDateTimeTicks"
+                    : $"From the save as of {world.WorldClockAsOfUtc.Value.ToLocalTime():g}; the world has been saved since and is being read again.";
             DashboardPulseSaveText = world.LastWorldSaveUtc.HasValue
                 ? $"World save: {FormatAge(DateTimeOffset.Now - world.LastWorldSaveUtc.Value.ToLocalTime())} ago"
                 : "World save: —";
@@ -7906,7 +7913,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             var selectedFileName = SelectedBackup?.FileName;
             var inventory = await _api.GetBackupsAsync(profile, BearerToken);
-            PopulateBackupItems(inventory.Items);
+            PopulateBackupItems(inventory);
 
             SelectedBackup = BackupItems.FirstOrDefault(x => x.FileName == selectedFileName) ?? BackupItems.FirstOrDefault();
             BackupState = $"{inventory.Count} backup(s)";
@@ -8091,7 +8098,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         var selectedFileName = SelectedBackup?.FileName;
         var inventory = await _api.GetBackupsAsync(profile, BearerToken);
-        PopulateBackupItems(inventory.Items);
+        PopulateBackupItems(inventory);
         SelectedBackup = BackupItems.FirstOrDefault(x => x.FileName == selectedFileName) ?? BackupItems.FirstOrDefault();
         BackupState = $"{inventory.Count} backup(s)";
         BackupTotalSizeText = $"{inventory.TotalSizeBytes / 1024d / 1024d:F2} MB";

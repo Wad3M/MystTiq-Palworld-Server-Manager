@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.4: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -2024,23 +2024,37 @@
                right-column card ("Backup Locations") has no equivalent here anymore: its one
                action (Open Backup Root) already moved into the ribbon in v0.7.27.0. Created also
                now leads the table's columns instead of the filename, per direct request. -->
+          <!-- v1.0.0.4: found live: the save folder belonged to administrators, so every restore failed. Shown for a server on
+               this computer when restores cannot replace it; the fix runs through Windows' administrator prompt. -->
+          <Border x:Name="SaveFolderAccessCard" Classes="card accentBackups" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" IsVisible="{Binding ShowSaveFolderAccessFix}" Margin="0,0,0,12">
+            <StackPanel Spacing="8">
+              <TextBlock Text="{services:Tr ui.save_folder_access_title}" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource AmberBrush}"/>
+              <TextBlock Text="{services:Tr ui.save_folder_access_hint}" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding SavedFolderPathVerbatim}" FontFamily="Consolas, monospace" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+              <Button Classes="primary" Content="{services:Tr ui.fix_save_folder_access}" Command="{Binding FixSaveFolderAccessCommand}" IsEnabled="{Binding CanManageAdmin}" HorizontalAlignment="Left"/>
+              <TextBlock Text="{services:TrText SaveFolderAccessStatus}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
           <Grid ColumnDefinitions="2.2*,*" ColumnSpacing="12">
             <Border Classes="card accentBackups">
               <Grid RowDefinitions="Auto,*" RowSpacing="10">
-                <Grid ColumnDefinitions="*,2*,*,*" ColumnSpacing="12">
+                <!-- v1.0.0.4: each backup's in-game day, from its own Level.sav, so a restore can be checked by day. -->
+                <Grid ColumnDefinitions="*,2*,*,*,*" ColumnSpacing="12">
                   <TextBlock Text="{services:Tr ui.created}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" />
                   <TextBlock Grid.Column="1" Text="{services:Tr ui.backup}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" />
-                  <TextBlock Grid.Column="2" Text="{services:Tr ui.size}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" />
-                  <TextBlock Grid.Column="3" Text="{services:Tr ui.status}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" />
+                  <TextBlock Grid.Column="2" Text="{services:Tr ui.world_day}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" />
+                  <TextBlock Grid.Column="3" Text="{services:Tr ui.size}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" />
+                  <TextBlock Grid.Column="4" Text="{services:Tr ui.status}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" />
                 </Grid>
                 <ListBox AutomationProperties.Name="{services:Tr ui.backups}" Grid.Row="1" ItemsSource="{Binding BackupItems}" SelectedItem="{Binding SelectedBackup}" MaxHeight="480">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:BackupItemDto">
-                      <Grid ColumnDefinitions="*,2*,*,*" ColumnSpacing="12" Margin="0,5">
+                      <Grid ColumnDefinitions="*,2*,*,*,*" ColumnSpacing="12" Margin="0,5">
                         <TextBlock Text="{services:TrText CreatedText}" />
                         <TextBlock Grid.Column="1" Text="{Binding FileName}" />
-                        <TextBlock Grid.Column="2" Text="{services:TrText SizeText}" />
-                        <TextBlock Grid.Column="3" Text="{services:TrText VerificationText}" />
+                        <TextBlock Grid.Column="2" Text="{services:TrText WorldDayText}" />
+                        <TextBlock Grid.Column="3" Text="{services:TrText SizeText}" />
+                        <TextBlock Grid.Column="4" Text="{services:TrText VerificationText}" />
                       </Grid>
                     </DataTemplate>
                   </ListBox.ItemTemplate>

@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.4: file reviewed for this release (2026-10-05). -->
 # Release checklist
 
-**Current version: v1.0.0.3. Accepted baseline: v1.0.0.0.** Read the [publishing guide](docs/release/README.md) for commands and asset names. Historical version-specific checks are preserved in [history](docs/history/RELEASE_CHECKLIST_pre_v0.8.25.0.md); the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md) defines the additional v1.0 gates.
+**Current version: v1.0.0.4. Accepted baseline: v1.0.0.0.** Read the [publishing guide](docs/release/README.md) for commands and asset names. Historical version-specific checks are preserved in [history](docs/history/RELEASE_CHECKLIST_pre_v0.8.25.0.md); the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md) defines the additional v1.0 gates.
 
 ## Source and documentation
 

@@ -1,6 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
-using System.ComponentModel;
-using System.Diagnostics;
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -18,31 +16,13 @@ public static class ElevatedFirewall
     /// <summary>Runs the script as an administrator (Windows asks first) and says whether it succeeded.</summary>
     public static async Task<(bool Success, string Message)> RunAsync(string script, CancellationToken cancellationToken = default)
     {
-        var powershell = Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe");
-        var encoded = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes("$ProgressPreference='SilentlyContinue';" + script));
-        var start = new ProcessStartInfo(File.Exists(powershell) ? powershell : "powershell.exe",
-            "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand " + encoded)
+        var (outcome, exitCode, error) = await ElevatedPowerShell.RunAsync(script, cancellationToken);
+        return outcome switch
         {
-            UseShellExecute = true,
-            Verb = "runas",
-            WindowStyle = ProcessWindowStyle.Hidden,
+            ElevatedPowerShell.Outcome.Succeeded => (true, "The firewall rule was added with administrator rights."),
+            ElevatedPowerShell.Outcome.Failed => (false, $"The firewall change failed as administrator (exit code {exitCode})."),
+            ElevatedPowerShell.Outcome.Declined => (false, "Windows asked for administrator rights and the request was declined. The firewall was not changed."),
+            _ => (false, error is null ? "Windows did not start the firewall change." : $"The firewall change could not be started: {error}"),
         };
-        try
-        {
-            using var process = Process.Start(start);
-            if (process is null) return (false, "Windows did not start the firewall change.");
-            await process.WaitForExitAsync(cancellationToken);
-            return process.ExitCode == 0
-                ? (true, "The firewall rule was added with administrator rights.")
-                : (false, $"The firewall change failed as administrator (exit code {process.ExitCode}).");
-        }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
-        {
-            return (false, "Windows asked for administrator rights and the request was declined. The firewall was not changed.");
-        }
-        catch (Exception ex)
-        {
-            return (false, $"The firewall change could not be started: {ex.Message}");
-        }
     }
 }

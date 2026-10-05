@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -617,6 +617,25 @@ try
             "MystTiq's own switched-off copy is restored before a newer hand-made one");
         Assert(NativeModCatalog.ConfigLoads("{\"load_dlls\":[\"mods\\\\paldefender.DLL\"]}", "PalDefender.dll") && !NativeModCatalog.ConfigLoads("not json", "PalDefender.dll"),
             "the config names the DLL in any case or folder; a broken config loads nothing");
+    }, failures);
+    // v1.0.0.4 (reported 2026-10-05): backup and restore checked by the world's in-game day. Live, the Dashboard said Day 210
+    // (decoded 2026-10-01) while Level.sav was Day 248 21:08 (2026-10-04).
+    RunScenario("World clock: the day and time from GameDateTimeTicks, a decoded copy older than Level.sav is not current, and a backup's world Level.sav is its newest one outside backup\\", () =>
+    {
+        var ticks = 248 * WorldClock.TicksPerDay + TimeSpan.FromHours(21).Ticks + TimeSpan.FromMinutes(8).Ticks + TimeSpan.FromSeconds(30).Ticks;
+        Assert(WorldClock.Split(ticks) == (248L, "21:08") && WorldClock.Describe(ticks) == "Day 248 21:08" && WorldClock.Describe(0) == "Day 0 00:00",
+            "Day 248 21:08 from the ticks (seconds dropped)");
+        var levelSaved = new DateTime(2026, 10, 4, 19, 40, 34, DateTimeKind.Utc);
+        Assert(!WorldClock.IsCurrent(new DateTime(2026, 10, 1, 13, 57, 6, DateTimeKind.Utc), levelSaved) && WorldClock.IsCurrent(levelSaved.AddSeconds(-1), levelSaved) && WorldClock.IsCurrent(levelSaved.AddMinutes(5), levelSaved),
+            "the 2026-10-01 decode is not current for a 2026-10-04 Level.sav; a decode within two seconds or later is");
+        var at = DateTimeOffset.Parse("2026-10-01T07:57:46Z", System.Globalization.CultureInfo.InvariantCulture);
+        Assert(WorldClock.NewestWorldLevel([("0/19FE0A03/backup/world/2026.10.01-07.50.00/Level.sav", at.AddHours(1)), ("0/19FE0A03/Level.sav", at), ("0/OLDWORLD/Level.sav", at.AddDays(-30)), ("0/19FE0A03/Level.sav.json", at.AddHours(2))]) == "0/19FE0A03/Level.sav" &&
+               WorldClock.NewestWorldLevel([("0\\19FE0A03\\Level.sav", at)]) == "0\\19FE0A03\\Level.sav" && WorldClock.NewestWorldLevel([("Level.sav.json", at)]) is null,
+            "a backup's world Level.sav: the newest under SaveGames, never Palworld's own backup\\ copies or the JSON");
+        var json = Path.Combine(Path.GetTempPath(), "mysttiq-clock-" + Guid.NewGuid().ToString("N") + ".json");
+        File.WriteAllText(json, "{\"worldSaveData\":{\"GameTimeSaveData\":{\"value\":{\"GameDateTimeTicks\":{\"id\":null,\"value\":" + ticks + ",\"type\":\"Int64Property\"}}}}}");
+        try { Assert(WorldClock.ReadTicks(json) == ticks && WorldClock.ReadTicks(json + ".missing") is null, "the ticks are read from the decoded JSON as palworld-save-tools writes it"); }
+        finally { File.Delete(json); }
     }, failures);
     RunScenario("Stuck start: a start is stuck after two minutes without its port; the status says how long it has been starting; the addresses rules", () =>
     {

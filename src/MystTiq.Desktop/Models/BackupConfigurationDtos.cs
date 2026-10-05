@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -10,6 +10,10 @@ public sealed class BackupItemDto
     [JsonPropertyName("createdAt")] public DateTimeOffset CreatedAt { get; init; }
     [JsonPropertyName("verified")] public bool Verified { get; init; }
     [JsonPropertyName("class")] public string Class { get; init; } = "Manual";
+    // v1.0.0.4: the world's in-game day inside the backup, read from its own Level.sav (empty until read).
+    [JsonPropertyName("worldDayNumber")] public long? WorldDayNumber { get; init; }
+    [JsonPropertyName("worldTimeText")] public string? WorldTimeText { get; init; }
+    public string WorldDayText => WorldDayNumber is { } day ? $"Day {day:N0} • {WorldTimeText ?? "--:--"}" : "—";
 
     public string SizeText => $"{SizeBytes / 1024d / 1024d:F2} MB";
     public string CreatedText => CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
@@ -33,6 +37,9 @@ public sealed class BackupInventoryDto
     [JsonPropertyName("observedAt")] public DateTimeOffset ObservedAt { get; init; }
     [JsonPropertyName("rootPath")] public string RootPath { get; init; } = string.Empty;
     [JsonPropertyName("detail")] public string Detail { get; init; } = string.Empty;
+    // v1.0.0.4: whether restores can replace the save folder, and the Pal\Saved folder a fix applies to.
+    [JsonPropertyName("saveFolderReplaceable")] public bool SaveFolderReplaceable { get; init; } = true;
+    [JsonPropertyName("savedFolderPath")] public string? SavedFolderPath { get; init; }
 }
 
 public sealed class BackupOperationResultDto
