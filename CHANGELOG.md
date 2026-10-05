@@ -1,4 +1,15 @@
-<!-- MystTiq v1.0.0.4: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.5: file reviewed for this release (2026-10-05). -->
+## v1.0.0.5 — Distinct Bases and Guilds Pages
+
+- Bases and Guilds (asked 2026-10-05: they looked too similar, with redundant data): base cards show the decoded
+  location, the Pals working there and the owner, with Show on map (Map page zoomed to the base) and Open guild; guild
+  cards show the leader, member and base counts and who is online, with a roster by name (leader, then online, then by
+  name) and the guild's bases with Open base. The shared count cards and Evidence Model block are removed; each page has
+  one summary line.
+- Tests: the v1.0.0.5 gate regenerated from v1.0.0.4 (every earlier check kept) and ArtworkHarness checks; 19 new texts
+  in all 12 languages.
+- Version advanced to 1.0.0.5.
+
 ## v1.0.0.4 — Restore Checked by the World's Day
 
 - The world's day (reported 2026-10-05): the decoded `Level.sav.json` the day is read from is re-decoded from a copy of

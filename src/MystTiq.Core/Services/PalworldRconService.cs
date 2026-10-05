@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.5: file reviewed for this release (2026-10-05).
 using System.Buffers.Binary;
 using System.Net.Sockets;
 using System.Text;

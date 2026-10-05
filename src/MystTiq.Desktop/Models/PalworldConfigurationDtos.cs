@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.5: file reviewed for this release (2026-10-05).
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;

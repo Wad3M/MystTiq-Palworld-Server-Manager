@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.5: file reviewed for this release (2026-10-05).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -495,6 +495,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SaveWhitelistCommand = new AsyncCommand(SaveWhitelistAsync, () => !IsBusy);
         AddWhitelistEntryCommand = new RelayCommand(AddWhitelistEntry);
         RemoveWhitelistEntryCommand = new RelayCommand(RemoveSelectedWhitelistEntry);
+        // v1.0.0.5: Bases and Guilds link to each other and to the map (MainWindowViewModel.WorldCards.cs).
+        ShowSelectedBaseOnMapCommand = new RelayCommand(ShowSelectedBaseOnMap);
+        OpenSelectedBaseGuildCommand = new RelayCommand(OpenSelectedBaseGuild);
+        OpenGuildBaseCommand = new RelayCommand<string>(OpenGuildBase);
         // v1.0.0.4: the save-folder access fix (MainWindowViewModel.SaveAccess.cs).
         FixSaveFolderAccessCommand = new AsyncCommand(FixSaveFolderAccessAsync, () => !IsBusy);
         // v1.0.0.2: unique player names (MainWindowViewModel.NameGuard.cs).
@@ -9401,30 +9405,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             foreach (var guild in snapshot.Guilds)
                 ExplorerGuilds.Add(guild);
 
-            ExplorerBases.Clear();
-            foreach (var guild in snapshot.Guilds)
-            {
-                foreach (var baseId in guild.BaseIds)
-                {
-                    ExplorerBases.Add(new BaseExplorerItemDto
-                    {
-                        BaseId = baseId,
-                        GuildId = guild.GuildId,
-                        GuildName = guild.GuildName,
-                        LeaderPlayerId = guild.LeaderPlayerId,
-                        LeaderName = guild.LeaderName,
-                        OwnerHealth = guild.Health,
-                        Evidence = $"Decoded GroupSaveDataMap guild base_ids ownership reference for {guild.GuildName} ({guild.GuildId})."
-                    });
-                }
-            }
-
-            ApplyGuildFilters();
-            ApplyBaseFilters();
-
+            // v1.0.0.5: base cards (location, workers) and guild rosters (MainWindowViewModel.WorldCards.cs); the same read
+            // gives the map its bases, so "Show on map" has them.
             PlayerGuildWarnings.Clear();
             foreach (var warning in snapshot.Warnings)
                 PlayerGuildWarnings.Add(warning);
+            ApplyWorldCards(snapshot);
+            ApplyBaseLocations(snapshot);
+
+            ApplyGuildFilters();
+            ApplyBaseFilters();
 
             SelectedExplorerPlayer = ExplorerPlayers.FirstOrDefault();
             SelectedExplorerGuild = !string.IsNullOrWhiteSpace(selectedGuildId)

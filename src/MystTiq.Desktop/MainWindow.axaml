@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.4: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.5: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -837,53 +837,20 @@
           </Grid>
         </StackPanel>
 
-        <!-- PLAYER / GUILD EXPLORER -->
+        <!-- BASES AND GUILDS. v1.0.0.5 (asked 2026-10-05: "the bases and guilds sections look too similar and have redundant
+             data"): both pages used to open with the same summary, count cards and evidence text, and both lists repeated the
+             guild's name, ID and leader. A base is a place (where it is, which Pals work there, who owns it); a guild is people
+             (its roster by name, who leads it, the bases it holds). Each links to the other, and a base opens on the map. -->
         <StackPanel IsVisible="{Binding IsPlayerGuildExplorerPage}" Spacing="12">
-          <Grid ColumnDefinitions="*,Auto">
-            <StackPanel>
-              <StackPanel IsVisible="{Binding IsBasesPage}">
-                <TextBlock Text="{services:Tr ui.review_guild_owned_base_references_and_the_autho_850039}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-              </StackPanel>
-              <StackPanel IsVisible="{Binding IsGuildsPage}">
-                <TextBlock Text="{services:Tr ui.review_guild_identity_leadership_membership_and_3976c5}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-              </StackPanel>
-              <TextBlock Text="{services:TrText PlayerGuildState}" Foreground="{DynamicResource VioletBrush}" />
-              <TextBlock Text="{services:TrText PlayerGuildDetail}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
-            </StackPanel>
-            <!-- v0.7.42.0: Refresh Evidence moved to the ribbon. -->
-          </Grid>
+          <StackPanel Spacing="2">
+            <TextBlock Text="{services:TrText BasesSummaryText}" FontSize="16" FontWeight="SemiBold" IsVisible="{Binding IsBasesPage}"/>
+            <TextBlock Text="{services:TrText GuildsSummaryText}" FontSize="16" FontWeight="SemiBold" IsVisible="{Binding IsGuildsPage}"/>
+            <TextBlock Text="{services:TrText PlayerGuildDetail}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+            <TextBlock Text="{services:TrText PlayerGuildState}" Foreground="{DynamicResource VioletBrush}" FontSize="11"/>
+          </StackPanel>
 
-          <Grid ColumnDefinitions="*,*,2*" ColumnSpacing="12">
-            <Border Classes="card accentWorld">
-              <StackPanel Spacing="5">
-                <TextBlock Text="{services:Tr ui.base_references}" Foreground="{DynamicResource MutedBrush}"/>
-                <TextBlock Text="{services:TrText ExplorerBases.Count}" FontSize="22" FontWeight="SemiBold"/>
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="1" Classes="card accentWorld">
-              <StackPanel Spacing="5">
-                <TextBlock Text="{services:Tr ui.guilds}" Foreground="{DynamicResource MutedBrush}"/>
-                <TextBlock Text="{services:TrText GuildRecordCountText}" FontSize="22" FontWeight="SemiBold"/>
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="2" Classes="card accentWorld">
-              <StackPanel Spacing="5">
-                <TextBlock Text="{services:Tr ui.semantic_evidence}" Foreground="{DynamicResource MutedBrush}"/>
-                <TextBlock Text="{services:TrText SemanticStateText}" FontSize="16" FontWeight="SemiBold"/>
-                <TextBlock Text="{services:TrText SemanticSourceText}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
-              </StackPanel>
-            </Border>
-          </Grid>
-
-          <Border Classes="card accentWorld">
-            <StackPanel Spacing="7">
-              <TextBlock Text="{services:Tr ui.evidence_model}" FontWeight="SemiBold"/>
-              <TextBlock Text="{services:Tr ui.player_save_identity_comes_from_validated_32_cha_45a3b2}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
-              <TextBlock Text="{services:Tr ui.this_phase_is_read_only_player_guild_repair_migr_86174f}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
-            </StackPanel>
-          </Border>
-
-          <StackPanel IsVisible="{Binding IsGuildsPage}" Spacing="14">
+          <!-- GUILDS: people -->
+          <StackPanel x:Name="GuildsPageBody" IsVisible="{Binding IsGuildsPage}" Spacing="14">
             <Border Classes="card accentWorld">
               <Grid ColumnDefinitions="2*,*,Auto,Auto" ColumnSpacing="10">
                 <TextBox PlaceholderText="{services:Tr ui.search_guild_id_leader_or_player_id}" Text="{Binding GuildSearchText}"/>
@@ -892,51 +859,159 @@
                 <Button Grid.Column="3" Content="{services:Tr ui.export_guilds_csv}" Click="ExportGuildsCsv_Click"/>
               </Grid>
             </Border>
-            <Grid ColumnDefinitions="3*,2*" ColumnSpacing="14">
+            <Grid ColumnDefinitions="2*,3*" ColumnSpacing="14">
               <Border Classes="card accentWorld">
                 <Grid RowDefinitions="Auto,*" RowSpacing="8">
-                  <TextBlock Text="{services:Tr ui.guild_directory}" FontSize="18" FontWeight="SemiBold"/>
-                  <ListBox Grid.Row="1" ItemsSource="{Binding FilteredExplorerGuilds}" SelectedItem="{Binding SelectedExplorerGuild}" MaxHeight="480" ToolTip.Tip="{services:Tr ui.right_click_for_guild_administration_actions}">
-                    <ListBox.ContextMenu>
-                      <ContextMenu>
-                        <MenuItem Header="{services:Tr ui.transfer_leadership_to}" Click="TransferGuildLeadership_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
-                        <MenuItem Header="{services:Tr ui.add_player}" Click="AddPlayerToGuild_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
-                        <MenuItem Header="{services:Tr ui.remove_broken_member}" Click="RemoveBrokenGuildMember_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
-                        <MenuItem Header="{services:Tr ui.claim_orphaned_guild}" Click="ClaimOrphanedGuild_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
-                      </ContextMenu>
-                    </ListBox.ContextMenu>
-                    <ListBox.ItemTemplate><DataTemplate x:DataType="models:GuildExplorerItemDto"><Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="10" Margin="0,8"><StackPanel><TextBlock Text="{Binding GuildName}" FontWeight="SemiBold"/><TextBlock Text="{Binding GuildId}" FontFamily="Consolas, monospace" FontSize="10" Foreground="{DynamicResource MutedBrush}"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="{services:TrText LeaderDisplay}"/><TextBlock Text="{services:TrText CountText}" FontSize="11" Foreground="{DynamicResource MutedBrush}"/></StackPanel><TextBlock Grid.Column="2" Text="{services:TrText Health}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/></Grid></DataTemplate></ListBox.ItemTemplate>
+                  <TextBlock Text="{services:Tr ui.guilds}" FontSize="18" FontWeight="SemiBold"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.guilds}" Grid.Row="1" ItemsSource="{Binding FilteredExplorerGuilds}" SelectedItem="{Binding SelectedExplorerGuild}" MaxHeight="520" ToolTip.Tip="{services:Tr ui.right_click_for_guild_administration_actions}">
+                      <ListBox.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem Header="{services:Tr ui.transfer_leadership_to}" Click="TransferGuildLeadership_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
+                          <MenuItem Header="{services:Tr ui.add_player}" Click="AddPlayerToGuild_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
+                          <MenuItem Header="{services:Tr ui.remove_broken_member}" Click="RemoveBrokenGuildMember_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
+                          <MenuItem Header="{services:Tr ui.claim_orphaned_guild}" Click="ClaimOrphanedGuild_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
+                        </ContextMenu>
+                      </ListBox.ContextMenu>
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="models:GuildExplorerItemDto">
+                        <StackPanel Spacing="3" Margin="0,8">
+                          <TextBlock Text="{Binding GuildNameVerbatim}" FontSize="17" FontWeight="SemiBold"/>
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="♛" Foreground="{DynamicResource AmberBrush}"/>
+                            <TextBlock Text="{Binding LeaderNameVerbatim}"/>
+                          </StackPanel>
+                          <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="{services:TrText MembersBasesText}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
+                            <TextBlock Text="{services:TrText OnlineText}" Foreground="{DynamicResource GreenBrush}" FontSize="11"/>
+                          </StackPanel>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
                   </ListBox>
                 </Grid>
               </Border>
-              <StackPanel Grid.Column="1" Spacing="14">
-                <Border Classes="card accentWorld"><StackPanel Spacing="7"><TextBlock Text="{services:Tr ui.guild_details}" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedExplorerGuild.GuildName}" FontSize="20" Foreground="{DynamicResource VioletBrush}"/><TextBlock Text="{Binding SelectedExplorerGuild.GuildId}" FontFamily="Consolas, monospace"/><TextBlock Text="{services:TrText SelectedExplorerGuild.Health}"/><TextBlock Text="{services:TrText SelectedExplorerGuild.LeaderDisplay}"/><TextBlock Text="{services:TrText SelectedExplorerGuild.CountText}"/><Grid ColumnDefinitions="*,*" ColumnSpacing="8"><Button Content="{services:Tr ui.copy_guild_id}" Click="CopyGuildId_Click"/><Button Grid.Column="1" Content="{services:Tr ui.open_leader_player}" Command="{Binding OpenSelectedGuildLeaderCommand}"/></Grid></StackPanel></Border>
-                <Border Classes="card accentWorld"><StackPanel Spacing="7"><TextBlock Text="{services:Tr ui.members}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.members}" ItemsSource="{Binding SelectedExplorerGuild.MemberPlayerIds}" MaxHeight="110"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontFamily="Consolas, monospace" FontSize="11"/></DataTemplate></ListBox.ItemTemplate></ListBox><TextBlock Text="{services:Tr ui.base_ids}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.base_ids}" ItemsSource="{Binding SelectedExplorerGuild.BaseIds}" MaxHeight="90"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontFamily="Consolas, monospace" FontSize="11"/></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
-              </StackPanel>
+              <Border Grid.Column="1" Classes="card accentWorld">
+                <StackPanel Spacing="10">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel>
+                      <TextBlock Text="{Binding SelectedExplorerGuild.GuildNameVerbatim}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource VioletBrush}"/>
+                      <TextBlock Text="{Binding SelectedExplorerGuild.GuildId}" FontFamily="Consolas, monospace" FontSize="10" Foreground="{DynamicResource MutedBrush}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                      <Button Content="{services:Tr ui.copy_guild_id}" Click="CopyGuildId_Click"/>
+                      <Button Content="{services:Tr ui.open_leader_player}" Command="{Binding OpenSelectedGuildLeaderCommand}"/>
+                    </StackPanel>
+                  </Grid>
+                  <TextBlock Text="{services:Tr ui.roster}" FontWeight="SemiBold"/>
+                  <ItemsControl x:Name="GuildRoster" ItemsSource="{Binding SelectedExplorerGuild.Roster}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="models:GuildMemberRow">
+                        <Grid ColumnDefinitions="24,*,90,2*" ColumnSpacing="8" Margin="0,3">
+                          <TextBlock Text="♛" Foreground="{DynamicResource AmberBrush}" IsVisible="{Binding IsLeader}"/>
+                          <TextBlock Grid.Column="1" Text="{Binding NameVerbatim}" FontWeight="SemiBold"/>
+                          <TextBlock Grid.Column="2" Text="{services:TrText RoleText}" Foreground="{DynamicResource MutedBrush}"/>
+                          <TextBlock Grid.Column="3" Text="{services:TrText StatusText}" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Text="{services:Tr ui.bases}" FontWeight="SemiBold"/>
+                  <ItemsControl ItemsSource="{Binding SelectedExplorerGuild.BaseCards}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="models:BaseExplorerItemDto">
+                        <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8" Margin="0,3">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="⌂" Foreground="{DynamicResource VioletBrush}"/>
+                            <TextBlock Text="{Binding LocationVerbatim}" FontFamily="Consolas, monospace"/>
+                          </StackPanel>
+                          <TextBlock Grid.Column="1" Text="{services:TrText WorkerCountText}" Foreground="{DynamicResource MutedBrush}"/>
+                          <Button Grid.Column="2" Content="{services:Tr ui.open_base}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).OpenGuildBaseCommand}" CommandParameter="{Binding BaseId}"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
             </Grid>
             <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.guild_ownership_operations}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_guild_above_requires_pal_5e89f6}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="180,2*,Auto" ColumnSpacing="10"><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_guild_operation}" ItemsSource="{Binding GuildOperationTypes}" SelectedItem="{Binding GuildOperationType}"/><TextBox Grid.Column="1" PlaceholderText="{services:Tr ui.target_player_id_32_hex}" Text="{Binding GuildOperationPlayerId}"/><Button Grid.Column="2" Content="{services:Tr ui.preview}" Command="{Binding PreviewGuildOwnershipCommand}"/></Grid><TextBlock Text="{services:TrText GuildOperationStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding GuildOperationConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyGuildOwnershipCommand}"/></StackPanel></Border>
           </StackPanel>
 
-          <StackPanel IsVisible="{Binding IsBasesPage}" Spacing="14">
+          <!-- BASES: places -->
+          <StackPanel x:Name="BasesPageBody" IsVisible="{Binding IsBasesPage}" Spacing="14">
             <Border Classes="card accentWorld"><Grid ColumnDefinitions="2*,*,Auto,Auto" ColumnSpacing="10"><TextBox PlaceholderText="{services:Tr ui.search_base_id_guild_or_leader}" Text="{Binding BaseSearchText}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_base_status_filter}" Grid.Column="1" ItemsSource="{Binding BaseStatusFilters}" SelectedItem="{Binding SelectedBaseStatusFilter}"/><TextBlock Grid.Column="2" Text="{services:TrText BaseVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/><Button Grid.Column="3" Content="{services:Tr ui.export_bases_csv}" Click="ExportBasesCsv_Click"/></Grid></Border>
-            <Grid ColumnDefinitions="3*,2*" ColumnSpacing="14">
-              <Border Classes="card accentWorld"><Grid RowDefinitions="Auto,*" RowSpacing="8"><TextBlock Text="{services:Tr ui.authoritative_base_references}" FontSize="18" FontWeight="SemiBold"/><ListBox Grid.Row="1" ItemsSource="{Binding FilteredExplorerBases}" SelectedItem="{Binding SelectedExplorerBase}" MaxHeight="480" ToolTip.Tip="{services:Tr ui.right_click_for_base_administration_actions}">
-                <ListBox.ContextMenu>
-                  <ContextMenu>
-                    <MenuItem Header="{services:Tr ui.copy_base_info}" Click="CopyBaseInfo_OnClick"/>
-                    <Separator/>
-                    <MenuItem Header="{services:Tr ui.transfer_to_guild}" Click="TransferBase_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
-                    <MenuItem Header="{services:Tr ui.wipe_base_completely}" Click="WipeBase_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
-                  </ContextMenu>
-                </ListBox.ContextMenu>
-                <ListBox.ItemTemplate><DataTemplate x:DataType="models:BaseExplorerItemDto"><Grid ColumnDefinitions="2*,2*,*" ColumnSpacing="10" Margin="0,8"><StackPanel><TextBlock Text="{Binding BaseId}" FontFamily="Consolas, monospace" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Evidence}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="{Binding GuildName}"/><TextBlock Text="{Binding GuildId}" FontSize="10" Foreground="{DynamicResource MutedBrush}"/></StackPanel><TextBlock Grid.Column="2" Text="{services:TrText OwnerHealth}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
-              <StackPanel Grid.Column="1" Spacing="14"><Border Classes="card accentWorld"><StackPanel Spacing="7"><TextBlock Text="{services:Tr ui.base_ownership_evidence}" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedExplorerBase.BaseId}" FontFamily="Consolas, monospace" FontSize="16" Foreground="{DynamicResource VioletBrush}"/><TextBlock Text="{Binding SelectedExplorerBase.GuildName}" FontSize="18"/><TextBlock Text="{Binding SelectedExplorerBase.GuildId}"/><TextBlock Text="{Binding SelectedExplorerBase.LeaderName}"/><TextBlock Text="{Binding SelectedExplorerBase.LeaderPlayerId}" FontFamily="Consolas, monospace" FontSize="11"/><TextBlock Text="{services:TrText SelectedExplorerBase.OwnerHealth}"/><TextBlock Text="{services:TrText SelectedExplorerBase.Evidence}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Button Content="{services:Tr ui.copy_base_id}" Click="CopyBaseId_Click"/></StackPanel></Border></StackPanel>
+            <Grid ColumnDefinitions="2*,3*" ColumnSpacing="14">
+              <Border Classes="card accentWorld">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                  <TextBlock Text="{services:Tr ui.bases}" FontSize="18" FontWeight="SemiBold"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.bases}" Grid.Row="1" ItemsSource="{Binding FilteredExplorerBases}" SelectedItem="{Binding SelectedExplorerBase}" MaxHeight="520" ToolTip.Tip="{services:Tr ui.right_click_for_base_administration_actions}">
+                    <ListBox.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="{services:Tr ui.copy_base_info}" Click="CopyBaseInfo_OnClick"/>
+                        <Separator/>
+                        <MenuItem Header="{services:Tr ui.transfer_to_guild}" Click="TransferBase_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
+                        <MenuItem Header="{services:Tr ui.wipe_base_completely}" Click="WipeBase_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
+                      </ContextMenu>
+                    </ListBox.ContextMenu>
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="models:BaseExplorerItemDto">
+                        <StackPanel Spacing="3" Margin="0,8">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="⌂" FontSize="17" Foreground="{DynamicResource VioletBrush}"/>
+                            <TextBlock Text="{Binding LocationVerbatim}" FontSize="17" FontWeight="SemiBold" FontFamily="Consolas, monospace"/>
+                          </StackPanel>
+                          <TextBlock Text="{services:TrText WorkerCountText}"/>
+                          <TextBlock Text="{Binding WorkerSummaryVerbatim}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding GuildNameVerbatim}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </Grid>
+              </Border>
+              <Border Grid.Column="1" Classes="card accentWorld">
+                <StackPanel Spacing="10">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel>
+                      <TextBlock Text="{Binding SelectedExplorerBase.LocationVerbatim}" FontSize="22" FontWeight="SemiBold" FontFamily="Consolas, monospace" Foreground="{DynamicResource VioletBrush}"/>
+                      <TextBlock Text="{services:TrText SelectedExplorerBase.LocationText}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
+                    </StackPanel>
+                    <Button x:Name="ShowBaseOnMapButton" Grid.Column="1" Classes="primary" Content="{services:Tr ui.show_on_map}" Command="{Binding ShowSelectedBaseOnMapCommand}" IsEnabled="{Binding SelectedExplorerBase.HasLocation}" VerticalAlignment="Top"/>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <StackPanel>
+                      <TextBlock Text="{services:Tr ui.owned_by}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
+                      <TextBlock Text="{Binding SelectedExplorerBase.GuildNameVerbatim}" FontSize="16"/>
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="♛" Foreground="{DynamicResource AmberBrush}"/>
+                        <TextBlock Text="{Binding SelectedExplorerBase.LeaderNameVerbatim}"/>
+                      </StackPanel>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="{services:Tr ui.open_guild}" Command="{Binding OpenSelectedBaseGuildCommand}" VerticalAlignment="Top"/>
+                  </Grid>
+                  <TextBlock Text="{services:TrText SelectedExplorerBase.WorkerCountText}" FontWeight="SemiBold"/>
+                  <ListBox x:Name="BaseWorkers" AutomationProperties.Name="{services:Tr ui.workers}" ItemsSource="{Binding SelectedExplorerBase.Workers}" MaxHeight="260">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="models:PalLocationDto">
+                        <Grid ColumnDefinitions="*,60,*" ColumnSpacing="8">
+                          <TextBlock Text="{Binding WorkerNameVerbatim}" FontWeight="SemiBold"/>
+                          <TextBlock Grid.Column="1" Text="{services:TrText LevelText}" Foreground="{DynamicResource MutedBrush}"/>
+                          <TextBlock Grid.Column="2" Text="{Binding OwnerNameVerbatim}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{Binding SelectedExplorerBase.BaseId}" FontFamily="Consolas, monospace" FontSize="10" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="{services:Tr ui.copy_base_id}" Click="CopyBaseId_Click"/>
+                  </Grid>
+                </StackPanel>
+              </Border>
             </Grid>
             <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.base_ownership_transfer}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_base_above_moves_the_bas_c0d0ff}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="2*,Auto" ColumnSpacing="10"><TextBox PlaceholderText="{services:Tr ui.target_guild_id_32_hex}" Text="{Binding BaseTransferTargetGuildId}"/><Button Grid.Column="1" Content="{services:Tr ui.preview_transfer}" Command="{Binding PreviewBaseTransferCommand}"/></Grid><TextBlock Text="{services:TrText BaseTransferStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding BaseTransferConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyBaseTransferCommand}"/></StackPanel></Border>
             <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.base_recovery}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_base_above_permanently_r_763a73}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Button Content="{services:Tr ui.preview_recovery}" HorizontalAlignment="Left" Command="{Binding PreviewBaseRecoveryCommand}"/><TextBlock Text="{services:TrText BaseRecoveryStatusText}" Foreground="{DynamicResource OrangeBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_73337a}" IsChecked="{Binding BaseRecoveryConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyBaseRecoveryCommand}"/></StackPanel></Border>
           </StackPanel>
 
-          <Border Classes="card accentWorld">
+          <Border Classes="card accentWorld" IsVisible="{Binding HasPlayerGuildWarnings}">
             <StackPanel Spacing="7">
               <TextBlock Text="{services:Tr ui.semantic_warnings_limitations}" FontSize="17" FontWeight="SemiBold"/>
               <ItemsControl ItemsSource="{Binding PlayerGuildWarnings}">

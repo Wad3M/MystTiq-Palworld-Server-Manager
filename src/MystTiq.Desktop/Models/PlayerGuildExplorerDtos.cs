@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.5: file reviewed for this release (2026-10-05).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -50,6 +50,30 @@ public sealed class GuildExplorerItemDto
 
     public string LeaderDisplay => $"{LeaderName} · {LeaderPlayerId}";
     public string CountText => $"{MemberCount} member(s) · {BaseCount} base reference(s)";
+
+    // v1.0.0.5: the Guilds page is about people: the roster by name and the bases the guild holds (filled by the Desktop).
+    [JsonIgnore] public IReadOnlyList<GuildMemberRow> Roster { get; set; } = [];
+    [JsonIgnore] public IReadOnlyList<BaseExplorerItemDto> BaseCards { get; set; } = [];
+    public string GuildNameVerbatim => GuildName;
+    public string LeaderNameVerbatim => string.IsNullOrWhiteSpace(LeaderName) ? "—" : LeaderName;
+    public string ShortIdVerbatim => GuildId.Length > 8 ? GuildId[..8] : GuildId;
+    public string MembersBasesText => $"{MemberCount} members · {BaseCount} bases";
+    public int OnlineCount => Roster.Count(r => r.Online);
+    public string OnlineText => OnlineCount > 0 ? $"{OnlineCount} online" : string.Empty;
+}
+
+// v1.0.0.5: one member of a guild, by name, for the Guilds page's roster.
+public sealed class GuildMemberRow
+{
+    public string PlayerId { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public bool IsLeader { get; init; }
+    public bool Online { get; init; }
+    public DateTimeOffset? LastSeenUtc { get; init; }
+
+    public string NameVerbatim => Name.Length > 0 ? Name : (PlayerId.Length > 8 ? PlayerId[..8] : PlayerId);
+    public string RoleText => IsLeader ? "Leader" : "Member";
+    public string StatusText => Online ? "Online" : LastSeenUtc is { } seen ? $"Last saved {seen.ToLocalTime():g}" : "Offline";
 }
 
 public sealed class BaseExplorerItemDto
@@ -61,6 +85,19 @@ public sealed class BaseExplorerItemDto
     public string LeaderName { get; init; } = string.Empty;
     public string OwnerHealth { get; init; } = string.Empty;
     public string Evidence { get; init; } = string.Empty;
+
+    // v1.0.0.5: the Bases page is about places: where the base is and which Pals work there.
+    public double? X { get; init; }
+    public double? Y { get; init; }
+    public IReadOnlyList<PalLocationDto> Workers { get; init; } = [];
+    public string WorkerSummaryVerbatim { get; init; } = string.Empty;
+    public bool HasLocation => X.HasValue && Y.HasValue;
+    public string LocationVerbatim => HasLocation ? MystTiq.Desktop.Services.PalworldMapCoordinates.Describe(X!.Value, Y!.Value) : "—";
+    public string LocationText => HasLocation ? "On the map" : "No location in the save";
+    public string ShortIdVerbatim => BaseId.Length > 8 ? BaseId[..8] : BaseId;
+    public string GuildNameVerbatim => GuildName;
+    public string LeaderNameVerbatim => string.IsNullOrWhiteSpace(LeaderName) ? "—" : LeaderName;
+    public string WorkerCountText => Workers.Count == 0 ? "No Pals working" : $"{Workers.Count} Pals working";
 }
 
 // v0.7.92.0: a base's decoded world coordinates (Level.sav.json BaseCampSaveData
@@ -103,6 +140,11 @@ public sealed class PalLocationDto
     [JsonPropertyName("y")] public double Y { get; init; }
     // v0.8.13.0: the species' display name ("Cattiva") when the game's names are available, else empty.
     [JsonPropertyName("speciesName")] public string SpeciesName { get; init; } = string.Empty;
+
+    // v1.0.0.5: a worker as listed on the Bases page.
+    public string WorkerNameVerbatim => MystTiq.Desktop.Services.WorldExplorerCards.PalName(this);
+    public string LevelText => $"Lv {Level}";
+    public string OwnerNameVerbatim => OwnerName;
 }
 
 public sealed class PalSummaryDto

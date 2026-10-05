@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.4: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.5: file reviewed for this release (2026-10-05).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1209,6 +1209,64 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Check(fixScript == @"& icacls.exe 'C:\Game Servers\O''Neil\Pal\Saved' /grant '*S-1-5-21-1000:(OI)(CI)M' /T /C /Q; exit $LASTEXITCODE" &&
           accessCard is not null && !vm.ShowSaveFolderAccessFix,
         $"Fix Save Folder Access grants this account Modify on Pal\\Saved (quoted), and its card is hidden while restores work [{fixScript}]");
+}
+// v1.0.0.5 (asked 2026-10-05: "the bases and guilds sections look too similar and have redundant data"): a base is a place
+// (location, workers, owner), a guild is people (roster by name, leader, bases); the shared count cards and evidence block are gone.
+{
+    var guild = new GuildExplorerItemDto
+    {
+        GuildId = "11D02AC34634E88B6A9262A0C74FCD53", GuildName = "MystTik", LeaderPlayerId = "A3835C7B000000000000000000000000", LeaderName = "Melly",
+        MemberCount = 3, BaseCount = 2, MemberPlayerIds = ["67D8D355000000000000000000000000", "A3835C7B000000000000000000000000", "6F7EEEE6000000000000000000000000"],
+        BaseIds = ["D04F779E4EF8578B7C8412B759E117E1", "E9D1225D4A8711195A400CBA6530FF6A"],
+    };
+    PalLocationDto Pal(string species, int level, string baseId, string nick = "") => new() { Species = species, SpeciesName = species, Level = level, BaseId = baseId, NickName = nick, Placement = PalMapLayout.BaseWorker, OwnerName = "Melly" };
+    var pals = new[] { Pal("Lamball", 12, "D04F779E4EF8578B7C8412B759E117E1"), Pal("Lamball", 20, "D04F779E4EF8578B7C8412B759E117E1", "Fluffy"), Pal("Cattiva", 15, "D04F779E4EF8578B7C8412B759E117E1"),
+        Pal("Depresso", 9, "D04F779E4EF8578B7C8412B759E117E1"), Pal("Vixy", 30, "D04F779E4EF8578B7C8412B759E117E1"), Pal("Lamball", 5, "OTHER") };
+    var bases = WorldExplorerCards.Bases([guild], [new BaseLocationDto { BaseId = "D04F779E4EF8578B7C8412B759E117E1", X = 0, Y = 0 }], pals);
+    Check(bases.Count == 2 && bases[0].HasLocation && bases[0].Workers.Count == 5 && bases[0].Workers[0].WorkerNameVerbatim == "Vixy" &&
+          bases[0].WorkerSummaryVerbatim == "Lamball ×2 · Cattiva · Depresso · +1" && bases[0].WorkerCountText == "5 Pals working" &&
+          !bases[1].HasLocation && bases[1].LocationVerbatim == "—" && bases[1].WorkerCountText == "No Pals working",
+        $"A base card has its location and the Pals working there, most common kinds first [{bases[0].WorkerSummaryVerbatim}]");
+    var players = new[]
+    {
+        new PlayerExplorerItemDto { PlayerId = "67D8D355000000000000000000000000", PlayerName = "Wade", Online = true },
+        new PlayerExplorerItemDto { PlayerId = "A3835C7B000000000000000000000000", PlayerName = "Melly", SaveLastWriteUtc = DateTimeOffset.UtcNow.AddDays(-1) },
+    };
+    var roster = WorldExplorerCards.Roster(guild, players);
+    Check(roster.Select(r => r.NameVerbatim).SequenceEqual(["Melly", "Wade", "6F7EEEE6"]) && roster[0].IsLeader && roster[0].RoleText == "Leader" && roster[1].StatusText == "Online" && roster[2].StatusText == "Offline",
+        $"A guild's roster is by name, leader first, then who is online; a member with no known name shows the start of the ID [{string.Join(", ", roster.Select(r => r.NameVerbatim))}]");
+
+    // selectedPage (the SelectedPage property) is declared earlier in this file.
+    selectedPage.SetValue(vm, NavigationPage.Bases);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var basesBody = window.GetVisualDescendants().OfType<StackPanel>().FirstOrDefault(s => s.Name == "BasesPageBody");
+    var guildsBody = window.GetVisualDescendants().OfType<StackPanel>().FirstOrDefault(s => s.Name == "GuildsPageBody");
+    var showOnMap = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "ShowBaseOnMapButton");
+    var shownTexts = window.GetVisualDescendants().OfType<TextBlock>().Where(x => x.IsEffectivelyVisible).Select(x => x.Text).ToHashSet();
+    var basesDistinct = basesBody is { IsEffectivelyVisible: true } && guildsBody is { IsEffectivelyVisible: false } && showOnMap is not null &&
+        !shownTexts.Contains(Localizer.Instance["ui.evidence_model"]) && !shownTexts.Contains(Localizer.Instance["ui.base_references"]);
+    selectedPage.SetValue(vm, NavigationPage.Guilds);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var roster2 = window.GetVisualDescendants().OfType<ItemsControl>().FirstOrDefault(i => i.Name == "GuildRoster");
+    Check(basesDistinct && guildsBody is { IsEffectivelyVisible: true } && basesBody is { IsEffectivelyVisible: false } && roster2 is { IsEffectivelyVisible: true },
+        "Bases shows places (Show on map) and Guilds shows a roster; neither shows the old shared count cards or evidence block");
+    // Seen live: Show on map passed the page as an enum to NavigateCommand, which takes the page's name, so nothing happened.
+    vm.SelectedExplorerBase = bases[0];
+    vm.ShowSelectedBaseOnMapCommand.Execute(null);
+    Dispatcher.UIThread.RunJobs();
+    var onMap = vm.SelectedPage == NavigationPage.Map;
+    vm.OpenGuildBaseCommand.Execute(bases[0].BaseId);
+    Dispatcher.UIThread.RunJobs();
+    var onBases = vm.SelectedPage == NavigationPage.Bases;
+    // Offline the explorer lists are empty, so Open base found no card to select; select the sample base again.
+    vm.SelectedExplorerBase = bases[0];
+    vm.OpenSelectedBaseGuildCommand.Execute(null);
+    Dispatcher.UIThread.RunJobs();
+    Check(onMap && onBases && vm.SelectedPage == NavigationPage.Guilds, $"Show on map opens the Map, Open base opens Bases and Open guild opens Guilds [{onMap}, {onBases}, {vm.SelectedPage}]");
+    Localizer.Instance.SetLanguage("de");
+    Check(Localizer.T("5 Pals working") != "5 Pals working" && Localizer.T("2 bases · 1 on the map · 5 Pals working").Contains("Basen", StringComparison.Ordinal),
+        "German: the base and guild summaries are translated");
+    Localizer.Instance.SetLanguage("en");
 }
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
 // Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.
