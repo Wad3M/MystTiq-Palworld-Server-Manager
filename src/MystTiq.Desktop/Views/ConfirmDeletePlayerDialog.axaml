@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.5: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:services="using:MystTiq.Desktop.Services"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -19,7 +19,7 @@
     </ItemsControl>
     <TextBlock Text="{services:Tr ui.this_permanently_deletes_the_player_s_save_file_7971d5}" Foreground="{DynamicResource OrangeBrush}" TextWrapping="Wrap" FontSize="12"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-      <Button Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
+      <Button Classes="plain" Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
       <Button Classes="danger" Content="{services:Tr ui.delete_permanently}" Click="Confirm_OnClick"/>
     </StackPanel>
   </StackPanel>

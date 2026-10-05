@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.5: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- v0.8.15.0: signs the real Desktop (ViewModel, window, API client with certificate pinning) in to a real remote
        MystTiq instance as each role, in a headless window with every local store isolated. Run by

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.5: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:services="using:MystTiq.Desktop.Services"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -12,8 +12,8 @@
     <TextBlock Text="{services:Tr ui.server_is_running}" FontSize="16" FontWeight="SemiBold"/>
     <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-      <Button Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
-      <Button Content="{services:Tr ui.leave_running}" Click="LeaveRunning_OnClick"/>
+      <Button Classes="plain" Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
+      <Button Classes="caution" Content="{services:Tr ui.leave_running}" Click="LeaveRunning_OnClick"/>
       <Button Classes="danger" Content="{services:Tr ui.stop_and_close}" Click="StopAndClose_OnClick"/>
     </StackPanel>
   </StackPanel>

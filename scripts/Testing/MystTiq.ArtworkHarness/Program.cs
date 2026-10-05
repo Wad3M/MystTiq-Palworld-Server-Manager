@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.5: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1266,6 +1266,135 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Localizer.Instance.SetLanguage("de");
     Check(Localizer.T("5 Pals working") != "5 Pals working" && Localizer.T("2 bases · 1 on the map · 5 Pals working").Contains("Basen", StringComparison.Ordinal),
         "German: the base and guild summaries are translated");
+    Localizer.Instance.SetLanguage("en");
+}
+// v1.0.0.6 (asked 2026-10-05: "consistency with all the buttons and tags ... governed by the central look and not hardcoded ...
+// Delete to be red, open to be purple, verify to be green"): every button has one intent from Services/ButtonIntents.cs, the
+// intent alone decides its colours, and every status tag takes its colour from what the status means.
+{
+    var samples = new (string Label, string Intent)[]
+    {
+        ("Delete", ButtonIntents.Danger), ("Remove selected", ButtonIntents.Danger), ("Force Stop", ButtonIntents.Danger), ("Kick", ButtonIntents.Danger),
+        ("Open", ButtonIntents.Open), ("Open guild", ButtonIntents.Open), ("Show on map", ButtonIntents.Open), ("MANAGE", ButtonIntents.Open),
+        ("Verify", ButtonIntents.Verify), ("VERIFY", ButtonIntents.Verify), ("Rescan", ButtonIntents.Verify), ("Run Doctor", ButtonIntents.Verify),
+        ("Save", ButtonIntents.Apply), ("INSTALL", ButtonIntents.Apply), ("Create", ButtonIntents.Apply), ("Apply Preset", ButtonIntents.Apply),
+        ("Refresh", ButtonIntents.Info), ("Preview", ButtonIntents.Info), ("Export", ButtonIntents.Info),
+        ("Restore", ButtonIntents.Caution), ("Restart", ButtonIntents.Caution), ("Reset", ButtonIntents.Caution),
+        ("Cancel", ButtonIntents.Plain), ("Next", ButtonIntents.Plain), ("something unknown", ButtonIntents.Plain),
+        ("Apply With Fresh Safety Backup", ButtonIntents.Danger),
+    };
+    var wrong = samples.Where(s => ButtonIntents.For(s.Label) != s.Intent).Select(s => $"{s.Label} -> {ButtonIntents.For(s.Label)}").ToList();
+    Check(wrong.Count == 0, $"The intent table: Delete is danger, Open open, Verify verify, Save apply, Refresh info, Restore caution, Cancel plain [{string.Join(", ", wrong)}]");
+    var tagSamples = new (string Status, string Kind)[]
+    {
+        ("READY", StatusTags.Ok), ("Up to date", StatusTags.Ok), ("PASS", StatusTags.Ok), ("Verified", StatusTags.Ok), ("Healthy", StatusTags.Ok),
+        ("Update available", StatusTags.Warn), ("WARNING", StatusTags.Warn), ("Attention", StatusTags.Warn),
+        ("MISSING", StatusTags.Fail), ("FAIL", StatusTags.Fail), ("Unreadable", StatusTags.Fail), ("Failed: timeout", StatusTags.Fail),
+        ("DISABLED", StatusTags.Off), ("Self-updating", StatusTags.Off), ("NOT INSTALLED", StatusTags.Off),
+        ("Checking", StatusTags.Info), ("", StatusTags.Info), ("Active / Unverified", StatusTags.Info), ("locked (failed sign-ins)", StatusTags.Fail),
+        ("Not loaded", StatusTags.Fail), ("Check manually", StatusTags.Warn), ("active", StatusTags.Ok), ("SKIPPED", StatusTags.Off),
+        ("Connected", StatusTags.Ok), ("Connecting…", StatusTags.Info), ("Connection failed", StatusTags.Fail), ("Not connected", StatusTags.Off),
+    };
+    var wrongTags = tagSamples.Where(s => StatusTags.KindFor(s.Status) != s.Kind).Select(s => $"{s.Status} -> {StatusTags.KindFor(s.Status)}").ToList();
+    Check(wrongTags.Count == 0, $"The tag table: ready/passing green, update available amber, missing/failed red, disabled/self-updating grey [{string.Join(", ", wrongTags)}]");
+
+    // Every button on every page: exactly one intent (or a structural look), matching the table for its English label.
+    var englishToKey = new Dictionary<string, string>(StringComparer.Ordinal);
+    var noIntent = new List<string>();
+    var mismatched = new List<string>();
+    var localColours = new List<string>();
+    var byIntent = new Dictionary<string, List<(string Where, IBrush? Background)>>();
+    var buttonsSeen = 0;
+    foreach (var page in Enum.GetValues<NavigationPage>())
+    {
+        selectedPage.SetValue(vm, page);
+        Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+        foreach (var button in window.GetVisualDescendants().OfType<Button>().Where(b => b is not Avalonia.Controls.Primitives.ToggleButton && b.TemplatedParent is null && b.IsEffectivelyVisible))
+        {
+            buttonsSeen++;
+            var where = $"{page}/{button.Name ?? button.Content as string ?? button.GetType().Name}";
+            var intents = ButtonIntents.All.Where(button.Classes.Contains).ToList();
+            var structural = ButtonIntents.Structural.Any(button.Classes.Contains);
+            if (structural) continue;
+            if (intents.Count != 1) { noIntent.Add($"{where} [{string.Join(" ", button.Classes)}]"); continue; }
+            // A label set at runtime (Server Setup's row action) follows the table too, through ButtonIntent.Label.
+            var label = ButtonIntent.GetLabel(button) ?? button.Content as string;
+            if (label is not null && button.Name != "ConfirmButton" && ButtonIntents.For(label) != intents[0]) mismatched.Add($"{where}: {intents[0]} but the table says {ButtonIntents.For(label)}");
+            foreach (var property in new AvaloniaProperty[] { Button.BackgroundProperty, Button.ForegroundProperty, Button.BorderBrushProperty })
+                if (button.IsSet(property) && Avalonia.Diagnostics.AvaloniaObjectExtensions.GetDiagnostic(button, property).Priority == Avalonia.Data.BindingPriority.LocalValue) localColours.Add($"{where}.{property.Name}");
+            if (button.IsEffectivelyEnabled && !button.IsPointerOver)
+                (byIntent.TryGetValue(intents[0], out var list) ? list : byIntent[intents[0]] = []).Add((where, button.Background));
+        }
+    }
+    Check(buttonsSeen > 100 && noIntent.Count == 0, $"Every button on every page ({buttonsSeen} seen) has exactly one intent or a structural look [{string.Join(", ", noIntent.Take(8))}]");
+    Check(mismatched.Count == 0, $"Every button's intent is the one the table gives its English label [{string.Join(", ", mismatched.Take(8))}]");
+    Check(localColours.Count == 0, $"No button sets its own colours; the intent's style does [{string.Join(", ", localColours.Take(8))}]");
+    var mixed = byIntent.Where(kv => kv.Value.Select(v => v.Background).Distinct().Count() != 1).Select(kv => $"{kv.Key}: {kv.Value.Select(v => v.Background).Distinct().Count()} looks").ToList();
+    Check(mixed.Count == 0 && byIntent.ContainsKey(ButtonIntents.Danger) && byIntent.ContainsKey(ButtonIntents.Open) && byIntent.ContainsKey(ButtonIntents.Verify),
+        $"Buttons with the same intent look the same on every page [{string.Join(", ", mixed)}]");
+    var looks = byIntent.Where(kv => kv.Key != ButtonIntents.Plain).ToDictionary(kv => kv.Key, kv => kv.Value[0].Background);
+    Check(looks.Values.Distinct().Count() == looks.Count, $"Each intent has its own colour ({string.Join(", ", looks.Keys)})");
+    // The asked-for colours: Delete red, Open purple, Verify green (the hue of each intent's gradient).
+    double Hue(IBrush? brush)
+    {
+        var color = brush switch { ISolidColorBrush s => s.Color, IGradientBrush g when g.GradientStops.Count > 0 => g.GradientStops[g.GradientStops.Count / 2].Color, _ => Colors.Transparent };
+        double r = color.R / 255.0, gr = color.G / 255.0, b = color.B / 255.0, max = Math.Max(r, Math.Max(gr, b)), min = Math.Min(r, Math.Min(gr, b)), d = max - min;
+        if (d == 0) return -1;
+        var h = max == r ? (gr - b) / d % 6 : max == gr ? (b - r) / d + 2 : (r - gr) / d + 4;
+        return (h * 60 + 360) % 360;
+    }
+    var (danger, open, verify) = (Hue(looks[ButtonIntents.Danger]), Hue(looks[ButtonIntents.Open]), Hue(looks[ButtonIntents.Verify]));
+    Check((danger >= 330 || danger <= 20) && open >= 250 && open <= 320 && verify >= 80 && verify <= 160,
+        $"Delete is red, Open purple and Verify green [hues {danger:0}, {open:0}, {verify:0}]");
+
+    // Tags: one kind each, from its status (sample rows, as the service would send them).
+    vm.EnvironmentItems.Add(new EnvironmentChecklistItemDto { Component = "SteamCMD", Status = "READY", Action = "VERIFY" });
+    vm.EnvironmentItems.Add(new EnvironmentChecklistItemDto { Component = "UE4SS", Status = "OPTIONAL", Action = "MANAGE" });
+    vm.EnvironmentItems.Add(new EnvironmentChecklistItemDto { Component = "Palworld server", Status = "MISSING", Action = "INSTALL" });
+    vm.CoreServerComponents.Add(new ComponentVersionDto { Component = "SteamCMD", Status = "SelfUpdating" });
+    vm.CoreServerComponents.Add(new ComponentVersionDto { Component = "Palworld server", Status = "UpdateAvailable" });
+    vm.CoreServerComponents.Add(new ComponentVersionDto { Component = ".NET Runtime", Status = "UpToDate" });
+    vm.BackupItems.Add(new BackupItemDto { FileName = "Palworld_2026-10-05_12-00-00-000.zip", Verified = true });
+    vm.BackupItems.Add(new BackupItemDto { FileName = "Palworld_2026-10-05_11-00-00-000.zip", Verified = false });
+    vm.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "a", Component = "Port", State = 0 });
+    vm.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "b", Component = "Backups", State = 2 });
+    var tagIssues = new List<string>();
+    var tagsSeen = 0;
+    foreach (var page in new[] { NavigationPage.ServerSetup, NavigationPage.UpdateCenter, NavigationPage.Doctor, NavigationPage.DiagnosticsCenter, NavigationPage.Backups, NavigationPage.Security, NavigationPage.ModDashboard })
+    {
+        selectedPage.SetValue(vm, page);
+        Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+        foreach (var tag in window.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("tag") && b.IsEffectivelyVisible))
+        {
+            tagsSeen++;
+            var kinds = StatusTags.All.Where(tag.Classes.Contains).ToList();
+            var status = StatusTag.GetStatus(tag);
+            if (kinds.Count != 1 || kinds[0] != StatusTags.KindFor(status)) tagIssues.Add($"{page}: '{status}' [{string.Join(" ", tag.Classes)}]");
+        }
+    }
+    var sampleTag = new Border { Classes = { "tag" } };
+    StatusTag.SetStatus(sampleTag, "MISSING");
+    var failFirst = sampleTag.Classes.Contains(StatusTags.Fail);
+    StatusTag.SetStatus(sampleTag, "READY");
+    Check(tagsSeen >= 6 && tagIssues.Count == 0 && failFirst && sampleTag.Classes.Contains(StatusTags.Ok) && !sampleTag.Classes.Contains(StatusTags.Fail),
+        $"Every status tag has one colour from its status ({tagsSeen} on the pages), and changes with it [{string.Join(", ", tagIssues.Take(8))}]");
+    selectedPage.SetValue(vm, NavigationPage.ServerSetup);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var rowActions = window.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible && ButtonIntent.GetLabel(b) is not null)
+        .Select(b => $"{ButtonIntent.GetLabel(b)}={ButtonIntents.All.Single(b.Classes.Contains)}").Distinct().ToList();
+    Check(rowActions.Contains("VERIFY=verify") && rowActions.Contains("MANAGE=open") && rowActions.Contains("INSTALL=apply"),
+        $"Server Setup: VERIFY is green, MANAGE purple and INSTALL blue on the rows [{string.Join(", ", rowActions)}]");
+    // Server Setup's row action changes at runtime (VERIFY, MANAGE, INSTALL): its intent follows.
+    var rowButton = new Button();
+    ButtonIntent.SetLabel(rowButton, "VERIFY");
+    var verifyFirst = rowButton.Classes.Contains(ButtonIntents.Verify);
+    ButtonIntent.SetLabel(rowButton, "MANAGE");
+    Check(verifyFirst && rowButton.Classes.Contains(ButtonIntents.Open) && !rowButton.Classes.Contains(ButtonIntents.Verify), "A button whose label changes takes the new label's intent");
+    Localizer.Instance.SetLanguage("de");
+    selectedPage.SetValue(vm, NavigationPage.Backups);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var germanDanger = window.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible && b.Classes.Contains(ButtonIntents.Danger)).ToList();
+    Check(germanDanger.Count > 0 && germanDanger.All(b => ButtonIntents.All.Count(b.Classes.Contains) == 1), "German: buttons keep their intent (it comes from the English label, not the shown text)");
     Localizer.Instance.SetLanguage("en");
 }
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.

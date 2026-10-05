@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.5: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:services="using:MystTiq.Desktop.Services"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -12,9 +12,9 @@
     <TextBlock Text="{services:Tr ui.unsaved_configuration_changes}" FontSize="16" FontWeight="SemiBold"/>
     <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-      <Button Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
-      <Button Content="{services:Tr ui.discard}" Click="Discard_OnClick"/>
-      <Button Classes="primary" Content="{services:Tr ui.save_changes}" Click="Save_OnClick"/>
+      <Button Classes="plain" Content="{services:Tr ui.cancel}" Click="Cancel_OnClick"/>
+      <Button Classes="danger" Content="{services:Tr ui.discard}" Click="Discard_OnClick"/>
+      <Button Classes="apply" Content="{services:Tr ui.save_changes}" Click="Save_OnClick"/>
     </StackPanel>
   </StackPanel>
 </Window>

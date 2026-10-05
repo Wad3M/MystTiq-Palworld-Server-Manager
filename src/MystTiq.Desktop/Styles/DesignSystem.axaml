@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.5: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Styles.Resources>
@@ -627,12 +627,12 @@
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="Opacity" Value="0.7"/>
   </Style>
-  <Style Selector="Button.primary">
+  <Style Selector="Button.apply">
     <Setter Property="Background" Value="{DynamicResource PrimaryGlassGradient}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_7DD9FF}"/>
     <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="10" Color="{DynamicResource Blue}" Opacity="0.32"/></Setter>
   </Style>
-  <Style Selector="Button.primary:pointerover">
+  <Style Selector="Button.apply:pointerover">
     <Setter Property="Background" Value="{DynamicResource PrimaryGlassHoverGradient}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_C4F1FF}"/>
     <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="16" Color="{DynamicResource Blue}" Opacity="0.62"/></Setter>
@@ -645,31 +645,31 @@
     <Setter Property="Background" Value="{DynamicResource DangerGradient}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_FFC0C4}"/>
   </Style>
-  <Style Selector="Button.success">
+  <Style Selector="Button.verify">
     <Setter Property="Background" Value="{DynamicResource SuccessGradient}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_5EE0AA}"/>
     <Setter Property="Foreground" Value="{DynamicResource SuccessButtonForegroundBrush}"/>
   </Style>
-  <Style Selector="Button.success:pointerover">
+  <Style Selector="Button.verify:pointerover">
     <Setter Property="Background" Value="{DynamicResource SuccessGradientHover}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_9AF0C8}"/>
     <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="{DynamicResource Green}" Opacity="0.5"/></Setter>
   </Style>
-  <Style Selector="Button.success:pressed">
+  <Style Selector="Button.verify:pressed">
     <Setter Property="Background" Value="{DynamicResource SuccessGradientPressed}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_2E9E6C}"/>
   </Style>
-  <Style Selector="Button.warning">
+  <Style Selector="Button.caution">
     <Setter Property="Background" Value="{DynamicResource WarningGradient}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_FFDE8A}"/>
     <Setter Property="Foreground" Value="{DynamicResource DecoForeground_2A1B04}"/>
   </Style>
-  <Style Selector="Button.warning:pointerover">
+  <Style Selector="Button.caution:pointerover">
     <Setter Property="Background" Value="{DynamicResource WarningGradientHover}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_FFEBB0}"/>
     <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="{DynamicResource Amber}" Opacity="0.5"/></Setter>
   </Style>
-  <Style Selector="Button.warning:pressed">
+  <Style Selector="Button.caution:pressed">
     <Setter Property="Background" Value="{DynamicResource WarningGradientPressed}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_C4841A}"/>
   </Style>
@@ -679,34 +679,95 @@
        Workspace's Open-in-explorer buttons, Server Setup's MANAGE/INSTALL/CREATE/ENABLE row
        actions. Neither reuses Primary/Success/Danger/Warning, so these read as their own thing
        rather than looking like a Save/Start button. -->
-  <Style Selector="Button.inspectAction">
+  <Style Selector="Button.info">
     <Setter Property="Background" Value="{DynamicResource InspectGradient}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_6FE8F5}"/>
     <Setter Property="Foreground" Value="{DynamicResource DecoForeground_EAFEFF}"/>
   </Style>
-  <Style Selector="Button.inspectAction:pointerover">
+  <Style Selector="Button.info:pointerover">
     <Setter Property="Background" Value="{DynamicResource InspectGradientHover}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_B0F7FF}"/>
     <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="{DynamicResource Cyan}" Opacity="0.5"/></Setter>
   </Style>
-  <Style Selector="Button.inspectAction:pressed">
+  <Style Selector="Button.info:pressed">
     <Setter Property="Background" Value="{DynamicResource InspectGradientPressed}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_1A7488}"/>
   </Style>
-  <Style Selector="Button.targetAction">
+  <Style Selector="Button.open">
     <Setter Property="Background" Value="{DynamicResource TargetGradient}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_D4B3FF}"/>
     <Setter Property="Foreground" Value="{DynamicResource DecoForeground_F5ECFF}"/>
   </Style>
-  <Style Selector="Button.targetAction:pointerover">
+  <Style Selector="Button.open:pointerover">
     <Setter Property="Background" Value="{DynamicResource TargetGradientHover}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_E9D6FF}"/>
     <Setter Property="Effect"><DropShadowEffect OffsetX="0" OffsetY="0" BlurRadius="12" Color="{DynamicResource Violet}" Opacity="0.5"/></Setter>
   </Style>
-  <Style Selector="Button.targetAction:pressed">
+  <Style Selector="Button.open:pressed">
     <Setter Property="Background" Value="{DynamicResource TargetGradientPressed}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_653C9E}"/>
   </Style>
+  <!-- v1.0.0.6 (asked 2026-10-05): every button has one intent class and the intent alone decides its look; see
+       Services/ButtonIntents.cs for the table (danger red, open purple, verify green, apply blue, info teal, caution amber,
+       plain neutral). The old look classes (primary, success, warning, inspectAction, targetAction) were renamed above to
+       apply, verify, caution, info and open; no page sets a button's colours itself. plain is the default look. -->
+  <Style Selector="Button.plain"/>
+  <!-- Map markers: the marker's own drawing is the button. -->
+  <Style Selector="Button.marker">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="MinWidth" Value="0"/>
+    <Setter Property="MinHeight" Value="0"/>
+  </Style>
+  <Style Selector="Button.marker:pointerover"><Setter Property="Background" Value="Transparent"/></Style>
+  <Style Selector="Button.marker:pressed"><Setter Property="Background" Value="Transparent"/></Style>
+  <!-- A row in a list that selects or zooms to something (the Map's lists, presets, theme swatches). -->
+  <Style Selector="Button.listItem">
+    <Setter Property="Padding" Value="6,3"/>
+    <Setter Property="Background" Value="{DynamicResource ButtonGradient}"/>
+  </Style>
+
+  <!-- v1.0.0.6: a status tag (READY, PASS, Up to date, Healthy, Verified ...): one Border with Classes="tag" and
+       services:StatusTag.Status bound to the English status, which sets ok / warn / fail / off / info
+       (Services/StatusTags.cs). Replaces the three hand-coloured Borders per tag on the Setup, Install and Doctor pages. -->
+  <Style Selector="Border.tag">
+    <Setter Property="CornerRadius" Value="4"/>
+    <Setter Property="Padding" Value="6,2"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="MinWidth" Value="64"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="Background" Value="{DynamicResource GlassOptionHoverGradient}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BlueAccentHighlightBrush}"/>
+  </Style>
+  <Style Selector="Border.tag > TextBlock">
+    <Setter Property="HorizontalAlignment" Value="Center"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="FontSize" Value="10"/>
+    <Setter Property="FontWeight" Value="Bold"/>
+    <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}"/>
+  </Style>
+  <Style Selector="Border.tag.ok">
+    <Setter Property="Background" Value="{DynamicResource SuccessGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource GreenAccentBorderBrush}"/>
+  </Style>
+  <Style Selector="Border.tag.warn">
+    <Setter Property="Background" Value="{DynamicResource WarningGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource AmberAccentBorderBrush}"/>
+  </Style>
+  <Style Selector="Border.tag.fail">
+    <Setter Property="Background" Value="{DynamicResource DangerGlassGradient}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource RedAccentBorderBrush}"/>
+  </Style>
+  <Style Selector="Border.tag.off">
+    <Setter Property="Background" Value="{DynamicResource ButtonGradient}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_5F7F98}"/>
+  </Style>
+  <Style Selector="Border.tag.off > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+  </Style>
+
   <Style Selector="Button.ghost">
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="BorderBrush" Value="Transparent"/>

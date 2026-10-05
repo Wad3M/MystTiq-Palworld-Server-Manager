@@ -1,4 +1,16 @@
-<!-- MystTiq v1.0.0.5: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
+## v1.0.0.6 — Buttons and Tags From One Look
+
+- Buttons (asked 2026-10-05: consistent, centrally governed, Delete red, Open purple, Verify green): every button has one
+  intent from a single table (danger red, open purple, verify green, apply blue, info teal, caution amber, plain
+  neutral) and the style sheet alone colours it. The old look classes are renamed; no button sets its own colours; a
+  runtime label (Server Setup's row action) takes its intent from the same table.
+- Tags: every status tag is a `Border.tag` coloured by its status (ok, warn, fail, off, info), replacing hand-drawn
+  Borders on Setup, Install and Doctor, the Update Center's colour converter and fixed violet/orange text.
+- Tests: the v1.0.0.6 gate regenerated from v1.0.0.5 (every earlier check kept) with contracts over every button and tag
+  in the XAML, and ArtworkHarness checks over every page.
+- Version advanced to 1.0.0.6.
+
 ## v1.0.0.5 — Distinct Bases and Guilds Pages
 
 - Bases and Guilds (asked 2026-10-05: they looked too similar, with redundant data): base cards show the decoded

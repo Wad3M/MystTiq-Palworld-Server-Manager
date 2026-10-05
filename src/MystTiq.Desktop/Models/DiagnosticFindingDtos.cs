@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.5: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
 namespace MystTiq.Desktop.Models;
 
 // v0.6.4.0 unified diagnostics. State mirrors Core's DiagnosticState int values exactly
@@ -60,10 +60,8 @@ public sealed class DiagnosticFindingDto : System.ComponentModel.INotifyProperty
     // can be highlighted in green or red"). Starting/Skipped/Unknown fall through to the badge's
     // own neutral default rather than getting their own color -- only Pass/Warning/Fail are
     // meaningfully color-codeable states.
-    public bool IsPass => State == 0;
     public bool IsWarning => State == 1;
     public bool IsFail => State == 2;
-    public bool IsOtherState => State is not (0 or 1 or 2);
     // Many findings report an identical Evidence and Recommendation string when nothing needs
     // fixing (e.g. both "Steam installation detected.") -- showing both lines is pure redundancy,
     // part of the same "make use of the spacing" complaint.

@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.0.5: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
 # Product roadmap to v1.0
 
-Updated 2026-10-04. **Current version: v1.0.0.5. Accepted baseline: v1.0.0.0. Next: the open items below.**
+Updated 2026-10-04. **Current version: v1.0.0.6. Accepted baseline: v1.0.0.0. Next: the open items below.**
 
 This is the active plan. Version assignments after v1.0.0.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
@@ -145,6 +145,16 @@ been saved, and a restore waits for a briefly held file or names the holder. Det
 - Found: the Dashboard's day was three days old (Day 210 vs Day 248); every 2026-10-01 restore failed (two while the
   server ran, two on a held file); no restore was logged.
 - Not covered by a recorded check: the in-game day after the server loads a restored world (the owner's to confirm).
+
+## v1.0.0.6 — Buttons and tags from one look (2026-10-05)
+
+"I would like to have consistency with all the buttons and tags ... governed by the central look and not hardcoded ...
+Delete to be red, open to be purple, verify to be green." Every button has one intent from `ButtonIntents` (danger,
+open, verify, apply, info, caution, plain) and every status tag one kind from `StatusTags` (ok, warn, fail, off, info);
+only the style sheet colours them. Details: `docs/architecture/v1.0.0.6-button-intents-and-status-tags.md`.
+
+- Not covered by a recorded check: buttons inside dialogs other than the confirm dialog are checked in the XAML (gate)
+  but not rendered by the harness.
 
 ## v1.0.0.5 — Distinct Bases and Guilds pages (2026-10-05)
 

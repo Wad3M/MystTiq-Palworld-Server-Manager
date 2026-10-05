@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.5: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -24,8 +24,6 @@ public sealed class EnvironmentChecklistItemDto
     public string ActionToolTip => ActionSupported ? Details : (UnavailableReason ?? "A safe headless/API implementation is required before this action can be enabled.");
     // v0.7.35.0: button color system (item 32). VERIFY/RESCAN are non-mutating checks (cyan
     // inspectAction); MANAGE/INSTALL/CREATE/ENABLE change something (violet targetAction).
-    public bool IsInspectAction => Action is "VERIFY" or "RESCAN";
-    public bool IsTargetAction => ActionSupported && !IsInspectAction;
     public bool IsReady => Status.Equals("READY", StringComparison.OrdinalIgnoreCase);
     public bool IsDisabled => Status.Equals("DISABLED", StringComparison.OrdinalIgnoreCase) || Status.Equals("OPTIONAL", StringComparison.OrdinalIgnoreCase);
     public bool IsMissing => !IsReady && !IsDisabled;

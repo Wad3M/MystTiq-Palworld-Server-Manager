@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- MystTiq v1.0.0.5: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
 <!-- v1.0.0.0: SignPath artifact configuration for the Windows download. Paste it into the SignPath project's artifact
      configuration (slug: windows-app). The release workflow uploads the unsigned app folder as a GitHub artifact, which is
      a ZIP whose root is that folder's contents. Only MystTiq's own binaries are signed; every one must carry the product
