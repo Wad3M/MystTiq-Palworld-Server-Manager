@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
+<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-05). -->
 # Linux Integration & Production Readiness — v0.3.0.7
 
 v0.3.0.7 closes the planned v0.3 feature line with an integration gate.

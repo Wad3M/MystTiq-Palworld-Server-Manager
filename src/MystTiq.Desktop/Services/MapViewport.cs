@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
+// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
 namespace MystTiq.Desktop.Services;
 
 // v0.7.100.0: the zoom and pan state of the Map page, with no UI dependency so the logic harness can

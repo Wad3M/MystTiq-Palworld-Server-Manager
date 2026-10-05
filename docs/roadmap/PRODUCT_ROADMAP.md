@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
+<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-05). -->
 # Product roadmap to v1.0
 
-Updated 2026-10-04. **Current version: v1.0.0.1. Accepted baseline: v1.0.0.0. Next: the open items below.**
+Updated 2026-10-04. **Current version: v1.0.0.2. Accepted baseline: v1.0.0.0. Next: the open items below.**
 
 This is the active plan. Version assignments after v1.0.0.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
@@ -135,6 +135,17 @@ from v1 on, which MystTiq's own update check requires.
 v1.0.0.0 is the accepted baseline (owner, 2026-09-30), replacing v0.8.25.0. From the next version on, the frozen-checkpoint
 regression and the upgrade and accounts smokes start from the v1.0.0.0 checkpoint (`_Backups/MystTiqPalworldServer/v1.0.0.0`)
 as well as v0.8.25.0, so an upgrade from 1.0 is always tested.
+
+## v1.0.0.2 — Unique player names (2026-10-04)
+
+Asked the same day: names must be unique and duplicates refused; matching ignores case. Each name belongs to the first
+account seen with it or to the account it is reserved for (or nobody); a player using another account's name is turned away
+and the owner is notified. Details: `docs/architecture/v1.0.0.2-unique-player-names.md`.
+
+- A turned-away player's character already has the name (Palworld reports names only in the world); the owner deletes it
+  on Players. Look-alike characters were offered and not chosen.
+- Recorded checks cover the rules (logic harness), the routes on isolated data (seed, save, restart) and the card in 12
+  languages. They do not replace a second account joining the real server with a taken name.
 
 ## v1.0.0.1 — Launcher, identity guard, tray and stuck starts (2026-10-04)
 

@@ -1,4 +1,18 @@
-<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
+<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-05). -->
+## v1.0.0.2 — Unique Player Names
+
+- Unique player names (asked 2026-10-04; matching ignores case): each name belongs to the first account seen with it, or
+  to the account it is reserved for (none: blocked for everyone). A player using another account's name is recorded,
+  notified (Warning) and kicked by default, on the same poll as the whitelist and the identity guard. On first use the
+  known players own their names, the earliest first. `GET`/`PUT /players/name-guard`.
+- The Players page's Unique player names card: on/off, kick or report only, reserve, block, release, save, and the players
+  turned away.
+- Fixed: a button for a role-gated command (Save Whitelist, Save names and others) stayed disabled when the role gates were
+  re-evaluated while the app was busy (sign-in, connect); every async command now re-evaluates when the busy state ends.
+- Tests: the v1.0.0.2 gate regenerated from v1.0.0.1 (every earlier check kept), `Test-v1.0.0.2-RouteSmoke.ps1`, logic and
+  artwork scenarios; 32 new texts in all 12 languages.
+- Version advanced to 1.0.0.2.
+
 ## v1.0.0.1 — Launcher, Identity Guard, Tray and Stuck Starts
 
 - Moved the advanced PalServer launcher editor out of System > Settings into its own **Server > Launcher** page, directly below Workspace.

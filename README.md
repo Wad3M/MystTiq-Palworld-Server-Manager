@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
+<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-05). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,15 +21,17 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.0.1 · Accepted baseline: v1.0.0.0**
+**Current version: v1.0.0.2 · Accepted baseline: v1.0.0.0**
 
 MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.0.1
+## What's new in v1.0.0.2
 
-**Launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
+**Unique player names.** Each player name now belongs to one account, with upper and lower case counted as the same name. A player who joins with someone else's name is turned away, and you can reserve or block names on the Players page.
 
-[Release notes](release-notes/v1.0.0.1.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+**Also new since 1.0 (v1.0.0.1): launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
+
+[Release notes](release-notes/v1.0.0.2.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -99,7 +101,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v0.9.0.0 – v0.9.4.0 | Delivered | 12 display languages for labels, messages and game names; roles explained; accessible names and keyboard reach |
 | v0.9.5.0 – v0.9.8.0 | Delivered | Servers never start each other; true update checks; firewall per server port; fast server search; Avalonia 12; alerts when a component falls behind; Linux install |
 | v0.9.9.0 – v0.9.10.0 | Delivered | One local helper; running servers survive adding one; crash causes for joins; UE4SS compared automatically; names kept in every language |
-| v1.0.0.1 | Current | Server > Launcher; characters protected on join; help for stuck starts; addresses on the Dashboard; a clean Exit from the tray |
+| v1.0.0.2 | Current | Unique player names: each name belongs to one account, case ignored |
+| v1.0.0.1 | Previous | Server > Launcher; characters protected on join; help for stuck starts; addresses on the Dashboard; a clean Exit from the tray |
 | v1.0.0.0 | Stable baseline | The first stable release |
 | v1.1 | Planned | A MOD browser connected to Nexus Mods and other online repositories |
 

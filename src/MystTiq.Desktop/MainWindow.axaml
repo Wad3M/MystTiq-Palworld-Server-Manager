@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
+<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -1656,6 +1656,65 @@
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Button Classes="danger" Content="{services:Tr ui.remove_selected}" Command="{Binding RemoveWhitelistEntryCommand}"/>
                   <Button Classes="success" Content="{services:Tr ui.save_whitelist}" Command="{Binding SaveWhitelistCommand}"/>
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- UNIQUE PLAYER NAMES (v1.0.0.2). Each name belongs to the first account seen with it, or to the account it is
+               reserved for; case is ignored. The service checks on the same poll as the whitelist and turns away a player
+               using another account's name (HeadlessNameGuardService). -->
+          <Border x:Name="UniqueNamesCard" Classes="card accentWorld" IsVisible="{Binding CanManageAdmin}" IsEnabled="{Binding CanManageAdmin}">
+            <StackPanel Spacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <Button Classes="sectionToggle" Command="{Binding ToggleNameGuardCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="▸" IsVisible="{Binding !IsNameGuardExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▾" IsVisible="{Binding IsNameGuardExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="{services:Tr ui.unique_names}" FontSize="17" FontWeight="SemiBold"/>
+                  </StackPanel>
+                </Button>
+                <Button Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding RefreshNameGuardCommand}" IsVisible="{Binding IsNameGuardExpanded}"/>
+              </Grid>
+              <StackPanel Spacing="10" IsVisible="{Binding IsNameGuardExpanded}">
+                <TextBlock Text="{services:Tr ui.unique_names_hint}" Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText NameGuardState}" TextWrapping="Wrap"/>
+                <CheckBox Content="{services:Tr ui.unique_names_enabled}" IsChecked="{Binding NameGuardConfig.Enabled}"/>
+                <CheckBox Content="{services:Tr ui.unique_names_kick}" IsChecked="{Binding NameGuardConfig.KickDuplicates}" IsEnabled="{Binding NameGuardConfig.Enabled}"/>
+                <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="10">
+                  <TextBox AutomationProperties.Name="{services:Tr ui.reserve_name}" Text="{Binding NewReservedName}" PlaceholderText="{services:Tr ui.reserve_name}"/>
+                  <TextBox Grid.Column="1" AutomationProperties.Name="{services:Tr ui.reserve_owner}" Text="{Binding NewReservedOwner}" PlaceholderText="{services:Tr ui.reserve_owner}"/>
+                  <Button Grid.Column="2" Content="{services:Tr ui.reserve}" Command="{Binding ReserveNameCommand}"/>
+                </Grid>
+                <ListBox AutomationProperties.Name="{services:Tr ui.unique_names}" ItemsSource="{Binding NameClaims}" SelectedItem="{Binding SelectedNameClaim}" MaxHeight="220">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:NameClaimDto">
+                      <Grid ColumnDefinitions="*,*,160" ColumnSpacing="8">
+                        <TextBlock Text="{Binding NameVerbatim}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="1" Text="{Binding OwnerVerbatim}" Classes="muted" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="2" Text="{services:TrText Kind}" Classes="muted"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="danger" Content="{services:Tr ui.release_selected}" Command="{Binding ReleaseNameCommand}"/>
+                  <Button Classes="success" Content="{services:Tr ui.save_unique_names}" Command="{Binding SaveNameGuardCommand}"/>
+                </StackPanel>
+                <StackPanel Spacing="4" IsVisible="{Binding HasNameGuardEvents}">
+                  <TextBlock Text="{services:Tr ui.unique_names_turned_away}" FontWeight="SemiBold"/>
+                  <ItemsControl ItemsSource="{Binding NameGuardEvents}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="models:NameGuardEventDto">
+                        <Grid ColumnDefinitions="140,*,*,110" ColumnSpacing="8">
+                          <TextBlock Text="{Binding AtVerbatim}" Classes="muted"/>
+                          <TextBlock Grid.Column="1" Text="{Binding NameVerbatim}" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Grid.Column="2" Text="{Binding UserIdVerbatim}" Classes="muted" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Grid.Column="3" Text="{services:TrText Outcome}" Classes="muted"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
                 </StackPanel>
               </StackPanel>
             </StackPanel>

@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
+// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -495,6 +495,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SaveWhitelistCommand = new AsyncCommand(SaveWhitelistAsync, () => !IsBusy);
         AddWhitelistEntryCommand = new RelayCommand(AddWhitelistEntry);
         RemoveWhitelistEntryCommand = new RelayCommand(RemoveSelectedWhitelistEntry);
+        // v1.0.0.2: unique player names (MainWindowViewModel.NameGuard.cs).
+        ToggleNameGuardCommand = new RelayCommand(ToggleNameGuard);
+        RefreshNameGuardCommand = new AsyncCommand(RefreshNameGuardAsync, () => !IsBusy);
+        SaveNameGuardCommand = new AsyncCommand(SaveNameGuardAsync, () => !IsBusy);
+        ReserveNameCommand = new RelayCommand(ReserveName);
+        ReleaseNameCommand = new RelayCommand(ReleaseSelectedName);
         RefreshAntiCheatCommand = new AsyncCommand(RefreshAntiCheatAsync, () => !IsBusy);
         SaveAntiCheatRulesCommand = new AsyncCommand(SaveAntiCheatRulesAsync, () => !IsBusy);
         RefreshFleetCommand = new AsyncCommand(RefreshFleetAsync, () => !IsBusy);
@@ -2516,6 +2522,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 : string.Empty;
             StatusBarText = value ? reasonWithServer : (ConnectionState == "Connected" ? $"Connected — {ServerState}" : ConnectionState);
 
+            RaiseAllAsyncCommandStates();
             RaiseNexusCommandStates();
             RaiseKitCommandStates();
             RaiseHostCommandStates();

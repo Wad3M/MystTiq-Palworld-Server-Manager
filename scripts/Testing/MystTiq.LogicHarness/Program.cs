@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
+// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -557,6 +557,38 @@ try
         Assert(IdentityGuard.Judge(wade, "None", _ => false) is null && IdentityGuard.Judge(wade, "00000000000000000000000000000001", _ => false) is null,
             "a new player, or a co-op host moved to the server (…0001) whose Steam character does not exist: left alone");
         Assert(IdentityGuard.Judge("xbox_2535405290", "1234ABCD000000000000000000000000", _ => true) is null, "a non-Steam player is not judged");
+    }, failures);
+    // v1.0.0.2 (asked 2026-10-04): "is there a way to ensure player names are unique and that duplicates can not be used?"
+    // Matching ignores case. Each name belongs to the first account seen with it, or to the account it is reserved for.
+    RunScenario("Unique names: a name belongs to the first account (case ignored), another account using it is caught, reserved and blocked names hold, and known players own their names first", () =>
+    {
+        var now = DateTimeOffset.Parse("2026-10-04T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+        Assert(NameGuard.Key("  Wade ") == NameGuard.Key("wade") && NameGuard.Key("Big  Wade") == NameGuard.Key("big wade") && NameGuard.Key("Wade") != NameGuard.Key("W4de"),
+            "case and spacing are ignored; other characters are not (look-alikes were not asked for)");
+        Assert(NameGuard.AccountOf("", "ABCD") == "ABCD" && NameGuard.AccountOf("76561197962020201", null) == "steam_76561197962020201" && NameGuard.AccountOf("steam_1", "X") == "steam_1",
+            "the account is the user ID (a bare SteamID64 gains steam_), else the player ID");
+        NameGuardPlayer P(string account, string name) => new(account, name, "E290DA9A000000000000000000000000");
+        var first = NameGuard.Judge([], [P("steam_1", "Wade")], now);
+        Assert(first.Duplicates.Count == 0 && first.NewClaims is [{ Name: "Wade", OwnerId: "steam_1", Reserved: false }], "an unclaimed name becomes the player's");
+        var claims = first.NewClaims;
+        Assert(NameGuard.Judge(claims, [P("steam_1", "WADE")], now) is { Duplicates.Count: 0, NewClaims.Count: 0 }, "the owner may use it in any case");
+        Assert(NameGuard.Judge([new NameClaim("Old", "E290DA9A000000000000000000000000", "Old", false, now)], [P("steam_1", "old")], now).Duplicates.Count == 0,
+            "a claim made from a record without a user ID (owned by the character's ID) is the same player");
+        var clash = NameGuard.Judge(claims, [P("steam_2", " wade ")], now);
+        Assert(clash.Duplicates is [{ Player.Account: "steam_2", Owner.OwnerId: "steam_1" }] && clash.NewClaims.Count == 0, "another account using it, in any case, is caught and gets no claim");
+        var together = NameGuard.Judge([], [P("steam_3", "Melly"), P("steam_4", "melly")], now);
+        Assert(together.NewClaims is [{ OwnerId: "steam_3" }] && together.Duplicates is [{ Player.Account: "steam_4" }], "two arriving together with one name: the first listed gets it");
+        Assert(NameGuard.Judge(claims, [P("steam_5", ""), new NameGuardPlayer("", "Wade", "")], now) is { Duplicates.Count: 0, NewClaims.Count: 0 }, "no name yet, or no account: nothing decided");
+        var saved = NameGuard.Normalize([new NameClaim(" Admin ", "", "", false, default), new NameClaim("admin", "steam_9", "", true, now), new NameClaim("Wade", "76561197962020201", "Wade", true, now), new NameClaim("  ", "steam_1", "", false, now)], now);
+        Assert(saved is [{ Name: "Admin", OwnerId: "", Reserved: true }, { Name: "Wade", OwnerId: "steam_76561197962020201" }] && saved[0].ClaimedAt == now,
+            "a saved list keeps one claim per name (the first), drops empty names, makes a blocked name reserved and a bare Steam ID an account");
+        Assert(NameGuard.Judge(saved, [P("steam_76561197962020201", "admin")], now).Duplicates is [{ Owner.OwnerId: "" }] && NameGuard.DescribeOwner(saved[0]) == "nobody (a blocked name)",
+            "a blocked name turns away everyone, its owner shown as nobody");
+        Assert(NameGuard.Judge(saved, [P("steam_76561197962020201", "wade")], now).Duplicates.Count == 0 && NameGuard.Judge(saved, [P("steam_6", "Wade")], now).Duplicates.Count == 1 &&
+               NameGuard.DescribeOwner(saved[1]) == "Wade (steam_76561197962020201)", "a reserved name is its owner's alone");
+        var seed = NameGuard.Seed([new NameGuardKnownPlayer("steam_8", "melly", now.AddDays(-1)), new NameGuardKnownPlayer("steam_7", "Melly", now.AddDays(-9)), new NameGuardKnownPlayer("steam_7", "MELLY", now.AddDays(-3)), new NameGuardKnownPlayer("steam_1", "", now)]);
+        Assert(seed.Claims is [{ Name: "Melly", OwnerId: "steam_7" }] && seed.Conflicts is [{ Owner: "steam_7", Other: "steam_8" }],
+            "known players own their names, the earliest seen first; a name two accounts share is reported once, the same account twice is not");
     }, failures);
     RunScenario("Stuck start: a start is stuck after two minutes without its port; the status says how long it has been starting; the addresses rules", () =>
     {

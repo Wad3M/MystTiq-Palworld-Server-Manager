@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
+// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -341,6 +341,10 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<WhitelistConfigDto>("/api/v1/players/whitelist", cancellationToken) ?? new(); }
     public async Task<WhitelistConfigDto> SaveWhitelistAsync(ConnectionProfile profile, WhitelistConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/players/whitelist", request, cancellationToken); return await ReadOperationAsync<WhitelistConfigDto>(response, cancellationToken); }
+    public async Task<NameGuardSnapshotDto> GetNameGuardAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<NameGuardSnapshotDto>("/api/v1/players/name-guard", cancellationToken) ?? new(); }
+    public async Task<NameGuardConfigDto> SaveNameGuardAsync(ConnectionProfile profile, NameGuardConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/players/name-guard", request, cancellationToken); return await ReadOperationAsync<NameGuardConfigDto>(response, cancellationToken); }
 
     // v0.8.17.0: the HOST tab. A refused or invalid policy comes back as a result with its message (400), or as a refusal.
     public async Task<HostPageSnapshotDto> GetHostAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)

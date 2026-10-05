@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
+// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
 namespace MystTiq.Core.Services;
 
 // v0.9.5.0: the UDP port a server really listens on, which is what readiness waits for. PalServer binds the port its

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
+<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-05). -->
 ## Complete command reference
 
 See **[`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md)** for all headless commands, workflows, paths and security expectations.

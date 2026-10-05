@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.1: file reviewed for this release (2026-10-04). -->
+<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-05). -->
 # Code signing with SignPath (setup)
 
 Requested 2026-09-30: sign the Windows download through SignPath. The release workflow is ready; it signs as soon as the

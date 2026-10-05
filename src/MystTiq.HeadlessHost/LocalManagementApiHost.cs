@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
+// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -193,6 +193,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var whitelist = new HeadlessWhitelistService(paths, activity, playerModeration);
             // v1.0.0.1: notices a Steam player who was not given their own character (see HeadlessIdentityGuardService).
             var identityGuard = new HeadlessIdentityGuardService(paths, activity, notifications, playerModeration);
+            // v1.0.0.2: unique player names (see HeadlessNameGuardService).
+            var nameGuard = new HeadlessNameGuardService(paths, activity, notifications, playerModeration, playerRegistry);
             var kits = new HeadlessKitService(paths, activity, playerRegistry, new RconKitCommandRunner(paths, rcon));
             // v0.8.3.0: the Give Item picker's item/Pal ids (world save, kits, earlier gives).
             var gameIds = new HeadlessGameIdCatalogService(paths, kits, gameNames);
@@ -276,6 +278,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 AntiCheat = antiCheat,
                 Whitelist = whitelist,
             IdentityGuard = identityGuard,
+            NameGuard = nameGuard,
                 Kits = kits,
                 GameIds = gameIds,
                 Teleport = teleport,
@@ -563,6 +566,11 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             .RequireRole(MystTiqRole.Viewer, p.Id);
         routes.MapPut("/players/identity-guard", (IdentityGuardConfig updated) => Results.Ok(p.IdentityGuard.SaveConfig(updated)))
             .RequireRole(MystTiqRole.Admin, p.Id);
+        // v1.0.0.2: unique player names: whether it is on, who owns which name, and the players turned away.
+        routes.MapGet("/players/name-guard", () => Results.Ok(new { config = p.NameGuard.GetConfig(), events = p.NameGuard.RecentEvents() }))
+            .RequireRole(MystTiqRole.Viewer, p.Id);
+        routes.MapPut("/players/name-guard", (NameGuardConfig updated) => Results.Ok(p.NameGuard.SaveConfig(updated)))
+            .RequireRole(MystTiqRole.Admin, p.Id);
         routes.MapGet("/network/addresses", async (bool? refresh, CancellationToken token) =>
             Results.Ok(await p.Addresses.GetAsync(ServerGamePort.Expected(p.Paths, p.ServerProfile.LaunchArguments), refresh == true, token)))
             .RequireRole(MystTiqRole.Viewer, p.Id);        routes.MapGet("/host/history", (double? hours, int? points) => Results.Ok(p.HostHistory.Snapshot(hours ?? 24, points ?? 600)))
@@ -603,6 +611,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             await p.Whitelist.EnforceAsync(players, token);
             // v1.0.0.1: a Steam player not given their own character is caught on the same poll, before they make a new one.
             await p.IdentityGuard.EnforceAsync(players, token);
+            // v1.0.0.2: a player using a name another account owns is turned away on the same poll.
+            await p.NameGuard.EnforceAsync(players, token);
             // v0.7.94.0: starter-kit auto-gift, same poll-driven cadence (the registry's Observe above
             // has already stamped a brand-new player's first-seen time by now).
             await p.Kits.EnforceAsync(players, token);

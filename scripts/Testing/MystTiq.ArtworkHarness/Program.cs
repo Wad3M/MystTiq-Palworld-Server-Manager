@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
+// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1129,6 +1129,37 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var panel = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "StuckStartPanel");
     var addressesCard = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "DashboardAddresses");
     Check(panel is { IsVisible: false } && addressesCard is { IsVisible: true }, "The Dashboard has the addresses line, and the stuck-start panel stays hidden while no start is stuck");
+}
+// v1.0.0.2: the Players page's Unique player names card and its text.
+{
+    var config = new NameGuardConfigDto { Enabled = true, KickDuplicates = true, Claims = [new NameClaimDto { Name = "Wade", OwnerId = "steam_1", OwnerName = "Wade" }] };
+    Check(NameGuardText.Describe(config) == "Unique names are on: 1 names are taken. A player using another account's name is kicked.", $"The card says the guard is on and kicks [{NameGuardText.Describe(config)}]");
+    var (reserved, reserveMessage) = NameGuardText.Reserve(config.Claims, "  wade ", "76561197962020201", DateTimeOffset.UtcNow);
+    Check(reserved is [{ Name: "wade", OwnerId: "steam_76561197962020201", Reserved: true }] && reserveMessage == "Reserved once you save.", "Reserving a listed name (any case) gives it to the new owner; a bare Steam ID gains steam_");
+    var (blocked, _) = NameGuardText.Reserve(config.Claims, "Admin", "", DateTimeOffset.UtcNow);
+    Check(blocked is [{ Name: "Admin", OwnerId: "", Kind: "Blocked for everyone" }, { Name: "Wade", Kind: "First to use it" }] && NameGuardText.Reserve(config.Claims, " ", "", DateTimeOffset.UtcNow).Claims is null,
+        "An empty owner blocks the name for everyone; an empty name is refused");
+    Localizer.Instance.SetLanguage("de");
+    Check(Localizer.T(NameGuardText.Describe(config)) != NameGuardText.Describe(config) && Localizer.T("First to use it") == Localizer.Parse(ReadLanguage("de"))["msg.name_kind_first"] &&
+          Localizer.T("steam_2 joined as \"Wade\", a name that belongs to Wade (steam_1). They were kicked.").StartsWith("steam_2 ist als \"Wade\" beigetreten", StringComparison.Ordinal),
+        "German: the card's status, the kinds and the service's notice are translated (the names are not)");
+    Localizer.Instance.SetLanguage("en");
+    vm.NavigateCommand.Execute(NavigationPage.Players);
+    Dispatcher.UIThread.RunJobs();
+    var card = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "UniqueNamesCard");
+    Check(card is { IsVisible: true }, "The Players page has the Unique player names card");
+    // v1.0.0.2 (seen live): a card's Save button was disabled while the card loaded (busy) and stayed disabled afterwards.
+    var isBusy = typeof(MainWindowViewModel).GetProperty("IsBusy")!;
+    isBusy.SetValue(vm, true);
+    // As at sign-in or connect: the role gates are re-evaluated while the app is busy, so every gated button reads disabled.
+    typeof(MainWindowViewModel).GetMethod("RaiseCommandRoleGatesChanged", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(vm, null);
+    Dispatcher.UIThread.RunJobs();
+    var blockedWhileBusy = !vm.SaveNameGuardCommand.CanExecute(null) && !vm.SaveWhitelistCommand.CanExecute(null);
+    isBusy.SetValue(vm, false);
+    Dispatcher.UIThread.RunJobs();
+    var saveButtons = window.GetLogicalDescendants().OfType<Button>().Where(b => ReferenceEquals(b.Command, vm.SaveNameGuardCommand) || ReferenceEquals(b.Command, vm.SaveWhitelistCommand)).ToList();
+    Check(blockedWhileBusy && saveButtons.Count == 2 && saveButtons.All(b => b.IsEffectivelyEnabled),
+        $"Save names and Save Whitelist are disabled while busy and enabled again afterwards [{string.Join(", ", saveButtons.Select(b => b.IsEffectivelyEnabled))}]");
 }
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
 // Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.

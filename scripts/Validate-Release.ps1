@@ -1,4 +1,4 @@
-# MystTiq v1.0.0.1: file reviewed for this release (2026-10-04).
+# MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
 [CmdletBinding()]
 # v0.7.115.0: -AllowBuildOutputs skips ONLY the hygiene check for build output (bin, obj, artifacts, publish and
 # anything inside them). The logic gates validate mid-run, after they themselves have built, published and
@@ -92,7 +92,12 @@ foreach ($file in $activeFiles) {
         $line = $lineMatch.Line
         $stale = @($lineMatch.Matches | Where-Object {
             $isHistoryMarker = $_.Index -gt 0 -and $line[$_.Index - 1] -eq 'v' -and ($_.Index + $_.Length) -lt $line.Length -and $line[$_.Index + $_.Length] -eq ':'
-            -not $isHistoryMarker -and ($_.Value -replace '-.*$', '') -ne ($version -replace '-.*$', '') })
+            # v1.0.0.2: releases now differ in the fourth number, so a code comment naming an earlier one ("// v1.0.0.1
+            # (reported …)") is history too: an older version, written with its v, on a comment line.
+            $older = $false
+            try { $older = [version]($_.Value -replace '-.*$', '') -lt [version]($version -replace '-.*$', '') } catch { }
+            $isHistoryComment = $older -and $_.Index -gt 0 -and $line[$_.Index - 1] -eq 'v' -and $line.TrimStart() -match '^(//|#|<!--|\*|/\*)'
+            -not $isHistoryMarker -and -not $isHistoryComment -and ($_.Value -replace '-.*$', '') -ne ($version -replace '-.*$', '') })
         if ($stale.Count -gt 0) {
             Add-Issue Warning 'Version consistency' "Possible stale version in $($file.FullName.Substring($root.Length + 1)):$($lineMatch.LineNumber): $($lineMatch.Line.Trim())"
         }
