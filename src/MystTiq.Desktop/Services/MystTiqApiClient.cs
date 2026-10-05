@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -743,6 +743,27 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     {
         using var client = BuildClient(profile, bearerToken);
         using var response = await client.PostAsync("/api/v1/update-center/components/pip/update", null, cancellationToken);
+        return await ReadOperationAsync<ComponentUpdateResultDto>(response, cancellationToken);
+    }
+
+    // v1.0.1.0: Update on the Update Center's PalDefender and Palworld Save Tools rows.
+    public async Task<ComponentUpdateResultDto> UpdatePalDefenderAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/update-center/components/paldefender/update", null, cancellationToken);
+        return await ReadOperationAsync<ComponentUpdateResultDto>(response, cancellationToken);
+    }
+
+    public async Task<ComponentUpdateResultDto> UpdateSaveToolsAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/update-center/components/save-tools/update", null, cancellationToken);
         return await ReadOperationAsync<ComponentUpdateResultDto>(response, cancellationToken);
     }
 

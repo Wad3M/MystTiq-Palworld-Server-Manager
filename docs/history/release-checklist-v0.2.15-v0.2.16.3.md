@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.1.0: file reviewed for this release (2026-10-05). -->
 # Archived Release Acceptance Checklist — v0.2.15 through v0.2.16.3
 
 > **Archived document.** This file describes a historical implementation phase and is retained for traceability. See the root README and current architecture docs for present behavior.

@@ -1,4 +1,18 @@
-<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.1.0: file reviewed for this release (2026-10-05). -->
+## v1.0.1.0 — Update on Every Update Center Row
+
+- Update Center (asked 2026-10-05: an update option on every row, greyed out only where it updates itself): every row
+  has Update. MystTiq downloads its release, checks it against SHA256SUMS.txt and unpacks it into a new folder; the
+  server files update through SteamCMD; UE4SS opens its page with the newest release previewed; PalDefender's two DLLs
+  are replaced from its release (checked, backed up, with the server stopped, a switched-off PalDefender kept off);
+  pip and Palworld Save Tools upgrade through pip; Python, .NET, VC++, Build Tools and the PlM/Oodle decoder open their
+  official pages. SteamCMD (self-updating), rows that do not apply and MystTiq with nothing newer are greyed out with the
+  reason beside them.
+- Fixed: the PlM/Oodle decoder row had no page ("PIM" lookup, and a page that did not exist).
+- Tests: the v1.0.1.0 gate regenerated from v1.0.0.6 (every earlier check kept), a LogicHarness scenario and
+  ArtworkHarness checks; 25 new texts in all 12 languages.
+- Version advanced to 1.0.1.0.
+
 ## v1.0.0.6 — Buttons and Tags From One Look
 
 - Buttons (asked 2026-10-05: consistent, centrally governed, Delete red, Open purple, Verify green): every button has one

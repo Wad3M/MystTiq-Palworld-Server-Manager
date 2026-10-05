@@ -1,63 +1,55 @@
-<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
-# MystTiq v1.0.0.6 Checkpoint: Buttons and Tags That Say What They Do
+<!-- MystTiq v1.0.1.0: file reviewed for this release (2026-10-05). -->
+# MystTiq v1.0.1.0 Checkpoint: Update, on Every Row
 
-You asked for consistent buttons and tags, governed by the central look and not hard-coded, with colour: Delete red,
-Open purple, Verify green, and other colours for the rest. Before this, each page picked its own button looks, more
-than half of the main window's buttons (159 of 287) had none, and tags were drawn by hand: three coloured boxes per row on
-Server Setup, four on Doctor, and fixed violet or orange text elsewhere whatever the state.
+You asked for an Update button on every Update Center row: greyed out where the component updates itself, but always
+there. Before this only pip had one, and PalDefender's row told you to swap its DLLs by hand.
 
-## Buttons
+## What each row's Update does
 
-One table now gives every button its intent from its label, and only the style sheet colours it:
+| Row | Update |
+|---|---|
+| MystTiq | Downloads the new release, checks it against the release's checksum list, unpacks it into a new folder beside this one and opens it. Exit from the tray and start the new one; settings and servers carry over. Greyed out when there's nothing newer. |
+| SteamCMD | Greyed out: it updates itself every time it runs. If it's missing, Update installs it. |
+| Palworld server | SteamCMD update (server stopped). |
+| UE4SS | Opens the UE4SS page with the newest release selected and the install previewed; you click Apply. |
+| PalDefender | Replaces `PalDefender.dll` and `d3d9.dll` from its newest release, with the server stopped. `d3d9_config.json` and the PalDefender folder are left alone, the old files are kept in a backup, and if you switched it off it stays off. |
+| pip, Save Tools | Upgraded with pip. |
+| Python, .NET, VC++, Build Tools, PlM/Oodle | Opens the official download page. Python stays on 3.10, because the save decoder is built for it. |
 
-| Colour | Intent | For example |
-|---|---|---|
-| Red | danger | Delete, Remove, Revoke, Kick, Ban, Force Stop, Discard |
-| Purple | open | Open, Browse, Show on map, Manage |
-| Green | verify | Verify, Rescan, Recheck, Test, Validate, Run Doctor |
-| Blue | apply | Save, Apply, Create, Add, Install, Send, Connect |
-| Teal | info | Refresh, Preview, Load, Export, Copy |
-| Amber | caution | Restore, Reset, Restart, Repair, Pause, Mute |
-| Neutral | plain | Cancel, Back, Next, Dismiss |
+Greyed-out buttons say why right beside them, and every Update says what it does when you hover over it.
 
-- All 303 buttons in the window and its dialogs have one. The ribbon, map markers, list rows and section toggles keep
-  their own shape.
-- Server Setup's row buttons follow what they say: VERIFY green, MANAGE purple, INSTALL blue.
-- To change a colour, or move a button to another intent, there's one place for each: the style sheet and the table.
+## Fixed on the way
 
-## Tags
+- The PlM/Oodle row never had its link. It was looked up as "PIM" (capital I), and the page it pointed to doesn't exist.
+  It now opens the decoder's project, which its install record names.
 
-All 21 status tags are one shape, coloured by what they say: green (ready, pass, up to date, verified, healthy,
-connected), amber (attention, update available, unverified), red (missing, failed, unreadable, not loaded, locked), grey
-(disabled, optional, self-updating, not applicable) and blue for in-between states such as Starting.
+## Signing
+
+Nothing in the code waits on it. The release workflow signs automatically once the SignPath variables are set in the
+repository, and until then it packages unsigned as before.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.0.0.6-Logic.ps1 -RunBuild`: 284 / 284 passed. The 4 Linux VM checks were skipped because 192.168.1.122 could not be reached. Every v1.0.0.5 check is carried, and the frozen v1.0.0.5 gate passes on its own checkpoint.
-- **Static gate:** 234 / 234. It reads every button and tag in the XAML (303 buttons, 21 tags): all have an intent or a
-  structural look, none sets its own colours, and none uses an old look class. **Validate-Release -Strict:** 0 errors, 0 warnings.
-  **Distribution check:** passed.
-- **ArtworkHarness:** 780 checks pass, including:
-  - every visible button on every page has one intent, matching the table for its English label;
-  - the same intent looks the same everywhere, and each intent has its own colour;
-  - by hue: Delete red (350°), Open purple (268°), Verify green (154°);
-  - the tags on Server Setup, Update Center, Doctor, Diagnostics, Backups and MODs match their status;
-  - Server Setup's VERIFY, MANAGE and INSTALL rows; German.
-- **Live (published v1.0.0.6, read-only):**
-  - **Server Setup:** VERIFY green, MANAGE purple, READY tags green.
-  - **Workspace:** Open and Browse purple, Save Paths blue.
-  - **Update Center:** Up to date green, Update available amber (PalDefender 1.9.2 → 1.9.3), Self-updating muted (the neutral slate of a plain button, with dimmed text).
-  - **Doctor:** PASS tags and Recheck green.
-  - **Security:** Delete red, Reset Password and Enable / Disable amber, Create Account blue.
-  - **Settings:** Forget red, Connect blue.
-  - The connection tag at the top is green.
-- **Found on the way:** the MOD status "Active / Unverified" would have read as green ("active"). It's now blue,
-  in between, like Starting and Connecting.
+- **Full gate** `scripts\Test-v1.0.1.0-Logic.ps1 -RunBuild`: 289 / 289 passed. The 4 Linux VM checks were skipped because 192.168.1.122 could not be reached. Every v1.0.0.6 check is carried, and the frozen v1.0.0.6 gate passes on its own checkpoint.
+- **Static gate, after your roadmap rewrite:** 239 / 239. The roadmap check now reads your new structure (current version, the v1.0.2.0 to v1.0.5.0 plan, owner decisions). The v1.0.0.0 checks read the history file too. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **LogicHarness:** the PalDefender update scenario passes (the files it writes, a checked download, settings and backup kept, refusals that change nothing, and switched-off PalDefender staying off).
+- **ArtworkHarness:** 789 checks pass, including:
+  - every one of the 12 rows has Update, greyed out only for SteamCMD, an up-to-date MystTiq and what doesn't apply;
+  - the reasons and tips; UE4SS's Update landing on its page;
+  - MystTiq's download: unpacked beside the folder, a second time into "-2", and refused on a bad or missing checksum;
+  - German.
+- **Live, on your real PalDefender files (copied to a temp folder):** the real GitHub release updated the copy from
+  1.9.2 to 1.9.3. The version check passed, `d3d9_config.json` was unchanged and the old files went to a backup. Your
+  live server is still on 1.9.2.
+- **Live, published v1.0.1.0:** all 12 rows show Update. MystTiq ("newest") and SteamCMD ("updates itself") are greyed
+  out with the reason beside them. PalDefender shows Update available, 1.9.2 → 1.9.3. Clicking UE4SS's Update opened
+  the UE4SS page with 2281fa31 selected and the install previewed; nothing was applied.
+- **Every official page opens** (python.org, Microsoft, .NET, PyPI, GitHub). The old PlM/Oodle link was a 404.
 
 ## For you
 
-- Look through **Server Setup, Workspace, Update Center, Doctor and Security** and say if any button's colour feels
-  wrong for what it does. Moving it is a one-line change to the table.
-- **Pushing:** v1.0.0.3, v1.0.0.4, v1.0.0.5 and v1.0.0.6 are committed but not pushed or tagged. Say when.
-- **Next:** v1.0.1.0, an Update button on every Update Center row (greyed where it updates itself) and the first signed
-  release.
+- **Update PalDefender:** your server has 1.9.2 and 1.9.3 is out (it fixes several crashes). Stop the server, then click
+  Update on the PalDefender row. I tested it on a copy of your files but did not touch your live server.
+- **Pushed and tagged** with your go-ahead (push through v1.0.5.0).
+- **Publishing:** MystTiq's own Update only offers published releases. Your GitHub releases since v1.0.0.0 are still
+  drafts, so it won't offer them until you publish them.

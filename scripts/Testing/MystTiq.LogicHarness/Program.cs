@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -3345,6 +3345,71 @@ try
             "the limit covers every priority MystTiq offers (High is niceness -11)");
     }, failures);
 
+    // v1.0.1.0 (asked 2026-10-05: an Update button for every Update Center row): PalDefender's Update replaces its two DLLs
+    // from the latest GitHub release, only after checking them, keeps everything else, and keeps a switched-off PalDefender off.
+    RunScenarioAsync("PalDefender Update: the files it writes, a checked download, settings kept, a backup, and refusals that change nothing", async () =>
+    {
+        NativeFile F(string name) => new(name, DateTime.UtcNow);
+        var plan = PalDefenderUpdater.Plan([F("PalDefender.dll"), F("d3d9.dll"), F("d3d9_config.json")]);
+        Assert(plan.Main == "PalDefender.dll" && plan.Loader == "d3d9.dll" && plan.Note is null, "an installed PalDefender: both DLLs");
+        plan = PalDefenderUpdater.Plan([F("PalDefender.dll"), F("version.dll")]);
+        Assert(plan.Loader is null && plan.Note!.Contains("version.dll"), "loaded through version.dll: that loader is left alone");
+        plan = PalDefenderUpdater.Plan([F("PalDefender.dll" + NativeModCatalog.DisableSuffix), F("d3d9.dll.disabled-test")]);
+        Assert(plan.Main == "PalDefender.dll" + NativeModCatalog.DisableSuffix && plan.Loader == "d3d9.dll.disabled-test", "switched off: the renamed files are written, so it stays off");
+        Assert(PalDefenderUpdater.Plan([F("d3d9.dll")]).Main is null, "no PalDefender.dll: nothing to update");
+        Assert(PalDefenderUpdater.SameVersion("1.9.3", "v1.9.3") && PalDefenderUpdater.SameVersion("1.9.3.0", "1.9.3") && !PalDefenderUpdater.SameVersion("1.9.2", "v1.9.3"),
+            "versions compare with or without the v and a trailing .0");
+
+        // A real DLL stands in for the new PalDefender.dll (its own version names the release); another for d3d9.dll.
+        var newMain = File.ReadAllBytes(typeof(PalDefenderUpdater).Assembly.Location);
+        var newLoader = File.ReadAllBytes(typeof(MystTiq.Core.Operations.OperationCoordinator).Assembly.Location);
+        var tag = "v" + PalDefenderUpdater.VersionOf(typeof(PalDefenderUpdater).Assembly.Location);
+        var root = Path.Combine(tempRoot, "paldefender-update");
+        string Win64(params (string Name, byte[] Bytes)[] files)
+        {
+            var dir = Path.Combine(root, Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(dir, "PalDefender"));
+            foreach (var (name, bytes) in files) File.WriteAllBytes(Path.Combine(dir, name), bytes);
+            File.WriteAllText(Path.Combine(dir, "PalDefender", "Config.json"), "{\"mine\":true}");
+            return dir;
+        }
+        byte[] Old(string text) => [(byte)'M', (byte)'Z', .. System.Text.Encoding.ASCII.GetBytes(text)];
+        PalDefenderUpdater Updater(string releaseTag, byte[] main, byte[] loader) => new(new HttpClient(new FakeGitHub(new()
+        {
+            ["/repos/Ultimeit/PalDefender/releases/latest"] = System.Text.Encoding.UTF8.GetBytes($$"""{"tag_name":"{{releaseTag}}","assets":[{"name":"PalDefender.dll","browser_download_url":"https://downloads.test/PalDefender.dll"},{"name":"d3d9.dll","browser_download_url":"https://downloads.test/d3d9.dll"}]}"""),
+            ["/PalDefender.dll"] = main,
+            ["/d3d9.dll"] = loader,
+        })), "https://api.test");
+
+        var win64 = Win64(("PalDefender.dll", Old("old main")), ("d3d9.dll", Old("old loader")), ("d3d9_config.json", "{\"load_dlls\":[\"PalDefender.dll\"]}"u8.ToArray()));
+        var backups = Path.Combine(root, "backups");
+        var result = await Updater(tag, newMain, newLoader).UpdateAsync(win64, backups, CancellationToken.None);
+        Assert(result.Success, "the update succeeds: " + result.Message);
+        Assert(File.ReadAllBytes(Path.Combine(win64, "PalDefender.dll")).SequenceEqual(newMain) && File.ReadAllBytes(Path.Combine(win64, "d3d9.dll")).SequenceEqual(newLoader),
+            "PalDefender.dll and d3d9.dll are the release's");
+        Assert(File.ReadAllText(Path.Combine(win64, "d3d9_config.json")).Contains("PalDefender.dll") && File.ReadAllText(Path.Combine(win64, "PalDefender", "Config.json")) == "{\"mine\":true}",
+            "d3d9_config.json and PalDefender's own settings are untouched");
+        var backup = Directory.GetDirectories(backups).Single(d => !Path.GetFileName(d).StartsWith("staging", StringComparison.Ordinal));
+        Assert(File.ReadAllBytes(Path.Combine(backup, "PalDefender.dll")).SequenceEqual(Old("old main")) && File.ReadAllBytes(Path.Combine(backup, "d3d9.dll")).SequenceEqual(Old("old loader")),
+            "the replaced files are kept in the backup folder");
+        Assert(result.Message.Contains("your settings kept", StringComparison.Ordinal) && result.Message.Contains(backup, StringComparison.Ordinal), "the message names what was kept and where the old files are");
+
+        var untouched = Win64(("PalDefender.dll", Old("old main")), ("d3d9.dll", Old("old loader")));
+        var wrong = await Updater("v9.9.9", newMain, newLoader).UpdateAsync(untouched, backups, CancellationToken.None);
+        Assert(!wrong.Success && wrong.Message.Contains("not v9.9.9", StringComparison.Ordinal) && File.ReadAllBytes(Path.Combine(untouched, "PalDefender.dll")).SequenceEqual(Old("old main")),
+            "a download whose own version is not the release's is refused and nothing changes: " + wrong.Message);
+        var notDll = await Updater(tag, "<html>rate limited</html>"u8.ToArray(), newLoader).UpdateAsync(untouched, backups, CancellationToken.None);
+        Assert(!notDll.Success && notDll.Message.Contains("not a Windows DLL", StringComparison.Ordinal) && File.ReadAllBytes(Path.Combine(untouched, "d3d9.dll")).SequenceEqual(Old("old loader")),
+            "a download that is not a DLL is refused and nothing changes");
+
+        var off = Win64(("PalDefender.dll" + NativeModCatalog.DisableSuffix, Old("old main")), ("d3d9.dll" + NativeModCatalog.DisableSuffix, Old("old loader")));
+        var offResult = await Updater(tag, newMain, newLoader).UpdateAsync(off, backups, CancellationToken.None);
+        Assert(offResult.Success && !File.Exists(Path.Combine(off, "PalDefender.dll")) && !File.Exists(Path.Combine(off, "d3d9.dll")) &&
+               File.ReadAllBytes(Path.Combine(off, "PalDefender.dll" + NativeModCatalog.DisableSuffix)).SequenceEqual(newMain) && offResult.Message.Contains("stays switched off", StringComparison.Ordinal),
+            "a switched-off PalDefender is updated under its switched-off names and stays off");
+        Assert(!Directory.GetDirectories(backups).Any(d => Path.GetFileName(d).StartsWith("staging", StringComparison.Ordinal)), "no download staging is left behind");
+    }, failures);
+
     // v0.8.19.0: secure by default.
     RunScenario("Route roles: a route that declares no role needs Viewer to read and Admin to change anything", () =>
     {
@@ -3814,4 +3879,13 @@ sealed class StubSmtpServer : IDisposable
 sealed class SyncProgress<T>(Action<T> report) : IProgress<T>
 {
     public void Report(T value) => report(value);
+}
+
+// v1.0.1.0: answers GitHub's API and download requests from memory (path -> body); anything else is 404.
+sealed class FakeGitHub(Dictionary<string, byte[]> responses) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+        Task.FromResult(responses.TryGetValue(request.RequestUri!.AbsolutePath, out var body)
+            ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(body) }
+            : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
 }

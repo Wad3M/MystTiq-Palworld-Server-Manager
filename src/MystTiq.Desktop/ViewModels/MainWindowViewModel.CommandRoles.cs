@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -43,7 +43,7 @@ public sealed partial class MainWindowViewModel
             SaveDiscordBotConfigCommand, SaveNetworkPolicyCommand, SavePalworldConfigurationCommand,
             SaveResourcePolicyCommand, SaveNameGuardCommand, SaveTeleportCommand, SaveWhitelistCommand, SendPlayerToTeleportPointCommand,
             SendTestNotificationCommand, SetSelectedModDescriptionSourceCommand, TeleportPlayerToMeCommand,
-            TeleportToPlayerCommand, ToggleAutomationRuleEnabledCommand, UnbanSelectedPlayerCommand, UpdatePipCommand,
+            TeleportToPlayerCommand, ToggleAutomationRuleEnabledCommand, UnbanSelectedPlayerCommand, UpdateComponentCommand,
             UpdateSelectedModCommand, WhisperSelectedPlayerCommand);
         Need("Owner", CloneIntoNewServerCommand, CloneWorldCommand, ContinueFromInstallDirectoryCommand,
             CreatePrincipalCommand, CreateUserCommand, DeleteUserCommand, ResetUserPasswordCommand,

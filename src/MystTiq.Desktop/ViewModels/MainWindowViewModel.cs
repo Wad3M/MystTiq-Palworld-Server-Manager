@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -577,7 +577,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         UpdatePalworldServerCommand = new AsyncCommand(UpdatePalworldServerAsync, () => !IsBusy);
         InstallPalworldServerFromWizardCommand = new AsyncCommand(InstallPalworldServerFromWizardAsync, () => !IsBusy);
         InstallPalworldServerWithExtrasCommand = new AsyncCommand(InstallPalworldServerWithExtrasAsync, () => !IsBusy);
-        UpdatePipCommand = new AsyncCommand(UpdatePipAsync, () => !IsBusy);
+        // v1.0.1.0: Update on every Update Center row (MainWindowViewModel.ComponentUpdates.cs); pip's own command folded in.
+        UpdateComponentCommand = new RelayCommand<ComponentVersionDto>(UpdateComponent, component => component?.CanUpdate == true);
         RefreshWorldExplorerCommand = new AsyncCommand(RefreshWorldExplorerAsync, () => !IsBusy);
         ValidateActiveWorldCommand = new AsyncCommand(ValidateActiveWorldAsync, () => !IsBusy && ManagementApiConnected);
         ApplyWorldTransactionCommand = new AsyncCommand(ApplyWorldTransactionAsync, () => !IsBusy && WorldTransactionConfirmed && !string.IsNullOrWhiteSpace(WorldPreviewToken));
@@ -2815,7 +2816,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand UpdatePalworldServerCommand { get; }
     public ICommand InstallPalworldServerFromWizardCommand { get; }
     public ICommand InstallPalworldServerWithExtrasCommand { get; }
-    public ICommand UpdatePipCommand { get; }
     public ICommand RefreshWorldExplorerCommand { get; }
     public ICommand ValidateActiveWorldCommand { get; }
     public ICommand ApplyWorldTransactionCommand { get; }
@@ -9052,20 +9052,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     private async Task InstallLatestUe4ssStableAsync()
     {
-        if (Ue4ssPalworldForkReleases.Count == 0)
-            await RefreshUe4ssReleaseCatalogAsync();
-
-        var latest = Ue4ssPalworldForkReleases.Where(r => !r.Prerelease).OrderByDescending(r => r.PublishedAt).FirstOrDefault()
-            ?? Ue4ssPalworldForkReleases.OrderByDescending(r => r.PublishedAt).FirstOrDefault();
-        if (latest is null)
-        {
-            Ue4ssInstallState = "No UE4SS release catalog data was available to auto-install from.";
-            return;
-        }
-
-        SelectedUe4ssFork = "Palworld Fork";
-        SelectedUe4ssRelease = latest;
-        await PreviewUe4ssInstallAsync();
+        if (!await SelectAndPreviewLatestUe4ssAsync()) return;
         if (!string.IsNullOrWhiteSpace(Ue4ssInstallToken))
             await ApplyUe4ssInstallAsync();
     }

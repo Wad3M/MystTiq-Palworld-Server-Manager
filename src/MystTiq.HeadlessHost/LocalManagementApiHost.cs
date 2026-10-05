@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -1272,6 +1272,23 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapPost("/update-center/components/pip/update", async (CancellationToken token) =>
         {
             var result = await p.ComponentUpdates.UpdatePipAsync(token);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        });
+
+        // v1.0.1.0 (asked 2026-10-05: an Update button for every Update Center row). PalDefender's files are loaded by
+        // PalServer, so they are only replaced while it is stopped; Save Tools is a pip package upgrade.
+        routes.MapPost("/update-center/components/paldefender/update", async (CancellationToken token) =>
+        {
+            var status = await p.Lifecycle.GetStatusAsync(token);
+            if (status.NativeProcessId.HasValue || status.Ready)
+                return Results.Conflict(new ComponentUpdateResult(false, "Stop PalServer before updating PalDefender; its files are in use while it runs."));
+            var result = await p.ComponentUpdates.UpdatePalDefenderAsync(token);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        });
+
+        routes.MapPost("/update-center/components/save-tools/update", async (CancellationToken token) =>
+        {
+            var result = await p.ComponentUpdates.UpdateSaveToolsAsync(token);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         });
 

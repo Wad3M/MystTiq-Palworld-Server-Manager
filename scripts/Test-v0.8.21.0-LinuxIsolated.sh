@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
+# MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
 # v0.8.21.0: an isolated check on the Linux test VM, run by Test-v0.8.21.0-LinuxIsolated.ps1. Prints the systemd unit that
 # service-install would write (as the ordinary user, into /tmp only) and has systemd itself check it. Nothing is installed:
 # /etc/mysttiq, /etc/systemd and the installed mysttiq-palworld service are never touched.

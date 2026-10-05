@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -215,7 +215,7 @@ public sealed class HeadlessComponentUpdateService
                 "Could not reach the GitHub releases API to check for a newer PalDefender." + note);
         var result = Compare("Core Server", component, installed, tag.TrimStart('v', 'V'), $"GitHub: {PalDefenderRepo}", now,
             $"Latest release: {tag}" + (release.PublishedAt is { } at ? $" ({at.ToLocalTime():yyyy-MM-dd})." : ".") +
-            " Replace PalDefender.dll and d3d9.dll in the server's Win64 folder with the server stopped." + note);
+            " Stop the server and use Update: MystTiq replaces PalDefender.dll and d3d9.dll and keeps your settings." + note);
         return warning is not null && result.Status == "UpToDate" ? result with { Status = "UpdateAvailable" } : result;
     }
 
@@ -456,6 +456,33 @@ public sealed class HeadlessComponentUpdateService
         return new ComponentUpdateResult(true, stdout.Trim().Length > 0 ? stdout.Trim() : "pip upgraded successfully.");
     }
 
+    // v1.0.1.0: Update for PalDefender (PalDefenderUpdater; the route makes sure PalServer is stopped). The files it replaces
+    // are kept under the manager's runtime folder.
+    public Task<ComponentUpdateResult> UpdatePalDefenderAsync(CancellationToken cancellationToken) =>
+        new PalDefenderUpdater(Downloads).UpdateAsync(paths.RuntimeBinaryRoot, Path.Combine(paths.ManagerRuntimeRoot, "backups", "paldefender"), cancellationToken);
+
+    // v1.0.1.0: Update for Palworld Save Tools. convert.py imports the palworld_save_tools package that pip installed, so
+    // upgrading that package is the update. A copy installed without pip has no package to upgrade and is left alone.
+    public async Task<ComponentUpdateResult> UpdateSaveToolsAsync(CancellationToken cancellationToken)
+    {
+        var python = FindOnPath(OperatingSystem.IsWindows() ? ["python.exe", "py.exe"] : ["python3", "python"]);
+        if (python is null)
+            return new ComponentUpdateResult(false, "Palworld Save Tools needs Python, which was not found on PATH.");
+        var (_, shown, _) = await RunProcessAsync(python, "-m pip show palworld-save-tools", cancellationToken);
+        var before = Regex.Match(shown ?? string.Empty, @"(?im)^Version:\s*(\S+)");
+        if (!before.Success)
+            return new ComponentUpdateResult(false, "Palworld Save Tools was not installed with pip, so pip cannot update it.");
+
+        var (exitCode, stdout, stderr) = await RunProcessAsync(python, "-m pip install --upgrade palworld-save-tools", cancellationToken, TimeSpan.FromSeconds(120));
+        if (exitCode != 0)
+            return new ComponentUpdateResult(false, $"Palworld Save Tools upgrade failed (exit code {exitCode}). {stderr.Trim()}");
+        var (_, after, _) = await RunProcessAsync(python, "-m pip show palworld-save-tools", cancellationToken);
+        var now = Regex.Match(after ?? string.Empty, @"(?im)^Version:\s*(\S+)");
+        var version = now.Success ? now.Groups[1].Value : before.Groups[1].Value;
+        return new ComponentUpdateResult(true, version == before.Groups[1].Value
+            ? $"Palworld Save Tools {version} is already the newest."
+            : $"Palworld Save Tools updated from {before.Groups[1].Value} to {version}.");
+    }
     private async Task<ComponentVersionInfo> CheckSaveToolsAsync(DateTimeOffset now, CancellationToken ct)
     {
         var scriptPath = FindFirstExisting(
@@ -499,8 +526,9 @@ public sealed class HeadlessComponentUpdateService
         // same real gap ("no safe current management API") rather than fabricating one.
         return new ComponentVersionInfo("Save & Runtime Dependencies", "PlM/Oodle Decoder",
             plm is not null ? "Detected (version unavailable)" : "Not detected", "Unavailable",
-            plm is not null ? "Unknown" : "NotInstalled", "No canonical upstream source", now,
-            "Required for newer PlM Level.sav containers. No single canonical upstream project exists for this component, so there is no reliable version or update source to check against.");
+            plm is not null ? "Unknown" : "NotInstalled", "No version source", now,
+            // v1.0.1.0: Update opens the project its install record names (deafdudecomputers/PalworldSaveTools).
+            "Required for newer PlM Level.sav containers. It is built from PalworldSaveTools' decoder and has no version number of its own, so there is nothing to compare against; Update opens that project.");
     }
 
     private async Task<ComponentVersionInfo> CheckDotNetAsync(DateTimeOffset now, CancellationToken ct)
@@ -626,7 +654,7 @@ public sealed class HeadlessComponentUpdateService
             detail += " (version strings could not be numerically compared; ordering inferred from inequality.)";
         }
         if (status == "UpdateAvailable" && updateIsInformationalOnly)
-            detail += " No automatic self-update is performed -- this is informational only.";
+            detail += " Update downloads it, checks it against the release's checksums and unpacks it into a new folder beside this one; nothing running is replaced.";
         return new ComponentVersionInfo(group, component, installed, latest, status, source, now, detail);
     }
 

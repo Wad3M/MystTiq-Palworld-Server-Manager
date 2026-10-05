@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -322,6 +322,17 @@ public interface IMystTiqApiClient
         CancellationToken cancellationToken = default);
 
     Task<ComponentUpdateResultDto> UpdatePipAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    // v1.0.1.0: Update on the Update Center's PalDefender and Palworld Save Tools rows.
+    Task<ComponentUpdateResultDto> UpdatePalDefenderAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ComponentUpdateResultDto> UpdateSaveToolsAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
         CancellationToken cancellationToken = default);

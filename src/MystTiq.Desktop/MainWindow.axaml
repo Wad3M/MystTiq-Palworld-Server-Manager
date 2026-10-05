@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.1.0: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -651,6 +651,7 @@
                 <TextBlock Text="{services:Tr ui.core_server}" Classes="muted" FontWeight="Bold"/>
                 <TextBlock Grid.Column="1" Text="{Binding ComponentVersionsCheckedAtText, StringFormat='Checked {0}'}" Classes="muted" FontSize="11"/>
               </Grid>
+              <TextBlock x:Name="ComponentUpdateMessageText" Text="{services:TrText ComponentUpdateMessage}" IsVisible="{Binding HasComponentUpdateMessage}" TextWrapping="Wrap" FontWeight="SemiBold"/>
               <ItemsControl ItemsSource="{Binding CoreServerComponents}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:ComponentVersionDto">
@@ -664,14 +665,13 @@
                           <TextBlock Grid.Column="4" Text="{services:TrText Source}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                         </Grid>
                         <TextBlock Text="{services:TrText Detail}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                        <!-- v0.7.82.0: direct live feedback. "Update" for the one component with a
-                             real, safe in-place update (pip); "Open" (manual check) for components
-                             with no reliable unattended "latest version" feed. Neither shows for a
-                             row that's neither (e.g. already up to date, or fully auto-compared). -->
-                        <WrapPanel>
-                          <Button Classes="apply" Content="{services:Tr ui.update}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).UpdatePipCommand}" IsVisible="{Binding CanUpdateInPlace}" Padding="8,3" FontSize="11"/>
-                          <Button Classes="open" Content="{services:Tr ui.open}" Click="OpenComponentSourceUrl_Click" IsVisible="{Binding HasSourceUrl}" ToolTip.Tip="{services:Tr ui.open_the_official_page_to_check_this_manually}" Padding="8,3" FontSize="11"/>
-                        </WrapPanel>
+                        <!-- v1.0.1.0: Update on every row (ComponentVersionDto.UpdateMethod); greyed out only where there is
+                             nothing it could do (SteamCMD updates itself), with the reason beside it. -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <Button Classes="apply" Content="{services:Tr ui.update}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).UpdateComponentCommand}" CommandParameter="{Binding}" ToolTip.Tip="{services:TrText UpdateHint}" ToolTip.ShowOnDisabled="True" Padding="8,3" FontSize="11"/>
+                          <Button Classes="open" Content="{services:Tr ui.open}" Click="OpenComponentSourceUrl_Click" IsVisible="{Binding ShowsOpen}" ToolTip.Tip="{services:Tr ui.open_the_official_page_to_check_this_manually}" Padding="8,3" FontSize="11"/>
+                          <TextBlock Text="{services:TrText UpdateHint}" IsVisible="{Binding !CanUpdate}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
                       </StackPanel>
                     </Border>
                   </DataTemplate>
@@ -692,10 +692,13 @@
                           <TextBlock Grid.Column="4" Text="{services:TrText Source}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                         </Grid>
                         <TextBlock Text="{services:TrText Detail}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                        <WrapPanel>
-                          <Button Classes="apply" Content="{services:Tr ui.update}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).UpdatePipCommand}" IsVisible="{Binding CanUpdateInPlace}" Padding="8,3" FontSize="11"/>
-                          <Button Classes="open" Content="{services:Tr ui.open}" Click="OpenComponentSourceUrl_Click" IsVisible="{Binding HasSourceUrl}" ToolTip.Tip="{services:Tr ui.open_the_official_page_to_check_this_manually}" Padding="8,3" FontSize="11"/>
-                        </WrapPanel>
+                        <!-- v1.0.1.0: Update on every row (ComponentVersionDto.UpdateMethod); greyed out only where there is
+                             nothing it could do (SteamCMD updates itself), with the reason beside it. -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <Button Classes="apply" Content="{services:Tr ui.update}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).UpdateComponentCommand}" CommandParameter="{Binding}" ToolTip.Tip="{services:TrText UpdateHint}" ToolTip.ShowOnDisabled="True" Padding="8,3" FontSize="11"/>
+                          <Button Classes="open" Content="{services:Tr ui.open}" Click="OpenComponentSourceUrl_Click" IsVisible="{Binding ShowsOpen}" ToolTip.Tip="{services:Tr ui.open_the_official_page_to_check_this_manually}" Padding="8,3" FontSize="11"/>
+                          <TextBlock Text="{services:TrText UpdateHint}" IsVisible="{Binding !CanUpdate}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
                       </StackPanel>
                     </Border>
                   </DataTemplate>

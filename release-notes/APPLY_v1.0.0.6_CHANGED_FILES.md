@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.6: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.1.0: file reviewed for this release (2026-10-05). -->
 # v1.0.0.6 Changed Files
 
 - `src/MystTiq.Desktop/Services/ButtonIntents.cs` (new): the intent table (danger, open, verify, apply, info, caution,

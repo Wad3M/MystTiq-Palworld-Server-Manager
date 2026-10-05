@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
+# MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
 # v0.8.18.0: an isolated MystTiq on the Linux test VM, run by Test-v0.8.18.0-LinuxIsolated.ps1. Own config, FleetRoot,
 # runtime and port (18419) over a synthetic server folder; never touches /etc/mysttiq or the installed
 # mysttiq-palworld service. MystTiq starts and stops the stand-in server itself (a PalServer.sh that runs a copy of

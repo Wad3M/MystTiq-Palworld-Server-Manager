@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.6: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1397,6 +1397,109 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Check(germanDanger.Count > 0 && germanDanger.All(b => ButtonIntents.All.Count(b.Classes.Contains) == 1), "German: buttons keep their intent (it comes from the English label, not the shown text)");
     Localizer.Instance.SetLanguage("en");
 }
+// v1.0.1.0 (asked 2026-10-05: "the update page should have a button to update every option. It can be greyed out if it is
+// self updating, but should always have the option to update"): every Update Center row has Update; only SteamCMD (it updates
+// itself), a component that does not apply and MystTiq with nothing newer are greyed out, each saying why.
+{
+    ComponentVersionDto Row(string group, string component, string status, string source = "") => new() { Group = group, Component = component, Status = status, Source = source, InstalledVersion = "1", LatestVersion = "1.0.1.0" };
+    var core = new[]
+    {
+        Row("Core Server", "MystTiq Server Manager", "UpToDate", "GitHub: Wad3M/MystTiq-Palworld-Server-Manager"),
+        Row("Core Server", "SteamCMD", "SelfUpdating", "Valve (self-updating)"),
+        Row("Core Server", "Palworld Dedicated Server", "UpdateAvailable", "SteamCMD app info (public branch)"),
+        Row("Core Server", "UE4SS Runtime", "UpToDate", "GitHub: Okaetsu/RE-UE4SS"),
+        Row("Core Server", "PalDefender", "UpdateAvailable", "GitHub: Ultimeit/PalDefender"),
+    };
+    var deps = new[]
+    {
+        Row("Save & Runtime Dependencies", "Python Runtime", "Unknown", "python.org"),
+        Row("Save & Runtime Dependencies", "pip", "UpToDate", "PyPI: pip"),
+        Row("Save & Runtime Dependencies", "Palworld Save Tools", "UpToDate", "PyPI: palworld-save-tools"),
+        Row("Save & Runtime Dependencies", "PlM/Oodle Decoder", "Unknown", "No canonical upstream source"),
+        Row("Save & Runtime Dependencies", ".NET Runtime", "UpToDate", "dotnet/core releases-index.json"),
+        Row("Save & Runtime Dependencies", "Visual C++ Runtime", "NotApplicable", "N/A"),
+        Row("Save & Runtime Dependencies", "Microsoft C++ Build Tools", "Unknown", "Windows Registry"),
+    };
+    vm.CoreServerComponents.Clear(); vm.SaveRuntimeDependencyComponents.Clear();
+    foreach (var r in core) vm.CoreServerComponents.Add(r);
+    foreach (var r in deps) vm.SaveRuntimeDependencyComponents.Add(r);
+    typeof(MystTiq.Desktop.ViewModels.ViewModelBase).GetMethod("RaisePropertyChanged", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, [nameof(vm.HasComponentVersions)]);
+    selectedPage.SetValue(vm, NavigationPage.UpdateCenter);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var updateButtons = window.GetVisualDescendants().OfType<Button>()
+        .Where(b => b.IsEffectivelyVisible && ReferenceEquals(b.Command, vm.UpdateComponentCommand)).ToList();
+    var rows = updateButtons.Select(b => (Row: (ComponentVersionDto)b.DataContext!, Enabled: b.IsEffectivelyEnabled)).ToList();
+    var greyed = rows.Where(r => !r.Enabled).Select(r => r.Row.Component).OrderBy(c => c).ToList();
+    Check(rows.Count == core.Length + deps.Length && rows.Select(r => r.Row).Distinct().Count() == rows.Count &&
+          greyed.SequenceEqual(new[] { "MystTiq Server Manager", "SteamCMD", "Visual C++ Runtime" }.OrderBy(c => c)),
+        $"Every Update Center row has Update ({rows.Count} of {core.Length + deps.Length}); greyed out only for SteamCMD (self-updating), an up-to-date MystTiq and what does not apply here [{string.Join(", ", greyed)}]");
+    var hints = window.GetVisualDescendants().OfType<TextBlock>().Where(x => x.IsEffectivelyVisible).Select(x => x.Text).ToHashSet();
+    Check(hints.Contains("SteamCMD updates itself every time it runs.") && hints.Contains("This is the newest MystTiq; there is nothing newer to update to.") &&
+          updateButtons.All(b => ToolTip.GetTip(b) is string { Length: > 0 }) && updateButtons.All(b => ToolTip.GetShowOnDisabled(b)),
+        "A greyed-out Update says why beside it, and every Update says what it does as its tip, also when greyed out");
+    Check(updateButtons.All(b => b.Classes.Contains(ButtonIntents.Apply)) && core.Single(r => r.Component == "PalDefender").ShowsOpen && !deps.Single(r => r.Component == "Python Runtime").ShowsOpen,
+        "Update is blue (apply) on every row; Open stays where it shows a release page and goes where Update already opens the official page");
+    var methods = core.Concat(deps).ToDictionary(r => r.Component, r => r.UpdateMethod);
+    Check(methods["Palworld Dedicated Server"] == ComponentUpdateMethod.ServerFiles && methods["UE4SS Runtime"] == ComponentUpdateMethod.Ue4ssInstall &&
+          methods["PalDefender"] == ComponentUpdateMethod.PalDefender && methods["pip"] == ComponentUpdateMethod.Pip && methods["Palworld Save Tools"] == ComponentUpdateMethod.SaveTools &&
+          methods["Python Runtime"] == ComponentUpdateMethod.OfficialPage && methods[".NET Runtime"] == ComponentUpdateMethod.OfficialPage &&
+          Row("Core Server", "MystTiq Server Manager", "UpdateAvailable").UpdateMethod == ComponentUpdateMethod.DownloadRelease &&
+          Row("Core Server", "SteamCMD", "NotInstalled").UpdateMethod == ComponentUpdateMethod.ServerFiles,
+        "Each row's Update: SteamCMD for the server (and a missing SteamCMD), the UE4SS install, PalDefender, pip, Save Tools, the official page, and MystTiq's download when newer");
+    // UE4SS's Update opens the UE4SS page (where the install is previewed and applied).
+    var ue4ssUpdate = vm.UpdateComponentAsync(core.Single(r => r.Component == "UE4SS Runtime"));
+    for (var i = 0; i < 100 && !ue4ssUpdate.IsCompleted; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(20); }
+    Dispatcher.UIThread.RunJobs();
+    Check(vm.SelectedPage == NavigationPage.Ue4ss, $"UE4SS's Update opens the UE4SS page [{vm.SelectedPage}]");
+    Localizer.Instance.SetLanguage("de");
+    Check(Localizer.T("SteamCMD updates itself every time it runs.") != "SteamCMD updates itself every time it runs." && Localizer.T("Updating PalDefender…").Contains("PalDefender", StringComparison.Ordinal) && Localizer.T("Updating PalDefender…") != "Updating PalDefender…",
+        "German: the Update tips and messages are translated");
+    Localizer.Instance.SetLanguage("en");
+
+    // MystTiq's own Update: the release's ZIP for this system, checked against SHA256SUMS.txt, unpacked beside this folder.
+    var updateRoot = Path.Combine(Path.GetTempPath(), "mysttiq-selfupdate-check-" + Guid.NewGuid().ToString("N"));
+    var appFolder = Path.Combine(updateRoot, "MystTiqPalworldServer_v1.0.0.6_Windows-x64");
+    Directory.CreateDirectory(appFolder);
+    try
+    {
+        var windows = OperatingSystem.IsWindows();
+        var asset = MystTiqSelfUpdate.AssetName("1.0.1.0", windows);
+        var desktopName = windows ? "MystTiq.Desktop.exe" : "MystTiq.Desktop";
+        byte[] zip;
+        using (var buffer = new MemoryStream())
+        {
+            using (var archive = new System.IO.Compression.ZipArchive(buffer, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+            {
+                using (var w = new StreamWriter(archive.CreateEntry(Path.GetFileNameWithoutExtension(asset) + "/" + desktopName).Open())) w.Write("desktop");
+                using (var w = new StreamWriter(archive.CreateEntry(Path.GetFileNameWithoutExtension(asset) + "/headless/mysttiq-server.exe").Open())) w.Write("service");
+            }
+            zip = buffer.ToArray();
+        }
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(zip)).ToLowerInvariant();
+        MystTiqSelfUpdate Updater(string sums) => new(new HttpClient(new FakeGitHub(new()
+        {
+            ["/repos/Wad3M/MystTiq-Palworld-Server-Manager/releases/tags/v1.0.1.0"] = Encoding.UTF8.GetBytes($$"""{"tag_name":"v1.0.1.0","assets":[{"name":"{{asset}}","browser_download_url":"https://downloads.test/{{asset}}"},{"name":"SHA256SUMS.txt","browser_download_url":"https://downloads.test/SHA256SUMS.txt"}]}"""),
+            ["/" + asset] = zip,
+            ["/SHA256SUMS.txt"] = Encoding.UTF8.GetBytes(sums),
+        })), "https://api.test");
+        var good = $"{new string('0', 64)}  MystTiqPalworldServer_v1.0.1.0_FullSource.zip\n{hash}  {asset}\n";
+        var fallback = Path.Combine(updateRoot, "fallback");
+        var first = Task.Run(() => Updater(good).DownloadAsync("1.0.1.0", appFolder, fallback, null, CancellationToken.None)).GetAwaiter().GetResult();
+        var second = Task.Run(() => Updater(good).DownloadAsync("1.0.1.0", appFolder, fallback, null, CancellationToken.None)).GetAwaiter().GetResult();
+        var expectedFolder = Path.Combine(updateRoot, Path.GetFileNameWithoutExtension(asset));
+        Check(first.Success && first.Folder == expectedFolder && File.ReadAllText(Path.Combine(expectedFolder, desktopName)) == "desktop" &&
+              File.Exists(Path.Combine(expectedFolder, "headless", "mysttiq-server.exe")) && second.Success && second.Folder == expectedFolder + "-2" && Directory.Exists(appFolder),
+            $"MystTiq's Update unpacks the checked release beside this folder (a second time into -2), leaving this one as it is [{first.Message}]");
+        var tampered = $"{new string('a', 64)}  {asset}\n";
+        var refused = Task.Run(() => Updater(tampered).DownloadAsync("1.0.1.0", appFolder, fallback, null, CancellationToken.None)).GetAwaiter().GetResult();
+        Check(!refused.Success && refused.Message.Contains("does not match its checksum", StringComparison.Ordinal) && Directory.GetDirectories(updateRoot).Length == 3,
+            $"A download that does not match the release's checksum is refused and nothing is unpacked [{refused.Message}]");
+        var unlisted = Task.Run(() => Updater($"{hash}  something-else.zip\n").DownloadAsync("1.0.1.0", appFolder, fallback, null, CancellationToken.None)).GetAwaiter().GetResult();
+        Check(!unlisted.Success && unlisted.Message.Contains("does not list", StringComparison.Ordinal) && MystTiqSelfUpdate.ExpectedHash($"{hash} *{asset}", asset) == hash,
+            "A release whose checksum list does not name the download is refused; binary-mode lines (*name) are read");
+    }
+    finally { try { Directory.Delete(updateRoot, true); } catch { } }
+}
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
 // Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.
 {
@@ -1471,4 +1574,13 @@ public class OfflineProxy : DispatchProxy
                 .MakeGenericMethod(type.GenericTypeArguments[0]).Invoke(null, [new InvalidOperationException("Offline artwork test: services unavailable")]);
         return type.IsValueType ? Activator.CreateInstance(type) : null;
     }
+}
+
+// v1.0.1.0: answers GitHub's API and download requests from memory (path -> body); anything else is 404.
+sealed class FakeGitHub(Dictionary<string, byte[]> responses) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+        Task.FromResult(responses.TryGetValue(request.RequestUri!.AbsolutePath, out var body)
+            ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(body) }
+            : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
 }
