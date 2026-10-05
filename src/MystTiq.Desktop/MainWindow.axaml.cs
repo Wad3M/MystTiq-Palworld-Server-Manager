@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -38,6 +38,7 @@ public sealed partial class MainWindow : Window
         // v0.7.78.0: drag-and-drop MOD ZIP install (direct request). Avalonia's DragOver/Drop are
         // attached routed events, not plain CLR events, so they're wired via AddHandler here rather
         // than a XAML Click-style attribute.
+        ZipInstallDropZone.AddHandler(DragDrop.DragEnterEvent, ZipInstallDropZone_OnDragOver);
         ZipInstallDropZone.AddHandler(DragDrop.DragOverEvent, ZipInstallDropZone_OnDragOver);
         ZipInstallDropZone.AddHandler(DragDrop.DropEvent, ZipInstallDropZone_OnDrop);
     }
@@ -736,6 +737,7 @@ public sealed partial class MainWindow : Window
     {
         var hasZip = e.DataTransfer.TryGetFiles()?.Any(f => f.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) == true;
         e.DragEffects = hasZip ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
     }
 
     private async void ZipInstallDropZone_OnDrop(object? sender, DragEventArgs e)
@@ -744,6 +746,7 @@ public sealed partial class MainWindow : Window
         var file = e.DataTransfer.TryGetFiles()?.OfType<IStorageFile>()
             .FirstOrDefault(f => f.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
         if (file is null) return;
+        e.Handled = true;
         await using var stream = await file.OpenReadAsync();
         await vm.InstallModZipAsync(stream, file.Name);
     }

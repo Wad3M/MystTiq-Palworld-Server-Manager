@@ -3729,5 +3729,21 @@
   "msg.player_name_taken_character": "Son personnage ({0}) porte déjà ce nom ; supprimez-le dans Joueurs pour qu’il en crée un sous un autre nom.",
   "msg.name_owner_nobody": "personne (un nom bloqué)",
   "msg.name_seed_shared": "\"{0}\" est utilisé par {1} et {2}.",
-  "msg.name_seed_owner": "Il appartient à {0}, vu en premier ; {1} est refusé sous ce nom."
+  "msg.name_seed_owner": "Il appartient à {0}, vu en premier ; {1} est refusé sous ce nom.",
+  "msg.native_paldefender_zip": "Il s’agit de PalDefender, qui ne s’installe pas comme un dossier de mod : serveur arrêté, placez PalDefender.dll et d3d9.dll de sa version dans le dossier Pal\\Binaries\\Win64 du serveur. Il apparaît ensuite sur la page des mods comme mod NATIVE.",
+  "msg.native_refusal": "Un mod NATIVE (PalDefender, le chargeur UE4SS) ne peut être qu’activé ou désactivé ici. Pour le retirer ou le remplacer, arrêtez le serveur et modifiez ses fichiers dans Pal\\Binaries\\Win64.",
+  "msg.only_pak_ue4ss_native_managed": "Seuls les mods de type PAK, UE4SS et NATIVE sont gérés.",
+  "msg.native_config_missing_paldefender": "d3d9.dll est présent, mais d3d9_config.json ne mentionne pas PalDefender.dll, il n’est donc pas chargé. Ajoutez \"PalDefender.dll\" à load_dlls.",
+  "msg.native_paldefender_dll_off": "PalDefender.dll lui-même est désactivé (renommé) ; redonnez-lui le nom PalDefender.dll.",
+  "msg.native_paldefender_no_loader": "PalDefender.dll est présent, mais rien ne le charge : le d3d9.dll de sa version doit se trouver à côté.",
+  "msg.native_ue4ss_loader_missing": "UE4SS est installé, mais son chargeur (dwmapi.dll) manque, donc aucun mod UE4SS ne se charge. Réinstallez UE4SS.",
+  "msg.native_no_disabled_loader": "{0} n’a pas de chargeur désactivé à restaurer.",
+  "msg.native_switched_off": "Désactivé : son chargeur a été renommé en {0}. Activez-le serveur arrêté.",
+  "msg.native_paldefender_game_warning": "Le journal de PalDefender indique qu’il n’est pas à jour pour cette version du jeu (\"{0}\"). Mettez-le à jour depuis ses versions GitHub, serveur arrêté.",
+  "msg.native_loaded_by": "Chargé par {0} : son journal a été écrit après le démarrage de ce serveur.",
+  "msg.native_in_place_no_log": "{0} est en place, mais son journal n’a pas été écrit depuis le démarrage de ce serveur.",
+  "msg.native_in_place_stopped": "{0} est en place et le charge au démarrage du serveur ; le serveur est arrêté.",
+  "msg.native_ue4ss_loader_off_mod": "Le chargeur UE4SS est désactivé, ce mod ne se charge donc pas. Activez UE4SS-Loader (NATIVE) serveur arrêté.",
+  "msg.ue4ss_loader_is_off": "Le chargeur UE4SS est désactivé",
+  "msg.not_updated_for_game_version": "Pas à jour pour cette version du jeu"
 }

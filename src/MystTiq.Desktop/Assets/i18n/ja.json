@@ -3729,5 +3729,21 @@
   "msg.player_name_taken_character": "そのキャラクター（{0}）はすでにその名前を持っています。別の名前で作り直せるよう［プレイヤー］で削除してください。",
   "msg.name_owner_nobody": "誰でもない（ブロックされた名前）",
   "msg.name_seed_shared": "\"{0}\" は {1} と {2} が使っています。",
-  "msg.name_seed_owner": "最初に確認された {0} のものです。{1} はその名前では拒否されます。"
+  "msg.name_seed_owner": "最初に確認された {0} のものです。{1} はその名前では拒否されます。",
+  "msg.native_paldefender_zip": "これは PalDefender で、MOD フォルダーとしてはインストールしません。サーバーを停止した状態で、リリースの PalDefender.dll と d3d9.dll をサーバーの Pal\\Binaries\\Win64 フォルダーに置いてください。その後、MOD ページに NATIVE MOD として表示されます。",
+  "msg.native_refusal": "NATIVE MOD（PalDefender、UE4SS ローダー）はここではオン／オフの切り替えのみ可能です。削除や置き換えは、サーバーを停止して Pal\\Binaries\\Win64 のファイルを変更してください。",
+  "msg.only_pak_ue4ss_native_managed": "管理できるのは PAK、UE4SS、NATIVE 形式の MOD のみです。",
+  "msg.native_config_missing_paldefender": "d3d9.dll はありますが、d3d9_config.json に PalDefender.dll が記載されていないため読み込まれません。load_dlls に \"PalDefender.dll\" を追加してください。",
+  "msg.native_paldefender_dll_off": "PalDefender.dll 自体がオフ（名前変更済み）です。PalDefender.dll という名前に戻してください。",
+  "msg.native_paldefender_no_loader": "PalDefender.dll はありますが、読み込むものがありません。リリースの d3d9.dll を隣に置く必要があります。",
+  "msg.native_ue4ss_loader_missing": "UE4SS はインストールされていますが、ローダー (dwmapi.dll) がないため UE4SS MOD は読み込まれません。UE4SS を再インストールしてください。",
+  "msg.native_no_disabled_loader": "{0} には復元できるオフのローダーがありません。",
+  "msg.native_switched_off": "オフ：ローダーの名前が {0} に変更されています。サーバーを停止した状態でオンにしてください。",
+  "msg.native_paldefender_game_warning": "PalDefender 自身のログによると、このゲームバージョンに対応していません（\"{0}\"）。サーバーを停止した状態で GitHub のリリースから更新してください。",
+  "msg.native_loaded_by": "{0} によって読み込まれました。ログはこのサーバーの起動後に書き込まれています。",
+  "msg.native_in_place_no_log": "{0} はありますが、このサーバーの起動以降ログが書き込まれていません。",
+  "msg.native_in_place_stopped": "{0} はあり、サーバー起動時に読み込みます。サーバーは停止中です。",
+  "msg.native_ue4ss_loader_off_mod": "UE4SS ローダーがオフのため、この MOD は読み込まれません。サーバーを停止した状態で UE4SS-Loader (NATIVE) をオンにしてください。",
+  "msg.ue4ss_loader_is_off": "UE4SS ローダーはオフです",
+  "msg.not_updated_for_game_version": "このゲームバージョンに未対応"
 }

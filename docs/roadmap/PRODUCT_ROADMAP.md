@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
 # Product roadmap to v1.0
 
-Updated 2026-10-04. **Current version: v1.0.0.2. Accepted baseline: v1.0.0.0. Next: the open items below.**
+Updated 2026-10-04. **Current version: v1.0.0.3. Accepted baseline: v1.0.0.0. Next: the open items below.**
 
 This is the active plan. Version assignments after v1.0.0.0 are proposed milestone buckets, not dated commitments. Older planning and completed work are retained in [the historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md), the [changelog](../../CHANGELOG.md) and [release notes](../../release-notes/). Historical “planned” and “not done” statements may have been superseded.
 
@@ -135,6 +135,23 @@ from v1 on, which MystTiq's own update check requires.
 v1.0.0.0 is the accepted baseline (owner, 2026-09-30), replacing v0.8.25.0. From the next version on, the frozen-checkpoint
 regression and the upgrade and accounts smokes start from the v1.0.0.0 checkpoint (`_Backups/MystTiqPalworldServer/v1.0.0.0`)
 as well as v0.8.25.0, so an upgrade from 1.0 is always tested.
+
+## v1.0.0.3 — NATIVE MODs and the MOD drop zone (2026-10-05)
+
+PalDefender and the UE4SS loader are NATIVE MODs on the MODs page, with an on/off switch that renames the loader; the MOD
+drop zone takes a drop anywhere. Details: `docs/architecture/v1.0.0.3-native-mods.md`.
+
+- Found on the owner's server: both loaders renamed to `*.disabled-test` by hand around 2026-10-01, so PalDefender and every
+  UE4SS MOD had not loaded since. Switched back on with the owner's go-ahead.
+- Not covered by a recorded check: an Explorer drag onto the live window (the harness drops through Avalonia's headless
+  input), and PalDefender loading on the real server after the switch-back.
+
+## v1.0.1.0 — planned
+
+- **An update button for every component in the Update Center** (asked 2026-10-05): every row gets one; it is greyed out
+  where the component updates itself, but always shown. PalDefender's would replace `PalDefender.dll` and `d3d9.dll` from
+  its GitHub release with the server stopped, keeping `d3d9_config.json` and its `PalDefender\` folder.
+- The first SignPath-signed release.
 
 ## v1.0.0.2 — Unique player names (2026-10-04)
 

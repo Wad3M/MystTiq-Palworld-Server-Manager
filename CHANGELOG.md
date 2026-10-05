@@ -1,4 +1,18 @@
-<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
+## v1.0.0.3 — NATIVE MODs and the MOD Drop Zone
+
+- NATIVE MODs (reported 2026-10-05: PalDefender did not show on the MODs page): PalDefender (`d3d9.dll` with
+  `d3d9_config.json`, or `version.dll`) and the UE4SS loader (`dwmapi.dll`, `xinput1_3.dll`) are listed with their version,
+  whether they loaded this run, and an on/off switch that renames the loader (`.mysttiq-disabled`). Switched-off copies
+  in the usual forms are recognised; MystTiq's own is restored first, else the newest. Disable/enable all and the
+  stuck-start tests include them. UE4SS MODs are marked when the loader is off. Delete, rollback and repair refuse them,
+  and a PalDefender ZIP is not installed as a UE4SS folder. The environment checklist recognises every switched-off form.
+- Fixed: a ZIP dropped on the MOD install box only installed when dropped on its button or caption (the zone had no
+  background); drag-enter is handled too.
+- Tests: the v1.0.0.3 gate regenerated from v1.0.0.2 (every earlier check kept), `Test-v1.0.0.3-RouteSmoke.ps1`, a logic
+  scenario and an ArtworkHarness drop; 17 new texts in all 12 languages.
+- Version advanced to 1.0.0.3.
+
 ## v1.0.0.2 — Unique Player Names
 
 - Unique player names (asked 2026-10-04; matching ignores case): each name belongs to the first account seen with it, or

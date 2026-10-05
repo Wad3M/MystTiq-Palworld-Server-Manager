@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
 using System.Text.RegularExpressions;
 using MystTiq.Core.Services;
 
@@ -106,7 +106,8 @@ public sealed class HeadlessEnvironmentChecklistService
         if (!Directory.Exists(paths.RuntimeBinaryRoot)) return ("MISSING", "Palworld runtime folder was not found.");
         var loaders = new[] { "dwmapi.dll", "xinput1_3.dll", "xinput1_4.dll", "winhttp.dll", "UE4SS.dll" };
         if (loaders.Any(x => File.Exists(Path.Combine(paths.RuntimeBinaryRoot, x)))) return ("READY", "UE4SS runtime loader detected.");
-        if (loaders.Any(x => File.Exists(Path.Combine(paths.RuntimeBinaryRoot, x + ".myst-disabled")))) return ("DISABLED", "UE4SS runtime is installed but disabled.");
+        // v1.0.0.3: any switched-off form of the loader (MystTiq's, or renamed by hand: *.disabled-test was found live).
+        if (loaders.Any(x => NativeModCatalog.DisabledSuffixes.Any(s => File.Exists(Path.Combine(paths.RuntimeBinaryRoot, x + s))))) return ("DISABLED", "UE4SS runtime is installed but disabled.");
         if (Directory.Exists(paths.Ue4ssRoot)) return ("READY", "UE4SS runtime folder detected.");
         return ("MISSING", "Optional runtime for UE4SS-based server mods was not detected.");
     }

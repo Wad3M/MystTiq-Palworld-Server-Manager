@@ -3729,5 +3729,21 @@
   "msg.player_name_taken_character": "Their character ({0}) already has that name; delete it on Players so they can make one with another name.",
   "msg.name_owner_nobody": "nobody (a blocked name)",
   "msg.name_seed_shared": "\"{0}\" is used by {1} and {2}.",
-  "msg.name_seed_owner": "It belongs to {0}, seen first; {1} is turned away under that name."
+  "msg.name_seed_owner": "It belongs to {0}, seen first; {1} is turned away under that name.",
+  "msg.native_paldefender_zip": "This is PalDefender, which is not installed as a MOD folder: with the server stopped, put PalDefender.dll and d3d9.dll from its release into the server's Pal\\Binaries\\Win64 folder. It then appears on the MODs page as a NATIVE MOD.",
+  "msg.native_refusal": "A NATIVE MOD (PalDefender, the UE4SS loader) can only be switched on or off here. To remove or replace it, stop the server and change its files in Pal\\Binaries\\Win64.",
+  "msg.only_pak_ue4ss_native_managed": "Only PAK, UE4SS and NATIVE MOD types are managed.",
+  "msg.native_config_missing_paldefender": "d3d9.dll is there, but d3d9_config.json does not list PalDefender.dll, so it is not loaded. Add \"PalDefender.dll\" to load_dlls.",
+  "msg.native_paldefender_dll_off": "PalDefender.dll itself is switched off (renamed); put it back as PalDefender.dll.",
+  "msg.native_paldefender_no_loader": "PalDefender.dll is there, but nothing loads it: d3d9.dll from its release belongs next to it.",
+  "msg.native_ue4ss_loader_missing": "UE4SS is installed, but its loader (dwmapi.dll) is missing, so no UE4SS MOD loads. Reinstall UE4SS.",
+  "msg.native_no_disabled_loader": "{0} has no switched-off loader to restore.",
+  "msg.native_switched_off": "Switched off: its loader is renamed to {0}. Switch it on with the server stopped.",
+  "msg.native_paldefender_game_warning": "PalDefender's own log says it is not updated for this game version (\"{0}\"). Update it from its GitHub releases with the server stopped.",
+  "msg.native_loaded_by": "Loaded by {0}: its log was written after this server started.",
+  "msg.native_in_place_no_log": "{0} is in place, but its log has not been written since this server started.",
+  "msg.native_in_place_stopped": "{0} is in place and loads it when the server starts; the server is stopped.",
+  "msg.native_ue4ss_loader_off_mod": "The UE4SS loader is switched off, so this MOD does not load. Switch on UE4SS-Loader (NATIVE) with the server stopped.",
+  "msg.ue4ss_loader_is_off": "UE4SS loader is off",
+  "msg.not_updated_for_game_version": "Not updated for this game version"
 }

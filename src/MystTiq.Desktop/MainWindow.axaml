@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -2303,7 +2303,9 @@
                      wired to the exact same InstallModZipAsync path the picker button already uses;
                      ZipInstallDropZone_OnDragOver/_OnDrop in MainWindow.axaml.cs only accept a
                      single real, existing .zip file, matching the Choose ZIP dialog's own filter. -->
-                <Border x:Name="ZipInstallDropZone" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="2" CornerRadius="6" Padding="16" DragDrop.AllowDrop="True">
+                <!-- v1.0.0.3 (reported 2026-10-05: drag and drop did not install): without a background only the button and caption
+                     took the drop; a drop on the rest of the zone went to the card behind it. -->
+                <Border x:Name="ZipInstallDropZone" Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="2" CornerRadius="6" Padding="16" DragDrop.AllowDrop="True">
                   <StackPanel Spacing="8" HorizontalAlignment="Center">
                     <Button Classes="primary" Content="{services:Tr ui.choose_zip_and_install}" Click="InstallModZip_Click" IsEnabled="{Binding CanManageAdmin}" HorizontalAlignment="Center"/>
                     <TextBlock Text="{services:Tr ui.or_drag_a_zip_file_here}" Foreground="{DynamicResource MutedBrush}" FontSize="11" HorizontalAlignment="Center"/>

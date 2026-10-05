@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1160,6 +1160,35 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var saveButtons = window.GetLogicalDescendants().OfType<Button>().Where(b => ReferenceEquals(b.Command, vm.SaveNameGuardCommand) || ReferenceEquals(b.Command, vm.SaveWhitelistCommand)).ToList();
     Check(blockedWhileBusy && saveButtons.Count == 2 && saveButtons.All(b => b.IsEffectivelyEnabled),
         $"Save names and Save Whitelist are disabled while busy and enabled again afterwards [{string.Join(", ", saveButtons.Select(b => b.IsEffectivelyEnabled))}]");
+}
+// v1.0.0.3 (reported 2026-10-05: "the drag and drop did not work for installing MODs"). A ZIP dropped anywhere on the
+// drop zone, not only on its button or caption, reaches the install. The zone had no background, so a drop on its empty
+// area hit the card behind it.
+{
+    typeof(MainWindowViewModel).GetProperty("SelectedPage")!.SetValue(vm, NavigationPage.ModLibrary);
+    Dispatcher.UIThread.RunJobs();
+    window.UpdateLayout();
+    var zone = window.GetVisualDescendants().OfType<Border>().First(b => b.Name == "ZipInstallDropZone");
+    zone.BringIntoView();
+    Dispatcher.UIThread.RunJobs();
+    window.UpdateLayout();
+    var corner = zone.TranslatePoint(new Point(6, 6), window)!.Value;
+    var zipPath = Path.Combine(Path.GetTempPath(), "mysttiq-drop-check-" + Guid.NewGuid().ToString("N") + ".zip");
+    using (var zipFile = System.IO.Compression.ZipFile.Open(zipPath, System.IO.Compression.ZipArchiveMode.Create))
+        zipFile.CreateEntry("Scripts/main.lua");
+    typeof(MainWindowViewModel).GetProperty("ModSummary")!.SetValue(vm, "before the drop");
+    var transfer = new Avalonia.Input.DataTransfer();
+    // Avalonia's own file object (the kind a drop from Explorer carries); IStorageFile cannot be implemented here.
+    var bclFile = (Avalonia.Platform.Storage.IStorageFile)Activator.CreateInstance(typeof(Avalonia.Input.DataTransfer).Assembly.GetType("Avalonia.Platform.Storage.FileIO.BclStorageFile")!,
+        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, [new FileInfo(zipPath)], null)!;
+    transfer.Add(Avalonia.Input.DataTransferItem.CreateFile(bclFile));
+    window.DragDrop(corner, Avalonia.Input.Raw.RawDragEventType.DragEnter, transfer, Avalonia.Input.DragDropEffects.Copy);
+    window.DragDrop(corner, Avalonia.Input.Raw.RawDragEventType.DragOver, transfer, Avalonia.Input.DragDropEffects.Copy);
+    window.DragDrop(corner, Avalonia.Input.Raw.RawDragEventType.Drop, transfer, Avalonia.Input.DragDropEffects.Copy);
+    for (var i = 0; i < 20 && vm.ModSummary == "before the drop"; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(50); }
+    Check(vm.ModSummary != "before the drop",
+        $"A ZIP dropped on the empty part of the MOD drop zone reaches the install [{corner} in {zone.Bounds}; summary: {vm.ModSummary}]");
+    try { File.Delete(zipPath); } catch { }
 }
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
 // Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.

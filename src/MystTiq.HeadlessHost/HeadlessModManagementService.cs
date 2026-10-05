@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -79,6 +79,9 @@ public sealed class HeadlessModManagementService
             // empty upload). This replaces trusting a manual dropdown default of PAK, which
             // silently installed a UE4SS mod as PAK (and vice versa) whenever a user forgot to
             // flip it.
+            // v1.0.0.3: a PalDefender (or other loader-DLL) archive would otherwise install as a UE4SS folder and never load.
+            if (Directory.EnumerateFiles(extracted, "*.dll", SearchOption.AllDirectories).Any(f => Path.GetFileName(f).Equals("PalDefender.dll", StringComparison.OrdinalIgnoreCase)))
+                return HeadlessModMutationResult.Failure("This is PalDefender, which is not installed as a MOD folder: with the server stopped, put PalDefender.dll and d3d9.dll from its release into the server's Pal\\Binaries\\Win64 folder. It then appears on the MODs page as a NATIVE MOD.");
             var detectedType = DetectModType(extracted);
             var changed = detectedType.Equals("PAK", StringComparison.OrdinalIgnoreCase)
                 ? InstallPakFiles(extracted, package)
@@ -118,7 +121,7 @@ public sealed class HeadlessModManagementService
                 if (Directory.Exists(folder)) { Directory.Delete(folder, true); changed++; }
                 RemoveModLine(Path.Combine(root, "mods.txt"), package);
             }
-            else return HeadlessModMutationResult.Failure("Only PAK and UE4SS MOD types are managed.");
+            else return HeadlessModMutationResult.Failure(NativeRefusal(type));
             if (changed == 0) return HeadlessModMutationResult.Failure("Managed MOD was not found.");
             activity.Record("Information", "MODs", "Deleted MOD", $"type={type.ToUpperInvariant()}; package={package}; items={changed}");
             return new(true, type.ToUpperInvariant(), package, false, changed, $"Deleted {package}.");
@@ -134,7 +137,10 @@ public sealed class HeadlessModManagementService
         {
             var blocked = await RejectWhenRunningAsync(cancellationToken); if (blocked is not null) return blocked;
             var inventory = await GetInventoryAsync(cancellationToken); var changed = 0;
-            foreach (var item in inventory.Mods) changed += item.Type == "PAK" ? Math.Max(0, TogglePak(item.Package, enabled)) : Math.Max(0, ToggleUe4ss(item.Package, enabled));
+            foreach (var item in inventory.Mods)
+                changed += item.Type == "PAK" ? Math.Max(0, TogglePak(item.Package, enabled))
+                    : item.Type == "NATIVE" ? Math.Max(0, ToggleNative(item.Package, enabled))
+                    : Math.Max(0, ToggleUe4ss(item.Package, enabled));
             activity.Record("Information", "MODs", enabled ? "Enabled all MODs" : "Disabled all MODs", $"packages={inventory.Mods.Count}; items={changed}");
             return new(true, "ALL", "all", enabled, changed, $"{(enabled ? "Enabled" : "Disabled")} all managed MODs.");
         }
@@ -347,7 +353,7 @@ public sealed class HeadlessModManagementService
                 var folder = Path.Combine(ResolveUe4ss().ActiveModsRoot, package);
                 if (Directory.Exists(folder)) Directory.Delete(folder, true);
             }
-            else return HeadlessModMutationResult.Failure("Only PAK and UE4SS MOD types are managed.");
+            else return HeadlessModMutationResult.Failure(NativeRefusal(type));
 
             var restored = false;
             if (File.Exists(snapshotPath) && File.Exists(metaPath))
@@ -709,6 +715,19 @@ public sealed class HeadlessModManagementService
         var mods = new List<HeadlessModItem>();
         mods.AddRange(ScanPakMods(serverRunning));
         mods.AddRange(ScanUe4ssMods(ue4ss, enabledUe4ss, runtimeEvidence, serverRunning));
+        // v1.0.0.3: DLL MODs the game loads through a proxy DLL (PalDefender, the UE4SS loader itself).
+        var natives = ScanNativeMods(serverRunning, status.NativeStartedAt, ue4ss).ToList();
+        mods.AddRange(natives);
+        // With the UE4SS loader switched off, no UE4SS MOD loads, however mods.txt marks it (seen live on 2026-10-05).
+        if (natives.Any(n => n.Package == NativeModCatalog.Ue4ssLoaderPackage && !n.Enabled))
+            for (var i = 0; i < mods.Count; i++)
+                if (mods[i].Type == "UE4SS" && mods[i].Enabled)
+                    mods[i] = mods[i] with
+                    {
+                        Health = "Attention", RuntimeState = "Not loaded", RuntimeConfirmed = false,
+                        Evidence = "The UE4SS loader is switched off, so this MOD does not load. Switch on UE4SS-Loader (NATIVE) with the server stopped.",
+                        Attention = "UE4SS loader is off",
+                    };
 
         // v0.7.78.0: per-mod update availability and installed version, surfaced directly on the
         // Installed MODs list instead of requiring a manual "Check for Update" click per selection.
@@ -721,6 +740,8 @@ public sealed class HeadlessModManagementService
         // version, rather than a misleading guess.
         for (var i = 0; i < mods.Count; i++)
         {
+            // v1.0.0.3: a NATIVE MOD has no Workshop copy; PalDefender's release is checked in the Update Center.
+            if (mods[i].Type == "NATIVE") continue;
             var check = await CheckModUpdateAsync(mods[i].Type, mods[i].Package, cancellationToken);
             var installedVersion = ReadWorkshopManifestVersion(mods[i].InstallPath);
             // v0.9.10.0: UpdateChecked says whether the answer is real. A MOD with no Workshop source (or on Linux, or whose
@@ -790,10 +811,12 @@ public sealed class HeadlessModManagementService
                 ? TogglePak(package, enabled)
                 : type.Equals("UE4SS", StringComparison.OrdinalIgnoreCase)
                     ? ToggleUe4ss(package, enabled)
-                    : -1;
+                    : type.Equals("NATIVE", StringComparison.OrdinalIgnoreCase)
+                        ? ToggleNative(package, enabled)
+                        : -1;
 
             if (changed < 0)
-                return HeadlessModMutationResult.Failure("Only PAK and UE4SS MOD types are managed.");
+                return HeadlessModMutationResult.Failure("Only PAK, UE4SS and NATIVE MOD types are managed.");
             if (changed == 0)
                 return HeadlessModMutationResult.Failure($"No managed {type} MOD named '{package}' was found.");
 
@@ -965,6 +988,98 @@ public sealed class HeadlessModManagementService
                 "UE4SS", name, name, directory, enabled, health, runtime, evidence,
                 SafeFileCount(directory), started, enabledMarker ? "enabled.txt present" : string.Empty);
         }
+    }
+
+    // v1.0.0.3: delete, rollback and repair work on MOD folders and files MystTiq installed; a NATIVE MOD is switched on
+    // and off here, and replaced by hand (or later from the Update Center).
+    private static string NativeRefusal(string type) =>
+        type.Equals("NATIVE", StringComparison.OrdinalIgnoreCase)
+            ? "A NATIVE MOD (PalDefender, the UE4SS loader) can only be switched on or off here. To remove or replace it, stop the server and change its files in Pal\\Binaries\\Win64."
+            : "Only PAK and UE4SS MOD types are managed.";
+
+    private sealed record NativeScan(NativeModState State, string MainPath, DateTime? LastLogUtc, string? GameWarning);
+
+    private List<NativeScan> ScanNativeStates()
+    {
+        var result = new List<NativeScan>();
+        var root = paths.RuntimeBinaryRoot;
+        if (!Directory.Exists(root)) return result;
+        var files = new DirectoryInfo(root).EnumerateFiles().Select(f => new NativeFile(f.Name, f.LastWriteTimeUtc)).ToList();
+        string? config = null;
+        try { var configPath = Path.Combine(root, "d3d9_config.json"); if (File.Exists(configPath)) config = File.ReadAllText(configPath); } catch { }
+        var palDefender = NativeModCatalog.PalDefender(files, config);
+        if (palDefender is not null)
+            result.Add(new NativeScan(palDefender, Path.Combine(root, "PalDefender.dll"), NewestFileUtc(Path.Combine(root, "PalDefender", "Logs")),
+                HeadlessComponentUpdateService.PalDefenderGameWarning(root)));
+        var ue4ssInstalled = File.Exists(Path.Combine(root, "UE4SS.dll")) || File.Exists(Path.Combine(paths.Ue4ssRoot, "UE4SS.dll"));
+        var loader = NativeModCatalog.Ue4ssLoader(files, ue4ssInstalled);
+        if (loader is not null)
+        {
+            var log = new[] { Path.Combine(paths.Ue4ssRoot, "UE4SS.log"), Path.Combine(root, "UE4SS.log") }.Where(File.Exists).Select(File.GetLastWriteTimeUtc).DefaultIfEmpty().Max();
+            result.Add(new NativeScan(loader, Path.Combine(root, loader.ActiveLoader ?? "dwmapi.dll"), log == default ? null : log, null));
+        }
+        return result;
+    }
+
+    private IEnumerable<HeadlessModItem> ScanNativeMods(bool serverRunning, DateTimeOffset? startedAt, HeadlessUe4ssStatus ue4ss)
+    {
+        foreach (var scan in ScanNativeStates())
+        {
+            var state = scan.State;
+            string? version = null;
+            try
+            {
+                if (state.Package == NativeModCatalog.PalDefenderPackage && File.Exists(scan.MainPath))
+                {
+                    var v = System.Diagnostics.FileVersionInfo.GetVersionInfo(scan.MainPath).ProductVersion?.Trim();
+                    if (IsMeaningfulVersion(v)) version = v;
+                }
+                else if (state.Package == NativeModCatalog.Ue4ssLoaderPackage) version = ue4ss.InstalledVersion;
+            }
+            catch { }
+            // Loaded this run: its log was written after this server process started.
+            var loaded = serverRunning && startedAt is not null && scan.LastLogUtc is not null && scan.LastLogUtc.Value >= startedAt.Value.UtcDateTime.AddSeconds(-5);
+            var loaderText = state.ActiveLoader ?? "its loader";
+            var (health, runtime, evidence, attention) =
+                state.Problem is not null ? ("Misconfigured", "Not loaded", state.Problem, state.Problem)
+                : !state.Enabled ? ("Disabled", "Disabled", $"Switched off: its loader is renamed to {state.DisabledLoader?.Name}. Switch it on with the server stopped.", string.Empty)
+                : scan.GameWarning is not null ? ("Attention", loaded ? "Confirmed Loaded" : "Active / Unverified",
+                    $"PalDefender's own log says it is not updated for this game version (\"{scan.GameWarning}\"). Update it from its GitHub releases with the server stopped.", "Not updated for this game version")
+                : loaded ? ("Healthy", "Confirmed Loaded", $"Loaded by {loaderText}: its log was written after this server started.", string.Empty)
+                : serverRunning ? ("Active / Unverified", "Active / Unverified", $"{loaderText} is in place, but its log has not been written since this server started.", string.Empty)
+                : ("Active / Unverified", "Active / Unverified", $"{loaderText} is in place and loads it when the server starts; the server is stopped.", string.Empty);
+            yield return new HeadlessModItem("NATIVE", state.Package, state.Name, scan.MainPath, state.Enabled, health, runtime, evidence,
+                1, loaded, attention, InstalledVersion: version);
+        }
+    }
+
+    private static DateTime? NewestFileUtc(string folder)
+    {
+        try { return Directory.Exists(folder) ? Directory.EnumerateFiles(folder).Select(File.GetLastWriteTimeUtc).DefaultIfEmpty().Max() is var t && t != default ? t : null : null; }
+        catch { return null; }
+    }
+
+    // Switching a NATIVE MOD renames its loader: off writes <loader>.mysttiq-disabled; on restores MystTiq's own copy, else
+    // the newest switched-off one. Already in the asked state counts as done.
+    private int ToggleNative(string package, bool enabled)
+    {
+        var scan = ScanNativeStates().FirstOrDefault(s => s.State.Package.Equals(package, StringComparison.OrdinalIgnoreCase));
+        if (scan is null) return 0;
+        var state = scan.State;
+        var root = paths.RuntimeBinaryRoot;
+        if (enabled)
+        {
+            if (state.Enabled) return 1;
+            if (state.DisabledLoader is null) throw new InvalidOperationException(state.Problem ?? $"{state.Name} has no switched-off loader to restore.");
+            var name = state.DisabledLoader.Name;
+            var loader = name[..(name.IndexOf(".dll", StringComparison.OrdinalIgnoreCase) + 4)];
+            File.Move(Path.Combine(root, name), Path.Combine(root, loader));
+            if (state.Problem is not null) throw new InvalidOperationException(state.Problem);
+            return 1;
+        }
+        if (state.ActiveLoader is null) return 1;
+        File.Move(Path.Combine(root, state.ActiveLoader), Path.Combine(root, state.ActiveLoader + NativeModCatalog.DisableSuffix), overwrite: true);
+        return 1;
     }
 
     private int TogglePak(string package, bool enabled)
@@ -1586,6 +1701,7 @@ public sealed class HeadlessModManagementService
     // one just used live to properly install PalSchema/QualityOfLife.
     public async Task<HeadlessModMutationResult> RepairModAsync(string type, string package, CancellationToken cancellationToken)
     {
+        if (type.Equals("NATIVE", StringComparison.OrdinalIgnoreCase)) return HeadlessModMutationResult.Failure(NativeRefusal(type));
         package = NormalizePackage(package);
         if (!OperatingSystem.IsWindows())
             return HeadlessModMutationResult.Failure("Repair via Steam Workshop requires Windows -- Workshop content lives on the local Steam client.");

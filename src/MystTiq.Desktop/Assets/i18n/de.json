@@ -3729,5 +3729,21 @@
   "msg.player_name_taken_character": "Sein Charakter ({0}) trägt diesen Namen bereits; lösche ihn unter Spieler, damit er einen mit anderem Namen erstellen kann.",
   "msg.name_owner_nobody": "niemandem (ein gesperrter Name)",
   "msg.name_seed_shared": "\"{0}\" wird von {1} und {2} verwendet.",
-  "msg.name_seed_owner": "Er gehört {0}, zuerst gesehen; {1} wird unter diesem Namen abgewiesen."
+  "msg.name_seed_owner": "Er gehört {0}, zuerst gesehen; {1} wird unter diesem Namen abgewiesen.",
+  "msg.native_paldefender_zip": "Das ist PalDefender, das nicht als Mod-Ordner installiert wird: Lege bei gestopptem Server PalDefender.dll und d3d9.dll aus seinem Release in den Ordner Pal\\Binaries\\Win64 des Servers. Danach erscheint es auf der Mods-Seite als NATIVE-Mod.",
+  "msg.native_refusal": "Eine NATIVE-Mod (PalDefender, der UE4SS-Loader) kann hier nur ein- oder ausgeschaltet werden. Zum Entfernen oder Ersetzen stoppe den Server und ändere ihre Dateien in Pal\\Binaries\\Win64.",
+  "msg.only_pak_ue4ss_native_managed": "Nur Mods der Typen PAK, UE4SS und NATIVE werden verwaltet.",
+  "msg.native_config_missing_paldefender": "d3d9.dll ist vorhanden, aber d3d9_config.json führt PalDefender.dll nicht auf, daher wird es nicht geladen. Füge \"PalDefender.dll\" zu load_dlls hinzu.",
+  "msg.native_paldefender_dll_off": "PalDefender.dll selbst ist ausgeschaltet (umbenannt); benenne es wieder in PalDefender.dll um.",
+  "msg.native_paldefender_no_loader": "PalDefender.dll ist vorhanden, aber nichts lädt es: d3d9.dll aus seinem Release gehört daneben.",
+  "msg.native_ue4ss_loader_missing": "UE4SS ist installiert, aber sein Loader (dwmapi.dll) fehlt, daher lädt keine UE4SS-Mod. Installiere UE4SS neu.",
+  "msg.native_no_disabled_loader": "{0} hat keinen ausgeschalteten Loader zum Wiederherstellen.",
+  "msg.native_switched_off": "Ausgeschaltet: sein Loader heißt jetzt {0}. Schalte ihn bei gestopptem Server ein.",
+  "msg.native_paldefender_game_warning": "PalDefenders eigenes Log sagt, dass es nicht für diese Spielversion aktualisiert ist (\"{0}\"). Aktualisiere es bei gestopptem Server aus seinen GitHub-Releases.",
+  "msg.native_loaded_by": "Geladen von {0}: sein Log wurde nach dem Start dieses Servers geschrieben.",
+  "msg.native_in_place_no_log": "{0} ist vorhanden, aber sein Log wurde seit dem Start dieses Servers nicht geschrieben.",
+  "msg.native_in_place_stopped": "{0} ist vorhanden und lädt es beim Serverstart; der Server ist gestoppt.",
+  "msg.native_ue4ss_loader_off_mod": "Der UE4SS-Loader ist ausgeschaltet, daher lädt diese Mod nicht. Schalte UE4SS-Loader (NATIVE) bei gestopptem Server ein.",
+  "msg.ue4ss_loader_is_off": "UE4SS-Loader ist aus",
+  "msg.not_updated_for_game_version": "Nicht für diese Spielversion aktualisiert"
 }

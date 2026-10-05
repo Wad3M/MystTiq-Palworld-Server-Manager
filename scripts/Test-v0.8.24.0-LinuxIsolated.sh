@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
+# MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
 # v0.8.24.0: processor cores (affinity) on Linux, run by Test-v0.8.24.0-LinuxIsolated.ps1 on the test VM. An isolated
 # MystTiq (own config, FleetRoot, runtime, port 18425) over a synthetic server folder; never touches /etc/mysttiq or the
 # installed mysttiq-palworld service. The stand-in server is a copy of python3 named PalServer-Linux-Shipping with extra

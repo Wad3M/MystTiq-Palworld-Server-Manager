@@ -3729,5 +3729,21 @@
   "msg.player_name_taken_character": "该玩家的角色（{0}）已使用此名称；请在“玩家”中删除它，以便其用其他名称创建角色。",
   "msg.name_owner_nobody": "无人（已禁用的名称）",
   "msg.name_seed_shared": "“{0}”被 {1} 和 {2} 同时使用。",
-  "msg.name_seed_owner": "它属于最先出现的 {0}；{1} 使用此名称时会被拒绝。"
+  "msg.name_seed_owner": "它属于最先出现的 {0}；{1} 使用此名称时会被拒绝。",
+  "msg.native_paldefender_zip": "这是 PalDefender，它不是以模组文件夹方式安装的：请在服务器停止时，将其发行版中的 PalDefender.dll 和 d3d9.dll 放入服务器的 Pal\\Binaries\\Win64 文件夹。之后它会作为 NATIVE 模组显示在“模组”页面。",
+  "msg.native_refusal": "NATIVE 模组（PalDefender、UE4SS 加载器）在这里只能开启或关闭。要删除或替换它，请停止服务器并修改 Pal\\Binaries\\Win64 中的文件。",
+  "msg.only_pak_ue4ss_native_managed": "仅管理 PAK、UE4SS 和 NATIVE 类型的模组。",
+  "msg.native_config_missing_paldefender": "d3d9.dll 已存在，但 d3d9_config.json 中没有列出 PalDefender.dll，因此不会加载它。请将 \"PalDefender.dll\" 加入 load_dlls。",
+  "msg.native_paldefender_dll_off": "PalDefender.dll 本身已被关闭（已重命名）；请将其改回 PalDefender.dll。",
+  "msg.native_paldefender_no_loader": "PalDefender.dll 已存在，但没有任何程序加载它：应把其发行版中的 d3d9.dll 放在它旁边。",
+  "msg.native_ue4ss_loader_missing": "已安装 UE4SS，但缺少其加载器 (dwmapi.dll)，因此不会加载任何 UE4SS 模组。请重新安装 UE4SS。",
+  "msg.native_no_disabled_loader": "{0} 没有可恢复的已关闭加载器。",
+  "msg.native_switched_off": "已关闭：其加载器已重命名为 {0}。请在服务器停止时开启它。",
+  "msg.native_paldefender_game_warning": "PalDefender 自己的日志显示它尚未针对此游戏版本更新（\"{0}\"）。请在服务器停止时从其 GitHub 发行版更新。",
+  "msg.native_loaded_by": "由 {0} 加载：其日志在本次服务器启动后写入。",
+  "msg.native_in_place_no_log": "{0} 已就位，但自本次服务器启动以来其日志尚未写入。",
+  "msg.native_in_place_stopped": "{0} 已就位，会在服务器启动时加载它；服务器当前已停止。",
+  "msg.native_ue4ss_loader_off_mod": "UE4SS 加载器已关闭，因此此模组不会加载。请在服务器停止时开启 UE4SS-Loader (NATIVE)。",
+  "msg.ue4ss_loader_is_off": "UE4SS 加载器已关闭",
+  "msg.not_updated_for_game_version": "尚未针对此游戏版本更新"
 }

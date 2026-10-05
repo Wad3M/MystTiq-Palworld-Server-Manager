@@ -3729,5 +3729,21 @@
   "msg.player_name_taken_character": "O personagem dele ({0}) já tem esse nome; exclua-o em Jogadores para que ele crie outro com outro nome.",
   "msg.name_owner_nobody": "ninguém (um nome bloqueado)",
   "msg.name_seed_shared": "\"{0}\" é usado por {1} e {2}.",
-  "msg.name_seed_owner": "Pertence a {0}, visto primeiro; {1} será recusado com esse nome."
+  "msg.name_seed_owner": "Pertence a {0}, visto primeiro; {1} será recusado com esse nome.",
+  "msg.native_paldefender_zip": "Este é o PalDefender, que não é instalado como pasta de mod: com o servidor parado, coloque PalDefender.dll e d3d9.dll da versão dele na pasta Pal\\Binaries\\Win64 do servidor. Depois ele aparece na página de mods como mod NATIVE.",
+  "msg.native_refusal": "Um mod NATIVE (PalDefender, o carregador do UE4SS) só pode ser ligado ou desligado aqui. Para removê-lo ou substituí-lo, pare o servidor e altere os arquivos em Pal\\Binaries\\Win64.",
+  "msg.only_pak_ue4ss_native_managed": "Apenas mods dos tipos PAK, UE4SS e NATIVE são gerenciados.",
+  "msg.native_config_missing_paldefender": "d3d9.dll está presente, mas d3d9_config.json não lista PalDefender.dll, então ele não é carregado. Adicione \"PalDefender.dll\" a load_dlls.",
+  "msg.native_paldefender_dll_off": "O próprio PalDefender.dll está desligado (renomeado); renomeie-o de volta para PalDefender.dll.",
+  "msg.native_paldefender_no_loader": "PalDefender.dll está presente, mas nada o carrega: o d3d9.dll da versão dele deve ficar ao lado.",
+  "msg.native_ue4ss_loader_missing": "O UE4SS está instalado, mas falta o carregador (dwmapi.dll), então nenhum mod do UE4SS é carregado. Reinstale o UE4SS.",
+  "msg.native_no_disabled_loader": "{0} não tem um carregador desligado para restaurar.",
+  "msg.native_switched_off": "Desligado: o carregador foi renomeado para {0}. Ligue-o com o servidor parado.",
+  "msg.native_paldefender_game_warning": "O próprio log do PalDefender diz que ele não está atualizado para esta versão do jogo (\"{0}\"). Atualize-o pelas versões no GitHub com o servidor parado.",
+  "msg.native_loaded_by": "Carregado por {0}: o log foi escrito depois que este servidor iniciou.",
+  "msg.native_in_place_no_log": "{0} está no lugar, mas o log não foi escrito desde que este servidor iniciou.",
+  "msg.native_in_place_stopped": "{0} está no lugar e o carrega quando o servidor inicia; o servidor está parado.",
+  "msg.native_ue4ss_loader_off_mod": "O carregador do UE4SS está desligado, então este mod não é carregado. Ligue o UE4SS-Loader (NATIVE) com o servidor parado.",
+  "msg.ue4ss_loader_is_off": "O carregador do UE4SS está desligado",
+  "msg.not_updated_for_game_version": "Não atualizado para esta versão do jogo"
 }

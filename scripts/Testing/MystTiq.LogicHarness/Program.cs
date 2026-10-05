@@ -1,4 +1,4 @@
-// MystTiq v1.0.0.2: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.0.3: file reviewed for this release (2026-10-05).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -589,6 +589,34 @@ try
         var seed = NameGuard.Seed([new NameGuardKnownPlayer("steam_8", "melly", now.AddDays(-1)), new NameGuardKnownPlayer("steam_7", "Melly", now.AddDays(-9)), new NameGuardKnownPlayer("steam_7", "MELLY", now.AddDays(-3)), new NameGuardKnownPlayer("steam_1", "", now)]);
         Assert(seed.Claims is [{ Name: "Melly", OwnerId: "steam_7" }] && seed.Conflicts is [{ Owner: "steam_7", Other: "steam_8" }],
             "known players own their names, the earliest seen first; a name two accounts share is reported once, the same account twice is not");
+    }, failures);
+    // v1.0.0.3 (reported 2026-10-05): PalDefender did not show on the MODs page. It and UE4SS itself are DLLs loaded through
+    // a proxy DLL; on the owner's server both loaders had been renamed to *.disabled-test by hand.
+    RunScenario("NATIVE MODs: PalDefender and the UE4SS loader are found from their loaders; switched-off copies are recognised, MystTiq's own restored first, else the newest", () =>
+    {
+        var now = new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc);
+        NativeFile F(string name, int daysAgo = 0) => new(name, now.AddDays(-daysAgo));
+        const string config = "{ \"load_dlls\": [ \"PalDefender.dll\" ] }";
+        // The owner's Win64 folder on 2026-10-05, before the loaders were renamed back.
+        var owner = new[] { F("PalDefender.dll"), F("d3d9.dll.disabled-test", 5), F("d3d9_config.json"), F("dwmapi.dll.myst-disabled", 87), F("dwmapi.dll.disabled-test", 38), F("dsound.dll") };
+        Assert(NativeModCatalog.PalDefender(owner, config) is { Enabled: false, ActiveLoader: null, DisabledLoader.Name: "d3d9.dll.disabled-test", Problem: null },
+            "PalDefender with its loader renamed by hand: switched off, d3d9.dll.disabled-test is the copy to restore");
+        Assert(NativeModCatalog.Ue4ssLoader(owner, true) is { Enabled: false, DisabledLoader.Name: "dwmapi.dll.disabled-test" },
+            "the UE4SS loader: of the two switched-off copies, the newest (August) is restored, not the July one");
+        Assert(NativeModCatalog.Ue4ssLoader(owner, false) is null && NativeModCatalog.PalDefender([F("dsound.dll")], null) is null,
+            "nothing is listed without UE4SS or PalDefender installed (MystTiq's own dsound.dll is not a MOD)");
+        Assert(NativeModCatalog.PalDefender([F("PalDefender.dll"), F("d3d9.dll"), F("d3d9_config.json")], config) is { Enabled: true, ActiveLoader: "d3d9.dll" } &&
+               NativeModCatalog.PalDefender([F("PalDefender.dll"), F("version.dll")], null) is { Enabled: true, ActiveLoader: "version.dll" } &&
+               NativeModCatalog.PalDefender([F("PalDefender.dll"), F("d3d9.dll")], null) is { Enabled: true },
+            "on with d3d9.dll (its release) or version.dll (its wiki); d3d9.dll without a config yet counts as loading it");
+        Assert(NativeModCatalog.PalDefender([F("PalDefender.dll"), F("d3d9.dll")], "{ \"load_dlls\": [ \"Other.dll\" ] }") is { Enabled: false, Problem: not null } &&
+               NativeModCatalog.PalDefender([F("PalDefender.dll")], null) is { Enabled: false, Problem: not null } &&
+               NativeModCatalog.PalDefender([F("PalDefender.dll.disabled"), F("d3d9.dll")], config) is { Enabled: false, Problem: not null },
+            "misconfigured: a d3d9_config.json that does not list it, no loader at all, or PalDefender.dll itself renamed");
+        Assert(NativeModCatalog.NewestDisabled([F("d3d9.dll.disabled", 0), F("d3d9.dll" + NativeModCatalog.DisableSuffix, 30)], "d3d9.dll")?.Name == "d3d9.dll.mysttiq-disabled",
+            "MystTiq's own switched-off copy is restored before a newer hand-made one");
+        Assert(NativeModCatalog.ConfigLoads("{\"load_dlls\":[\"mods\\\\paldefender.DLL\"]}", "PalDefender.dll") && !NativeModCatalog.ConfigLoads("not json", "PalDefender.dll"),
+            "the config names the DLL in any case or folder; a broken config loads nothing");
     }, failures);
     RunScenario("Stuck start: a start is stuck after two minutes without its port; the status says how long it has been starting; the addresses rules", () =>
     {

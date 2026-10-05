@@ -1,50 +1,51 @@
-<!-- MystTiq v1.0.0.2: file reviewed for this release (2026-10-04). -->
-# MystTiq v1.0.0.2 Checkpoint: Unique Player Names
+<!-- MystTiq v1.0.0.3: file reviewed for this release (2026-10-05). -->
+# MystTiq v1.0.0.3 Checkpoint: PalDefender on the MODs Page, Drag and Drop Fixed
 
-You asked whether player names could be made unique so duplicates can't be used, and chose case-insensitive matching.
-This version builds on v1.0.0.1, which hasn't been pushed yet either.
+You reported that PalDefender doesn't show on the MODs page, and that dragging a ZIP onto the MODs page didn't install it.
 
-## What it does
+## What was wrong on your server
 
-- **Each name belongs to one account:** the first account seen using it, or the account you reserve it for. Upper and
-  lower case count as the same name (`Wade` = `wade` = `WADE`). Spaces at the ends and doubled spaces are ignored too.
-  Look-alike characters (`W4de`, a Cyrillic "а") still count as different names, as you chose.
-- **A player who joins with someone else's name** is kicked within one poll (about 5 seconds) and told the name is taken.
-  You get a Warning notification and an activity entry, and the Players card lists them under "Turned away recently".
-  You can switch the kick off and only be told.
-- **Your existing players keep their names.** The first time v1.0.0.2 runs, each name in the player list goes to the
-  account that used it first. On this machine that gives Wade, WadeeRROR to Wade's account and Melly, M3llyM to Melly's.
-  There are no conflicts.
-- **Players > Unique player names** (admins): on/off, kick or report only, reserve a name for a Steam ID, block a name
-  for everyone (leave the Steam ID empty), release a name, and save.
+- **PalDefender and UE4SS weren't loading at all.** Their loaders had been renamed by hand to `d3d9.dll.disabled-test`
+  and `dwmapi.dll.disabled-test`, most likely during the 2026-10-01 stuck-server troubleshooting. PalDefender's last log
+  was 2026-10-01 09:40. Since then Give Item, kits and teleports wouldn't have worked, and none of your UE4SS MODs loaded.
+- With your go-ahead, I renamed both back with the server stopped. An older July `dwmapi.dll.myst-disabled` sits next to
+  them; I left it alone.
+- You have PalDefender 1.9.2. 1.9.3 came out on 2026-10-03.
 
-## Fixed on the way
+## What's new
 
-- **Save buttons stuck greyed out.** While checking the new card live, **Save names** and **Save Whitelist** were greyed out
-  and did nothing. That has been the case for a while, not just in this version: when MystTiq connected while busy, every admin-only button was
-  disabled and only some were enabled again afterwards. Now all of them are. The harness reproduces it and fails without
-  the fix.
+- **NATIVE MODs on the MODs page:** PalDefender and the UE4SS loader, with their version, whether they loaded since the
+  server started, and an on/off switch. Switching off renames the loader to `*.mysttiq-disabled`. Switching on restores
+  that copy first, otherwise the newest switched-off copy, which handles your hand-renamed files and never picks the
+  July one.
+- If the UE4SS loader is off, every enabled UE4SS MOD is marked "UE4SS loader is off" instead of looking fine.
+- Disable All, Enable All and the stuck-start tests include them, so "Test without MODs" now also leaves PalDefender
+  and UE4SS out. That's the same test that was done by hand on 2026-10-01.
+- Delete, rollback and repair don't apply to them. Dropping PalDefender's ZIP explains where its files go, rather than
+  installing it as a UE4SS folder that would never load.
 
-## Limits
+## Drag and drop
 
-- Palworld only reports a name once the player is in the world, so the turned-away player already has a character with
-  that name. Delete it on Players and they can make one with another name.
-- Like the whitelist and the identity guard, names are only checked while MystTiq is polling the server (the desktop is
-  open, also from the tray, or the service runs).
+The drop box had no background. The app only registers a drop where something is painted, so it worked only right on
+the button or the caption under it. Drops anywhere else went to the card behind it. Now the whole box takes the drop.
+The test harness drops a real ZIP on the box's empty corner. It failed before the fix and passes now.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.0.0.2-Logic.ps1 -RunBuild`: 263 / 263 passed. The 4 Linux VM checks were skipped because 192.168.1.122 could not be reached. Every v1.0.0.1 check is carried, and the frozen v1.0.0.1 gate passes on its own checkpoint.
-- **Static gate:** 215 / 215. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-- **Unique-names smoke** `Test-v1.0.0.2-RouteSmoke.ps1`: 3 / 3. On first use the known players own their names (the earlier account wins, case ignored); a saved list is made consistent; it survives a restart.
-- **Logic harness:** the unique-names scenario passes. **ArtworkHarness:** 758 checks pass, including the card, German text, and Save buttons re-enabled after a busy sign-in (this check fails without the fix).
-- **Live, on this machine's real data:** the published v1.0.0.2 desktop showed the card with M3llyM, Melly → Melly's account and Wade, WadeeRROR → Wade's. I reserved a test blocked name ("zz Test Block") and saved it (the file showed 5 names), then released it and saved again (back to the 4). Before the fix, Save names did nothing.
-- **Not verified live:** a second Steam account joining with a taken name. That needs a second player.
+- **Full gate** `scripts\Test-v1.0.0.3-Logic.ps1 -RunBuild`: 269 / 269 passed. The 4 Linux VM checks were skipped because 192.168.1.122 could not be reached. Every v1.0.0.2 check is carried, and the frozen v1.0.0.2 gate passes on its own checkpoint.
+- **Static gate:** 220 / 220. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **NATIVE MOD smoke** `Test-v1.0.0.3-RouteSmoke.ps1`: 4 / 4. It covers your layout: both loaders renamed by hand, the July copy left alone, MystTiq's own copy restored first, disable/enable all, and delete and ZIP install refused.
+- **Logic harness:** the NATIVE MOD scenario passes. **ArtworkHarness:** 759 checks pass, including a ZIP dropped on the empty corner of the drop box. That check failed before the fix.
+- **Live, read-only on your data:** the published v1.0.0.3 MOD Dashboard and MOD Library list PalDefender (v1.9.2, `Win64\PalDefender.dll`) and the UE4SS loader as enabled NATIVE MODs.
+- **Not verified live:** a real drag from Explorer (it would install into your server), and PalDefender loading on the next server start. Both need you.
+- **Tray Exit, live (yours):** after Exit, no MystTiq process of yours was left. The `mysttiq-server.exe` you saw was the gate's own test server (parent: the gate's PowerShell; config under `artifacts\runtime-smoke`).
 
 ## For you
 
-- **Live check:** start the main server through v1.0.0.2, open Players > Unique player names and check the list. A second
-  Steam account joining as `wade` would be turned away.
-- **Still open from v1.0.0.1:** apply **Like double-click** on Server > Launcher for the main server and save, then have
-  a player join.
-- **Pushing:** neither v1.0.0.1 nor v1.0.0.2 has been pushed or tagged. Say when.
+- **Start the main server once** and check the MODs page: PalDefender and UE4SS-Loader should be NATIVE and "Healthy"
+  (loaded). If the server hangs on start, the Dashboard's stuck-start test will now include them.
+- **Try dragging a MOD ZIP** onto the install box from Explorer. Don't run MystTiq with "Run as administrator": Windows
+  blocks drag and drop from a normal Explorer window into an elevated one.
+- **Queued for v1.0.1.0** (roadmap): an Update button for every Update Center component, greyed out where the
+  component updates itself. PalDefender's would bring it to 1.9.3.
+- **Pushing:** v1.0.0.3 hasn't been pushed. Say when.

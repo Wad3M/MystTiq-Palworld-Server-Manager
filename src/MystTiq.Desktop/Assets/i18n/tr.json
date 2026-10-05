@@ -3729,5 +3729,21 @@
   "msg.player_name_taken_character": "Karakteri ({0}) bu adı zaten aldı; başka bir adla yenisini oluşturabilmesi için Oyuncular bölümünde silin.",
   "msg.name_owner_nobody": "hiç kimse (engelli ad)",
   "msg.name_seed_shared": "\"{0}\" adını {1} ve {2} kullanıyor.",
-  "msg.name_seed_owner": "İlk görülen {0} hesabına ait; {1} bu adla geri çevrilir."
+  "msg.name_seed_owner": "İlk görülen {0} hesabına ait; {1} bu adla geri çevrilir.",
+  "msg.native_paldefender_zip": "Bu PalDefender’dır ve mod klasörü olarak kurulmaz: sunucu durmuşken sürümündeki PalDefender.dll ve d3d9.dll dosyalarını sunucunun Pal\\Binaries\\Win64 klasörüne koyun. Ardından MOD sayfasında NATIVE mod olarak görünür.",
+  "msg.native_refusal": "NATIVE bir mod (PalDefender, UE4SS yükleyicisi) burada yalnızca açılıp kapatılabilir. Kaldırmak veya değiştirmek için sunucuyu durdurun ve Pal\\Binaries\\Win64 içindeki dosyalarını değiştirin.",
+  "msg.only_pak_ue4ss_native_managed": "Yalnızca PAK, UE4SS ve NATIVE türündeki modlar yönetilir.",
+  "msg.native_config_missing_paldefender": "d3d9.dll mevcut, ancak d3d9_config.json PalDefender.dll dosyasını listelemiyor, bu yüzden yüklenmiyor. load_dlls listesine \"PalDefender.dll\" ekleyin.",
+  "msg.native_paldefender_dll_off": "PalDefender.dll dosyasının kendisi kapalı (adı değiştirilmiş); adını yeniden PalDefender.dll yapın.",
+  "msg.native_paldefender_no_loader": "PalDefender.dll mevcut, ancak onu yükleyen bir şey yok: sürümündeki d3d9.dll yanında olmalı.",
+  "msg.native_ue4ss_loader_missing": "UE4SS kurulu, ancak yükleyicisi (dwmapi.dll) eksik, bu yüzden hiçbir UE4SS modu yüklenmiyor. UE4SS’yi yeniden kurun.",
+  "msg.native_no_disabled_loader": "{0} için geri yüklenecek kapalı bir yükleyici yok.",
+  "msg.native_switched_off": "Kapalı: yükleyicisinin adı {0} olarak değiştirildi. Sunucu durmuşken açın.",
+  "msg.native_paldefender_game_warning": "PalDefender’ın kendi günlüğü bu oyun sürümü için güncellenmediğini söylüyor (\"{0}\"). Sunucu durmuşken GitHub sürümlerinden güncelleyin.",
+  "msg.native_loaded_by": "{0} tarafından yüklendi: günlüğü bu sunucu başladıktan sonra yazıldı.",
+  "msg.native_in_place_no_log": "{0} yerinde, ancak bu sunucu başladığından beri günlüğü yazılmadı.",
+  "msg.native_in_place_stopped": "{0} yerinde ve sunucu başladığında yükler; sunucu durmuş durumda.",
+  "msg.native_ue4ss_loader_off_mod": "UE4SS yükleyicisi kapalı, bu yüzden bu mod yüklenmiyor. Sunucu durmuşken UE4SS-Loader (NATIVE) açın.",
+  "msg.ue4ss_loader_is_off": "UE4SS yükleyicisi kapalı",
+  "msg.not_updated_for_game_version": "Bu oyun sürümü için güncellenmedi"
 }
