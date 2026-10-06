@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
@@ -34,6 +34,13 @@ public static class CrashAlertText
                     $"{e.Detail} " + (remaining > 0
                         ? $"MystTiq will try again ({remaining} attempt(s) left in this window)."
                         : "That was the last attempt in this window."),
+                    false);
+
+            // v1.0.2.0 (roadmap R-1): running but frozen; the restart follows (its outcome is its own event).
+            case SupervisorEventKind.FrozenDetected:
+                return new("Critical",
+                    $"{name}: server stopped responding, restarting (attempt {e.Attempt} of {e.MaximumAttempts})",
+                    $"{e.Detail} MystTiq is restarting it now (a frozen server does not save on the way out, so the world is as of its last save)." + Describe(analysis),
                     false);
 
             // v0.7.110.0: automatic recovery had given up and pinned a "server is DOWN" notice; the
@@ -164,6 +171,10 @@ public sealed class CrashAlertObserver : ISupervisorObserver
             // Muted or switched off: no notification, but the Activity log still records what happened.
             activity?.Record("Information", "Alerts", "Crash alert not sent (muted or switched off)", alert.Title);
         }
+
+        // v1.0.2.0 (roadmap R-1): a frozen-server restart is always in the Activity log, whether or not the alert is sent.
+        if (supervisorEvent.Kind == SupervisorEventKind.FrozenDetected)
+            activity?.Record("Warning", "Recovery", "Frozen server restarted", $"{alert.Title}. {supervisorEvent.Detail}");
 
         if (supervisorEvent.Kind == SupervisorEventKind.ManualRecovery)
         {

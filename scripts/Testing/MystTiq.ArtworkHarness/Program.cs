@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1499,6 +1499,45 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
             "A release whose checksum list does not name the download is refused; binary-mode lines (*name) are read");
     }
     finally { try { Directory.Delete(updateRoot, true); } catch { } }
+}
+// v1.0.2.0 (roadmap R-2, alert delivery proof): a switched-on outside channel with no proven delivery is flagged on the
+// Dashboard and listed in Alert Center with each channel's state and the latest sends.
+{
+    var health = new NotificationDeliveryHealthDto
+    {
+        WindowDays = 7, AnyFlagged = true, Summary = "Email, Webhook: no proven delivery in the last 7 days. Open Alert Center.",
+        Channels =
+        [
+            new() { Channel = "Discord", Enabled = true, State = "Delivered", Detail = "Last delivered 2026-10-05 12:00 UTC." },
+            new() { Channel = "Email", Enabled = true, State = "Failing", Flagged = true, Detail = "The last send failed: Mailbox unavailable" },
+            new() { Channel = "Webhook", Enabled = true, State = "NotProven", Flagged = true, Detail = "Nothing has been delivered through this channel yet. Send a test to prove it works." },
+        ],
+        Recent = [new() { AtUtc = DateTimeOffset.UtcNow, Channel = "Email", Title = "Clone: server stopped responding", Success = false, Detail = "Mailbox unavailable", Attempts = 2 }],
+    };
+    typeof(MainWindowViewModel).GetProperty("DeliveryHealth")!.SetValue(vm, health);
+    selectedPage.SetValue(vm, NavigationPage.Dashboard);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var banner = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "DeliveryWarningBanner");
+    var open = banner?.GetVisualDescendants().OfType<Button>().FirstOrDefault();
+    Check(banner is { IsEffectivelyVisible: true } && open is not null && open.Classes.Contains(ButtonIntents.Open),
+        "The Dashboard warns when a switched-on channel has no proven delivery, with a purple Open Alert Center");
+    open!.Command!.Execute(open.CommandParameter);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var card = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "DeliveryHealthCard");
+    var kinds = card?.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("tag") && b.IsEffectivelyVisible)
+        .Select(b => $"{StatusTag.GetStatus(b)}={StatusTags.All.Single(b.Classes.Contains)}").ToList() ?? [];
+    Check(vm.SelectedPage == NavigationPage.AlertCenter && card is { IsEffectivelyVisible: true } &&
+          kinds.Contains("Delivered=ok") && kinds.Contains("Failing=fail") && kinds.Contains("Not proven=warn") && kinds.Contains("Failed=fail"),
+        $"Open Alert Center lands on the Delivery card: Delivered green, Failing red, Not proven amber, and the failed send [{string.Join(", ", kinds)}]");
+    typeof(MainWindowViewModel).GetProperty("DeliveryHealth")!.SetValue(vm, new NotificationDeliveryHealthDto { Summary = "Every switched-on channel delivered in the last 7 days." });
+    selectedPage.SetValue(vm, NavigationPage.Dashboard);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    Check(banner is { IsEffectivelyVisible: false }, "With every channel delivering, the Dashboard shows no warning");
+    Localizer.Instance.SetLanguage("de");
+    Check(Localizer.T("Email, Webhook: no proven delivery in the last 7 days. Open Alert Center.").StartsWith("Email, Webhook:", StringComparison.Ordinal) &&
+          Localizer.T("Email, Webhook: no proven delivery in the last 7 days. Open Alert Center.") != "Email, Webhook: no proven delivery in the last 7 days. Open Alert Center." &&
+          Localizer.T("Not proven") != "Not proven", "German: the delivery warning and states are translated, the channel names kept");
+    Localizer.Instance.SetLanguage("en");
 }
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
 // Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.

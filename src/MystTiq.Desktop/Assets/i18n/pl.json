@@ -3809,5 +3809,20 @@
   "msg.update_stop_for_paldefender": "Zatrzymaj PalServer przed aktualizacją PalDefender; jego pliki są używane, gdy działa.",
   "msg.update_save_tools_newest": "Palworld Save Tools {0} to już najnowsza wersja.",
   "msg.update_save_tools_updated": "Palworld Save Tools zaktualizowano z {0} do {1}.",
-  "msg.update_save_tools_not_pip": "Palworld Save Tools nie zostało zainstalowane przez pip, więc pip nie może go zaktualizować."
+  "msg.update_save_tools_not_pip": "Palworld Save Tools nie zostało zainstalowane przez pip, więc pip nie może go zaktualizować.",
+  "ui.delivery": "Dostarczanie",
+  "ui.recent_sends": "Ostatnie wysyłki",
+  "msg.delivery_delivered": "Dostarczono",
+  "msg.delivery_failing": "Niepowodzenie",
+  "msg.delivery_not_proven": "Niepotwierdzone",
+  "msg.delivery_switched_off": "Wyłączone.",
+  "msg.delivery_last_delivered": "Ostatnie dostarczenie {0} UTC.",
+  "msg.delivery_nothing_yet": "Przez ten kanał nic jeszcze nie dostarczono. Wyślij test, aby sprawdzić, czy działa.",
+  "msg.delivery_none_in_window": "W ciągu ostatnich {0} dni nic nie dostarczono (ostatnio {1} UTC). Wyślij test, aby sprawdzić, czy nadal działa.",
+  "msg.delivery_all_off": "Żaden kanał zewnętrzny nie jest włączony; powiadomienia pojawiają się tylko w MystTiq.",
+  "msg.delivery_all_delivered": "Każdy włączony kanał dostarczał w ciągu ostatnich {0} dni.",
+  "msg.delivery_flagged": "{0}: brak potwierdzonego dostarczenia w ciągu ostatnich {1} dni. Otwórz Centrum alertów.",
+  "msg.frozen_alert_title": "{0}: serwer przestał odpowiadać, ponowne uruchamianie (próba {1} z {2})",
+  "msg.frozen_activity": "Zawieszony serwer uruchomiony ponownie",
+  "dashboard.openAlertCenter": "Otwórz Centrum alertów"
 }

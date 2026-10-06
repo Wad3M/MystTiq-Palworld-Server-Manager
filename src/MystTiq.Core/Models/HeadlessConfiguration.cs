@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 namespace MystTiq.Core.Models;
 
 public sealed record HeadlessApiAuthenticationConfiguration(
@@ -23,7 +23,10 @@ public sealed record HeadlessLifecycleConfiguration(
     int ServicePollSeconds,
     int RecoveryBackoffSeconds,
     int MaximumRecoveryAttempts,
-    int RecoveryWindowSeconds);
+    int RecoveryWindowSeconds,
+    // v1.0.2.0 (roadmap R-1): seconds a running server may go without answering its REST API before it is
+    // restarted as frozen. Absent: 180; 0: never; otherwise at least 60.
+    int? UnresponsiveRestartSeconds = null);
 
 // Kept for backward-compatible schema-v1/v2 migration only -- superseded by
 // HeadlessServerProfileConfiguration (schema v3, multi-server fleet).

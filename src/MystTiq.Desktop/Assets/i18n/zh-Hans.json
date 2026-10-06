@@ -3809,5 +3809,20 @@
   "msg.update_stop_for_paldefender": "更新 PalDefender 前请先停止 PalServer；运行期间其文件正在使用中。",
   "msg.update_save_tools_newest": "Palworld Save Tools {0} 已是最新版本。",
   "msg.update_save_tools_updated": "Palworld Save Tools 已从 {0} 更新到 {1}。",
-  "msg.update_save_tools_not_pip": "Palworld Save Tools 不是通过 pip 安装的，因此 pip 无法更新它。"
+  "msg.update_save_tools_not_pip": "Palworld Save Tools 不是通过 pip 安装的，因此 pip 无法更新它。",
+  "ui.delivery": "送达情况",
+  "ui.recent_sends": "最近发送",
+  "msg.delivery_delivered": "已送达",
+  "msg.delivery_failing": "失败中",
+  "msg.delivery_not_proven": "未验证",
+  "msg.delivery_switched_off": "已关闭。",
+  "msg.delivery_last_delivered": "最后送达时间 {0} UTC。",
+  "msg.delivery_nothing_yet": "此渠道尚未成功送达任何消息。发送一条测试消息来验证它是否可用。",
+  "msg.delivery_none_in_window": "过去 {0} 天内没有成功送达（最后送达时间 {1} UTC）。发送一条测试消息来验证它是否仍可用。",
+  "msg.delivery_all_off": "没有开启任何外部渠道；通知只会显示在 MystTiq 中。",
+  "msg.delivery_all_delivered": "所有已开启的渠道在过去 {0} 天内都成功送达。",
+  "msg.delivery_flagged": "{0}：过去 {1} 天内没有确认送达。请打开警报中心。",
+  "msg.frozen_alert_title": "{0}：服务器停止响应，正在重启（第 {1} 次，共 {2} 次）",
+  "msg.frozen_activity": "已重启无响应的服务器",
+  "dashboard.openAlertCenter": "打开警报中心"
 }

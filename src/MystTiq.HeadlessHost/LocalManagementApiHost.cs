@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -121,7 +121,9 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds),
             TimeSpan.FromSeconds(configuration.Lifecycle.RecoveryBackoffSeconds),
             configuration.Lifecycle.MaximumRecoveryAttempts,
-            TimeSpan.FromSeconds(configuration.Lifecycle.RecoveryWindowSeconds));
+            TimeSpan.FromSeconds(configuration.Lifecycle.RecoveryWindowSeconds),
+            // v1.0.2.0 (roadmap R-1): frozen-server restarts (absent: the default limit; 0: off).
+            configuration.Lifecycle.UnresponsiveRestartSeconds is int unresponsive ? TimeSpan.FromSeconds(unresponsive) : null);
 
         // v0.8.17.0: the machine's own readings for the HOST tab; the same machine for every profile.
         var hostMonitor = new HeadlessHostMonitor();
@@ -185,7 +187,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 notifications, crashAndSaveTools,
                 async token => (await modManagement.GetInventoryAsync(token)).Mods.SelectMany(m => new[] { m.Name, m.Package }).ToArray(),
                 alertCenter.GetRules, activity, recoveryState);
-            var crashRecovery = new HeadlessFleetCrashRecoveryService(lifecycle, crashRecoveryOptions, serverConfig.LaunchArguments, crashAlerts, recoveryState);
+            var crashRecovery = new HeadlessFleetCrashRecoveryService(lifecycle, crashRecoveryOptions, serverConfig.LaunchArguments, crashAlerts, recoveryState,
+                new PalworldRestResponsivenessProbe(paths));
             var palworldConfiguration = new PalworldSettingsConfigurationService(paths);
             // v0.8.18.0: bandwidth (Engine.ini network limits, written before every start by the lifecycle itself).
             var networkPolicy = new HeadlessNetworkPolicyService(paths, lifecycle, palworldConfiguration, activity);
@@ -662,6 +665,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         // v0.8.4.0: pause outside delivery (Discord/email/webhooks) while the Notifications page keeps everything, and a
         // test notification that goes through the normal path, so an admin can check the channels (and the pause).
         routes.MapGet("/notifications/delivery", () => Results.Ok(p.NotificationRouting.GetDeliveryState()));
+        // v1.0.2.0 (roadmap R-2): every outside send with its result, and which switched-on channel has no proven delivery.
+        routes.MapGet("/notifications/delivery-health", () => Results.Ok(p.NotificationRouting.GetDeliveryHealth()));
         routes.MapPost("/notifications/delivery/pause", (NotificationDeliveryPauseRequest request) =>
             Results.Ok(p.NotificationRouting.PauseDelivery(request.Minutes))).RequireRole(MystTiqRole.Admin, p.Id);
         routes.MapPost("/notifications/test", () =>
@@ -673,7 +678,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 ? "Created on the Notifications page only: outside delivery is paused."
                 : state.ExternalChannels.Count == 0
                     ? "Created on the Notifications page. No outside channel is switched on."
-                    : $"Created, and sent to {string.Join(", ", state.ExternalChannels)} in the background. A failed send is written to the Activity log.";
+                    : $"Created, and sent to {string.Join(", ", state.ExternalChannels)} in the background. Each send's result appears under Delivery in Alert Center.";
             return Results.Ok(new { message = outcome, delivery = state });
         }).RequireRole(MystTiqRole.Admin, p.Id);
 

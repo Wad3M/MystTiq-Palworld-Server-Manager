@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.1.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -345,6 +345,14 @@
                warning banner here rather than something that could block the wizard beforehand. -->
           <Border Classes="statuscard" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" Padding="10,7" IsVisible="{Binding ActiveTab.HasDuplicateInstallWarning}">
             <TextBlock Text="{services:TrText ActiveTab.DuplicateInstallWarning}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="12"/>
+          </Border>
+
+          <!-- v1.0.2.0 (roadmap R-2): a switched-on outside channel with no proven delivery in 7 days, or whose last send failed. -->
+          <Border x:Name="DeliveryWarningBanner" Classes="statuscard" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" Padding="10,7" IsVisible="{Binding DeliveryHealth.AnyFlagged}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <TextBlock Text="{services:TrText DeliveryHealth.Summary}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Classes="open" Content="{services:Tr dashboard.openAlertCenter}" Command="{Binding NavigateCommand}" CommandParameter="AlertCenter"/>
+            </Grid>
           </Border>
 
           <Border Classes="card accentHome" Padding="7,5" IsVisible="{Binding ManagementApiConnected}">
@@ -3226,6 +3234,38 @@
                         ToolTip.Tip="{services:Tr ui.creates_a_test_notification_through_the_normal_p_b060d4}"/>
               </WrapPanel>
               <TextBlock Text="{services:Tr ui.unlike_mute_alerts_nothing_is_silenced_in_mystti_3218bd}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+          <!-- v1.0.2.0 (roadmap R-2, alert delivery proof): every send to Discord, email or a webhook is recorded with its
+               result; a switched-on channel with no proven delivery in 7 days, or whose last send failed, is flagged. -->
+          <Border x:Name="DeliveryHealthCard" Classes="card accentSystem">
+            <StackPanel Spacing="8">
+              <TextBlock Text="{services:Tr ui.delivery}" FontSize="17" FontWeight="SemiBold"/>
+              <TextBlock Text="{services:TrText DeliveryHealth.Summary}" TextWrapping="Wrap"/>
+              <ItemsControl ItemsSource="{Binding DeliveryHealth.Channels}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:NotificationChannelHealthDto">
+                    <Grid ColumnDefinitions="110,110,*" ColumnSpacing="10" Margin="0,2">
+                      <TextBlock Text="{services:TrText Channel}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                      <Border Grid.Column="1" Classes="tag" HorizontalAlignment="Left" services:StatusTag.Status="{Binding StateText}"><TextBlock Text="{services:TrText StateText}"/></Border>
+                      <TextBlock Grid.Column="2" Text="{services:TrText Detail}" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{services:Tr ui.recent_sends}" FontWeight="SemiBold" IsVisible="{Binding DeliveryHealth.HasRecent}"/>
+              <ItemsControl ItemsSource="{Binding DeliveryHealth.Recent}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:NotificationDeliveryRecordDto">
+                    <Grid ColumnDefinitions="140,90,90,*" ColumnSpacing="10" Margin="0,1">
+                      <TextBlock Text="{Binding WhenVerbatim}" Classes="muted" FontSize="11" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="1" Text="{services:TrText Channel}" FontSize="11" VerticalAlignment="Center"/>
+                      <Border Grid.Column="2" Classes="tag" HorizontalAlignment="Left" services:StatusTag.Status="{Binding ResultText}"><TextBlock Text="{services:TrText ResultText}"/></Border>
+                      <StackPanel Grid.Column="3"><TextBlock Text="{services:TrText Title}" FontSize="11" TextTrimming="CharacterEllipsis"/><TextBlock Text="{services:TrText Detail}" Classes="muted" FontSize="10" TextTrimming="CharacterEllipsis"/></StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </StackPanel>
           </Border>
           <!-- v0.7.5.0 (no-scroll pass 1): Discord Bot and Anti-Cheat are large, independent

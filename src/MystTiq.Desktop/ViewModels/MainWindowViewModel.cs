@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -4925,6 +4925,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ApplyServiceStatus(snapshot.Service);
             // v1.0.0.1: the addresses line (at most once a minute; the service keeps the public address for an hour).
             _ = RefreshHostAddressesAsync(profile, requestTab, force: false);
+            // v1.0.2.0 (roadmap R-2): the Dashboard's warning when a switched-on channel has no proven delivery.
+            _ = RefreshDeliveryHealthAsync(profile, requestTab, force: false);
             ApplyPlayers(snapshot.Players);
             ApplyMetrics(snapshot.Metrics);
             ApplyLogs(snapshot.LogTail);
@@ -6518,6 +6520,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             AlertRules = await _api.GetAlertRulesAsync(SelectedProfile, BearerToken);
             DiskSpacePrediction = await _api.GetDiskSpacePredictionAsync(SelectedProfile, BearerToken);
             NotificationDelivery = await _api.GetNotificationDeliveryAsync(SelectedProfile, BearerToken);
+            await RefreshDeliveryHealthAsync(SelectedProfile, null, force: true);
             AlertCenterState = "Alert rules and disk-space prediction loaded.";
         }
         catch (Exception ex) { AlertCenterState = ex.Message; }
@@ -6575,6 +6578,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex) { AlertCenterState = ex.Message; }
         finally { IsBusy = false; }
+        // v1.0.2.0 (roadmap R-2): the sends run in the background (each tries twice, 10 s apiece); show their results.
+        if (SelectedProfile is { } profile)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            await RefreshDeliveryHealthAsync(profile, null, force: true);
+        }
     }
 
     private async Task RefreshDiscordBotConfigAsync()

@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -517,7 +517,8 @@ public sealed class HeadlessMonitoringService
             .ToList();
     }
 
-    private static bool? ReadBooleanOption(string text, string key)
+    // v1.0.2.0: shared with PalworldRestResponsivenessProbe.
+    internal static bool? ReadBooleanOption(string text, string key)
     {
         var match = Regex.Match(
             text,
@@ -527,7 +528,7 @@ public sealed class HeadlessMonitoringService
         return match.Success ? bool.Parse(match.Groups[1].Value) : null;
     }
 
-    private static int? ReadIntegerOption(string text, string key)
+    internal static int? ReadIntegerOption(string text, string key)
     {
         var match = Regex.Match(
             text,
@@ -540,7 +541,7 @@ public sealed class HeadlessMonitoringService
             : null;
     }
 
-    private static string? ReadQuotedOption(string text, string key)
+    internal static string? ReadQuotedOption(string text, string key)
     {
         var match = Regex.Match(
             text,

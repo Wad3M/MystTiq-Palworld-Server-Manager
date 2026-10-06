@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using Avalonia;
 using Avalonia.Controls;
 
@@ -28,9 +28,9 @@ public static class StatusTags
 
     // States that are neither good nor bad (checked first: "Active / Unverified" must not read as "active").
     private static readonly string[] InfoWords = ["active / unverified", "starting", "transitioning", "checking", "connecting…", "connecting"];
-    private static readonly string[] OkWords = ["ready", "pass", "passed", "ok", "up to date", "verified", "healthy", "online", "installed", "present", "running", "confirmed loaded", "confirmed active", "enabled", "done", "success", "succeeded", "current", "active", "connected"];
-    private static readonly string[] WarnWords = ["attention", "warn", "warning", "update available", "unverified", "degraded", "needs review", "stale", "partial", "pending", "outdated", "behind", "check manually", "needs bearer token"];
-    private static readonly string[] FailWords = ["fail", "failed", "missing", "error", "critical", "broken", "unreadable", "misconfigured", "not found", "crashed", "crash detected", "blocked", "denied", "not loaded", "locked", "incompatible api version", "invalid profile"];
+    private static readonly string[] OkWords = ["ready", "pass", "passed", "ok", "up to date", "verified", "healthy", "online", "installed", "present", "running", "confirmed loaded", "confirmed active", "enabled", "done", "success", "succeeded", "current", "active", "connected", "delivered"];
+    private static readonly string[] WarnWords = ["attention", "warn", "warning", "update available", "unverified", "degraded", "needs review", "stale", "partial", "pending", "outdated", "behind", "check manually", "needs bearer token", "not proven"];
+    private static readonly string[] FailWords = ["fail", "failed", "missing", "error", "critical", "broken", "unreadable", "misconfigured", "not found", "crashed", "crash detected", "blocked", "denied", "not loaded", "locked", "incompatible api version", "invalid profile", "failing"];
     private static readonly string[] OffWords = ["disabled", "optional", "self-updating", "n/a", "not applicable", "unknown", "unavailable", "skipped", "off", "stopped", "not installed", "not connected", "signed out", "notconfigured", "not configured"];
 
     /// <summary>The tag kind for an English status (case and surrounding spaces ignored; exact phrases before first words).</summary>

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.1.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- v0.8.2.0: a stand-in for PalServer.exe in route smokes. The process name must be "PalServer" (the lifecycle
        service matches processes by name and path), so the assembly is named PalServer. Test use only. -->

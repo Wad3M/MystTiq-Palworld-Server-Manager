@@ -3809,5 +3809,20 @@
   "msg.update_stop_for_paldefender": "Stoppe PalServer, bevor du PalDefender aktualisierst; seine Dateien sind während des Betriebs in Benutzung.",
   "msg.update_save_tools_newest": "Palworld Save Tools {0} ist bereits die neueste Version.",
   "msg.update_save_tools_updated": "Palworld Save Tools wurde von {0} auf {1} aktualisiert.",
-  "msg.update_save_tools_not_pip": "Palworld Save Tools wurde nicht mit pip installiert, daher kann pip es nicht aktualisieren."
+  "msg.update_save_tools_not_pip": "Palworld Save Tools wurde nicht mit pip installiert, daher kann pip es nicht aktualisieren.",
+  "ui.delivery": "Zustellung",
+  "ui.recent_sends": "Letzte Sendungen",
+  "msg.delivery_delivered": "Zugestellt",
+  "msg.delivery_failing": "Fehlerhaft",
+  "msg.delivery_not_proven": "Nicht bewiesen",
+  "msg.delivery_switched_off": "Ausgeschaltet.",
+  "msg.delivery_last_delivered": "Zuletzt zugestellt {0} UTC.",
+  "msg.delivery_nothing_yet": "Über diesen Kanal wurde noch nichts zugestellt. Sende einen Test, um zu prüfen, ob er funktioniert.",
+  "msg.delivery_none_in_window": "In den letzten {0} Tagen wurde nichts zugestellt (zuletzt {1} UTC). Sende einen Test, um zu prüfen, ob er noch funktioniert.",
+  "msg.delivery_all_off": "Kein externer Kanal ist eingeschaltet; Benachrichtigungen erscheinen nur in MystTiq.",
+  "msg.delivery_all_delivered": "Jeder eingeschaltete Kanal hat in den letzten {0} Tagen zugestellt.",
+  "msg.delivery_flagged": "{0}: keine nachgewiesene Zustellung in den letzten {1} Tagen. Öffne die Alarmzentrale.",
+  "msg.frozen_alert_title": "{0}: Server antwortet nicht mehr, Neustart (Versuch {1} von {2})",
+  "msg.frozen_activity": "Eingefrorener Server neu gestartet",
+  "dashboard.openAlertCenter": "Alarmzentrale öffnen"
 }

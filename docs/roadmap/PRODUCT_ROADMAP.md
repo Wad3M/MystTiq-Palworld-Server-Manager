@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.1.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
 # Product roadmap
 
-Updated 2026-10-05. **Current version: v1.0.1.0. Accepted baseline: v1.0.0.0. Next milestone: v1.0.2.0 (unattended reliability).**
+Updated 2026-10-05. **Current version: v1.0.2.0. Accepted baseline: v1.0.0.0. Next milestone: v1.0.3.0 (packaging and read-only access).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -32,11 +32,13 @@ This is the active plan. Completed work and the per-version detail behind every 
 
 Exit gate: R-1 to R-3 are `Done` on the supported matrix (Windows and the Linux VM), and E-1 is unaffected.
 
+Released 2026-10-05 as v1.0.2.0 with R-1 `Done`. R-2 and R-3 are `Built` and carried into the v1.0.3.0 exit gate until their live evidence is recorded (an owner-configured Discord and email channel; the Linux VM reachable).
+
 | ID | Item | Acceptance | Evidence required | Status |
 | --- | --- | --- | --- | --- |
-| R-1 | Frozen-server watchdog | A server that is running but stops answering its health probe is restarted within a set time. The restart is logged and raises an alert. A healthy server is never restarted. | Live: freeze the clone (suspend the process), see the restart, the log line and the alert. Harness: healthy server untouched. | Planned |
-| R-2 | Alert delivery proof | Each send is recorded with its result. A channel with no successful delivery in a set window is flagged on the Dashboard and in Alert Center. | Harness for records and flags. Live: one real send per channel (Discord, email) confirmed arrived. | Planned |
-| R-3 | Linux headless service under systemd | The headless service runs without a desktop, starts at boot, restarts on failure, and stops cleanly. | Live on the Linux VM, clone server only: reboot, crash, stop. Production unit untouched. | Planned |
+| R-1 | Frozen-server watchdog | A server that is running but stops answering its health probe is restarted within a set time. The restart is logged and raises an alert. A healthy server is never restarted. | Live: freeze the clone (suspend the process), see the restart, the log line and the alert. Harness: healthy server untouched. Recorded 2026-10-05 (v1.0.2.0): clone frozen, restarted 84 s later, alert, Activity entry and service log line; harness covers healthy, REST off and give-up. | Done |
+| R-2 | Alert delivery proof | Each send is recorded with its result. A channel with no successful delivery in a set window is flagged on the Dashboard and in Alert Center. | Harness for records and flags. Live: one real send per channel (Discord, email) confirmed arrived. Harness recorded (v1.0.2.0). Live owed: no Discord or email channel is set up yet; owner to configure, then Send test notification. | Built |
+| R-3 | Linux headless service under systemd | The headless service runs without a desktop, starts at boot, restarts on failure, and stops cleanly. | Live on the Linux VM, clone server only: reboot, crash, stop. Production unit untouched. `scripts/Test-v1.0.2.0-LinuxSystemd.ps1` built (v1.0.2.0); the VM did not answer on 2026-10-05, so the live run is owed. | Built |
 
 ## v1.0.3.0 — Packaging and read-only access
 

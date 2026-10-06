@@ -1,55 +1,64 @@
-<!-- MystTiq v1.0.1.0: file reviewed for this release (2026-10-05). -->
-# MystTiq v1.0.1.0 Checkpoint: Update, on Every Row
+<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
+# MystTiq v1.0.2.0 Checkpoint: Unattended Reliability
 
-You asked for an Update button on every Update Center row: greyed out where the component updates itself, but always
-there. Before this only pip had one, and PalDefender's row told you to swap its DLLs by hand.
+The first milestone of your new roadmap: R-1 frozen-server watchdog, R-2 alert delivery proof, R-3 the Linux service
+under systemd.
 
-## What each row's Update does
+## R-1: a frozen server is restarted — Done
 
-| Row | Update |
-|---|---|
-| MystTiq | Downloads the new release, checks it against the release's checksum list, unpacks it into a new folder beside this one and opens it. Exit from the tray and start the new one; settings and servers carry over. Greyed out when there's nothing newer. |
-| SteamCMD | Greyed out: it updates itself every time it runs. If it's missing, Update installs it. |
-| Palworld server | SteamCMD update (server stopped). |
-| UE4SS | Opens the UE4SS page with the newest release selected and the install previewed; you click Apply. |
-| PalDefender | Replaces `PalDefender.dll` and `d3d9.dll` from its newest release, with the server stopped. `d3d9_config.json` and the PalDefender folder are left alone, the old files are kept in a backup, and if you switched it off it stays off. |
-| pip, Save Tools | Upgraded with pip. |
-| Python, .NET, VC++, Build Tools, PlM/Oodle | Opens the official download page. Python stays on 3.10, because the save decoder is built for it. |
+A server that hung but kept running looked fine to MystTiq, because its game port stayed open. Now:
+- MystTiq asks each running server's REST API about every 30 seconds whether it still answers.
+- A server that has answered and then stays silent for 3 minutes is restarted. You get "server stopped responding,
+  restarting", then "server is back up", and an Activity entry.
+- It never touches a healthy server, or one with the REST API switched off.
+- The restart counts toward the same limit as crash restarts. When that limit is used up, MystTiq tells you once and
+  leaves the server alone.
+- The time is `lifecycle.unresponsiveRestartSeconds` in `mysttiq.json` (0 switches it off). Your config doesn't set it,
+  so it's 3 minutes.
 
-Greyed-out buttons say why right beside them, and every Update says what it does when you hover over it.
+## R-2: proof that alerts arrive — Built (needs you)
 
-## Fixed on the way
+- Every send to Discord, email or a webhook is now recorded with its result.
+- **Alert Center > Delivery** shows each channel as Delivered, Failing or Not proven (nothing delivered in 7 days),
+  with the latest sends.
+- The Dashboard warns when a switched-on channel is failing or not proven.
+- **Owed:** none of your servers has a Discord or email channel set up, so there's nothing real to send to yet.
 
-- The PlM/Oodle row never had its link. It was looked up as "PIM" (capital I), and the page it pointed to doesn't exist.
-  It now opens the decoder's project, which its install record names.
+## R-3: the Linux service under systemd — Built (needs the VM)
 
-## Signing
-
-Nothing in the code waits on it. The release workflow signs automatically once the SignPath variables are set in the
-repository, and until then it packages unsigned as before.
+- The unit already restarts on failure, starts at boot and stops cleanly.
+- `scripts\Test-v1.0.2.0-LinuxSystemd.ps1` now proves that on the Linux VM, using its own test unit: install, crash
+  (SIGKILL), reboot, stop and clean up. It checks your real unit is unchanged.
+- The gate runs it (without the reboot) whenever the VM answers. Today it didn't (192.168.1.122).
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.0.1.0-Logic.ps1 -RunBuild`: 289 / 289 passed. The 4 Linux VM checks were skipped because 192.168.1.122 could not be reached. Every v1.0.0.6 check is carried, and the frozen v1.0.0.6 gate passes on its own checkpoint.
-- **Static gate, after your roadmap rewrite:** 239 / 239. The roadmap check now reads your new structure (current version, the v1.0.2.0 to v1.0.5.0 plan, owner decisions). The v1.0.0.0 checks read the history file too. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-- **LogicHarness:** the PalDefender update scenario passes (the files it writes, a checked download, settings and backup kept, refusals that change nothing, and switched-off PalDefender staying off).
-- **ArtworkHarness:** 789 checks pass, including:
-  - every one of the 12 rows has Update, greyed out only for SteamCMD, an up-to-date MystTiq and what doesn't apply;
-  - the reasons and tips; UE4SS's Update landing on its page;
-  - MystTiq's download: unpacked beside the folder, a second time into "-2", and refused on a bad or missing checksum;
-  - German.
-- **Live, on your real PalDefender files (copied to a temp folder):** the real GitHub release updated the copy from
-  1.9.2 to 1.9.3. The version check passed, `d3d9_config.json` was unchanged and the old files went to a backup. Your
-  live server is still on 1.9.2.
-- **Live, published v1.0.1.0:** all 12 rows show Update. MystTiq ("newest") and SteamCMD ("updates itself") are greyed
-  out with the reason beside them. PalDefender shows Update available, 1.9.2 → 1.9.3. Clicking UE4SS's Update opened
-  the UE4SS page with 2281fa31 selected and the install previewed; nothing was applied.
-- **Every official page opens** (python.org, Microsoft, .NET, PyPI, GitHub). The old PlM/Oodle link was a 404.
+- **Full gate** `scripts\Test-v1.0.2.0-Logic.ps1 -RunBuild`: 293 / 293 passed. The 5 Linux VM checks (R-3's systemd check included) were skipped because 192.168.1.122 could not be reached. Every v1.0.1.0 check is carried, and the frozen v1.0.1.0 gate passes on its own checkpoint.
+- **Static gate:** 243 / 243. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **LogicHarness**, six new scenarios:
+  - the watchdog's rules (healthy never frozen; never-answered, REST off and not ready never judged; frozen after exactly the limit; a new process starts clean; 0 is off);
+  - the recovery loop: a frozen server restarted once with FrozenDetected then RecoverySucceeded, a give-up said once and left alone, a replaced process announced;
+  - REST off: never restarted;
+  - the probe against real sockets (a 401 counts as an answer; silence doesn't), the alert text and the mute rule;
+  - the delivery states (Delivered, Failing, Not proven, Off);
+  - real sends to an answering endpoint and a failing one, each recorded, kept across a restart, capped at 500.
+- **ArtworkHarness:** 793 checks pass, including the Dashboard warning, Open Alert Center landing on the Delivery card, the
+  tag colours and German.
+- **Live R-1 on your clone** (`second-local`, run by an isolated service on its own port; your live config and main
+  server not touched):
+  - frozen with NtSuspendProcess at 16:23:07, with a 60 s limit;
+  - the service logged "has not answered its REST API for 1 minute(s). Frozen-server restart attempt 1/5";
+  - a new process was ready 84 s after the freeze, and the frozen one was gone;
+  - the alerts "server stopped responding, restarting (attempt 1 of 5)" and "server is back up" were raised, and the
+    Activity log has "Frozen server restarted";
+  - no outside channel is set up anywhere on this machine, so nothing was sent out.
+- **Live, published v1.0.2.0:** Alert Center shows the new Delivery card (Webhook, Discord and Email all Off, "Switched off.").
 
 ## For you
 
-- **Update PalDefender:** your server has 1.9.2 and 1.9.3 is out (it fixes several crashes). Stop the server, then click
-  Update on the PalDefender row. I tested it on a copy of your files but did not touch your live server.
+- **R-2:** set up a Discord webhook and/or email in Alert Center, then press **Send test notification**. The Delivery
+  card shows whether it arrived. Tell me it did, and R-2 can be marked Done.
+- **R-3:** when the Linux VM is on, I can run the systemd test with the reboot (it reboots the VM).
 - **Pushed and tagged** with your go-ahead (push through v1.0.5.0).
-- **Publishing:** MystTiq's own Update only offers published releases. Your GitHub releases since v1.0.0.0 are still
-  drafts, so it won't offer them until you publish them.
+- **Next:** v1.0.3.0. P-1 Docker (Docker Desktop runs here) and W-1 the read-only browser view I can build and prove on the
+  clone. X-1 Xbox discovery needs your Xbox account in the clone's world.

@@ -3809,5 +3809,20 @@
   "msg.update_stop_for_paldefender": "Pare o PalServer antes de atualizar o PalDefender; os arquivos dele ficam em uso enquanto ele roda.",
   "msg.update_save_tools_newest": "O Palworld Save Tools {0} já é o mais recente.",
   "msg.update_save_tools_updated": "O Palworld Save Tools foi atualizado de {0} para {1}.",
-  "msg.update_save_tools_not_pip": "O Palworld Save Tools não foi instalado com o pip, então o pip não pode atualizá-lo."
+  "msg.update_save_tools_not_pip": "O Palworld Save Tools não foi instalado com o pip, então o pip não pode atualizá-lo.",
+  "ui.delivery": "Entrega",
+  "ui.recent_sends": "Envios recentes",
+  "msg.delivery_delivered": "Entregue",
+  "msg.delivery_failing": "Falhando",
+  "msg.delivery_not_proven": "Não comprovado",
+  "msg.delivery_switched_off": "Desativado.",
+  "msg.delivery_last_delivered": "Última entrega {0} UTC.",
+  "msg.delivery_nothing_yet": "Nada foi entregue por este canal ainda. Envie um teste para comprovar que funciona.",
+  "msg.delivery_none_in_window": "Nada foi entregue nos últimos {0} dias (última entrega {1} UTC). Envie um teste para comprovar que ainda funciona.",
+  "msg.delivery_all_off": "Nenhum canal externo está ativado; as notificações só aparecem no MystTiq.",
+  "msg.delivery_all_delivered": "Todos os canais ativados entregaram nos últimos {0} dias.",
+  "msg.delivery_flagged": "{0}: nenhuma entrega comprovada nos últimos {1} dias. Abra a Central de alertas.",
+  "msg.frozen_alert_title": "{0}: o servidor parou de responder, reiniciando (tentativa {1} de {2})",
+  "msg.frozen_activity": "Servidor congelado reiniciado",
+  "dashboard.openAlertCenter": "Abrir Central de alertas"
 }

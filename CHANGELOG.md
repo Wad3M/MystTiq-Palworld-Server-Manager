@@ -1,4 +1,18 @@
-<!-- MystTiq v1.0.1.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
+## v1.0.2.0 — Unattended Reliability
+
+- R-1 frozen-server watchdog: a running server whose REST API stops answering (after it has answered) for 3 minutes is
+  restarted, counted in the restart window, with a "stopped responding" alert and an Activity entry; never when the
+  REST API is off; a give-up is said once. `lifecycle.unresponsiveRestartSeconds` (0 off, at least 60). Proven live on
+  the clone (frozen with NtSuspendProcess, restarted 84 s later).
+- R-2 alert delivery proof: every Discord, email and webhook send is recorded with its result; Alert Center's Delivery
+  card shows each channel as Delivered, Failing or Not proven (7 days) with the latest sends; the Dashboard warns.
+- R-3 Linux service under systemd: a VM test (own unit, crash, reboot, stop, production unchanged), run by the gate when
+  the VM answers.
+- Tests: the v1.0.2.0 gate regenerated from v1.0.1.0 (every earlier check kept), six LogicHarness scenarios and four
+  ArtworkHarness checks; 15 new texts in all 12 languages.
+- Version advanced to 1.0.2.0.
+
 ## v1.0.1.0 — Update on Every Update Center Row
 
 - Update Center (asked 2026-10-05: an update option on every row, greyed out only where it updates itself): every row

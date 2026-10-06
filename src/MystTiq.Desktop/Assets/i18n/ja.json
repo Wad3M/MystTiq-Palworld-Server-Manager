@@ -3809,5 +3809,20 @@
   "msg.update_stop_for_paldefender": "PalDefender を更新する前に PalServer を停止してください。実行中はファイルが使用中です。",
   "msg.update_save_tools_newest": "Palworld Save Tools {0} はすでに最新です。",
   "msg.update_save_tools_updated": "Palworld Save Tools を {0} から {1} に更新しました。",
-  "msg.update_save_tools_not_pip": "Palworld Save Tools は pip でインストールされていないため、pip では更新できません。"
+  "msg.update_save_tools_not_pip": "Palworld Save Tools は pip でインストールされていないため、pip では更新できません。",
+  "ui.delivery": "配信",
+  "ui.recent_sends": "最近の送信",
+  "msg.delivery_delivered": "配信済み",
+  "msg.delivery_failing": "失敗中",
+  "msg.delivery_not_proven": "未確認",
+  "msg.delivery_switched_off": "オフです。",
+  "msg.delivery_last_delivered": "最終配信 {0} UTC。",
+  "msg.delivery_nothing_yet": "このチャンネルではまだ何も配信されていません。テストを送信して動作を確認してください。",
+  "msg.delivery_none_in_window": "過去 {0} 日間は何も配信されていません（最終配信 {1} UTC）。テストを送信してまだ動作するか確認してください。",
+  "msg.delivery_all_off": "外部チャンネルはオンになっていません。通知は MystTiq 内にのみ表示されます。",
+  "msg.delivery_all_delivered": "オンのチャンネルはすべて過去 {0} 日間に配信しました。",
+  "msg.delivery_flagged": "{0}：過去 {1} 日間に確認された配信がありません。アラートセンターを開いてください。",
+  "msg.frozen_alert_title": "{0}：サーバーが応答しなくなりました。再起動中（{2} 回中 {1} 回目）",
+  "msg.frozen_activity": "フリーズしたサーバーを再起動しました",
+  "dashboard.openAlertCenter": "アラートセンターを開く"
 }

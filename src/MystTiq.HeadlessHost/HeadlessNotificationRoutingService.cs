@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Mail;
@@ -71,6 +71,8 @@ public sealed class HeadlessNotificationRoutingService
     private DateTimeOffset? deliveryPausedUntilUtc;
     private NotificationChannelConfiguration channels;
     private List<NotificationTemplate> templates;
+    // v1.0.2.0 (roadmap R-2): every outside send and its result.
+    private readonly NotificationDeliveryLog deliveries;
 
     public HeadlessNotificationRoutingService(IServerPathProfile paths, HeadlessActivityLogService activity)
     {
@@ -80,6 +82,7 @@ public sealed class HeadlessNotificationRoutingService
         channelsPath = Path.Combine(root, "channels.json");
         templatesPath = Path.Combine(root, "templates.json");
         deliveryPath = Path.Combine(root, "delivery.json");
+        deliveries = new NotificationDeliveryLog(root);
         channels = LoadChannels();
         deliveryPausedUntilUtc = LoadDeliveryPause();
         templates = LoadTemplates();
@@ -137,6 +140,14 @@ public sealed class HeadlessNotificationRoutingService
         return new(until, external, detail);
     }
 
+    // v1.0.2.0 (roadmap R-2): each outside channel's delivery health over the last 7 days, and the latest sends.
+    public NotificationDeliveryHealth GetDeliveryHealth()
+    {
+        List<(string, bool)> external;
+        lock (gate) external = channels.Channels.Where(c => c.Channel != NotificationChannel.Desktop).Select(c => (c.Channel.ToString(), c.Enabled)).ToList();
+        return NotificationDeliveryLog.Health(external, deliveries.Snapshot(), DateTimeOffset.UtcNow, NotificationDeliveryLog.Window);
+    }
+
     // v0.8.4.0: minutes <= 0 resumes; the end time is set on the host's clock and capped like the alert mute.
     public NotificationDeliveryState PauseDelivery(int minutes)
     {
@@ -173,51 +184,60 @@ public sealed class HeadlessNotificationRoutingService
     {
         foreach (var channel in enabled)
         {
+            (bool Success, string Detail, int Attempts) outcome;
             try
             {
-                switch (channel.Channel)
+                outcome = channel.Channel switch
                 {
-                    case NotificationChannel.Webhook:
-                        await DispatchWebhookAsync(channel, severity, title, message);
-                        break;
-                    case NotificationChannel.Discord:
-                        await DispatchDiscordAsync(channel, severity, title, message);
-                        break;
-                    case NotificationChannel.Email:
-                        await DispatchEmailAsync(channel, severity, title, message);
-                        break;
-                }
+                    NotificationChannel.Webhook => await DispatchWebhookAsync(channel, severity, title, message),
+                    NotificationChannel.Discord => await DispatchDiscordAsync(channel, severity, title, message),
+                    NotificationChannel.Email => await DispatchEmailAsync(channel, severity, title, message),
+                    _ => (false, "Unknown channel.", 0)
+                };
             }
             catch (Exception ex)
             {
                 activity.Record("Warning", "Notifications", $"{channel.Channel} dispatch failed", ex.Message);
+                outcome = (false, ex.Message, 1);
             }
+            // v1.0.2.0 (roadmap R-2): every send is recorded, delivered or not.
+            deliveries.Record(new NotificationDeliveryRecord(DateTimeOffset.UtcNow, channel.Channel.ToString(), title, outcome.Success, outcome.Detail, outcome.Attempts));
         }
     }
 
-    private async Task DispatchWebhookAsync(NotificationChannelConfig channel, string severity, string title, string message)
+    // v1.0.2.0 (roadmap R-2): a POST to an HTTPS endpoint, retried once; the answer (or error) is the send's result.
+    private static async Task<(bool Success, string Detail, int Attempts)> PostAsync(string url, object payload)
     {
-        if (string.IsNullOrWhiteSpace(channel.TargetUrl)) return;
-        var payload = new { severity, title, message, createdUtc = DateTimeOffset.UtcNow };
-        for (var attempt = 0; attempt < 2; attempt++)
+        var detail = string.Empty;
+        for (var attempt = 1; attempt <= 2; attempt++)
         {
             try
             {
-                var response = await HttpClient.PostAsJsonAsync(channel.TargetUrl, payload);
-                if (response.IsSuccessStatusCode) return;
+                using var response = await HttpClient.PostAsJsonAsync(url, payload);
+                if (response.IsSuccessStatusCode) return (true, $"HTTP {(int)response.StatusCode}", attempt);
+                detail = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}";
             }
-            catch when (attempt == 0) { /* retry once */ }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { detail = ex.Message; }
         }
-        activity.Record("Warning", "Notifications", "Webhook dispatch failed after retry", channel.TargetUrl);
+        return (false, detail, 2);
+    }
+
+    private async Task<(bool Success, string Detail, int Attempts)> DispatchWebhookAsync(NotificationChannelConfig channel, string severity, string title, string message)
+    {
+        if (string.IsNullOrWhiteSpace(channel.TargetUrl)) return (false, "No webhook URL is set.", 0);
+        var payload = new { severity, title, message, createdUtc = DateTimeOffset.UtcNow };
+        var result = await PostAsync(channel.TargetUrl, payload);
+        if (!result.Success) activity.Record("Warning", "Notifications", "Webhook dispatch failed after retry", channel.TargetUrl);
+        return result;
     }
 
     // v0.6.17.0: a Discord webhook is a plain HTTPS POST endpoint (Channel Settings > Integrations
     // > Webhooks) -- no bot, no token, no gateway connection needed for outbound-only notifications.
     // That's the real HeadlessDiscordBotService (a whole separate, opt-in gateway connection) for
     // two-way command handling; this is just the outbound leg, shaped like Discord's own embed API.
-    private async Task DispatchDiscordAsync(NotificationChannelConfig channel, string severity, string title, string message)
+    private async Task<(bool Success, string Detail, int Attempts)> DispatchDiscordAsync(NotificationChannelConfig channel, string severity, string title, string message)
     {
-        if (string.IsNullOrWhiteSpace(channel.TargetUrl)) return;
+        if (string.IsNullOrWhiteSpace(channel.TargetUrl)) return (false, "No Discord webhook URL is set.", 0);
         var color = severity switch
         {
             "Critical" or "Error" => 0xE74C3C,
@@ -231,16 +251,9 @@ public sealed class HeadlessNotificationRoutingService
                 new { title, description = message, color, timestamp = DateTimeOffset.UtcNow }
             }
         };
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            try
-            {
-                var response = await HttpClient.PostAsJsonAsync(channel.TargetUrl, payload);
-                if (response.IsSuccessStatusCode) return;
-            }
-            catch when (attempt == 0) { /* retry once */ }
-        }
-        activity.Record("Warning", "Notifications", "Discord dispatch failed after retry", channel.TargetUrl);
+        var result = await PostAsync(channel.TargetUrl, payload);
+        if (!result.Success) activity.Record("Warning", "Notifications", "Discord dispatch failed after retry", channel.TargetUrl);
+        return result;
     }
 
     // v0.7.70.0: plain SMTP submission via the BCL's own SmtpClient rather than hand-rolling the
@@ -252,12 +265,12 @@ public sealed class HeadlessNotificationRoutingService
     // validate against. Known limitation: SmtpClient only supports STARTTLS-style submission
     // (typically port 587), not implicit-TLS-from-connect (port 465) -- disclosed, not silently
     // unsupported.
-    private async Task DispatchEmailAsync(NotificationChannelConfig channel, string severity, string title, string message)
+    private async Task<(bool Success, string Detail, int Attempts)> DispatchEmailAsync(NotificationChannelConfig channel, string severity, string title, string message)
     {
         if (string.IsNullOrWhiteSpace(channel.SmtpHost) || string.IsNullOrWhiteSpace(channel.EmailFrom) || string.IsNullOrWhiteSpace(channel.EmailTo))
         {
             activity.Record("Warning", "Notifications", "Email dispatch skipped", "SmtpHost, EmailFrom and EmailTo must all be configured.");
-            return;
+            return (false, "SmtpHost, EmailFrom and EmailTo must all be configured.", 0);
         }
 
         using var client = new SmtpClient(channel.SmtpHost, channel.SmtpPort) { EnableSsl = channel.SmtpUseSsl, Timeout = 10_000 };
@@ -270,12 +283,14 @@ public sealed class HeadlessNotificationRoutingService
             Body = message
         };
 
-        for (var attempt = 0; attempt < 2; attempt++)
+        var detail = string.Empty;
+        for (var attempt = 1; attempt <= 2; attempt++)
         {
-            try { await client.SendMailAsync(mail); return; }
-            catch when (attempt == 0) { /* retry once */ }
+            try { await client.SendMailAsync(mail); return (true, $"Accepted by {channel.SmtpHost}", attempt); }
+            catch (Exception ex) when (ex is SmtpException or InvalidOperationException or IOException) { detail = ex.Message; }
         }
         activity.Record("Warning", "Notifications", "Email dispatch failed after retry", channel.SmtpHost);
+        return (false, detail, 2);
     }
 
     private NotificationChannelConfiguration LoadChannels()

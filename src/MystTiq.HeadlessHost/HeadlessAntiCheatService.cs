@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using MystTiq.Core.Models;

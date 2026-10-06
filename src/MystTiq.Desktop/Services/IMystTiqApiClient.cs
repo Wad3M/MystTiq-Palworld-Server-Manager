@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -327,6 +327,12 @@ public interface IMystTiqApiClient
         CancellationToken cancellationToken = default);
 
     // v1.0.1.0: Update on the Update Center's PalDefender and Palworld Save Tools rows.
+    // v1.0.2.0 (roadmap R-2): each outside channel's delivery health and the latest sends.
+    Task<NotificationDeliveryHealthDto> GetNotificationDeliveryHealthAsync(
+        ConnectionProfile profile,
+        string? bearerToken = null,
+        CancellationToken cancellationToken = default);
+
     Task<ComponentUpdateResultDto> UpdatePalDefenderAsync(
         ConnectionProfile profile,
         string? bearerToken = null,

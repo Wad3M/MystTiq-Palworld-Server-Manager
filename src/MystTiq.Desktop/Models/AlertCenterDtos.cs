@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 namespace MystTiq.Desktop.Models;
 
 public sealed class AlertThresholdRuleDto
@@ -73,6 +73,44 @@ public sealed class DiskSpacePredictionDto
 }
 
 // v0.8.4.0: pausing outside delivery (Discord, email, webhooks); notifications still appear on the Notifications page.
+// v1.0.2.0 (roadmap R-2): each outside channel's delivery health and the latest sends (NotificationDeliveryLog).
+public sealed class NotificationChannelHealthDto
+{
+    public string Channel { get; set; } = string.Empty;
+    public bool Enabled { get; set; }
+    public string State { get; set; } = string.Empty;
+    public bool Flagged { get; set; }
+    public string Detail { get; set; } = string.Empty;
+    public DateTimeOffset? LastAttemptUtc { get; set; }
+    public DateTimeOffset? LastSuccessUtc { get; set; }
+    public string? LastError { get; set; }
+    public int AttemptsInWindow { get; set; }
+    public int SuccessesInWindow { get; set; }
+    public string StateText => State switch { "NotProven" => "Not proven", _ => State };
+}
+
+public sealed class NotificationDeliveryRecordDto
+{
+    public DateTimeOffset AtUtc { get; set; }
+    public string Channel { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public bool Success { get; set; }
+    public string Detail { get; set; } = string.Empty;
+    public int Attempts { get; set; }
+    public string WhenVerbatim => AtUtc.ToLocalTime().ToString("g");
+    public string ResultText => Success ? "Delivered" : "Failed";
+}
+
+public sealed class NotificationDeliveryHealthDto
+{
+    public int WindowDays { get; set; } = 7;
+    public List<NotificationChannelHealthDto> Channels { get; set; } = [];
+    public List<NotificationDeliveryRecordDto> Recent { get; set; } = [];
+    public bool AnyFlagged { get; set; }
+    public string Summary { get; set; } = string.Empty;
+    public bool HasRecent => Recent.Count > 0;
+}
+
 public sealed class NotificationDeliveryStateDto
 {
     public DateTimeOffset? PausedUntilUtc { get; set; }

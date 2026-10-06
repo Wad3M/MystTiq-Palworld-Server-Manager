@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 namespace MystTiq.Core.Services;
 
 // v0.7.101.0: what the crash-recovery loop tells the outside world. Until now it restarted a crashed
@@ -17,7 +17,9 @@ public enum SupervisorEventKind
     // v0.7.110.0: automatic recovery had given up (RecoverySuppressed) and the server is running again
     // anyway -- started by an admin, not by the loop, since the loop itself stopped trying. Appended so
     // existing callers' numbering is unaffected.
-    ManualRecovery
+    ManualRecovery,
+    // v1.0.2.0 (roadmap R-1): the server was running but stopped answering (frozen) and is being restarted.
+    FrozenDetected
 }
 
 public sealed record SupervisorEvent(

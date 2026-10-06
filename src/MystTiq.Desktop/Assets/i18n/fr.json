@@ -3809,5 +3809,20 @@
   "msg.update_stop_for_paldefender": "Arrêtez PalServer avant de mettre à jour PalDefender ; ses fichiers sont utilisés tant qu'il tourne.",
   "msg.update_save_tools_newest": "Palworld Save Tools {0} est déjà la plus récente.",
   "msg.update_save_tools_updated": "Palworld Save Tools mis à jour de {0} vers {1}.",
-  "msg.update_save_tools_not_pip": "Palworld Save Tools n'a pas été installé avec pip, donc pip ne peut pas le mettre à jour."
+  "msg.update_save_tools_not_pip": "Palworld Save Tools n'a pas été installé avec pip, donc pip ne peut pas le mettre à jour.",
+  "ui.delivery": "Livraison",
+  "ui.recent_sends": "Envois récents",
+  "msg.delivery_delivered": "Livré",
+  "msg.delivery_failing": "En échec",
+  "msg.delivery_not_proven": "Non prouvé",
+  "msg.delivery_switched_off": "Désactivé.",
+  "msg.delivery_last_delivered": "Dernière livraison {0} UTC.",
+  "msg.delivery_nothing_yet": "Rien n'a encore été livré par ce canal. Envoyez un test pour prouver qu'il fonctionne.",
+  "msg.delivery_none_in_window": "Rien n'a été livré ces {0} derniers jours (dernière livraison {1} UTC). Envoyez un test pour prouver qu'il fonctionne encore.",
+  "msg.delivery_all_off": "Aucun canal externe n'est activé ; les notifications n'apparaissent que dans MystTiq.",
+  "msg.delivery_all_delivered": "Chaque canal activé a livré ces {0} derniers jours.",
+  "msg.delivery_flagged": "{0} : aucune livraison prouvée ces {1} derniers jours. Ouvrez le centre d’alertes.",
+  "msg.frozen_alert_title": "{0} : le serveur ne répond plus, redémarrage (tentative {1} sur {2})",
+  "msg.frozen_activity": "Serveur figé redémarré",
+  "dashboard.openAlertCenter": "Ouvrir le centre d’alertes"
 }

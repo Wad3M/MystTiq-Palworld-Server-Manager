@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -255,6 +255,9 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     // v0.8.4.0: outside delivery pause and a test notification through the normal path.
     public async Task<NotificationDeliveryStateDto> GetNotificationDeliveryAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<NotificationDeliveryStateDto>("/api/v1/notifications/delivery", cancellationToken) ?? new(); }
+    // v1.0.2.0 (roadmap R-2): each outside channel's delivery health and the latest sends.
+    public async Task<NotificationDeliveryHealthDto> GetNotificationDeliveryHealthAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<NotificationDeliveryHealthDto>("/api/v1/notifications/delivery-health", cancellationToken) ?? new(); }
     public async Task<NotificationDeliveryStateDto> PauseNotificationDeliveryAsync(ConnectionProfile profile, int minutes, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsJsonAsync("/api/v1/notifications/delivery/pause", new NotificationDeliveryPauseRequestDto { Minutes = minutes }, cancellationToken); return await ReadOperationAsync<NotificationDeliveryStateDto>(response, cancellationToken); }
     public async Task<NotificationTestResultDto> SendTestNotificationAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)

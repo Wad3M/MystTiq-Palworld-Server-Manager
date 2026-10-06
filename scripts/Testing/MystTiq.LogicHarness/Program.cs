@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -1761,6 +1761,193 @@ try
                Array.IndexOf(kinds, SupervisorEventKind.ManualRecovery) > Array.IndexOf(kinds, SupervisorEventKind.RecoverySuppressed),
             $"give-up must come before the manual recovery it explains, got: {string.Join(", ", kinds)}");
     }, failures);
+    // ---- v1.0.2.0 (roadmap R-1): frozen-server watchdog ----------
+    RunScenario("Frozen-server watchdog: only a server that answered and then stayed silent for the whole limit is frozen; a healthy one never is", () =>
+    {
+        var t0 = DateTimeOffset.Parse("2026-10-05T12:00:00Z");
+        var healthy = new FrozenServerWatchdog(TimeSpan.FromMinutes(3));
+        for (var s = 0; s <= 600; s += 10)
+            Assert(healthy.Record(100, true, ResponsivenessProbeResult.Answered, t0.AddSeconds(s)) is null, "a server that keeps answering is never frozen");
+        var never = new FrozenServerWatchdog(TimeSpan.FromMinutes(3));
+        for (var s = 0; s <= 600; s += 10)
+            Assert(never.Record(100, true, ResponsivenessProbeResult.NoAnswer, t0.AddSeconds(s)) is null, "a REST API that never answered this process proves nothing");
+        var off = new FrozenServerWatchdog(TimeSpan.FromMinutes(3));
+        off.Record(100, true, ResponsivenessProbeResult.Answered, t0);
+        for (var s = 10; s <= 600; s += 10)
+            Assert(off.Record(100, true, ResponsivenessProbeResult.CannotTell, t0.AddSeconds(s)) is null, "'cannot tell' (REST off, no password) never counts against it");
+        var frozen = new FrozenServerWatchdog(TimeSpan.FromMinutes(3));
+        frozen.Record(100, true, ResponsivenessProbeResult.Answered, t0);
+        Assert(frozen.Record(100, true, ResponsivenessProbeResult.NoAnswer, t0.AddSeconds(179)) is null, "silent for 2:59 of a 3:00 limit: not yet");
+        Assert(frozen.Record(100, false, ResponsivenessProbeResult.NoAnswer, t0.AddSeconds(200)) is null, "not ready (starting, port down): not judged");
+        Assert(frozen.Record(100, true, ResponsivenessProbeResult.NoAnswer, t0.AddSeconds(180)) == TimeSpan.FromSeconds(180), "silent for the whole limit: frozen, with how long");
+        Assert(frozen.Record(200, true, ResponsivenessProbeResult.NoAnswer, t0.AddSeconds(400)) is null, "another process starts with a clean record");
+        Assert(!new FrozenServerWatchdog(TimeSpan.Zero).Enabled && !new FrozenServerWatchdog(TimeSpan.Zero).IsDue(100, t0), "a limit of 0 switches it off");
+        var due = new FrozenServerWatchdog(TimeSpan.FromMinutes(3));
+        due.Record(100, true, ResponsivenessProbeResult.Answered, t0);
+        Assert(!due.IsDue(100, t0.AddSeconds(29)) && due.IsDue(100, t0.AddSeconds(30)), "a 3-minute limit looks every 30 seconds");
+    }, failures);
+    RunScenario("Frozen-server watchdog in the recovery loop: a frozen server is restarted once with an alert; a healthy one is never touched; a give-up is said once and left alone until it is replaced", () =>
+    {
+        var lifecycle = new ScriptedLifecycle { Running = true };
+        var probe = new ScriptedProbe();
+        var observer = new RecordingObserver();
+        var options = new HeadlessSupervisorOptions(TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(5), 1, TimeSpan.FromMinutes(1), TimeSpan.FromMilliseconds(150));
+        var supervisor = new HeadlessSupervisor(lifecycle, options, [], observer, null, probe);
+        var cts = new CancellationTokenSource();
+        var loop = Task.Run(async () => { try { return await supervisor.RunCrashRecoveryLoopAsync(cts.Token); } catch (OperationCanceledException) { return 0; } });
+        Thread.Sleep(600);
+        Assert(probe.Probes > 3 && lifecycle.Restarts == 0 && observer.Events.Count == 0, $"a healthy, answering server is never restarted ({probe.Probes} looks)");
+
+        probe.Result = ResponsivenessProbeResult.NoAnswer;
+        Assert(WaitFor(() => lifecycle.Restarts == 1 && observer.Events.Any(e => e.Kind == SupervisorEventKind.RecoverySucceeded)), "a server silent for the limit is restarted, and the restart is reported");
+        var first = observer.Events.Select(e => e.Kind).ToArray();
+        Assert(first.SequenceEqual([SupervisorEventKind.FrozenDetected, SupervisorEventKind.RecoverySucceeded]), $"frozen, then back up: {string.Join(", ", first)}");
+        Assert(observer.Events[0].Detail.Contains("has not answered its REST API", StringComparison.Ordinal), "the alert says why: " + observer.Events[0].Detail);
+
+        // The restarted server answers once, then freezes again: the one attempt in this window is used up.
+        probe.Result = ResponsivenessProbeResult.Answered;
+        Thread.Sleep(100);
+        probe.Result = ResponsivenessProbeResult.NoAnswer;
+        Assert(WaitFor(() => observer.Events.Any(e => e.Kind == SupervisorEventKind.RecoverySuppressed)), "with no attempts left, recovery gives up");
+        Thread.Sleep(400);
+        Assert(observer.Events.Count(e => e.Kind == SupervisorEventKind.RecoverySuppressed) == 1 && lifecycle.Restarts == 1 && !loop.IsCompleted,
+            "the give-up is said once, the frozen process is left alone, and the loop keeps watching");
+
+        // An admin replaces the frozen process: it is announced back up and judged afresh.
+        lifecycle.Pid = 101;
+        probe.Result = ResponsivenessProbeResult.Answered;
+        Assert(WaitFor(() => observer.Events.Any(e => e.Kind == SupervisorEventKind.ManualRecovery)), "a replaced process is announced as running again");
+        cts.Cancel(); loop.GetAwaiter().GetResult();
+    }, failures);
+    RunScenario("Frozen-server watchdog: with the REST API off, the loop never restarts a server, however long it runs", () =>
+    {
+        var lifecycle = new ScriptedLifecycle { Running = true };
+        var probe = new ScriptedProbe { Result = ResponsivenessProbeResult.CannotTell };
+        var observer = new RecordingObserver();
+        var options = new HeadlessSupervisorOptions(TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(5), 3, TimeSpan.FromMinutes(1), TimeSpan.FromMilliseconds(100));
+        var supervisor = new HeadlessSupervisor(lifecycle, options, [], observer, null, probe);
+        var cts = new CancellationTokenSource();
+        var loop = Task.Run(async () => { try { return await supervisor.RunCrashRecoveryLoopAsync(cts.Token); } catch (OperationCanceledException) { return 0; } });
+        Thread.Sleep(500);
+        cts.Cancel(); loop.GetAwaiter().GetResult();
+        Assert(lifecycle.Restarts == 0 && observer.Events.Count == 0, "REST off: never restarted, nothing announced");
+    }, failures);
+    RunScenarioAsync("Frozen-server watchdog: the REST probe (an answer of any kind is alive; silence is not; REST off is 'cannot tell'), the alert, and the setting", async () =>
+    {
+        var dir = Path.Combine(tempRoot, "frozen-probe");
+        Directory.CreateDirectory(dir);
+        var ini = Path.Combine(dir, "PalWorldSettings.ini");
+        var silent = new TcpListener(IPAddress.Loopback, 0); silent.Start();
+        var silentPort = ((IPEndPoint)silent.LocalEndpoint).Port;
+        var answering = new TcpListener(IPAddress.Loopback, 0); answering.Start();
+        var answeringPort = ((IPEndPoint)answering.LocalEndpoint).Port;
+        var server = Task.Run(async () =>
+        {
+            using var c = await answering.AcceptTcpClientAsync();
+            var s = c.GetStream(); var buffer = new byte[4096]; await s.ReadAsync(buffer);
+            await s.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"));
+        });
+        try
+        {
+            string Settings(bool rest, int port, string password) => $"[/Script/Pal.PalGameWorldSettings]\nOptionSettings=(AdminPassword=\"{password}\",RESTAPIEnabled={(rest ? "True" : "False")},RESTAPIPort={port})\n";
+            File.WriteAllText(ini, Settings(false, answeringPort, "pw"));
+            var probe = new PalworldRestResponsivenessProbe(ini, TimeSpan.FromMilliseconds(400));
+            Assert(await probe.ProbeAsync(CancellationToken.None) == ResponsivenessProbeResult.CannotTell, "REST off: cannot tell");
+            File.WriteAllText(ini, Settings(true, answeringPort, ""));
+            Assert(await probe.ProbeAsync(CancellationToken.None) == ResponsivenessProbeResult.CannotTell, "no admin password: cannot tell");
+            File.WriteAllText(ini, Settings(true, answeringPort, "pw"));
+            Assert(await probe.ProbeAsync(CancellationToken.None) == ResponsivenessProbeResult.Answered, "a refusal (401) is still an answer");
+            File.WriteAllText(ini, Settings(true, silentPort, "pw"));
+            Assert(await probe.ProbeAsync(CancellationToken.None) == ResponsivenessProbeResult.NoAnswer, "a connection that never gets an answer (a frozen process) is no answer");
+        }
+        finally { silent.Stop(); answering.Stop(); try { await server; } catch { } }
+
+        var alert = CrashAlertText.Build("Clone", new SupervisorEvent(SupervisorEventKind.FrozenDetected, 1, 5, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(5),
+            "PalServer (PID 100) is running but has not answered its REST API for 3 minute(s).", DateTimeOffset.UtcNow), null);
+        Assert(alert.Severity == "Critical" && !alert.Pinned && alert.Title == "Clone: server stopped responding, restarting (attempt 1 of 5)" && alert.Message.StartsWith("PalServer (PID 100)", StringComparison.Ordinal),
+            "the alert: critical, not pinned (the restart's own outcome follows), and says what happened: " + alert.Title);
+        Assert(AlertMutePolicy.ShouldSendCrashAlert(new AlertRuleSet(), SupervisorEventKind.FrozenDetected, DateTimeOffset.UtcNow), "it is sent like a crash alert");
+        Assert(new FrozenServerWatchdog(FrozenServerWatchdog.DefaultLimit).Limit == TimeSpan.FromMinutes(3) && FrozenServerWatchdog.MinimumLimitSeconds == 60,
+            "the default limit is 3 minutes; a configured one must be 0 (off) or at least 60 seconds");
+    }, failures);
+
+    // ---- v1.0.2.0 (roadmap R-2): alert delivery proof ----------
+    RunScenario("Delivery proof: a switched-on channel is Delivered, Failing or Not proven over 7 days, and only Delivered is not flagged", () =>
+    {
+        var now = DateTimeOffset.Parse("2026-10-05T12:00:00Z");
+        NotificationDeliveryRecord R(string channel, double hoursAgo, bool ok, string detail = "HTTP 204") => new(now.AddHours(-hoursAgo), channel, "t", ok, detail, 1);
+        var records = new List<NotificationDeliveryRecord>
+        {
+            R("Discord", 30, true), R("Discord", 2, true),
+            R("Email", 30, true), R("Email", 1, false, "Mailbox unavailable"),
+            R("Webhook", 24 * 10, true),
+        };
+        var health = NotificationDeliveryLog.Health([("Webhook", true), ("Discord", true), ("Email", true)], records, now, NotificationDeliveryLog.Window);
+        var by = health.Channels.ToDictionary(c => c.Channel);
+        Assert(by["Discord"] is { State: "Delivered", Flagged: false, SuccessesInWindow: 2 }, "the last send arrived: Delivered, not flagged");
+        Assert(by["Email"] is { State: "Failing", Flagged: true } && by["Email"].Detail.Contains("Mailbox unavailable", StringComparison.Ordinal), "the last send failed: Failing, flagged, with the reason: " + by["Email"].Detail);
+        Assert(by["Webhook"] is { State: "NotProven", Flagged: true } && by["Webhook"].Detail.Contains("last 7 days", StringComparison.Ordinal), "nothing delivered for 10 days: Not proven, flagged");
+        Assert(health.AnyFlagged && health.Summary == "Webhook, Email: no proven delivery in the last 7 days. Open Alert Center.", "the summary names the flagged channels: " + health.Summary);
+        var fresh = NotificationDeliveryLog.Health([("Discord", true), ("Email", false)], [], now, NotificationDeliveryLog.Window);
+        Assert(fresh.Channels[0] is { State: "NotProven", Flagged: true } && fresh.Channels[0].Detail.StartsWith("Nothing has been delivered through this channel yet", StringComparison.Ordinal) &&
+               fresh.Channels[1] is { State: "Off", Flagged: false }, "a new channel is not proven until something arrives; a switched-off one is just off");
+        var off = NotificationDeliveryLog.Health([("Discord", false)], [], now, NotificationDeliveryLog.Window);
+        Assert(!off.AnyFlagged && off.Summary.StartsWith("No outside channel is switched on", StringComparison.Ordinal), "nothing switched on: nothing flagged");
+    }, failures);
+    RunScenario("Delivery proof: every real send is recorded with its result (an answering endpoint and a failing one), kept across a restart, and capped", () =>
+    {
+        var root = Path.Combine(tempRoot, "delivery-proof");
+        Directory.CreateDirectory(root);
+        var ok = new TcpListener(IPAddress.Loopback, 0); ok.Start();
+        var bad = new TcpListener(IPAddress.Loopback, 0); bad.Start();
+        async Task Serve(TcpListener l, string status)
+        {
+            for (var i = 0; i < 4; i++)
+            {
+                try
+                {
+                    using var c = await l.AcceptTcpClientAsync();
+                    var s = c.GetStream(); var buffer = new byte[8192]; await s.ReadAsync(buffer);
+                    await s.WriteAsync(Encoding.ASCII.GetBytes($"HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"));
+                }
+                catch { return; }
+            }
+        }
+        var servers = new[] { Task.Run(() => Serve(ok, "204 No Content")), Task.Run(() => Serve(bad, "500 Internal Server Error")) };
+        try
+        {
+            var paths = new HarnessPathProfile(root);
+            var activity = new HeadlessActivityLogService(paths);
+            var routing = new HeadlessNotificationRoutingService(paths, activity);
+            routing.SaveChannels(new NotificationChannelConfiguration
+            {
+                Channels =
+                [
+                    new(NotificationChannel.Desktop, true, null),
+                    new(NotificationChannel.Discord, true, $"http://127.0.0.1:{((IPEndPoint)ok.LocalEndpoint).Port}/hook"),
+                    new(NotificationChannel.Webhook, true, $"http://127.0.0.1:{((IPEndPoint)bad.LocalEndpoint).Port}/hook"),
+                    new(NotificationChannel.Email, false, null),
+                ]
+            });
+            routing.Dispatch("Critical", "Clone: server stopped responding", "PalServer is frozen.");
+            Assert(WaitFor(() => routing.GetDeliveryHealth().Recent.Count >= 2, 15000), "both sends are recorded");
+            var health = routing.GetDeliveryHealth();
+            var discord = health.Recent.Single(r => r.Channel == "Discord");
+            var webhook = health.Recent.Single(r => r.Channel == "Webhook");
+            Assert(discord is { Success: true, Attempts: 1, Detail: "HTTP 204" } && discord.Title == "Clone: server stopped responding", "Discord answered: delivered on the first try (HTTP 204)");
+            Assert(webhook is { Success: false, Attempts: 2 } && webhook.Detail.StartsWith("HTTP 500", StringComparison.Ordinal), "the webhook failed twice: recorded as failed with HTTP 500: " + webhook.Detail);
+            Assert(health.Channels.Single(c => c.Channel == "Discord").State == "Delivered" && health.Channels.Single(c => c.Channel == "Webhook").State == "Failing" &&
+                   health.Channels.Single(c => c.Channel == "Email").State == "Off", "Discord delivered, the webhook failing, email off");
+            var again = new HeadlessNotificationRoutingService(paths, activity).GetDeliveryHealth();
+            Assert(again.Recent.Count == 2, "the record survives a restart");
+            var log = new NotificationDeliveryLog(Path.Combine(root, "cap"));
+            Directory.CreateDirectory(Path.Combine(root, "cap"));
+            for (var i = 0; i < 520; i++) log.Record(new(DateTimeOffset.UtcNow, "Discord", $"n{i}", true, "HTTP 204", 1));
+            Assert(log.Snapshot().Count == 500 && log.Snapshot()[0].Title == "n20", "at most 500 sends are kept, the oldest dropped");
+        }
+        finally { ok.Stop(); bad.Stop(); try { Task.WaitAll(servers, 2000); } catch { } }
+    }, failures);
+
     // ---- v0.7.115.0 deficiency fixes: readiness, restart-surviving recovery state, operation history ----------
     RunScenario("Recovery only counts as success once the server is ready: a process whose game port never comes up is a failed restart", () =>
     {
@@ -3519,10 +3706,13 @@ sealed class ScriptedLifecycle : IServerLifecycleService
     // v0.7.115.0: null = ready whenever running (the old behaviour); false = the process runs but its game
     // port never comes up.
     public bool? ReadyOverride;
+    // v1.0.2.0: the running process's id.
+    public int Pid = 100;
+    public int Restarts;
 
     public Task<ServerLifecycleSnapshot> GetStatusAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult(new ServerLifecycleSnapshot(Phase, Running ? 100 : null,
-            Running ? [new ServerSessionProcessInfo(100, 1, "PalServer", "PalServer.exe", true)] : [],
+        Task.FromResult(new ServerLifecycleSnapshot(Phase, Running ? Pid : null,
+            Running ? [new ServerSessionProcessInfo(Pid, 1, "PalServer", "PalServer.exe", true)] : [],
             [], Running && (ReadyOverride ?? true), CrashFlag, DateTimeOffset.UtcNow, null, "scripted"));
 
     public async Task<ServerLifecycleOperationResult> StartAsync(IReadOnlyList<string> serverArguments, TimeSpan startupTimeout, CancellationToken cancellationToken = default)
@@ -3541,6 +3731,7 @@ sealed class ScriptedLifecycle : IServerLifecycleService
     }
     public async Task<ServerLifecycleOperationResult> RestartAsync(IReadOnlyList<string> serverArguments, TimeSpan startupTimeout, TimeSpan gracefulTimeout, CancellationToken cancellationToken = default)
     {
+        Restarts++;
         await StopAsync(gracefulTimeout, cancellationToken);
         return await StartAsync(serverArguments, startupTimeout, cancellationToken);
     }
@@ -3575,6 +3766,14 @@ sealed class FakeResourceControl : IProcessResourceControl
         if (FailAffinity) throw new UnauthorizedAccessException("it belongs to another user");
         Affinity[processId] = mask; AffinitySets++;
     }
+}
+
+// v1.0.2.0: what the server's REST API "says" to the frozen-server watchdog.
+sealed class ScriptedProbe : IServerResponsivenessProbe
+{
+    public volatile ResponsivenessProbeResult Result = ResponsivenessProbeResult.Answered;
+    public int Probes;
+    public Task<ResponsivenessProbeResult> ProbeAsync(CancellationToken cancellationToken) { Interlocked.Increment(ref Probes); return Task.FromResult(Result); }
 }
 
 sealed class RecordingObserver(bool throws = false) : ISupervisorObserver

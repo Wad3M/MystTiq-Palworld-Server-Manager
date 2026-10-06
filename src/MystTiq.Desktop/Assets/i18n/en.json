@@ -3809,5 +3809,20 @@
   "msg.update_stop_for_paldefender": "Stop PalServer before updating PalDefender; its files are in use while it runs.",
   "msg.update_save_tools_newest": "Palworld Save Tools {0} is already the newest.",
   "msg.update_save_tools_updated": "Palworld Save Tools updated from {0} to {1}.",
-  "msg.update_save_tools_not_pip": "Palworld Save Tools was not installed with pip, so pip cannot update it."
+  "msg.update_save_tools_not_pip": "Palworld Save Tools was not installed with pip, so pip cannot update it.",
+  "ui.delivery": "Delivery",
+  "ui.recent_sends": "Recent sends",
+  "msg.delivery_delivered": "Delivered",
+  "msg.delivery_failing": "Failing",
+  "msg.delivery_not_proven": "Not proven",
+  "msg.delivery_switched_off": "Switched off.",
+  "msg.delivery_last_delivered": "Last delivered {0} UTC.",
+  "msg.delivery_nothing_yet": "Nothing has been delivered through this channel yet. Send a test to prove it works.",
+  "msg.delivery_none_in_window": "Nothing was delivered in the last {0} days (last delivered {1} UTC). Send a test to prove it still works.",
+  "msg.delivery_all_off": "No outside channel is switched on; notifications only appear in MystTiq.",
+  "msg.delivery_all_delivered": "Every switched-on channel delivered in the last {0} days.",
+  "msg.delivery_flagged": "{0}: no proven delivery in the last {1} days. Open Alert Center.",
+  "msg.frozen_alert_title": "{0}: server stopped responding, restarting (attempt {1} of {2})",
+  "msg.frozen_activity": "Frozen server restarted",
+  "dashboard.openAlertCenter": "Open Alert Center"
 }

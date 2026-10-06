@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -643,7 +643,9 @@ switch (command.ToLowerInvariant())
             TimeSpan.FromSeconds(GetIntOption("--stop-timeout-seconds", headlessConfiguration.Lifecycle.StopTimeoutSeconds)),
             TimeSpan.FromSeconds(GetIntOption("--recovery-backoff-seconds", headlessConfiguration.Lifecycle.RecoveryBackoffSeconds)),
             GetIntOption("--max-recovery-attempts", headlessConfiguration.Lifecycle.MaximumRecoveryAttempts),
-            TimeSpan.FromSeconds(GetIntOption("--recovery-window-seconds", headlessConfiguration.Lifecycle.RecoveryWindowSeconds)));
+            TimeSpan.FromSeconds(GetIntOption("--recovery-window-seconds", headlessConfiguration.Lifecycle.RecoveryWindowSeconds)),
+            // v1.0.2.0 (roadmap R-1): frozen-server restarts (absent: the default limit; 0: off).
+            headlessConfiguration.Lifecycle.UnresponsiveRestartSeconds is int unresponsive ? TimeSpan.FromSeconds(unresponsive) : null);
         var serverArguments = effectiveDefaultServerProfile.LaunchArguments;
         var startNow = args.Any(argument => argument.Equals("--start-now", StringComparison.OrdinalIgnoreCase));
 
@@ -765,7 +767,8 @@ switch (command.ToLowerInvariant())
                 : null;
             var supervisorParts = apiHost?.TakeOverCrashRecovery(effectiveDefaultServerProfile.Id);
             var supervisor = new HeadlessSupervisor(lifecycle, supervisorOptions, serverArguments,
-                supervisorParts?.Observer, supervisorParts?.State ?? SupervisorRecoveryStateStore.ForProfile(paths));
+                supervisorParts?.Observer, supervisorParts?.State ?? SupervisorRecoveryStateStore.ForProfile(paths),
+                new PalworldRestResponsivenessProbe(paths));
             try
             {
                 if (apiHost is not null)
@@ -918,7 +921,8 @@ switch (command.ToLowerInvariant())
                 : null;
             var supervisorParts = apiHost?.TakeOverCrashRecovery(effectiveDefaultServerProfile.Id);
             var supervisor = new HeadlessSupervisor(lifecycle, supervisorOptions, serverArguments,
-                supervisorParts?.Observer, supervisorParts?.State ?? SupervisorRecoveryStateStore.ForProfile(paths));
+                supervisorParts?.Observer, supervisorParts?.State ?? SupervisorRecoveryStateStore.ForProfile(paths),
+                new PalworldRestResponsivenessProbe(paths));
 
             using var termRegistration = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
             {

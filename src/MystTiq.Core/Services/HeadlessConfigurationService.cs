@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using System.Net;
 using System.Text.Json;
 using MystTiq.Core.Models;
@@ -91,6 +91,9 @@ public sealed class HeadlessConfigurationService
         ValidatePositive(configuration.Lifecycle.RecoveryBackoffSeconds, "lifecycle.recoveryBackoffSeconds", errors);
         ValidatePositive(configuration.Lifecycle.MaximumRecoveryAttempts, "lifecycle.maximumRecoveryAttempts", errors);
         ValidatePositive(configuration.Lifecycle.RecoveryWindowSeconds, "lifecycle.recoveryWindowSeconds", errors);
+        // v1.0.2.0 (roadmap R-1): 0 switches frozen-server restarts off; anything else must leave room for a world save.
+        if (configuration.Lifecycle.UnresponsiveRestartSeconds is int unresponsive && unresponsive != 0 && unresponsive < FrozenServerWatchdog.MinimumLimitSeconds)
+            errors.Add($"lifecycle.unresponsiveRestartSeconds must be 0 (off) or at least {FrozenServerWatchdog.MinimumLimitSeconds}.");
 
         ValidateAbsolutePath(configuration.FleetRoot, "fleetRoot", errors);
         if (configuration.FleetStaggerSeconds < 0)

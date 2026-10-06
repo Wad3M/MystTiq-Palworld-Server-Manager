@@ -3809,5 +3809,20 @@
   "msg.update_stop_for_paldefender": "PalDefender'ı güncellemeden önce PalServer'ı durdurun; çalışırken dosyaları kullanımdadır.",
   "msg.update_save_tools_newest": "Palworld Save Tools {0} zaten en yeni sürüm.",
   "msg.update_save_tools_updated": "Palworld Save Tools {0} sürümünden {1} sürümüne güncellendi.",
-  "msg.update_save_tools_not_pip": "Palworld Save Tools pip ile kurulmadığından pip onu güncelleyemez."
+  "msg.update_save_tools_not_pip": "Palworld Save Tools pip ile kurulmadığından pip onu güncelleyemez.",
+  "ui.delivery": "Teslim",
+  "ui.recent_sends": "Son gönderimler",
+  "msg.delivery_delivered": "Teslim edildi",
+  "msg.delivery_failing": "Başarısız",
+  "msg.delivery_not_proven": "Kanıtlanmadı",
+  "msg.delivery_switched_off": "Kapalı.",
+  "msg.delivery_last_delivered": "Son teslim {0} UTC.",
+  "msg.delivery_nothing_yet": "Bu kanaldan henüz hiçbir şey teslim edilmedi. Çalıştığını kanıtlamak için bir test gönderin.",
+  "msg.delivery_none_in_window": "Son {0} günde hiçbir şey teslim edilmedi (son teslim {1} UTC). Hâlâ çalıştığını kanıtlamak için bir test gönderin.",
+  "msg.delivery_all_off": "Hiçbir dış kanal açık değil; bildirimler yalnızca MystTiq içinde görünür.",
+  "msg.delivery_all_delivered": "Açık olan her kanal son {0} günde teslim etti.",
+  "msg.delivery_flagged": "{0}: son {1} günde kanıtlanmış teslim yok. Uyarı Merkezini açın.",
+  "msg.frozen_alert_title": "{0}: sunucu yanıt vermeyi bıraktı, yeniden başlatılıyor (deneme {1}/{2})",
+  "msg.frozen_activity": "Donmuş sunucu yeniden başlatıldı",
+  "dashboard.openAlertCenter": "Uyarı Merkezini aç"
 }

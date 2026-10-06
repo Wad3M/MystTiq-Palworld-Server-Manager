@@ -3809,5 +3809,20 @@
   "msg.update_stop_for_paldefender": "Остановите PalServer перед обновлением PalDefender; пока он работает, его файлы заняты.",
   "msg.update_save_tools_newest": "Palworld Save Tools {0} уже самая новая версия.",
   "msg.update_save_tools_updated": "Palworld Save Tools обновлены с {0} до {1}.",
-  "msg.update_save_tools_not_pip": "Palworld Save Tools установлены не через pip, поэтому pip не может их обновить."
+  "msg.update_save_tools_not_pip": "Palworld Save Tools установлены не через pip, поэтому pip не может их обновить.",
+  "ui.delivery": "Доставка",
+  "ui.recent_sends": "Последние отправки",
+  "msg.delivery_delivered": "Доставлено",
+  "msg.delivery_failing": "Сбой",
+  "msg.delivery_not_proven": "Не подтверждено",
+  "msg.delivery_switched_off": "Выключено.",
+  "msg.delivery_last_delivered": "Последняя доставка {0} UTC.",
+  "msg.delivery_nothing_yet": "Через этот канал ещё ничего не доставлено. Отправьте тест, чтобы проверить его работу.",
+  "msg.delivery_none_in_window": "За последние {0} дн. ничего не доставлено (последняя доставка {1} UTC). Отправьте тест, чтобы проверить, что канал работает.",
+  "msg.delivery_all_off": "Ни один внешний канал не включён; уведомления видны только в MystTiq.",
+  "msg.delivery_all_delivered": "Все включённые каналы доставляли сообщения за последние {0} дн.",
+  "msg.delivery_flagged": "{0}: нет подтверждённой доставки за последние {1} дн. Откройте центр оповещений.",
+  "msg.frozen_alert_title": "{0}: сервер перестал отвечать, перезапуск (попытка {1} из {2})",
+  "msg.frozen_activity": "Зависший сервер перезапущен",
+  "dashboard.openAlertCenter": "Открыть центр оповещений"
 }

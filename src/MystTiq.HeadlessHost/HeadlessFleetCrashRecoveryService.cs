@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using MystTiq.Core.Models;
 using MystTiq.Core.Services;
 
@@ -40,7 +40,8 @@ public sealed class HeadlessFleetCrashRecoveryService : IAsyncDisposable
         HeadlessSupervisorOptions options,
         IReadOnlyList<string> serverArguments,
         ISupervisorObserver? observer = null,
-        SupervisorRecoveryStateStore? stateStore = null)
+        SupervisorRecoveryStateStore? stateStore = null,
+        IServerResponsivenessProbe? responsiveness = null)
     {
         this.lifecycle = lifecycle;
         this.options = options;
@@ -48,7 +49,8 @@ public sealed class HeadlessFleetCrashRecoveryService : IAsyncDisposable
         this.stateStore = stateStore;
         // v0.7.101.0: the optional observer is how a crash, a recovery and a give-up reach the
         // notification pipeline instead of only the console.
-        supervisor = new HeadlessSupervisor(lifecycle, options, serverArguments, observer, stateStore);
+        // v1.0.2.0 (roadmap R-1): with a probe, a running server that stops answering is restarted too.
+        supervisor = new HeadlessSupervisor(lifecycle, options, serverArguments, observer, stateStore, responsiveness);
     }
 
     public Task StartAsync(CancellationToken hostShutdownToken)

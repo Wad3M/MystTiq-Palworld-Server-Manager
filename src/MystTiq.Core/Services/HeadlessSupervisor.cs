@@ -1,4 +1,4 @@
-// MystTiq v1.0.1.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
 using MystTiq.Core.Models;
 
 namespace MystTiq.Core.Services;
@@ -18,19 +18,29 @@ public sealed class HeadlessSupervisor
     // v0.7.115.0: optional (api-run passes one; service-run does not), so the restart window survives a
     // MystTiq restart instead of resetting to zero attempts every time.
     private readonly SupervisorRecoveryStateStore? stateStore;
+    // v1.0.2.0 (roadmap R-1): a running server that stops answering is restarted (FrozenServerWatchdog decides when).
+    private readonly IServerResponsivenessProbe? responsiveness;
+    private readonly FrozenServerWatchdog watchdog;
+    // The frozen process recovery gave up on: left alone (not re-announced on every poll) until it is replaced.
+    private int? gaveUpOnFrozenProcess;
+    // A frozen process does not answer a graceful stop; the force-kill follows after this.
+    private static readonly TimeSpan FrozenStopTimeout = TimeSpan.FromSeconds(15);
 
     public HeadlessSupervisor(
         IServerLifecycleService lifecycle,
         HeadlessSupervisorOptions options,
         IReadOnlyList<string> serverArguments,
         ISupervisorObserver? observer = null,
-        SupervisorRecoveryStateStore? stateStore = null)
+        SupervisorRecoveryStateStore? stateStore = null,
+        IServerResponsivenessProbe? responsiveness = null)
     {
         this.observer = observer;
+        this.responsiveness = responsiveness;
         this.lifecycle = lifecycle ?? throw new ArgumentNullException(nameof(lifecycle));
         this.options = options ?? throw new ArgumentNullException(nameof(options));
         this.serverArguments = serverArguments ?? throw new ArgumentNullException(nameof(serverArguments));
         this.stateStore = stateStore;
+        watchdog = new FrozenServerWatchdog(options.UnresponsiveLimit ?? FrozenServerWatchdog.DefaultLimit);
         if (stateStore is not null)
             foreach (var attempt in stateStore.Read().RestartHistory.OrderBy(t => t)) restartHistory.Enqueue(attempt);
     }
@@ -81,7 +91,11 @@ public sealed class HeadlessSupervisor
             var status = await lifecycle.GetStatusAsync(cancellationToken);
 
             if (status.Processes.Count > 0)
+            {
+                if (await CheckFrozenAsync(status, cancellationToken) is { } silentFor)
+                    await RestartFrozenAsync(status, silentFor, cancellationToken);
                 continue;
+            }
 
             if (!status.CrashDetected && status.Phase == ServerLifecyclePhase.Stopped)
             {
@@ -109,31 +123,82 @@ public sealed class HeadlessSupervisor
 
             await Task.Delay(options.RestartBackoff, cancellationToken);
             var restart = await lifecycle.StartAsync(serverArguments, options.StartupTimeout, cancellationToken);
-
-            if (!restart.Success && restart.ExitCode != HeadlessExitCode.AlreadyRunning)
-            {
-                Console.Error.WriteLine($"Automatic recovery failed: {restart.ExitCode} — {restart.Message}");
-                await NotifyAsync(SupervisorEventKind.RecoveryFailed, restartHistory.Count, $"{restart.ExitCode}: {restart.Message}", cancellationToken);
-            }
-            // v0.7.115.0 (deficiency report): "AlreadyRunning" (a process appeared while backing off) used to count
-            // as recovered on sight. Recovered now means ready: the game port is up, the same test a normal start
-            // uses, waited for up to the startup timeout.
-            else if (!restart.Snapshot.Ready && !await WaitUntilReadyAsync(cancellationToken))
-            {
-                Console.Error.WriteLine("Automatic recovery failed: PalServer is running but never became ready.");
-                await NotifyAsync(SupervisorEventKind.RecoveryFailed, restartHistory.Count,
-                    $"NotReady: a PalServer process is running, but its game port did not come up within {options.StartupTimeout}.", cancellationToken);
-            }
-            else
-            {
-                Console.WriteLine($"PalServer recovery succeeded; PID {restart.Snapshot.NativeProcessId?.ToString() ?? "unknown"}.");
-                await NotifyAsync(SupervisorEventKind.RecoverySucceeded, restartHistory.Count,
-                    $"PalServer is running again (PID {restart.Snapshot.NativeProcessId?.ToString() ?? "unknown"}).", cancellationToken);
-            }
+            await ReportRestartAsync(restart, cancellationToken);
         }
 
         return 0;
     }
+
+    private async Task ReportRestartAsync(ServerLifecycleOperationResult restart, CancellationToken cancellationToken)
+    {
+        if (!restart.Success && restart.ExitCode != HeadlessExitCode.AlreadyRunning)
+        {
+            Console.Error.WriteLine($"Automatic recovery failed: {restart.ExitCode} — {restart.Message}");
+            await NotifyAsync(SupervisorEventKind.RecoveryFailed, restartHistory.Count, $"{restart.ExitCode}: {restart.Message}", cancellationToken);
+        }
+        // v0.7.115.0 (deficiency report): "AlreadyRunning" (a process appeared while backing off) used to count
+        // as recovered on sight. Recovered now means ready: the game port is up, the same test a normal start
+        // uses, waited for up to the startup timeout.
+        else if (!restart.Snapshot.Ready && !await WaitUntilReadyAsync(cancellationToken))
+        {
+            Console.Error.WriteLine("Automatic recovery failed: PalServer is running but never became ready.");
+            await NotifyAsync(SupervisorEventKind.RecoveryFailed, restartHistory.Count,
+                $"NotReady: a PalServer process is running, but its game port did not come up within {options.StartupTimeout}.", cancellationToken);
+        }
+        else
+        {
+            Console.WriteLine($"PalServer recovery succeeded; PID {restart.Snapshot.NativeProcessId?.ToString() ?? "unknown"}.");
+            await NotifyAsync(SupervisorEventKind.RecoverySucceeded, restartHistory.Count,
+                $"PalServer is running again (PID {restart.Snapshot.NativeProcessId?.ToString() ?? "unknown"}).", cancellationToken);
+        }
+    }
+
+    // v1.0.2.0 (roadmap R-1): one look at a running server, when one is due. Returns how long it has been silent
+    // when the watchdog judges it frozen.
+    private async Task<TimeSpan?> CheckFrozenAsync(ServerLifecycleSnapshot status, CancellationToken cancellationToken)
+    {
+        if (responsiveness is null || !watchdog.Enabled) return null;
+        var pid = status.NativeProcessId;
+        if (gaveUpOnFrozenProcess is { } frozen)
+        {
+            if (pid == frozen) return null;
+            // Replaced by someone else (an admin, Automation): it is running again; say so once and judge it afresh.
+            gaveUpOnFrozenProcess = null;
+            if (status.Ready)
+                await NotifyAsync(SupervisorEventKind.ManualRecovery, 0, "PalServer is running again.", cancellationToken);
+        }
+        if (!watchdog.IsDue(pid, DateTimeOffset.UtcNow)) return null;
+        ResponsivenessProbeResult result;
+        try { result = await responsiveness.ProbeAsync(cancellationToken); }
+        catch (Exception ex) when (ex is not OperationCanceledException) { result = ResponsivenessProbeResult.CannotTell; }
+        return watchdog.Record(pid, status.Ready, result, DateTimeOffset.UtcNow);
+    }
+
+    private async Task RestartFrozenAsync(ServerLifecycleSnapshot status, TimeSpan silentFor, CancellationToken cancellationToken)
+    {
+        var pid = status.NativeProcessId;
+        var detail = $"PalServer (PID {pid?.ToString() ?? "unknown"}) is running but has not answered its REST API for {Describe(silentFor)}.";
+        if (!CanRestart(DateTimeOffset.UtcNow))
+        {
+            gaveUpOnFrozenProcess = pid;
+            watchdog.Forget();
+            Console.Error.WriteLine($"{detail} Automatic recovery suppressed after {options.MaximumRestartAttempts} attempts inside {options.RestartWindow}; the process was left as it is.");
+            await NotifyAsync(SupervisorEventKind.RecoverySuppressed, restartHistory.Count,
+                $"{detail} Automatic recovery gave up after {options.MaximumRestartAttempts} restart attempts inside {options.RestartWindow}; the frozen process was left running.", cancellationToken);
+            return;
+        }
+
+        restartHistory.Enqueue(DateTimeOffset.UtcNow);
+        SaveHistory();
+        Console.Error.WriteLine($"{detail} Frozen-server restart attempt {restartHistory.Count}/{options.MaximumRestartAttempts}.");
+        await NotifyAsync(SupervisorEventKind.FrozenDetected, restartHistory.Count, detail, cancellationToken);
+        var restart = await lifecycle.RestartAsync(serverArguments, options.StartupTimeout, FrozenStopTimeout, cancellationToken);
+        watchdog.Forget();
+        await ReportRestartAsync(restart, cancellationToken);
+    }
+
+    private static string Describe(TimeSpan span) =>
+        span.TotalMinutes >= 1 ? $"{span.TotalMinutes:0.#} minute(s)" : $"{Math.Max(1, (int)Math.Round(span.TotalSeconds))} second(s)";
 
     public async Task StopManagedServerAsync(CancellationToken cancellationToken)
     {
