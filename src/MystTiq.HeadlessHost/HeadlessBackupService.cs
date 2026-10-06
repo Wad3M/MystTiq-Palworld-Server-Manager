@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -258,18 +258,17 @@ public sealed class HeadlessBackupService
             // because this deletion ran inside the same try/catch as the actual restore above, so
             // e.g. an AV scanner holding a file lock on the rollback copy for a moment would make a
             // successful restore return Failure() while leaving the good data already in place.
-            string? leftoverRollback = null;
-            if (Directory.Exists(rollback))
-            {
-                try { Directory.Delete(rollback, recursive: true); }
-                catch { leftoverRollback = rollback; }
-            }
+            // v1.0.6.0: a held file is retried for a moment; files that belong to administrators are named as the reason.
+            string? leftoverRollback = null, leftoverReason = null;
+            if (Directory.Exists(rollback) && FileRetry.TryDeleteDirectory(rollback) is { } why) { leftoverRollback = rollback; leftoverReason = why; }
 
             var message = safetyBackup is null
                 ? $"Backup restored: {fileName}"
                 : $"Backup restored: {fileName}. Safety backup: {safetyBackup}";
             if (leftoverRollback is not null)
-                message += $" Note: a temporary rollback copy could not be cleaned up automatically ({Path.GetFileName(leftoverRollback)}) -- safe to delete manually.";
+                message += leftoverReason == "denied"
+                    ? $" Note: the temporary copy of the world from before the restore ({Path.GetFileName(leftoverRollback)}) was kept: some files in it belong to administrators. Fix Save Folder Access on the Backups page lets MystTiq remove it next time; it is safe to delete."
+                    : $" Note: a temporary rollback copy could not be cleaned up automatically ({Path.GetFileName(leftoverRollback)}) -- safe to delete manually.";
 
             // v1.0.0.4: the proof the owner asked for: the restored world's day, read from the restored Level.sav itself (this
             // also refreshes the decoded copy the Dashboard reads, which the backup carried in its old state).

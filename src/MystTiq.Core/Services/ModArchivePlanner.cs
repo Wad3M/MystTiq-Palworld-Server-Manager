@@ -1,17 +1,31 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 namespace MystTiq.Core.Services;
 
 // v1.0.5.0 (roadmap M-1): what a MOD archive holds and whether MystTiq can install it where the game loads it. The MOD
 // browser shows this before anything is installed, and the service decides by the same rules, so a ZIP dropped on the
 // page and one fetched from a repository are treated alike. Archives MystTiq would install wrongly are refused with the
-// reason rather than installed half: a PAK plus Lua scripts (the scripts were dropped), a LogicMods PAK (it went to
-// ~mods), several PAKs (they overwrote each other), unreal_shimloader packages, loader DLLs and anything executable.
+// reason rather than installed half: several PAKs (they overwrote each other), unreal_shimloader packages, loader DLLs
+// and anything executable.
+// v1.0.6.0 (roadmap M-2): MODs laid out as the game folder install too: a LogicMods PAK (a blueprint MOD for UE4SS) goes
+// into Paks\LogicMods\<package> with the files beside it, and a PAK with UE4SS scripts installs as two parts under one
+// name (the PAK where it belongs, the scripts as a UE4SS MOD folder). Both need UE4SS (the service checks).
 public enum ModArchiveKind { Pak, Ue4ss, MixedPakAndScripts, LogicModsPak, SeveralPaks, SeveralUe4ssMods, Shimloader, NativeLoader, Executable, NoMod, UnsafePath }
 
 public sealed record ModArchivePlan(ModArchiveKind Kind, bool Installable, string Summary, string? Ue4ssRoot, IReadOnlyList<string> Files)
 {
-    // "PAK" or "UE4SS" for an archive MystTiq installs; null otherwise.
-    public string? InstallType => Kind switch { ModArchiveKind.Pak => "PAK", ModArchiveKind.Ue4ss => "UE4SS", _ => null };
+    // v1.0.6.0: where the PAK goes ("~mods", or "LogicMods" with the files of its folder), and that folder in the archive.
+    public string? PakTarget { get; init; }
+    public string? PakDirectory { get; init; }
+
+    // "PAK", "UE4SS" or "PAK+UE4SS" for an archive MystTiq installs; null otherwise.
+    public string? InstallType => !Installable ? null : Kind switch
+    {
+        ModArchiveKind.Pak or ModArchiveKind.LogicModsPak => "PAK",
+        ModArchiveKind.Ue4ss => "UE4SS",
+        ModArchiveKind.MixedPakAndScripts => "PAK+UE4SS",
+        _ => null,
+    };
+    public bool NeedsUe4ss => Installable && (Kind == ModArchiveKind.MixedPakAndScripts || PakTarget == "LogicMods");
 }
 
 public static class ModArchivePlanner
@@ -49,19 +63,24 @@ public static class ModArchivePlanner
 
         var paks = files.Where(f => PakExtensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase)).ToList();
         var roots = files.Select(Ue4ssRootOf).Where(r => r is not null).Select(r => r!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        if (paks.Count > 0 && roots.Count > 0)
-            return Refuse(ModArchiveKind.MixedPakAndScripts, "The archive holds a PAK and UE4SS scripts together. MystTiq installs one or the other, so install it by hand.");
+        if (roots.Count > 1)
+            return Refuse(ModArchiveKind.SeveralUe4ssMods, $"The archive holds {roots.Count} UE4SS MODs. Install them one at a time.");
         if (paks.Count > 0)
         {
-            if (paks.Any(p => p.Split('/').Any(s => s.Equals("LogicMods", StringComparison.OrdinalIgnoreCase))))
-                return Refuse(ModArchiveKind.LogicModsPak, "The archive's PAK belongs in Paks\\LogicMods (a blueprint MOD for UE4SS). MystTiq installs PAKs into ~mods only, so install it by hand.");
             var names = paks.Select(p => Path.GetFileNameWithoutExtension(FileName(p))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             if (names.Count > 1)
                 return Refuse(ModArchiveKind.SeveralPaks, $"The archive holds {names.Count} different PAKs ({string.Join(", ", names.Take(4))}), often choices of one. Extract the one you want and install that.");
-            return new(ModArchiveKind.Pak, true, $"A PAK MOD ({names[0]}), installed into Pal\\Content\\Paks\\~mods.", null, files);
+            var logic = paks.Any(p => p.Split('/').Any(s => s.Equals("LogicMods", StringComparison.OrdinalIgnoreCase)));
+            var pakDirectory = paks[0].Contains('/') ? paks[0][..(paks[0].LastIndexOf('/') + 1)] : string.Empty;
+            var where = logic ? "Pal\\Content\\Paks\\LogicMods" : "Pal\\Content\\Paks\\~mods";
+            if (roots.Count == 1)
+                return new(ModArchiveKind.MixedPakAndScripts, true, $"A PAK ({names[0]}) with UE4SS scripts, installed as two parts under one name: the PAK into {where}, the scripts as a UE4SS MOD folder.", roots[0], files)
+                    { PakTarget = logic ? "LogicMods" : "~mods", PakDirectory = pakDirectory };
+            if (logic)
+                return new(ModArchiveKind.LogicModsPak, true, $"A blueprint MOD for UE4SS ({names[0]}), installed into Pal\\Content\\Paks\\LogicMods in its own folder.", null, files)
+                    { PakTarget = "LogicMods", PakDirectory = pakDirectory };
+            return new(ModArchiveKind.Pak, true, $"A PAK MOD ({names[0]}), installed into Pal\\Content\\Paks\\~mods.", null, files) { PakTarget = "~mods", PakDirectory = pakDirectory };
         }
-        if (roots.Count > 1)
-            return Refuse(ModArchiveKind.SeveralUe4ssMods, $"The archive holds {roots.Count} UE4SS MODs. Install them one at a time.");
         if (roots.Count == 1)
         {
             var where = roots[0].Length == 0 ? "at the archive's top" : $"in {roots[0].TrimEnd('/')}";

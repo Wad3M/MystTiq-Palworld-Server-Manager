@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -331,6 +331,10 @@ public interface IMystTiqApiClient
     Task<InventoryViewDto> GetInventoryAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<InventoryEditPreviewDto> PreviewInventoryEditAsync(ConnectionProfile profile, InventoryEditRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<InventoryEditResultDto> ApplyInventoryEditAsync(ConnectionProfile profile, string token, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v1.0.6.0 (roadmap S-3): a player's Pal box, and the guarded add/remove.
+    Task<PalBoxViewDto> GetPalBoxAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PalBoxEditPreviewDto> PreviewPalBoxEditAsync(ConnectionProfile profile, PalBoxEditRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PalBoxEditResultDto> ApplyPalBoxEditAsync(ConnectionProfile profile, string token, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     // v1.0.2.0 (roadmap R-2): each outside channel's delivery health and the latest sends.
     Task<NotificationDeliveryHealthDto> GetNotificationDeliveryHealthAsync(

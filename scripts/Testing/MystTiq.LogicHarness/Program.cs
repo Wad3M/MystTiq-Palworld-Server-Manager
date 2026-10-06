@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -1822,6 +1822,91 @@ try
         Assert(alive.ServerMayBeRunning, "a live process did not count as running");
         Assert((gone with { Ready = true }).ServerMayBeRunning, "an open game port did not count as running");
         Assert((alive with { NativeProcessId = null }).ServerMayBeRunning, "a live process without a native id did not count as running");
+    }, failures);
+
+    // ---- v1.0.6.0 (roadmap M-2): MODs laid out as the game folder ----
+    RunScenario("MOD archive check (M-2): a LogicMods PAK installs into its own LogicMods folder with the files beside it, and a PAK with UE4SS scripts installs as two parts; both need UE4SS", () =>
+    {
+        // Thunderstore: PalModders-BasesPlus 1.1.1.
+        var basesPlus = ModArchivePlanner.Plan(["Pal/", "Pal/Binaries/Win64/Mods/BasesPlus/Enabled.txt", "Pal/Binaries/Win64/Mods/BasesPlus/Scripts/main.lua",
+            "Pal/Content/Paks/LogicMods/BasesPlus.modconfig.json", "Pal/Content/Paks/LogicMods/BasesPlus.pak", "icon.png", "README.md", "manifest.json"]);
+        Assert(basesPlus is { Kind: ModArchiveKind.MixedPakAndScripts, Installable: true, InstallType: "PAK+UE4SS", PakTarget: "LogicMods", PakDirectory: "Pal/Content/Paks/LogicMods/", Ue4ssRoot: "Pal/Binaries/Win64/Mods/BasesPlus/", NeedsUe4ss: true },
+            $"BasesPlus installs as a LogicMods PAK plus a UE4SS MOD: {basesPlus.Kind} {basesPlus.PakTarget} {basesPlus.PakDirectory} {basesPlus.Ue4ssRoot}");
+        var logic = ModArchivePlanner.Plan(["Bp/Pal/Content/Paks/LogicMods/Bp.pak", "Bp/Pal/Content/Paks/LogicMods/Bp.ini"]);
+        Assert(logic is { Kind: ModArchiveKind.LogicModsPak, Installable: true, InstallType: "PAK", PakTarget: "LogicMods", PakDirectory: "Bp/Pal/Content/Paks/LogicMods/", NeedsUe4ss: true }, $"LogicMods PAK: {logic.Kind}");
+        var mixedMods = ModArchivePlanner.Plan(["X/X_P.pak", "X/Scripts/main.lua"]);
+        Assert(mixedMods is { Kind: ModArchiveKind.MixedPakAndScripts, PakTarget: "~mods", Ue4ssRoot: "X/" }, $"a ~mods PAK with scripts: {mixedMods.Kind} {mixedMods.PakTarget}");
+        var plain = ModArchivePlanner.Plan(["Plain_P.pak"]);
+        Assert(plain is { Kind: ModArchiveKind.Pak, PakTarget: "~mods", NeedsUe4ss: false } && ModArchivePlanner.Plan(["M/Scripts/main.lua"]).NeedsUe4ss == false, "plain PAK and plain UE4SS MODs install as before");
+        Assert(ModArchivePlanner.Plan(["A/Big.pak", "B/Small.pak", "M/Scripts/main.lua"]).Kind == ModArchiveKind.SeveralPaks, "several PAKs stay refused, scripts or not");
+        Assert(ModArchivePlanner.Plan(["A/Scripts/main.lua", "B/Scripts/main.lua", "x.pak"]).Kind == ModArchiveKind.SeveralUe4ssMods, "two UE4SS MODs stay refused");
+    }, failures);
+
+    // ---- v1.0.6.0 (roadmap S-3): one Pal added to, or removed from, one player's Pal box ----
+    RunScenario("Pal box edits: add a copy of a boxed Pal (new id, owner, free place, guild member), remove a boxed Pal with its slot and guild entry, refuse Pals outside the box, unknown species and a full box, and verify only that Pal changed", () =>
+    {
+        const string Z = PalBoxEdits.ZeroGuid, Me = "67d8d355-0000-0000-0000-000000000000", Other = "a3835c7b-0000-0000-0000-000000000000";
+        const string MyBox = "744e8384-449e-0dd3-c5e3-7c98bd50b9bd", OtherBox = "11111111-2222-3333-4444-555555555555", Party = "432363ed-4826-b4d6-7d56-209e440a3f89", Guild = "11d02ac3-4634-e88b-6a92-62a0c74fcd53";
+        static string G(string v) => """{"struct_type":"Guid","struct_id":"@Z@","id":null,"value":"@V@","type":"StructProperty"}""".Replace("@Z@", PalBoxEdits.ZeroGuid).Replace("@V@", v);
+        static string Pal(string id, string species, int level, string owner, string container, int slot, string group, string? nick = null) =>
+            """{"key":{"PlayerUId":@ZG@,"InstanceId":@IDG@,"DebugName":{"id":null,"value":"","type":"StrProperty"}},"value":{"RawData":{"array_type":"ByteProperty","id":null,"value":{"object":{"SaveParameter":{"struct_type":"PalIndividualCharacterSaveParameter","struct_id":"@Z@","id":null,"value":{"CharacterID":{"id":null,"value":"@SP@","type":"NameProperty"},"Gender":{"id":null,"value":{"type":"EPalGenderType","value":"EPalGenderType::Female"},"type":"EnumProperty"},"Level":{"id":null,"value":{"type":"None","value":@LV@},"type":"ByteProperty"},@NICK@"OwnedTime":{"struct_type":"DateTime","struct_id":"@Z@","id":null,"value":639220827780120000,"type":"StructProperty"},"OwnerPlayerUId":@OWG@,"OldOwnerPlayerUIds":{"array_type":"StructProperty","id":null,"value":{"prop_name":"OldOwnerPlayerUIds","prop_type":"StructProperty","values":["@OW@"],"type_name":"Guid","id":"@Z@"},"type":"ArrayProperty"},"SlotId":{"struct_type":"PalCharacterSlotId","struct_id":"@Z@","id":null,"value":{"ContainerId":{"struct_type":"PalContainerId","struct_id":"@Z@","id":null,"value":{"ID":@CG@},"type":"StructProperty"},"SlotIndex":{"id":null,"value":@SL@,"type":"IntProperty"}},"type":"StructProperty"}},"type":"StructProperty"}},"unknown_bytes":{"~b":"AAAAAA=="},"group_id":"@GR@","trailing_bytes":{"~b":"AAAAAA=="}},"type":"ArrayProperty","custom_type":".worldSaveData.CharacterSaveParameterMap.Value.RawData"},"CustomVersionData":{"array_type":"ByteProperty","id":null,"value":{"values":{"~b":"AQAAAA=="}},"type":"ArrayProperty"}}}"""
+            .Replace("@ZG@", G(PalBoxEdits.ZeroGuid)).Replace("@IDG@", G(id)).Replace("@SP@", species).Replace("@LV@", level.ToString()).Replace("@OWG@", G(owner)).Replace("@OW@", owner)
+            .Replace("@CG@", G(container)).Replace("@SL@", slot.ToString()).Replace("@GR@", group).Replace("@Z@", PalBoxEdits.ZeroGuid)
+            .Replace("@NICK@", nick is null ? "" : "\"NickName\":{\"id\":null,\"value\":\"" + nick + "\",\"type\":\"StrProperty\"},\"LastNickNameModifierPlayerUid\":" + G(owner) + ",");
+        static string PlayerChar(string uid, string id, string group) =>
+            """{"key":{"PlayerUId":@UG@,"InstanceId":@IDG@,"DebugName":{"id":null,"value":"","type":"StrProperty"}},"value":{"RawData":{"array_type":"ByteProperty","id":null,"value":{"object":{"SaveParameter":{"struct_type":"PalIndividualCharacterSaveParameter","struct_id":"@Z@","id":null,"value":{"IsPlayer":{"id":null,"value":true,"type":"BoolProperty"}},"type":"StructProperty"}},"unknown_bytes":{"~b":"AAAAAA=="},"group_id":"@GR@","trailing_bytes":{"~b":"AAAAAA=="}},"type":"ArrayProperty"}}}"""
+            .Replace("@UG@", G(uid)).Replace("@IDG@", G(id)).Replace("@GR@", group).Replace("@Z@", PalBoxEdits.ZeroGuid);
+        static string Slot(int index, string id) =>
+            """{"SlotIndex":{"id":null,"value":@I@,"type":"IntProperty"},"RawData":{"array_type":"ByteProperty","id":null,"value":{"player_uid":"@Z@","instance_id":"@ID@","permission_tribe_id":0,"unknown_bytes":[0,0,0,0,0]},"type":"ArrayProperty","custom_type":".worldSaveData.CharacterContainerSaveData.Value.Slots.Slots.RawData"},"CustomVersionData":{"array_type":"ByteProperty","id":null,"value":{"values":{"~b":"AQAAAA=="}},"type":"ArrayProperty"}}"""
+            .Replace("@I@", index.ToString()).Replace("@ID@", id).Replace("@Z@", PalBoxEdits.ZeroGuid);
+        static string Container(string id, int capacity, params string[] slots) =>
+            """{"key":{"ID":@IG@},"value":{"bReferenceSlot":{"value":false,"id":null,"type":"BoolProperty"},"Slots":{"array_type":"StructProperty","id":null,"value":{"prop_name":"Slots","prop_type":"StructProperty","values":[@S@],"type_name":"PalCharacterSlotSaveData","id":"@Z@"},"type":"ArrayProperty"},"SlotNum":{"id":null,"value":@C@,"type":"IntProperty"}}}"""
+            .Replace("@IG@", G(id)).Replace("@S@", string.Join(",", slots)).Replace("@C@", capacity.ToString()).Replace("@Z@", PalBoxEdits.ZeroGuid);
+        string World(int myCapacity) =>
+            """{"properties":{"worldSaveData":{"value":{"CharacterSaveParameterMap":{"value":[@CH@]},"CharacterContainerSaveData":{"value":[@CO@]},"GroupSaveDataMap":{"value":[{"key":"@GU@","value":{"RawData":{"value":{"group_type":"EPalGroupType::Guild","individual_character_handle_ids":[{"guid":"@ME@","instance_id":"f883a86b-4731-fdcc-228a-c183d685c8d3"},{"guid":"@Z@","instance_id":"aaaaaaaa-0000-0000-0000-000000000001"},{"guid":"@Z@","instance_id":"aaaaaaaa-0000-0000-0000-000000000002"},{"guid":"@Z@","instance_id":"aaaaaaaa-0000-0000-0000-000000000003"},{"guid":"@Z@","instance_id":"aaaaaaaa-0000-0000-0000-000000000004"}]}}}}]}}}}}"""
+            .Replace("@CH@", string.Join(",", PlayerChar(Me, "f883a86b-4731-fdcc-228a-c183d685c8d3", Guild),
+                Pal("aaaaaaaa-0000-0000-0000-000000000001", "SheepBall", 2, Me, MyBox, 0, Guild, "Fluffy"),
+                Pal("aaaaaaaa-0000-0000-0000-000000000002", "Ganesha", 6, Me, MyBox, 2, Guild),
+                Pal("aaaaaaaa-0000-0000-0000-000000000003", "Kitsunebi", 9, Me, Party, 0, Guild),
+                Pal("aaaaaaaa-0000-0000-0000-000000000004", "KendoFrog", 12, Other, OtherBox, 0, Guild)))
+            .Replace("@CO@", string.Join(",", Container(MyBox, myCapacity, Slot(0, "aaaaaaaa-0000-0000-0000-000000000001"), Slot(2, "aaaaaaaa-0000-0000-0000-000000000002")),
+                Container(Party, 5, Slot(0, "aaaaaaaa-0000-0000-0000-000000000003")), Container(OtherBox, myCapacity, Slot(0, "aaaaaaaa-0000-0000-0000-000000000004"))))
+            .Replace("@GU@", Guild).Replace("@ME@", Me).Replace("@Z@", PalBoxEdits.ZeroGuid);
+        var level = System.Text.Json.Nodes.JsonNode.Parse(World(960))!;
+        var player = System.Text.Json.Nodes.JsonNode.Parse("""{"properties":{"SaveData":{"value":{"PlayerUId":@MG@,"PalStorageContainerId":{"value":{"ID":@BG@}}}}}}""".Replace("@MG@", G(Me)).Replace("@BG@", G(MyBox)))!;
+        Assert(PalBoxEdits.PlayerUid(player) == Me && PalBoxEdits.PalBoxContainerId(player) == MyBox && PalBoxEdits.GuildOf(level, Me) == Guild, "the player's id, Pal box and guild are read");
+        var box = PalBoxEdits.ReadPalBox(level, MyBox);
+        Assert(box.Count == 2 && box[0] is { Species: "SheepBall", Level: 2, Nickname: "Fluffy", SlotIndex: 0 } && box[1].SlotIndex == 2, "the box lists its Pals with species, level, name and place (the party Pal is not in it)");
+        Assert(PalBoxEdits.AddableSpecies(level, MyBox).SequenceEqual(["Ganesha", "KendoFrog", "SheepBall"]), "species with a Pal in a Pal box can be added (not the party-only Kitsunebi)");
+        var before = PalBoxEdits.Measure(level, MyBox, Guild);
+        var newId = "bbbbbbbb-0000-0000-0000-000000000009";
+        var added = PalBoxEdits.Add(level, Me, MyBox, "KendoFrog", newId, new DateTime(2026, 10, 6, 0, 0, 0, DateTimeKind.Utc));
+        Assert(added is { SlotIndex: 1, Species: "KendoFrog", Level: 12 }, $"added in the first free place, a copy of the boxed KendoFrog: {added}");
+        var entry = PalBoxEdits.Characters(level).Single(e => e!["key"]!["InstanceId"]!["value"]!.GetValue<string>() == newId)!;
+        var sp = entry["value"]!["RawData"]!["value"]!["object"]!["SaveParameter"]!["value"]!;
+        Assert(sp["OwnerPlayerUId"]!["value"]!.GetValue<string>() == Me && sp["OldOwnerPlayerUIds"]!["value"]!["values"]![0]!.GetValue<string>() == Me &&
+               sp["SlotId"]!["value"]!["ContainerId"]!["value"]!["ID"]!["value"]!.GetValue<string>() == MyBox && sp["SlotId"]!["value"]!["SlotIndex"]!["value"]!.GetValue<int>() == 1 &&
+               entry["value"]!["RawData"]!["value"]!["group_id"]!.GetValue<string>() == Guild && sp["OwnedTime"]!["value"]!.GetValue<long>() == new DateTime(2026, 10, 6, 0, 0, 0, DateTimeKind.Utc).Ticks,
+            "the copy has the new owner, the box place, the owner's guild and now as its owned time");
+        Assert(PalBoxEdits.Characters(level).Count(e => e!["key"]!["InstanceId"]!["value"]!.GetValue<string>() == "aaaaaaaa-0000-0000-0000-000000000004") == 1 &&
+               PalBoxEdits.ReadPalBox(level, OtherBox).Single().InstanceId == "aaaaaaaa-0000-0000-0000-000000000004", "the original Pal stays where it was");
+        PalBoxEdits.VerifyOnlyThisChanged(before, PalBoxEdits.Measure(level, MyBox, Guild), added, "add");
+        var copyNick = PalBoxEdits.Add(level, Me, MyBox, "SheepBall", "bbbbbbbb-0000-0000-0000-00000000000a", DateTime.UtcNow);
+        Assert(copyNick.Nickname is null && PalBoxEdits.ReadPalBox(level, MyBox).Single(p => p.InstanceId == copyNick.InstanceId).Nickname is null, "a copy does not keep the original's nickname");
+        var before2 = PalBoxEdits.Measure(level, MyBox, Guild);
+        var removed = PalBoxEdits.Remove(level, Me, MyBox, newId);
+        Assert(removed.InstanceId == newId && !PalBoxEdits.Characters(level).Any(e => e!["key"]!["InstanceId"]!["value"]!.GetValue<string>() == newId), "the removed Pal's record is gone");
+        PalBoxEdits.VerifyOnlyThisChanged(before2, PalBoxEdits.Measure(level, MyBox, Guild), removed, "remove");
+        bool Refused(Action a, string text) { try { a(); return false; } catch (InvalidOperationException ex) { return ex.Message.Contains(text); } }
+        Assert(Refused(() => PalBoxEdits.Remove(level, Me, MyBox, "aaaaaaaa-0000-0000-0000-000000000003"), "not in this player's Pal box"), "a Pal in the party is not removed");
+        Assert(Refused(() => PalBoxEdits.Add(level, Me, MyBox, "Kitsunebi", Guid.NewGuid().ToString(), DateTime.UtcNow), "none to copy"), "a species only in a party is refused (nothing in a box to copy)");
+        Assert(Refused(() => PalBoxEdits.Add(level, Me, MyBox, "Unobtainium", Guid.NewGuid().ToString(), DateTime.UtcNow), "none to copy"), "an unknown species is refused");
+        var small = System.Text.Json.Nodes.JsonNode.Parse(World(2))!;
+        PalBoxEdits.Add(small, Me, MyBox, "SheepBall", Guid.NewGuid().ToString(), DateTime.UtcNow);
+        Assert(Refused(() => PalBoxEdits.Add(small, Me, MyBox, "SheepBall", Guid.NewGuid().ToString(), DateTime.UtcNow), "The Pal box is full"), "a full box is refused (its last free place taken first)");
+        bool Mismatch(Action a) { try { a(); return false; } catch (InvalidDataException) { return true; } }
+        var tampered = PalBoxEdits.Measure(level, MyBox, Guild);
+        Assert(Mismatch(() => PalBoxEdits.VerifyOnlyThisChanged(tampered, tampered, removed, "add")), "verification notices when the Pal is not there");
     }, failures);
 
     // ---- v1.0.5.0 (roadmap M-1): what a MOD archive holds and whether MystTiq installs it (layouts seen on 2026-10-06) ----

@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1566,6 +1566,26 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         $"The Players page's inventory card lists the saved slots, Remove red, Add and Load styled, a recorded item marked [{list?.ItemCount} rows; {classes}]");
     vm.InventorySlots.Clear();
 }
+// v1.0.6.0 (roadmap S-3): the Players page's Pal box card lists the box, Remove is red, Add an apply button beside the
+// species picker, and both are Admin controls.
+{
+    vm.PalBoxPals.Clear(); vm.PalBoxSpecies.Clear();
+    vm.PalBoxPals.Add(new PalBoxPalDto { SlotIndex = 0, InstanceId = "aaaaaaaa-0000-0000-0000-000000000001", Species = "SheepBall", Level = 2, Nickname = "Fluffy" });
+    vm.PalBoxPals.Add(new PalBoxPalDto { SlotIndex = 2, InstanceId = "aaaaaaaa-0000-0000-0000-000000000002", Species = "Ganesha", Level = 6 });
+    foreach (var s in new[] { "Ganesha", "SheepBall" }) vm.PalBoxSpecies.Add(s);
+    vm.SelectedPalBoxSpecies = "SheepBall";
+    vm.NavigateCommand.Execute(NavigationPage.Players);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var card = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "PalBoxCard");
+    var list = card?.GetVisualDescendants().OfType<ListBox>().FirstOrDefault(l => l.Name == "PalBoxList");
+    var buttons = card?.GetLogicalDescendants().OfType<Button>().ToList() ?? [];
+    var picker = card?.GetLogicalDescendants().OfType<ComboBox>().FirstOrDefault();
+    Check(card is { IsVisible: true } && list?.ItemCount == 2 && picker?.ItemCount == 2 && picker.SelectedItem as string == "SheepBall" &&
+          buttons.Count(b => b.Classes.Contains("danger")) == 1 && buttons.Count(b => b.Classes.Contains("apply")) == 1 && buttons.Count(b => b.Classes.Contains("info")) == 1 &&
+          vm.PalBoxPals[0].RowVerbatim.Contains("SheepBall") && vm.PalBoxPals[0].RowVerbatim.Contains("\"Fluffy\""),
+        $"The Players page's Pal box card lists the box (place, species, level, name), with a species picker, Remove red and Add styled [{list?.ItemCount} rows]");
+    vm.PalBoxPals.Clear(); vm.PalBoxSpecies.Clear();
+}
 // v1.0.5.0 (roadmap M-1): the MOD browser against stand-in repositories (Thunderstore, CurseForge, GitHub), a folder of
 // ZIPs, the download host checks, the nxm:// handoff and the card on the MOD Library page.
 {
@@ -1657,7 +1677,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var folder = Path.Combine(Path.GetTempPath(), "mysttiq-folder-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(Path.Combine(folder, "sub"));
     File.WriteAllBytes(Path.Combine(folder, "GuildFeedBox-0.4.1-manual.zip"), Zip("GuildFeedBox/enabled.txt", "GuildFeedBox/Scripts/main.lua"));
-    File.WriteAllBytes(Path.Combine(folder, "sub", "BasesPlus.zip"), Zip("Pal/Content/Paks/LogicMods/BasesPlus.pak", "Pal/Binaries/Win64/Mods/BasesPlus/Scripts/main.lua"));
+    File.WriteAllBytes(Path.Combine(folder, "sub", "Variants.zip"), Zip("Option A/Big.pak", "Option B/Small.pak"));
     File.WriteAllBytes(Path.Combine(folder, "photos.zip"), Zip("a.jpg", "b.jpg"));
     File.WriteAllBytes(Path.Combine(folder, "installer.zip"), Zip("setup.exe", "Mod/Scripts/main.lua"));
     File.WriteAllText(Path.Combine(folder, "other.7z"), "7z");
@@ -1667,18 +1687,18 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     vm.SelectedModSource = vm.ModSourceOptions.First(o => o.Id == "folders");
     Wait((Task)typeof(MainWindowViewModel).GetMethod("SearchModBrowserAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, null)!);
     var listed = vm.ModBrowserResults.Select(l => l.Name).ToList();
-    Check(listed.Count == 2 && listed.Contains("GuildFeedBox-0.4.1-manual") && listed.Contains("BasesPlus") && vm.ModBrowserStatus.Contains("1 .7z or .rar") &&
-          vm.ModBrowserResults.Single(l => l.Name == "BasesPlus").HasNote,
+    Check(listed.Count == 2 && listed.Contains("GuildFeedBox-0.4.1-manual") && listed.Contains("Variants") && vm.ModBrowserStatus.Contains("1 .7z or .rar") &&
+          vm.ModBrowserResults.Single(l => l.Name == "Variants").HasNote,
         $"Downloads and folders: MOD ZIPs listed (one MystTiq cannot install marked), others hidden, .7z counted [{string.Join(", ", listed)}; {vm.ModBrowserStatus}]");
-    vm.SelectedModListing = vm.ModBrowserResults.Single(l => l.Name == "BasesPlus");
+    vm.SelectedModListing = vm.ModBrowserResults.Single(l => l.Name == "Variants");
     var clock = Stopwatch.StartNew(); while (vm.SelectedModFile is null && clock.ElapsedMilliseconds < 5000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
     var refusedPrep = Run(vm.PrepareModBrowserInstallAsync());
     var refusedText = vm.ModBrowserStatus;
     vm.SelectedModListing = vm.ModBrowserResults.Single(l => l.Name == "GuildFeedBox-0.4.1-manual");
     clock.Restart(); while ((vm.SelectedModFile is null || !vm.SelectedModFile.Name.StartsWith("GuildFeedBox")) && clock.ElapsedMilliseconds < 5000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
     var prepared = Run(vm.PrepareModBrowserInstallAsync());
-    Check(refusedPrep is null && refusedText.Contains("PAK and UE4SS scripts together") && prepared is { IsTemporary: false, Plan.Kind: ModArchiveKind.Ue4ss, Package: "GuildFeedBox" },
-        $"Install Selected File reads the archive first: a mixed one is refused with the reason, a UE4SS MOD is ready to confirm under its own folder's name [{refusedText}]");
+    Check(refusedPrep is null && refusedText.Contains("2 different PAKs") && prepared is { IsTemporary: false, Plan.Kind: ModArchiveKind.Ue4ss, Package: "GuildFeedBox" },
+        $"Install Selected File reads the archive first: a choose-one archive is refused with the reason, a UE4SS MOD is ready to confirm under its own folder's name [{refusedText}]");
     if (prepared is not null) vm.DiscardPreparedMod(prepared);
     Check(File.Exists(Path.Combine(folder, "GuildFeedBox-0.4.1-manual.zip")), "A file from a folder on this PC is never deleted by the browser");
 

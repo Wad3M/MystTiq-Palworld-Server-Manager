@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -169,6 +169,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var palEdit = new HeadlessPalEditService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             // v1.0.4.0 (roadmap S-1, S-2): one item removed from, or added to, one player's saved inventory.
             var inventoryEdit = new HeadlessInventoryEditService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
+            // v1.0.6.0 (roadmap S-3): one Pal added to, or removed from, one player's Pal box.
+            var palBoxEdit = new HeadlessPalBoxEditService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var playerDeletion = new HeadlessPlayerDeletionService(paths, lifecycle, backups, activity, playerGuildExplorer, playerRegistry, guildOwnership, operations, profileId);
             var playerCopy = new HeadlessPlayerCopyService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var consoleLog = new HeadlessConsoleLogWriter(paths);
@@ -283,6 +285,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 RecoveryState = recoveryState,
                 PalEdit = palEdit,
                 InventoryEdit = inventoryEdit,
+                PalBoxEdit = palBoxEdit,
                 PlayerDeletion = playerDeletion,
                 PlayerCopy = playerCopy,
                 DiscordBot = discordBot,
@@ -1074,6 +1077,17 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapPost("/players/inventory/apply", async (InventoryEditApplyRequest request, CancellationToken token) =>
         {
             var result = await p.InventoryEdit.ApplyAsync(request.Token, request.Confirmed, token);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+        // v1.0.6.0 (roadmap S-3; D-7 add and remove a Pal): a player's Pal box from the world save, and one Pal added (a copy of
+        // one of that species already in a Pal box) or removed, with the same preview, checked backup and verification.
+        routes.MapGet("/players/{playerId}/palbox", async (string playerId, CancellationToken token) =>
+            Results.Ok(await p.PalBoxEdit.GetPalBoxAsync(playerId, token)));
+        routes.MapPost("/players/palbox/preview", async (PalBoxEditRequest request, CancellationToken token) =>
+            Results.Ok(await p.PalBoxEdit.PreviewAsync(request, token)));
+        routes.MapPost("/players/palbox/apply", async (PalBoxEditApplyRequest request, CancellationToken token) =>
+        {
+            var result = await p.PalBoxEdit.ApplyAsync(request.Token, request.Confirmed, token);
             return result.Success ? Results.Ok(result) : Results.BadRequest(result);
         }).RequireRole(MystTiqRole.Admin, p.Id);
 

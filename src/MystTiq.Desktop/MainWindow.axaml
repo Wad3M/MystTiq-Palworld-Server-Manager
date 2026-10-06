@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.5.0: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.6.0: file reviewed for this release (2026-10-06). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -1661,6 +1661,30 @@
                     <Button Classes="apply" Content="{services:Tr ui.add_to_inventory}" Click="AddInventoryItem_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
                   </WrapPanel>
                   <TextBlock Text="{services:TrText InventoryStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Border>
+              <!-- v1.0.6.0 (roadmap S-3): the selected player's Pal box from the world save; add a Pal (a copy of one of that
+                   species already in a Pal box) or remove one, with a preview, a confirmation and a checked backup. -->
+              <Border x:Name="PalBoxCard" Classes="statuscard accentWorld" IsVisible="{Binding CanManageAdmin}">
+                <StackPanel Spacing="6">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <TextBlock Text="{services:Tr ui.palbox_saved}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.load_palbox}" Command="{Binding LoadPalBoxCommand}"/>
+                  </Grid>
+                  <TextBlock Text="{services:Tr ui.palbox_saved_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.palbox_saved}" x:Name="PalBoxList" ItemsSource="{Binding PalBoxPals}" SelectedItem="{Binding SelectedPalBoxPal}" MaxHeight="200">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="models:PalBoxPalDto">
+                        <TextBlock Text="{Binding RowVerbatim}" FontFamily="Consolas, monospace" FontSize="12"/>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <WrapPanel>
+                    <Button Classes="danger" Content="{services:Tr ui.remove_selected_pal}" Click="RemovePalBoxPal_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
+                    <ComboBox AutomationProperties.Name="{services:Tr ui.pal_to_add}" ItemsSource="{Binding PalBoxSpecies}" SelectedItem="{Binding SelectedPalBoxSpecies}" MinWidth="180" Margin="0,0,8,6"/>
+                    <Button Classes="apply" Content="{services:Tr ui.add_to_palbox}" Click="AddPalBoxPal_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
+                  </WrapPanel>
+                  <TextBlock Text="{services:TrText PalBoxStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                 </StackPanel>
               </Border>
               <TextBlock Text="{services:TrText PlayerAdminStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>

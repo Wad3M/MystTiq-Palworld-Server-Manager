@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -49,6 +49,7 @@ public sealed class HeadlessModManagementService
         if (contentLength is > 536_870_912) return HeadlessModMutationResult.Failure("MOD archive exceeds the 512 MB limit.");
         if (!await mutationGate.WaitAsync(0, cancellationToken)) return HeadlessModMutationResult.Failure("A MOD mutation is already in progress.");
         var staging = Path.Combine(paths.ManagerRuntimeRoot, "mod-staging", Guid.NewGuid().ToString("N"));
+        var typeNoteExtra = string.Empty;
         try
         {
             var blocked = await RejectWhenRunningAsync(cancellationToken); if (blocked is not null) return blocked;
@@ -92,14 +93,29 @@ public sealed class HeadlessModManagementService
                 return HeadlessModMutationResult.Failure(plan.Summary);
             }
             var detectedType = plan.InstallType!;
-            var changed = detectedType.Equals("PAK", StringComparison.OrdinalIgnoreCase)
-                ? InstallPakFiles(extracted, package)
-                : InstallUe4ssFiles(Path.Combine(extracted, plan.Ue4ssRoot ?? string.Empty), package);
-            var typeNote = string.Equals(detectedType, type, StringComparison.OrdinalIgnoreCase)
+            // v1.0.6.0 (roadmap M-2): a LogicMods PAK and a PAK with UE4SS scripts need UE4SS; both destinations are checked
+            // before anything is copied, and the second part gets its own rollback snapshot.
+            var ue4ss = ResolveUe4ss();
+            if (plan.NeedsUe4ss && !ue4ss.HasUe4ssRoot && !ue4ss.HasLegacyModsRoot)
+                return HeadlessModMutationResult.Failure("This MOD needs UE4SS, which is not installed on this server. Install UE4SS from its page first.");
+            var logicFolder = Path.Combine(paths.ServerRoot, "Pal", "Content", "Paks", "LogicMods", package);
+            if (plan.PakTarget == "LogicMods" && Directory.Exists(logicFolder))
+                return HeadlessModMutationResult.Failure("A LogicMods MOD with this package name already exists.");
+            if (plan.Kind == ModArchiveKind.MixedPakAndScripts && Directory.Exists(Path.Combine(ue4ss.ActiveModsRoot, package)))
+                return HeadlessModMutationResult.Failure("A UE4SS MOD with this package name already exists.");
+            if (plan.Kind == ModArchiveKind.MixedPakAndScripts && !type.Equals("UE4SS", StringComparison.OrdinalIgnoreCase)) CaptureSnapshot("UE4SS", package);
+            var changed = 0;
+            if (detectedType.StartsWith("PAK", StringComparison.OrdinalIgnoreCase))
+                changed += plan.PakTarget == "LogicMods" ? InstallLogicModsFiles(Path.Combine(extracted, plan.PakDirectory ?? string.Empty), logicFolder) : InstallPakFiles(extracted, package);
+            if (plan.Ue4ssRoot is not null)
+                changed += InstallUe4ssFiles(Path.Combine(extracted, plan.Ue4ssRoot), package);
+            if (plan.PakTarget == "LogicMods" && !BpModLoaderOn(ue4ss.ActiveModsRoot))
+                typeNoteExtra = " LogicMods PAKs load through UE4SS's BPModLoaderMod, which is not switched on in mods.txt.";
+            var typeNote = detectedType.Contains('+') || string.Equals(detectedType, type, StringComparison.OrdinalIgnoreCase)
                 ? string.Empty
                 : $"; requestedType={type.ToUpperInvariant()} (auto-corrected from archive contents)";
             activity.Record("Information", "MODs", "Installed MOD archive", $"type={detectedType}; package={package}; files={changed}{typeNote}");
-            return new(true, detectedType, package, true, changed, $"Installed {package} from validated ZIP archive ({detectedType} detected from contents).");
+            return new(true, detectedType, package, true, changed, $"Installed {package} from validated ZIP archive ({detectedType} detected from contents).{typeNoteExtra}");
         }
         catch (Exception ex) { return HeadlessModMutationResult.Failure(ex.Message); }
         finally { TryDeleteDirectory(staging); mutationGate.Release(); }
@@ -673,6 +689,23 @@ public sealed class HeadlessModManagementService
         var root = Path.Combine(paths.ServerRoot, "Pal", "Content", "Paks", "~mods"); Directory.CreateDirectory(root);
         foreach (var file in files) File.Copy(file, Path.Combine(root, package + Path.GetExtension(file).ToLowerInvariant()), true);
         return files.Length;
+    }
+
+    // v1.0.6.0 (roadmap M-2): a blueprint MOD's folder from the archive (its PAK and the files beside it, such as a
+    // .modconfig.json) into Paks\LogicMods\<package>, names kept; listed, removed and rolled back as a nested PAK MOD.
+    private static int InstallLogicModsFiles(string pakDirectory, string destination)
+    {
+        var files = Directory.EnumerateFiles(pakDirectory, "*", SearchOption.AllDirectories).ToArray();
+        if (files.Length == 0) throw new InvalidDataException("The LogicMods folder in the archive is empty.");
+        Directory.CreateDirectory(destination);
+        foreach (var file in files) { var target = Path.Combine(destination, Path.GetRelativePath(pakDirectory, file)); Directory.CreateDirectory(Path.GetDirectoryName(target)!); File.Copy(file, target); }
+        return files.Length;
+    }
+
+    private static bool BpModLoaderOn(string modsRoot)
+    {
+        var modsTxt = Path.Combine(modsRoot, "mods.txt");
+        return File.Exists(modsTxt) && File.ReadAllLines(modsTxt).Any(l => l.Replace(" ", string.Empty).Equals("BPModLoaderMod:1", StringComparison.OrdinalIgnoreCase));
     }
 
     private int InstallUe4ssFiles(string extracted, string package)

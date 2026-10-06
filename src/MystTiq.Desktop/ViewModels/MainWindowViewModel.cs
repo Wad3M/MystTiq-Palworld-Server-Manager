@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -426,6 +426,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         InitializeNexusMods();
         // v1.0.5.0 (roadmap M-1): the MOD browser.
         InitializeModBrowser();
+        // v1.0.6.0 (roadmap S-3): the Players page's Pal box.
+        InitializePalBox();
         // v0.8.5.0: the saved display language, before anything is shown.
         Localizer.Instance.SetLanguage(_languageStore.Load());
         Localizer.Instance.LanguageChanged += OnLanguageChanged;

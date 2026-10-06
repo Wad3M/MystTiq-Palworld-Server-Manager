@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -403,6 +403,21 @@ public sealed partial class MainWindow : Window
             if (await dialog.ShowDialog<bool>(this) != true) return;
         }
         vm.UseMystTiqForNxmLinks();
+    }
+
+    // v1.0.6.0 (roadmap S-3): add or remove one Pal in the player's Pal box, after the preview and a confirmation.
+    private async void RemovePalBoxPal_OnClick(object? sender, RoutedEventArgs e) => await EditPalBoxAsync("remove");
+    private async void AddPalBoxPal_OnClick(object? sender, RoutedEventArgs e) => await EditPalBoxAsync("add");
+
+    private async Task EditPalBoxAsync(string action)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        var preview = await vm.PreviewPalBoxEditAsync(action);
+        if (preview is not { CanApply: true, Token: { } token }) return;
+        var dialog = new Views.ConfirmOperationDialog(Localizer.T(preview.Summary), preview.Findings.Select(Localizer.T).ToList(),
+            Localizer.T(action == "remove" ? "Remove" : "Add"), danger: action == "remove");
+        if (await dialog.ShowDialog<bool>(this) != true) return;
+        await vm.ApplyPalBoxEditAsync(token);
     }
 
     private async void WipeBase_OnClick(object? sender, RoutedEventArgs e)

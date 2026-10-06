@@ -1,4 +1,27 @@
-<!-- MystTiq v1.0.5.0: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.6.0: file reviewed for this release (2026-10-06). -->
+## v1.0.6.0 — Pals in the Pal Box, and MODs Laid Out as the Game
+
+- S-3 add and remove a Pal: the Players page's Pal box card (admins) lists a player's Pal box from the world save. One Pal
+  is added (a copy of one of that kind already in a Pal box: new id, the player as owner, the first free place, the
+  player's guild, no nickname) or removed (only from that player's box, with its place and guild entry), guarded like the
+  inventory edits and verified to change exactly that Pal. Live on the clone's real world, the game kept an added Pal
+  through a load and save, and after a removal it was gone; the pre-edit backup restored Level.sav byte for byte.
+- M-2 MODs laid out as the game folder: a LogicMods PAK installs into Paks\LogicMods\<name> with its files, and a PAK with
+  UE4SS scripts installs as two parts under one name; both need UE4SS, check both destinations first, and note when
+  BPModLoaderMod is off. Live on the clone, Thunderstore's BasesPlus installed from the MOD browser and was removed.
+- Evidence gathered automatically (owner, 2026-10-06), with no changes to either firewall:
+  - R-3 Done: the production unit started at boot; the current build as a per-user systemd unit restarted after SIGKILL
+    and stopped cleanly; no sudo, no reboot.
+  - W-1 Done: a pinned-TLS browser session on the clone from the Linux VM through an SSH tunnel, a Start refused 403.
+  - R-2: a webhook delivered, then Failing on a closed port.
+  - S-1/S-2: the game kept both inventory edits through a load and save.
+- Fixed:
+  - a file held for a moment no longer fails a save edit's final replace (retried briefly);
+  - a restore that cannot remove its temporary copy because of files owned by administrators says so.
+- Tests: the v1.0.6.0 gate regenerated from v1.0.5.0 (every earlier check kept), the Pal box and MOD layout smokes, the
+  Linux per-user unit check, LogicHarness and ArtworkHarness checks; 28 texts in 12 languages.
+- Version advanced to 1.0.6.0.
+
 ## v1.0.5.0 — MOD Browser
 
 - M-1 MOD browser (repositories agreed with the owner, D-8): the MOD Library page's MOD Browser searches the Downloads

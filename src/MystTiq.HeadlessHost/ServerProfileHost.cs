@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Providers;
@@ -64,6 +64,8 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required HeadlessPalEditService PalEdit { get; init; }
     // v1.0.4.0 (roadmap S-1, S-2): guarded inventory edits.
     public required HeadlessInventoryEditService InventoryEdit { get; init; }
+    // v1.0.6.0 (roadmap S-3): one Pal added to, or removed from, one player's Pal box.
+    public required HeadlessPalBoxEditService PalBoxEdit { get; init; }
     public required HeadlessPlayerDeletionService PlayerDeletion { get; init; }
     public required HeadlessPlayerCopyService PlayerCopy { get; init; }
     public required HeadlessDiscordBotService DiscordBot { get; init; }

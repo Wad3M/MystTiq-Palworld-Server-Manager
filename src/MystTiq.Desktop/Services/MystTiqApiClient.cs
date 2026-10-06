@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -262,6 +262,13 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsJsonAsync("/api/v1/players/inventory/preview", request, cancellationToken); return await ReadOperationAsync<InventoryEditPreviewDto>(response, cancellationToken); }
     public async Task<InventoryEditResultDto> ApplyInventoryEditAsync(ConnectionProfile profile, string token, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsJsonAsync("/api/v1/players/inventory/apply", new { token, confirmed = true }, cancellationToken); return await ReadOperationAsync<InventoryEditResultDto>(response, cancellationToken); }
+    // v1.0.6.0 (roadmap S-3): a player's Pal box, and the guarded add/remove.
+    public async Task<PalBoxViewDto> GetPalBoxAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<PalBoxViewDto>($"/api/v1/players/{Uri.EscapeDataString(playerId)}/palbox", cancellationToken) ?? new(); }
+    public async Task<PalBoxEditPreviewDto> PreviewPalBoxEditAsync(ConnectionProfile profile, PalBoxEditRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsJsonAsync("/api/v1/players/palbox/preview", request, cancellationToken); return await ReadOperationAsync<PalBoxEditPreviewDto>(response, cancellationToken); }
+    public async Task<PalBoxEditResultDto> ApplyPalBoxEditAsync(ConnectionProfile profile, string token, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsJsonAsync("/api/v1/players/palbox/apply", new { token, confirmed = true }, cancellationToken); return await ReadOperationAsync<PalBoxEditResultDto>(response, cancellationToken); }
 
     // v1.0.2.0 (roadmap R-2): each outside channel's delivery health and the latest sends.
     public async Task<NotificationDeliveryHealthDto> GetNotificationDeliveryHealthAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)

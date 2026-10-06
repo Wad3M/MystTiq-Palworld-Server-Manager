@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.5.0: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.6.0: file reviewed for this release (2026-10-06). -->
 # Secure Management API & Automated Acceptance Architecture — v0.3.0.4
 
 ## API exposure policy

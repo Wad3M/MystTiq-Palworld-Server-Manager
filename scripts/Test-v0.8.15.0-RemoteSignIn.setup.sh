@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+# MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 # v0.8.15.0: starts an isolated, remote-enabled MystTiq on the Linux test VM for Test-v0.8.15.0-RemoteSignIn.ps1.
 # Everything lives in this script's own folder: its own config, FleetRoot, runtime, bearer token, self-signed TLS
 # certificate and port. /etc/mysttiq and the installed mysttiq-palworld service are never touched.

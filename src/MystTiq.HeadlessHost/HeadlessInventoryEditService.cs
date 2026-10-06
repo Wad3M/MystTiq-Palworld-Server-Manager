@@ -1,4 +1,4 @@
-// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -168,7 +168,7 @@ public sealed class HeadlessInventoryEditService
 
             var replacement = op.LevelSavePath + $".mysttiq-inventory-{id}.tmp";
             File.Copy(staged, replacement, true);
-            File.Replace(replacement, op.LevelSavePath, null, true);
+            FileRetry.Replace(replacement, op.LevelSavePath);
             Advance(journal, "Committed", $"Committed. Result hash {HashFile(op.LevelSavePath)}.");
             HeadlessSaveCodecService.RefreshExplorerSidecar(op.LevelSavePath, verifyJson);
             var message = (op.Request.Action == "remove" ? DescribeRemove(changed) : DescribeAdd(changed)) + $" Safety backup: {safety.FileName}.";
