@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -253,7 +253,7 @@ public sealed class HeadlessModManagementService
     private async Task<HeadlessModMutationResult?> RejectWhenRunningAsync(CancellationToken token)
     {
         var status = await lifecycle.GetStatusAsync(token);
-        return status.NativeProcessId.HasValue || status.Ready ? HeadlessModMutationResult.Failure("Stop PalServer before changing MOD files.") : null;
+        return status.ServerMayBeRunning ? HeadlessModMutationResult.Failure("Stop PalServer before changing MOD files.") : null;
     }
 
     // v0.6.8.0 "Backup, staged install, runtime verification and rollback": the roadmap's backup/
@@ -453,7 +453,7 @@ public sealed class HeadlessModManagementService
                 return Ue4ssInstallResult.Failure("Install preview is missing or expired. Preview again.");
 
             var status = await lifecycle.GetStatusAsync(cancellationToken);
-            if (status.NativeProcessId.HasValue || status.Ready)
+            if (status.ServerMayBeRunning)
                 return Ue4ssInstallResult.Failure("Stop PalServer before installing UE4SS -- its engine files are loaded into the running process.");
 
             Directory.CreateDirectory(staging);
@@ -547,7 +547,7 @@ public sealed class HeadlessModManagementService
         try
         {
             var status = await lifecycle.GetStatusAsync(cancellationToken);
-            if (status.NativeProcessId.HasValue || status.Ready)
+            if (status.ServerMayBeRunning)
                 return Ue4ssInstallResult.Failure("Stop PalServer before rolling back UE4SS -- its engine files are loaded into the running process.");
 
             if (!File.Exists(Ue4ssEngineSnapshotMetaPath))
@@ -707,7 +707,7 @@ public sealed class HeadlessModManagementService
     public async Task<HeadlessModInventory> GetInventoryAsync(CancellationToken cancellationToken)
     {
         var status = await lifecycle.GetStatusAsync(cancellationToken);
-        var serverRunning = status.NativeProcessId.HasValue || status.Ready;
+        var serverRunning = status.ServerMayBeRunning;
         var ue4ss = ResolveUe4ss();
         var enabledUe4ss = ReadEnabledPackages(ue4ss.ActiveModsRoot);
         var runtimeEvidence = ReadModRuntimeEvidence(ue4ss.RuntimeLogPath);
@@ -800,7 +800,7 @@ public sealed class HeadlessModManagementService
         try
         {
             var status = await lifecycle.GetStatusAsync(cancellationToken);
-            if (status.NativeProcessId.HasValue || status.Ready)
+            if (status.ServerMayBeRunning)
                 return HeadlessModMutationResult.Failure("Stop PalServer before enabling or disabling MOD files.");
 
             package = Path.GetFileName(package ?? string.Empty).Trim();

@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -68,7 +68,7 @@ public sealed class HeadlessPlayerCopyService(
         else if (destination.Online) findings.Add($"Destination player {destination.PlayerName} is currently online -- wait for them to disconnect.");
 
         var status = await lifecycle.GetStatusAsync(cancellationToken);
-        if (status.NativeProcessId.HasValue || status.Ready)
+        if (status.ServerMayBeRunning)
             findings.Add("PalServer must be stopped before copying player data.");
 
         string? sourcePath = null, destinationPath = null;
@@ -86,7 +86,7 @@ public sealed class HeadlessPlayerCopyService(
 
         var canApply = findings.Count == 0 && sourcePath is not null && destinationPath is not null &&
             File.Exists(sourcePath) && File.Exists(destinationPath) && converterMatch is not null &&
-            !status.NativeProcessId.HasValue && !status.Ready;
+            !status.ServerMayBeRunning;
 
         var token = "";
         var expires = DateTimeOffset.UtcNow.Add(PreviewLifetime);
@@ -131,7 +131,7 @@ public sealed class HeadlessPlayerCopyService(
                 return HeadlessPlayerCopyResult.Failure("The preview token is missing or expired. Preview the copy again.");
 
             var status = await lifecycle.GetStatusAsync(cancellationToken);
-            if (status.NativeProcessId.HasValue || status.Ready)
+            if (status.ServerMayBeRunning)
                 return HeadlessPlayerCopyResult.Failure("Stop PalServer before copying player data.");
 
             if (!File.Exists(op.DestinationPath) || !HashFile(op.DestinationPath).Equals(op.DestinationHash, StringComparison.OrdinalIgnoreCase))

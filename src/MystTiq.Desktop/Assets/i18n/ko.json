@@ -3826,5 +3826,22 @@
   "msg.frozen_activity": "멈춘 서버를 다시 시작함",
   "dashboard.openAlertCenter": "알림 센터 열기",
   "ui.browser_view": "읽기 전용 브라우저 보기",
-  "ui.browser_view_hint": "이 주소를 브라우저에서 열고 MystTiq 계정으로 로그인하면 각 서버의 상태, 플레이어, 백업을 볼 수 있습니다. 아무것도 변경할 수 없습니다. 인증(원격 액세스)이 켜져 있어야 하며, 다른 컴퓨터에서는 TLS도 필요합니다."
+  "ui.browser_view_hint": "이 주소를 브라우저에서 열고 MystTiq 계정으로 로그인하면 각 서버의 상태, 플레이어, 백업을 볼 수 있습니다. 아무것도 변경할 수 없습니다. 인증(원격 액세스)이 켜져 있어야 하며, 다른 컴퓨터에서는 TLS도 필요합니다.",
+  "ui.inventory_saved": "월드 세이브의 인벤토리",
+  "ui.inventory_saved_hint": "선택한 플레이어의 월드 세이브 속 기본 인벤토리입니다. 한 묶음을 제거하거나 위에서 고른 아이템을 추가합니다(수량 칸으로 개수 지정). 일반 묶음만, 서버가 중지된 동안에만 편집하며, 편집마다 먼저 새 안전 백업을 만들고 확인합니다.",
+  "ui.load_inventory": "인벤토리 불러오기",
+  "ui.remove_selected_stack": "선택한 묶음 제거",
+  "ui.add_to_inventory": "인벤토리에 추가",
+  "msg.inventory_has_own_record": "자체 기록 있음(여기서 제거 불가)",
+  "msg.inventory_select_player": "먼저 플레이어를 선택하세요.",
+  "msg.inventory_select_stack": "먼저 인벤토리에서 묶음을 선택하세요.",
+  "msg.inventory_pick_item": "먼저 위 목록에서 아이템을 고르세요.",
+  "msg.inventory_reading": "월드 세이브를 읽는 중…",
+  "msg.inventory_slots_used": "{1}칸 중 {0}칸 사용 중.",
+  "msg.inventory_removed": "{0} × {1} 제거함(칸 {2}).",
+  "msg.inventory_added": "{0} × {1} 추가함(칸 {2}).",
+  "msg.inventory_stop_first": "먼저 PalServer를 중지하세요. 세이브는 서버가 중지된 동안에만 편집하므로 접속한 플레이어가 없고 게임이 덮어쓸 수 없습니다.",
+  "msg.inventory_backup_first": "먼저 새 안전 백업을 만들고 확인하며, 변경 사항은 월드를 바꾸기 전에 검증됩니다.",
+  "msg.inventory_full": "인벤토리가 가득 찼습니다({0}칸).",
+  "msg.inventory_no_plain_stack": "월드에 {0}의 일반 묶음이 없어 MystTiq가 안전하게 추가할 수 없습니다."
 }

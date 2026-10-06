@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 namespace MystTiq.Core.Models;
 
 public enum ServerLifecyclePhase
@@ -46,6 +46,12 @@ public sealed record ServerLifecycleSnapshot(
     // StartupWatch.StuckAfter without opening its game port. A stuck start is what the stuck-start test is for.
     public DateTimeOffset? NativeStartedAt { get; init; }
     public bool StartupStuck { get; init; }
+
+    // v1.0.4.0: a PalServer process is alive right now, or its game port is open. NativeProcessId alone is not that: after
+    // a server ends outside MystTiq (a crash, a kill) the Crashed and Stopped snapshots carry its last-known id, and the
+    // guards that refused on NativeProcessId blocked backup restores and save edits until the next start (found by the
+    // v1.0.4.0 inventory smoke). Every "stop PalServer first" guard uses this.
+    public bool ServerMayBeRunning => Processes.Count > 0 || Ready;
 }
 
 public sealed record ServerLifecycleOperationResult(

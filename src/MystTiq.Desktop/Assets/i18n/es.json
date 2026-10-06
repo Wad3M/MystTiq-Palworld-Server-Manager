@@ -3826,5 +3826,22 @@
   "msg.frozen_activity": "Servidor congelado reiniciado",
   "dashboard.openAlertCenter": "Abrir Centro de alertas",
   "ui.browser_view": "Vista de solo lectura en el navegador",
-  "ui.browser_view_hint": "Abre esta dirección en un navegador e inicia sesión con una cuenta de MystTiq para ver el estado, los jugadores y las copias de seguridad de cada servidor. No puede cambiar nada. Requiere la autenticación activada (acceso remoto) y, desde otro equipo, también TLS."
+  "ui.browser_view_hint": "Abre esta dirección en un navegador e inicia sesión con una cuenta de MystTiq para ver el estado, los jugadores y las copias de seguridad de cada servidor. No puede cambiar nada. Requiere la autenticación activada (acceso remoto) y, desde otro equipo, también TLS.",
+  "ui.inventory_saved": "Inventario en la partida guardada",
+  "ui.inventory_saved_hint": "El inventario principal del jugador seleccionado tal como lo guarda la partida. Quita una pila o añade el objeto elegido arriba (la casilla de cantidad indica cuántos). Solo se editan pilas simples, solo con el servidor detenido, y cada edición hace antes una copia de seguridad nueva y comprobada.",
+  "ui.load_inventory": "Cargar inventario",
+  "ui.remove_selected_stack": "Quitar pila seleccionada",
+  "ui.add_to_inventory": "Añadir al inventario",
+  "msg.inventory_has_own_record": "Tiene su propio registro (no se puede quitar aquí)",
+  "msg.inventory_select_player": "Selecciona primero un jugador.",
+  "msg.inventory_select_stack": "Selecciona primero una pila del inventario.",
+  "msg.inventory_pick_item": "Elige primero un objeto en la lista de arriba.",
+  "msg.inventory_reading": "Leyendo la partida guardada…",
+  "msg.inventory_slots_used": "{0} de {1} casillas usadas.",
+  "msg.inventory_removed": "Quitado {0} × {1} (casilla {2}).",
+  "msg.inventory_added": "Añadido {0} × {1} (casilla {2}).",
+  "msg.inventory_stop_first": "Detén primero PalServer: la partida solo se edita con el servidor detenido, así nadie está conectado y el juego no puede sobrescribirla.",
+  "msg.inventory_backup_first": "Primero se hace y comprueba una copia de seguridad nueva; el cambio se verifica antes de reemplazar el mundo.",
+  "msg.inventory_full": "El inventario está lleno ({0} casillas).",
+  "msg.inventory_no_plain_stack": "El mundo no tiene ninguna pila simple de {0}, así que MystTiq no puede añadirlo con seguridad."
 }

@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.3.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.4.0: file reviewed for this release (2026-10-05). -->
 # Product roadmap
 
-Updated 2026-10-05. **Current version: v1.0.3.0. Accepted baseline: v1.0.0.0. Next milestone: v1.0.4.0 (guarded save edits).**
+Updated 2026-10-05. **Current version: v1.0.4.0. Accepted baseline: v1.0.0.0. Next milestone: v1.0.5.0 (MOD browser).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -56,6 +56,8 @@ Released 2026-10-05 as v1.0.3.0. W-1 is `Built` (the remote TLS session is owed)
 
 Exit gate: S-1 `Done` (remove an item), S-2 `Done` (add an item), S-3 `Done` (Pal add and remove). No edit ships without its restore check.
 
+Released 2026-10-05 as v1.0.4.0 with S-1 and S-2 `Built` (a player confirming in game on the clone is owed). S-3 moved to the milestone after v1.0.5.0: a Pal is two linked records (the parameter map and the Pal box slot) that must agree with the game's species record, so it ships later with its own restore check rather than without one.
+
 Every edit in this milestone follows the same rules:
 - An automatic backup is taken before the edit and is verified.
 - The edit runs on a clone server first, never on a production world.
@@ -63,8 +65,8 @@ Every edit in this milestone follows the same rules:
 
 | ID | Item | Acceptance | Evidence required | Status |
 | --- | --- | --- | --- | --- |
-| S-1 | Remove an item from a player | One named item is removed from one player's inventory. Other items are unchanged. The backup restores byte for byte. | Harness on a copy of a save. Live: clone server, player confirms, restore check. | Planned |
-| S-2 | Add an item to a player | One item is added to one player's inventory. Refused if the inventory is full or the player is online. | Same as S-1, plus a refused-case check. | Planned |
+| S-1 | Remove an item from a player | One named item is removed from one player's inventory. Other items are unchanged. The backup restores byte for byte. | Harness on a copy of a save. Live: clone server, player confirms, restore check. Recorded (v1.0.4.0): the logic harness, and on a copy of the clone's world one stack was removed and one added through the API, each after a fresh safety backup that passed its check, with only that slot changed; an item the world holds nowhere as a plain stack was refused, as was any edit while a server ran; and restoring the first edit's safety backup gave the pre-edit Level.sav byte for byte. A player confirming in game is owed. | Built |
+| S-2 | Add an item to a player | One item is added to one player's inventory. Refused if the inventory is full or the player is online. | Same as S-1, plus a refused-case check. Recorded (v1.0.4.0) with S-1, plus the refusals (an item the world holds nowhere as a plain stack, a full inventory in the harness, any edit while a server runs). A player confirming in game is owed. | Built |
 | S-3 | Add and remove a Pal | One Pal is added to, and then removed from, one player. Pal data is checked against the game's own record. | Same as S-1, run on a clone with a test Pal. | Planned |
 
 ## Carried from v1.0 (evidence still owed)

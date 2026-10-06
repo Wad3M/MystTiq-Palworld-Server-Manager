@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -579,6 +579,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         InstallPalworldServerWithExtrasCommand = new AsyncCommand(InstallPalworldServerWithExtrasAsync, () => !IsBusy);
         // v1.0.1.0: Update on every Update Center row (MainWindowViewModel.ComponentUpdates.cs); pip's own command folded in.
         UpdateComponentCommand = new RelayCommand<ComponentVersionDto>(UpdateComponent, component => component?.CanUpdate == true);
+        // v1.0.4.0 (roadmap S-1, S-2): the selected player's inventory (MainWindowViewModel.Inventory.cs).
+        LoadInventoryCommand = new AsyncCommand(LoadInventoryAsync, () => !IsBusy && SelectedPlayerRecord is not null);
         RefreshWorldExplorerCommand = new AsyncCommand(RefreshWorldExplorerAsync, () => !IsBusy);
         ValidateActiveWorldCommand = new AsyncCommand(ValidateActiveWorldAsync, () => !IsBusy && ManagementApiConnected);
         ApplyWorldTransactionCommand = new AsyncCommand(ApplyWorldTransactionAsync, () => !IsBusy && WorldTransactionConfirmed && !string.IsNullOrWhiteSpace(WorldPreviewToken));

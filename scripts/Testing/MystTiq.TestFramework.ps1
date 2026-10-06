@@ -1,4 +1,4 @@
-# MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+# MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 Set-StrictMode -Version 3.0
 
 function New-MystTiqTestContext {

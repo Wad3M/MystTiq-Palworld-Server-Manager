@@ -3826,5 +3826,22 @@
   "msg.frozen_activity": "已重启无响应的服务器",
   "dashboard.openAlertCenter": "打开警报中心",
   "ui.browser_view": "只读浏览器视图",
-  "ui.browser_view_hint": "在浏览器中打开此地址并使用 MystTiq 账户登录，即可查看每台服务器的状态、玩家和备份。它无法更改任何内容。需要开启身份验证（远程访问）；从其他电脑访问时还需要 TLS。"
+  "ui.browser_view_hint": "在浏览器中打开此地址并使用 MystTiq 账户登录，即可查看每台服务器的状态、玩家和备份。它无法更改任何内容。需要开启身份验证（远程访问）；从其他电脑访问时还需要 TLS。",
+  "ui.inventory_saved": "世界存档中的物品栏",
+  "ui.inventory_saved_hint": "所选玩家在世界存档中的主物品栏。可移除一组物品，或添加上方选中的物品（数量框决定数量）。只编辑普通堆叠物品，且仅在服务器停止时进行；每次编辑前都会先创建并检查一份新的安全备份。",
+  "ui.load_inventory": "加载物品栏",
+  "ui.remove_selected_stack": "移除所选堆叠",
+  "ui.add_to_inventory": "添加到物品栏",
+  "msg.inventory_has_own_record": "有独立记录（此处无法移除）",
+  "msg.inventory_select_player": "请先选择一名玩家。",
+  "msg.inventory_select_stack": "请先在物品栏中选择一组物品。",
+  "msg.inventory_pick_item": "请先在上方列表中选择一个物品。",
+  "msg.inventory_reading": "正在读取世界存档…",
+  "msg.inventory_slots_used": "已使用 {0}/{1} 个格子。",
+  "msg.inventory_removed": "已移除 {0} × {1}（格子 {2}）。",
+  "msg.inventory_added": "已添加 {0} × {1}（格子 {2}）。",
+  "msg.inventory_stop_first": "请先停止 PalServer：只有在服务器停止时才编辑存档，这样没有玩家在线，游戏也不会覆盖它。",
+  "msg.inventory_backup_first": "会先创建并检查一份新的安全备份；更改在替换世界存档前会经过验证。",
+  "msg.inventory_full": "物品栏已满（{0} 个格子）。",
+  "msg.inventory_no_plain_stack": "世界中没有 {0} 的普通堆叠，因此 MystTiq 无法安全地添加它。"
 }

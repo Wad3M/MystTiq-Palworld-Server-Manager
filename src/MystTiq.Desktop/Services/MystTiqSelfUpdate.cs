@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;

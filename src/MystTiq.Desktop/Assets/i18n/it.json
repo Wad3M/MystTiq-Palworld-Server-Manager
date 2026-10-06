@@ -3826,5 +3826,22 @@
   "msg.frozen_activity": "Server bloccato riavviato",
   "dashboard.openAlertCenter": "Apri Centro avvisi",
   "ui.browser_view": "Vista browser in sola lettura",
-  "ui.browser_view_hint": "Apri questo indirizzo in un browser e accedi con un account MystTiq per vedere stato, giocatori e backup di ogni server. Non può modificare nulla. Richiede l'autenticazione attiva (accesso remoto) e, da un altro computer, anche TLS."
+  "ui.browser_view_hint": "Apri questo indirizzo in un browser e accedi con un account MystTiq per vedere stato, giocatori e backup di ogni server. Non può modificare nulla. Richiede l'autenticazione attiva (accesso remoto) e, da un altro computer, anche TLS.",
+  "ui.inventory_saved": "Inventario nel salvataggio del mondo",
+  "ui.inventory_saved_hint": "L'inventario principale del giocatore selezionato come lo contiene il salvataggio del mondo. Rimuovi una pila o aggiungi l'oggetto scelto sopra (la casella quantità indica quanti). Si modificano solo pile semplici, solo a server fermo, e ogni modifica crea prima un backup di sicurezza nuovo e verificato.",
+  "ui.load_inventory": "Carica inventario",
+  "ui.remove_selected_stack": "Rimuovi pila selezionata",
+  "ui.add_to_inventory": "Aggiungi all'inventario",
+  "msg.inventory_has_own_record": "Ha un proprio record (non rimovibile qui)",
+  "msg.inventory_select_player": "Seleziona prima un giocatore.",
+  "msg.inventory_select_stack": "Seleziona prima una pila nell'inventario.",
+  "msg.inventory_pick_item": "Scegli prima un oggetto nell'elenco sopra.",
+  "msg.inventory_reading": "Lettura del salvataggio del mondo…",
+  "msg.inventory_slots_used": "{0} di {1} slot usati.",
+  "msg.inventory_removed": "Rimosso {0} × {1} (slot {2}).",
+  "msg.inventory_added": "Aggiunto {0} × {1} (slot {2}).",
+  "msg.inventory_stop_first": "Ferma prima PalServer: un salvataggio si modifica solo a server fermo, così nessuno è online e il gioco non può sovrascriverlo.",
+  "msg.inventory_backup_first": "Prima si crea e verifica un backup di sicurezza nuovo; la modifica è verificata prima di sostituire il mondo.",
+  "msg.inventory_full": "L'inventario è pieno ({0} slot).",
+  "msg.inventory_no_plain_stack": "Il mondo non contiene nessuna pila semplice di {0}, quindi MystTiq non può aggiungerlo in sicurezza."
 }

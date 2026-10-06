@@ -3826,5 +3826,22 @@
   "msg.frozen_activity": "Donmuş sunucu yeniden başlatıldı",
   "dashboard.openAlertCenter": "Uyarı Merkezini aç",
   "ui.browser_view": "Salt okunur tarayıcı görünümü",
-  "ui.browser_view_hint": "Her sunucunun durumunu, oyuncularını ve yedeklerini görmek için bu adresi bir tarayıcıda açın ve bir MystTiq hesabıyla oturum açın. Hiçbir şeyi değiştiremez. Kimlik doğrulamanın açık olması (uzaktan erişim), başka bir bilgisayardan ise TLS de gerekir."
+  "ui.browser_view_hint": "Her sunucunun durumunu, oyuncularını ve yedeklerini görmek için bu adresi bir tarayıcıda açın ve bir MystTiq hesabıyla oturum açın. Hiçbir şeyi değiştiremez. Kimlik doğrulamanın açık olması (uzaktan erişim), başka bir bilgisayardan ise TLS de gerekir.",
+  "ui.inventory_saved": "Dünya kaydındaki envanter",
+  "ui.inventory_saved_hint": "Seçili oyuncunun dünya kaydındaki ana envanteri. Bir yığını kaldırın ya da yukarıda seçilen eşyayı ekleyin (miktar kutusu kaç tane olacağını belirler). Yalnızca düz yığınlar, yalnızca sunucu durdurulmuşken düzenlenir ve her düzenlemeden önce yeni, denetlenmiş bir güvenlik yedeği alınır.",
+  "ui.load_inventory": "Envanteri yükle",
+  "ui.remove_selected_stack": "Seçili yığını kaldır",
+  "ui.add_to_inventory": "Envantere ekle",
+  "msg.inventory_has_own_record": "Kendi kaydı var (burada kaldırılamaz)",
+  "msg.inventory_select_player": "Önce bir oyuncu seçin.",
+  "msg.inventory_select_stack": "Önce envanterden bir yığın seçin.",
+  "msg.inventory_pick_item": "Önce yukarıdaki listeden bir eşya seçin.",
+  "msg.inventory_reading": "Dünya kaydı okunuyor…",
+  "msg.inventory_slots_used": "{1} yuvadan {0} tanesi dolu.",
+  "msg.inventory_removed": "{0} × {1} kaldırıldı (yuva {2}).",
+  "msg.inventory_added": "{0} × {1} eklendi (yuva {2}).",
+  "msg.inventory_stop_first": "Önce PalServer'ı durdurun: kayıt yalnızca sunucu durdurulmuşken düzenlenir; böylece kimse çevrimiçi olmaz ve oyun onu üzerine yazamaz.",
+  "msg.inventory_backup_first": "Önce yeni bir güvenlik yedeği alınıp denetlenir; değişiklik dünyanın yerine geçmeden önce doğrulanır.",
+  "msg.inventory_full": "Envanter dolu ({0} yuva).",
+  "msg.inventory_no_plain_stack": "Dünyada {0} için düz bir yığın yok; bu yüzden MystTiq onu güvenle ekleyemez."
 }

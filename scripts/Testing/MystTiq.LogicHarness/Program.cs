@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -1769,6 +1769,61 @@ try
         Assert(!SteamCmdFailure.IsMissingConfiguration(["ERROR! Failed to install app '2394010' (No subscription)", "Missing configuration file elsewhere"]),
             "another install failure, or the words on separate lines, is not");
     }, failures);
+    // ---- v1.0.4.0 (roadmap S-1, S-2): guarded inventory edits ----------
+    RunScenario("Inventory edits: remove one plain stack, add one in a free slot, refuse items with their own record, unknown items and a full inventory, and verify only that slot changed", () =>
+    {
+        const string mine = "11111111-2222-3333-4444-555555555555", other = "99999999-8888-7777-6666-555555555555";
+        static string SlotJson(int index, string id, int count, string local = InventoryEdits.ZeroGuid) =>
+            """{"RawData":{"array_type":"ByteProperty","id":null,"value":{"slot_index":@INDEX@,"count":@COUNT@,"item":{"static_id":"@ID@","dynamic_id":{"created_world_id":"@ZERO@","local_id_in_created_world":"@LOCAL@"}},"trailing_bytes":[0,0,0,0]},"type":"ArrayProperty","custom_type":".worldSaveData.ItemContainerSaveData.Value.Slots.Slots.RawData"},"CustomVersionData":{"array_type":"ByteProperty","id":null,"value":{"values":{"~b":"AgAA"}},"type":"ArrayProperty"}}"""
+                .Replace("@INDEX@", index.ToString()).Replace("@COUNT@", count.ToString()).Replace("@ID@", id).Replace("@ZERO@", InventoryEdits.ZeroGuid).Replace("@LOCAL@", local);
+        static string Container(string id, int capacity, params string[] slots) =>
+            """{"key":{"ID":{"struct_type":"Guid","struct_id":"@ZERO@","id":null,"value":"@ID@","type":"StructProperty"}},"value":{"SlotNum":{"id":null,"value":@CAP@,"type":"IntProperty"},"Slots":{"array_type":"StructProperty","id":null,"value":{"prop_name":"Slots","prop_type":"StructProperty","values":[@SLOTS@],"type_name":"PalItemSlotSaveData","id":"@ZERO@"},"type":"ArrayProperty"}}}"""
+                .Replace("@ZERO@", InventoryEdits.ZeroGuid).Replace("@ID@", id).Replace("@CAP@", capacity.ToString()).Replace("@SLOTS@", string.Join(",", slots));
+        var level = System.Text.Json.Nodes.JsonNode.Parse(
+            """{"properties":{"worldSaveData":{"value":{"ItemContainerSaveData":{"type":"MapProperty","value":[@A@,@B@]}}}}}"""
+                .Replace("@A@", Container(mine, 4, SlotJson(0, "Money", 757), SlotJson(1, "Axe_Tier_00", 1, "abcdef01-0000-0000-0000-000000000001")))
+                .Replace("@B@", Container(other, 3, SlotJson(0, "PalSphere", 5))))!;
+        var player = System.Text.Json.Nodes.JsonNode.Parse(
+            """{"properties":{"SaveData":{"value":{"InventoryInfo":{"value":{"CommonContainerId":{"struct_type":"PalContainerId","struct_id":"@ZERO@","id":null,"value":{"ID":{"struct_type":"Guid","struct_id":"@ZERO@","id":null,"value":"@MINE@","type":"StructProperty"}},"type":"StructProperty"}}}}}}}"""
+                .Replace("@ZERO@", InventoryEdits.ZeroGuid).Replace("@MINE@", mine))!;
+
+        Assert(InventoryEdits.CommonContainerId(player) == mine, "the player's main inventory id is read from their save");
+        var container = InventoryEdits.FindContainer(level, mine)!;
+        var before = InventoryEdits.ReadSlots(container);
+        Assert(before.Count == 2 && before[0] is { ItemId: "Money", Count: 757, HasOwnRecord: false } && before[1] is { ItemId: "Axe_Tier_00", HasOwnRecord: true } && InventoryEdits.Capacity(container) == 4,
+            "the inventory: Money × 757 (a plain stack) and an axe with its own record, 4 slots");
+        AssertThrows<InvalidOperationException>(() => InventoryEdits.Remove(container, "Axe_Tier_00", null), "an item with its own record is never removed");
+        AssertThrows<InvalidOperationException>(() => InventoryEdits.Remove(container, "PalSphere", null), "an item the player does not hold is refused");
+        var removed = InventoryEdits.Remove(container, "Money", null);
+        var afterRemove = InventoryEdits.ReadSlots(container);
+        HeadlessInventoryEditService.VerifyOnlyThisChanged(before, afterRemove, removed, "remove");
+        Assert(removed is { SlotIndex: 0, Count: 757 } && afterRemove.Count == 1 && afterRemove[0].ItemId == "Axe_Tier_00", "S-1: Money removed, the axe untouched");
+
+        AssertThrows<InvalidOperationException>(() => InventoryEdits.Add(level, container, "Unobtainium", 1), "an item the world holds nowhere as a plain stack is refused");
+        AssertThrows<InvalidOperationException>(() => InventoryEdits.Add(level, container, "Axe_Tier_00", 1), "an item that only exists with its own record is refused");
+        var added = InventoryEdits.Add(level, container, "PalSphere", 10);
+        var afterAdd = InventoryEdits.ReadSlots(container);
+        HeadlessInventoryEditService.VerifyOnlyThisChanged(afterRemove, afterAdd, added, "add");
+        Assert(added is { SlotIndex: 0, ItemId: "PalSphere", Count: 10, HasOwnRecord: false } && afterAdd.Count == 2, "S-2: 10 Pal Spheres added in the first free slot as a plain stack");
+        InventoryEdits.Add(level, container, "PalSphere", 1);
+        InventoryEdits.Add(level, container, "PalSphere", 2);
+        AssertThrows<InvalidOperationException>(() => InventoryEdits.Add(level, container, "PalSphere", 1), "S-2: a full inventory is refused");
+        AssertThrows<InvalidDataException>(() => HeadlessInventoryEditService.VerifyOnlyThisChanged(before, before.Skip(1).ToList(), added, "add"),
+            "verification fails when anything but the one slot differs");
+        Assert(InventoryEdits.ReadSlots(InventoryEdits.FindContainer(level, other)!).Single() is { ItemId: "PalSphere", Count: 5 }, "another player's inventory is never touched");
+    }, failures);
+
+    RunScenario("A PalServer that ended outside MystTiq does not block restores and edits: a crashed or stopped status with the last-known process id is not running", () =>
+    {
+        var gone = new ServerLifecycleSnapshot(ServerLifecyclePhase.Crashed, 4242, [], [], false, true, DateTimeOffset.UtcNow, null, "crashed");
+        Assert(!gone.ServerMayBeRunning, "a crashed status with only the last-known id counted as running");
+        Assert(!(gone with { Phase = ServerLifecyclePhase.Stopped, CrashDetected = false }).ServerMayBeRunning, "a stopped status with the last-known id counted as running");
+        var alive = gone with { Phase = ServerLifecyclePhase.Running, Processes = [new ServerSessionProcessInfo(4242, 1, "PalServer", "PalServer.exe", true)] };
+        Assert(alive.ServerMayBeRunning, "a live process did not count as running");
+        Assert((gone with { Ready = true }).ServerMayBeRunning, "an open game port did not count as running");
+        Assert((alive with { NativeProcessId = null }).ServerMayBeRunning, "a live process without a native id did not count as running");
+    }, failures);
+
     // ---- v1.0.2.0 (roadmap R-1): frozen-server watchdog ----------
     RunScenario("Frozen-server watchdog: only a server that answered and then stayed silent for the whole limit is frozen; a healthy one never is", () =>
     {

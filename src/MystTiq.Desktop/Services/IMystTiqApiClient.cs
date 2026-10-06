@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -327,6 +327,11 @@ public interface IMystTiqApiClient
         CancellationToken cancellationToken = default);
 
     // v1.0.1.0: Update on the Update Center's PalDefender and Palworld Save Tools rows.
+    // v1.0.4.0 (roadmap S-1, S-2): a player's main inventory, and the guarded remove/add (preview, then apply).
+    Task<InventoryViewDto> GetInventoryAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<InventoryEditPreviewDto> PreviewInventoryEditAsync(ConnectionProfile profile, InventoryEditRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<InventoryEditResultDto> ApplyInventoryEditAsync(ConnectionProfile profile, string token, string? bearerToken = null, CancellationToken cancellationToken = default);
+
     // v1.0.2.0 (roadmap R-2): each outside channel's delivery health and the latest sends.
     Task<NotificationDeliveryHealthDto> GetNotificationDeliveryHealthAsync(
         ConnectionProfile profile,

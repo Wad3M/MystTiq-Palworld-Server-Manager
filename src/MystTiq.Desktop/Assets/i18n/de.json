@@ -3826,5 +3826,22 @@
   "msg.frozen_activity": "Eingefrorener Server neu gestartet",
   "dashboard.openAlertCenter": "Alarmzentrale öffnen",
   "ui.browser_view": "Schreibgeschützte Browseransicht",
-  "ui.browser_view_hint": "Öffne diese Adresse in einem Browser und melde dich mit einem MystTiq-Konto an, um Status, Spieler und Sicherungen jedes Servers zu sehen. Ändern lässt sich dort nichts. Dafür muss die Authentifizierung an sein (Fernzugriff), von einem anderen Computer aus auch TLS."
+  "ui.browser_view_hint": "Öffne diese Adresse in einem Browser und melde dich mit einem MystTiq-Konto an, um Status, Spieler und Sicherungen jedes Servers zu sehen. Ändern lässt sich dort nichts. Dafür muss die Authentifizierung an sein (Fernzugriff), von einem anderen Computer aus auch TLS.",
+  "ui.inventory_saved": "Inventar im Weltspielstand",
+  "ui.inventory_saved_hint": "Das Hauptinventar des gewählten Spielers, wie es der Weltspielstand enthält. Entferne einen Stapel oder füge den oben gewählten Gegenstand hinzu (das Mengenfeld legt die Anzahl fest). Bearbeitet werden nur einfache Stapel, nur bei gestopptem Server, und vor jeder Änderung wird eine neue, geprüfte Sicherung erstellt.",
+  "ui.load_inventory": "Inventar laden",
+  "ui.remove_selected_stack": "Gewählten Stapel entfernen",
+  "ui.add_to_inventory": "Zum Inventar hinzufügen",
+  "msg.inventory_has_own_record": "Hat einen eigenen Datensatz (hier nicht entfernbar)",
+  "msg.inventory_select_player": "Wähle zuerst einen Spieler.",
+  "msg.inventory_select_stack": "Wähle zuerst einen Stapel im Inventar.",
+  "msg.inventory_pick_item": "Wähle zuerst einen Gegenstand in der Liste oben.",
+  "msg.inventory_reading": "Weltspielstand wird gelesen…",
+  "msg.inventory_slots_used": "{0} von {1} Plätzen belegt.",
+  "msg.inventory_removed": "{0} × {1} entfernt (Platz {2}).",
+  "msg.inventory_added": "{0} × {1} hinzugefügt (Platz {2}).",
+  "msg.inventory_stop_first": "Stoppe zuerst PalServer: Ein Spielstand wird nur bei gestopptem Server bearbeitet, damit niemand online ist und das Spiel ihn nicht überschreibt.",
+  "msg.inventory_backup_first": "Zuerst wird eine neue Sicherung erstellt und geprüft; die Änderung wird geprüft, bevor sie die Welt ersetzt.",
+  "msg.inventory_full": "Das Inventar ist voll ({0} Plätze).",
+  "msg.inventory_no_plain_stack": "Die Welt enthält keinen einfachen Stapel {0}, daher kann MystTiq ihn nicht sicher hinzufügen."
 }

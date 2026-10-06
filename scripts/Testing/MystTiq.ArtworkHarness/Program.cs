@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1547,6 +1547,24 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var address = card?.GetVisualDescendants().OfType<SelectableTextBlock>().FirstOrDefault()?.Text;
     Check(card is { IsEffectivelyVisible: true } && address == "http://127.0.0.1:1/web",
         $"The Security page names the read-only browser view at the API's address under /web [{address}]");
+}
+// v1.0.4.0 (roadmap S-1, S-2): the Players page's inventory card lists the saved slots; Remove is red, Add an apply button,
+// and a stack with its own record says why it can't be removed.
+{
+    vm.InventorySlots.Clear();
+    vm.InventorySlots.Add(new InventorySlotDto { SlotIndex = 0, ItemId = "Money", Count = 757 });
+    vm.InventorySlots.Add(new InventorySlotDto { SlotIndex = 1, ItemId = "Axe_Tier_00", Count = 1, HasOwnRecord = true });
+    vm.NavigateCommand.Execute(NavigationPage.Players);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var card = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "InventoryCard");
+    var list = card?.GetVisualDescendants().OfType<ListBox>().FirstOrDefault(l => l.Name == "InventoryList");
+    var buttons = card?.GetLogicalDescendants().OfType<Button>().ToList() ?? [];
+    var classes = string.Join(", ", buttons.Select(b => string.Join("+", b.Classes.Where(c => !c.StartsWith(':')))));
+    Check(card is { IsVisible: true } && list?.ItemCount == 2 &&
+          buttons.Count(b => b.Classes.Contains("danger")) == 1 && buttons.Count(b => b.Classes.Contains("apply")) == 1 && buttons.Count(b => b.Classes.Contains("info")) == 1 &&
+          vm.InventorySlots[1].RecordText.Length > 0 && vm.InventorySlots[0].RecordText.Length == 0,
+        $"The Players page's inventory card lists the saved slots, Remove red, Add and Load styled, a recorded item marked [{list?.ItemCount} rows; {classes}]");
+    vm.InventorySlots.Clear();
 }
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
 // Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.

@@ -1,4 +1,19 @@
-<!-- MystTiq v1.0.3.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.4.0: file reviewed for this release (2026-10-05). -->
+## v1.0.4.0 — Guarded Save Edits: Items
+
+- S-1 remove an item and S-2 add an item: the Players page's inventory card (admins) shows a player's main inventory
+  from the world save; one plain stack is removed, or one added in a free slot (only items the world holds as plain
+  stacks; a full inventory refused). The server must be stopped. A single-use preview and a confirmation come first,
+  then a fresh safety backup that must pass its check. The edit is verified by an independent decode (only that slot
+  changed), committed atomically and rolled back on any failure. one stack was removed and one added through the API, each after a fresh safety backup that passed its check, with only that slot changed; an item the world holds nowhere as a plain stack was refused, as was any edit while a server ran; and restoring the first edit's safety backup gave the pre-edit Level.sav byte for byte.
+- Fixed: after PalServer crashed or was ended outside MystTiq, backup restores, save edits and MOD changes were refused
+  ("Stop PalServer first") until the next start, because the guards counted the dead process's last-known id as
+  running. They now look for a live process or an open game port. Found by the inventory smoke.
+- S-3 (add and remove a Pal) moved to the next milestone with its reason.
+- Tests: the v1.0.4.0 gate regenerated from v1.0.3.0 (every earlier check kept), the inventory smoke in the gate, a
+  LogicHarness scenario and an ArtworkHarness check; 15 new texts in all 12 languages.
+- Version advanced to 1.0.4.0.
+
 ## v1.0.3.0 — Packaging and Read-only Access
 
 - W-1 read-only browser view: `/web` (static page, strict content policy, no data in it), `auth/browser-login`, and

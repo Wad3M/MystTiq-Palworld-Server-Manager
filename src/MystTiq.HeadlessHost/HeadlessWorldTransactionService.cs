@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -125,7 +125,7 @@ public sealed class HeadlessWorldTransactionService
                 return HeadlessWorldTransactionResult.Failure("The preview token is missing or expired. Analyze the archive again.");
 
             var status = await lifecycle.GetStatusAsync(cancellationToken);
-            if (status.NativeProcessId.HasValue || status.Ready)
+            if (status.ServerMayBeRunning)
                 return HeadlessWorldTransactionResult.Failure("Stop PalServer before applying a world transaction.");
 
             var snapshot = explorer.Explore();

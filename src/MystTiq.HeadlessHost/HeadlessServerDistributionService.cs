@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.Diagnostics;
 using MystTiq.Core.Services;
 
@@ -120,7 +120,7 @@ public sealed class HeadlessServerDistributionService
         try
         {
             var status = await lifecycle.GetStatusAsync(cancellationToken);
-            if (status.NativeProcessId.HasValue || status.Ready)
+            if (status.ServerMayBeRunning)
             {
                 return HeadlessServerDistributionOperationResult.Failure(
                     "Stop PalServer before running SteamCMD update/validation.");

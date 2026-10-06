@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.3.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.4.0: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -1634,6 +1634,33 @@
                     <Button Classes="apply" IsEnabled="{Binding CanManageAdmin}" Content="{services:Tr ui.add_to_selected_kit}" Command="{Binding AddGameIdToKitCommand}" Margin="0,0,8,6" ToolTip.Tip="{services:Tr ui.adds_the_selected_id_to_the_kit_selected_under_s_24f806}"/>
                   </WrapPanel>
                   <TextBlock Text="{services:TrText GameIdCatalogStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Border>
+              <!-- v1.0.4.0 (roadmap S-1, S-2; owner decision D-2): the selected player's main inventory from the world save. One
+                   plain stack removed, or one added (the item picked above), each previewed and confirmed, applied with a fresh,
+                   checked safety backup while the server is stopped. -->
+              <Border x:Name="InventoryCard" Classes="statuscard accentWorld" IsVisible="{Binding CanManageAdmin}">
+                <StackPanel Spacing="6">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <TextBlock Text="{services:Tr ui.inventory_saved}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.load_inventory}" Command="{Binding LoadInventoryCommand}"/>
+                  </Grid>
+                  <TextBlock Text="{services:Tr ui.inventory_saved_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.inventory_saved}" x:Name="InventoryList" ItemsSource="{Binding InventorySlots}" SelectedItem="{Binding SelectedInventorySlot}" MaxHeight="200">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="models:InventorySlotDto">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                          <TextBlock Text="{Binding RowVerbatim}" FontFamily="Consolas, monospace" FontSize="12"/>
+                          <TextBlock Text="{services:TrText RecordText}" Classes="muted" FontSize="11"/>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <WrapPanel>
+                    <Button Classes="danger" Content="{services:Tr ui.remove_selected_stack}" Click="RemoveInventoryStack_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
+                    <Button Classes="apply" Content="{services:Tr ui.add_to_inventory}" Click="AddInventoryItem_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
+                  </WrapPanel>
+                  <TextBlock Text="{services:TrText InventoryStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                 </StackPanel>
               </Border>
               <TextBlock Text="{services:TrText PlayerAdminStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>

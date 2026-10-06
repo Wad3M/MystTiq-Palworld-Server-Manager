@@ -3826,5 +3826,22 @@
   "msg.frozen_activity": "Servidor congelado reiniciado",
   "dashboard.openAlertCenter": "Abrir Central de alertas",
   "ui.browser_view": "Visualização somente leitura no navegador",
-  "ui.browser_view_hint": "Abra este endereço em um navegador e entre com uma conta do MystTiq para ver o status, os jogadores e os backups de cada servidor. Ele não pode alterar nada. Exige a autenticação ativada (acesso remoto) e, de outro computador, também TLS."
+  "ui.browser_view_hint": "Abra este endereço em um navegador e entre com uma conta do MystTiq para ver o status, os jogadores e os backups de cada servidor. Ele não pode alterar nada. Exige a autenticação ativada (acesso remoto) e, de outro computador, também TLS.",
+  "ui.inventory_saved": "Inventário no save do mundo",
+  "ui.inventory_saved_hint": "O inventário principal do jogador selecionado como o save do mundo o guarda. Remova uma pilha ou adicione o item escolhido acima (a caixa de quantidade define quantos). Só pilhas simples são editadas, só com o servidor parado, e cada edição faz antes um backup de segurança novo e verificado.",
+  "ui.load_inventory": "Carregar inventário",
+  "ui.remove_selected_stack": "Remover pilha selecionada",
+  "ui.add_to_inventory": "Adicionar ao inventário",
+  "msg.inventory_has_own_record": "Tem registro próprio (não pode ser removido aqui)",
+  "msg.inventory_select_player": "Selecione um jogador primeiro.",
+  "msg.inventory_select_stack": "Selecione primeiro uma pilha no inventário.",
+  "msg.inventory_pick_item": "Escolha primeiro um item na lista acima.",
+  "msg.inventory_reading": "Lendo o save do mundo…",
+  "msg.inventory_slots_used": "{0} de {1} espaços usados.",
+  "msg.inventory_removed": "Removido {0} × {1} (espaço {2}).",
+  "msg.inventory_added": "Adicionado {0} × {1} (espaço {2}).",
+  "msg.inventory_stop_first": "Pare o PalServer primeiro: o save só é editado com o servidor parado, assim ninguém está online e o jogo não pode sobrescrevê-lo.",
+  "msg.inventory_backup_first": "Primeiro um backup de segurança novo é feito e verificado; a mudança é conferida antes de substituir o mundo.",
+  "msg.inventory_full": "O inventário está cheio ({0} espaços).",
+  "msg.inventory_no_plain_stack": "O mundo não tem nenhuma pilha simples de {0}, então o MystTiq não pode adicioná-lo com segurança."
 }

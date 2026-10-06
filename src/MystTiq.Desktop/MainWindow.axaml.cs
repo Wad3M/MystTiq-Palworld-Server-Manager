@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -361,6 +361,21 @@ public sealed partial class MainWindow : Window
         if (await dialog.ShowDialog<bool>(this) != true) return;
 
         await vm.ApplyTransferBaseAsync(preview.PreviewToken);
+    }
+
+    // v1.0.4.0 (roadmap S-1, S-2): one stack removed from, or added to, the selected player's saved inventory, after a preview.
+    private async void RemoveInventoryStack_OnClick(object? sender, RoutedEventArgs e) => await EditInventoryAsync("remove");
+    private async void AddInventoryItem_OnClick(object? sender, RoutedEventArgs e) => await EditInventoryAsync("add");
+
+    private async Task EditInventoryAsync(string action)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        var preview = await vm.PreviewInventoryEditAsync(action);
+        if (preview is not { CanApply: true, Token: { } token }) return;
+        var dialog = new Views.ConfirmOperationDialog(Localizer.T(preview.Summary), preview.Findings.Select(Localizer.T).ToList(),
+            Localizer.T(action == "remove" ? "Remove" : "Add"), danger: action == "remove");
+        if (await dialog.ShowDialog<bool>(this) != true) return;
+        await vm.ApplyInventoryEditAsync(token);
     }
 
     private async void WipeBase_OnClick(object? sender, RoutedEventArgs e)

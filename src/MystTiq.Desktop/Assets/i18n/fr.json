@@ -3826,5 +3826,22 @@
   "msg.frozen_activity": "Serveur figé redémarré",
   "dashboard.openAlertCenter": "Ouvrir le centre d’alertes",
   "ui.browser_view": "Vue navigateur en lecture seule",
-  "ui.browser_view_hint": "Ouvrez cette adresse dans un navigateur et connectez-vous avec un compte MystTiq pour voir l'état, les joueurs et les sauvegardes de chaque serveur. Rien ne peut y être modifié. L'authentification doit être activée (accès à distance), et depuis un autre ordinateur, TLS aussi."
+  "ui.browser_view_hint": "Ouvrez cette adresse dans un navigateur et connectez-vous avec un compte MystTiq pour voir l'état, les joueurs et les sauvegardes de chaque serveur. Rien ne peut y être modifié. L'authentification doit être activée (accès à distance), et depuis un autre ordinateur, TLS aussi.",
+  "ui.inventory_saved": "Inventaire dans la sauvegarde du monde",
+  "ui.inventory_saved_hint": "L'inventaire principal du joueur sélectionné tel que la sauvegarde du monde le contient. Retirez une pile ou ajoutez l'objet choisi ci-dessus (la case de quantité fixe combien). Seules les piles simples sont modifiées, uniquement serveur arrêté, et chaque modification fait d'abord une sauvegarde de sécurité neuve et vérifiée.",
+  "ui.load_inventory": "Charger l'inventaire",
+  "ui.remove_selected_stack": "Retirer la pile sélectionnée",
+  "ui.add_to_inventory": "Ajouter à l'inventaire",
+  "msg.inventory_has_own_record": "A son propre enregistrement (non retirable ici)",
+  "msg.inventory_select_player": "Sélectionnez d'abord un joueur.",
+  "msg.inventory_select_stack": "Sélectionnez d'abord une pile dans l'inventaire.",
+  "msg.inventory_pick_item": "Choisissez d'abord un objet dans la liste ci-dessus.",
+  "msg.inventory_reading": "Lecture de la sauvegarde du monde…",
+  "msg.inventory_slots_used": "{0} emplacements sur {1} utilisés.",
+  "msg.inventory_removed": "Retiré {0} × {1} (emplacement {2}).",
+  "msg.inventory_added": "Ajouté {0} × {1} (emplacement {2}).",
+  "msg.inventory_stop_first": "Arrêtez d'abord PalServer : une sauvegarde n'est modifiée que serveur arrêté, pour qu'aucun joueur ne soit en ligne et que le jeu ne l'écrase pas.",
+  "msg.inventory_backup_first": "Une sauvegarde de sécurité neuve est d'abord faite et vérifiée ; la modification est vérifiée avant de remplacer le monde.",
+  "msg.inventory_full": "L'inventaire est plein ({0} emplacements).",
+  "msg.inventory_no_plain_stack": "Le monde ne contient aucune pile simple de {0}, MystTiq ne peut donc pas l'ajouter sans risque."
 }

@@ -3826,5 +3826,22 @@
   "msg.frozen_activity": "Frozen server restarted",
   "dashboard.openAlertCenter": "Open Alert Center",
   "ui.browser_view": "Read-only browser view",
-  "ui.browser_view_hint": "Open this address in a browser and sign in with a MystTiq account to see each server's status, players and backups. It cannot change anything. It needs authentication on (remote access), and from another computer also TLS."
+  "ui.browser_view_hint": "Open this address in a browser and sign in with a MystTiq account to see each server's status, players and backups. It cannot change anything. It needs authentication on (remote access), and from another computer also TLS.",
+  "ui.inventory_saved": "Inventory in the world save",
+  "ui.inventory_saved_hint": "The selected player's main inventory as the world save holds it. Remove one stack, or add the item picked above (the amount box sets how many). Only plain stacks are edited, only while the server is stopped, and each edit takes a fresh, checked safety backup first.",
+  "ui.load_inventory": "Load Inventory",
+  "ui.remove_selected_stack": "Remove Selected Stack",
+  "ui.add_to_inventory": "Add To Inventory",
+  "msg.inventory_has_own_record": "Has its own record (cannot be removed here)",
+  "msg.inventory_select_player": "Select a player first.",
+  "msg.inventory_select_stack": "Select a stack in the inventory first.",
+  "msg.inventory_pick_item": "Pick an item in the list above first.",
+  "msg.inventory_reading": "Reading the world save…",
+  "msg.inventory_slots_used": "{0} of {1} slots used.",
+  "msg.inventory_removed": "Removed {0} × {1} (slot {2}).",
+  "msg.inventory_added": "Added {0} × {1} (slot {2}).",
+  "msg.inventory_stop_first": "Stop PalServer first: a save is only edited while the server is stopped, so no player is online and the game cannot overwrite it.",
+  "msg.inventory_backup_first": "A fresh safety backup is taken and checked first; the change is verified before it replaces the world.",
+  "msg.inventory_full": "The inventory is full ({0} slots).",
+  "msg.inventory_no_plain_stack": "The world holds no plain stack of {0}, so MystTiq cannot add it safely."
 }

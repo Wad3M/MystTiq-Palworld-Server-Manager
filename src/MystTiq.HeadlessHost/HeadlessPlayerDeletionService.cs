@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.Security.Cryptography;
 using System.Text.Json;
 using MystTiq.Core.Operations;
@@ -57,7 +57,7 @@ public sealed class HeadlessPlayerDeletionService(
         }
 
         var status = await lifecycle.GetStatusAsync(cancellationToken);
-        if (status.NativeProcessId.HasValue || status.Ready)
+        if (status.ServerMayBeRunning)
             findings.Add("PalServer must be stopped before deleting a player save.");
 
         var savePath = player is not null && !string.IsNullOrWhiteSpace(snapshot.ActiveWorldPath)
@@ -65,7 +65,7 @@ public sealed class HeadlessPlayerDeletionService(
             : null;
 
         var canApply = player is { SaveExists: true, Online: false } && savePath is not null && File.Exists(savePath) &&
-            !status.NativeProcessId.HasValue && !status.Ready;
+            !status.ServerMayBeRunning;
 
         var token = "";
         var expires = DateTimeOffset.UtcNow.Add(PreviewLifetime);
@@ -104,7 +104,7 @@ public sealed class HeadlessPlayerDeletionService(
                 return HeadlessPlayerDeletionResult.Failure("The preview token is missing or expired. Preview the deletion again.");
 
             var status = await lifecycle.GetStatusAsync(cancellationToken);
-            if (status.NativeProcessId.HasValue || status.Ready)
+            if (status.ServerMayBeRunning)
                 return HeadlessPlayerDeletionResult.Failure("Stop PalServer before deleting a player save.");
 
             if (!File.Exists(op.SavePath) || !HashFile(op.SavePath).Equals(op.SourceHash, StringComparison.OrdinalIgnoreCase))

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.3.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.4.0: file reviewed for this release (2026-10-05). -->
 # v0.9.9.0 Changed Files
 
 - `Directory.Build.props`, `src/MystTiq.Desktop/app.manifest`: version 0.9.9.0.

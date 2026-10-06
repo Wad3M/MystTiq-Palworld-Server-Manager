@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -146,7 +146,7 @@ public sealed class HeadlessGuildOwnershipService
                 return HeadlessGuildOwnershipResult.Failure("The preview token is missing or expired. Preview the change again.");
 
             var status = await lifecycle.GetStatusAsync(cancellationToken);
-            if (status.NativeProcessId.HasValue || status.Ready)
+            if (status.ServerMayBeRunning)
                 return HeadlessGuildOwnershipResult.Failure("Stop PalServer before applying an ownership change.");
 
             if (!File.Exists(op.LevelSavePath) || !HashFile(op.LevelSavePath).Equals(op.SourceHash, StringComparison.OrdinalIgnoreCase))

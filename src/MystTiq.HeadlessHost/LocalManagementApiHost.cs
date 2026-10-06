@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -167,6 +167,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var baseOwnership = new HeadlessBaseOwnershipService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var characterMigration = new HeadlessCharacterMigrationService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var palEdit = new HeadlessPalEditService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
+            // v1.0.4.0 (roadmap S-1, S-2): one item removed from, or added to, one player's saved inventory.
+            var inventoryEdit = new HeadlessInventoryEditService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var playerDeletion = new HeadlessPlayerDeletionService(paths, lifecycle, backups, activity, playerGuildExplorer, playerRegistry, guildOwnership, operations, profileId);
             var playerCopy = new HeadlessPlayerCopyService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var consoleLog = new HeadlessConsoleLogWriter(paths);
@@ -280,6 +282,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 CrashAlerts = crashAlerts,
                 RecoveryState = recoveryState,
                 PalEdit = palEdit,
+                InventoryEdit = inventoryEdit,
                 PlayerDeletion = playerDeletion,
                 PlayerCopy = playerCopy,
                 DiscordBot = discordBot,
@@ -480,7 +483,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             {
                 authAbuseGuard.RecordSuccess(remoteIp);
                 browserSessions.Add(issued, result.ExpiresUtc);
-                fleetActivity.Record("Information", "Security", "Browser view signed in", request.Username);
+                fleetActivity.Record("Information", "Security", "Browser view signed in", request.Username ?? string.Empty);
                 return Results.Ok(result);
             }
             authAbuseGuard.RecordFailure(remoteIp);
@@ -1062,6 +1065,18 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             return result.Success ? Results.Ok(result) : Results.BadRequest(result);
         }).RequireRole(MystTiqRole.Admin, p.Id);
 
+        // v1.0.4.0 (roadmap S-1, S-2; owner decision D-2: guarded edits only): a player's main inventory from the world save,
+        // and one plain stack removed or added (preview, then apply with a fresh, checked safety backup, server stopped).
+        routes.MapGet("/players/{playerId}/inventory", async (string playerId, CancellationToken token) =>
+            Results.Ok(await p.InventoryEdit.GetInventoryAsync(playerId, token)));
+        routes.MapPost("/players/inventory/preview", async (InventoryEditRequest request, CancellationToken token) =>
+            Results.Ok(await p.InventoryEdit.PreviewAsync(request, token)));
+        routes.MapPost("/players/inventory/apply", async (InventoryEditApplyRequest request, CancellationToken token) =>
+        {
+            var result = await p.InventoryEdit.ApplyAsync(request.Token, request.Confirmed, token);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
+
         routes.MapPost("/bases/ownership/preview", async (HeadlessBaseOwnershipTransferRequest request, CancellationToken token) =>
             Results.Ok(await p.BaseOwnership.PreviewTransferAsync(request.BaseId, request.TargetGuildId, token)));
 
@@ -1322,7 +1337,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapPost("/update-center/components/paldefender/update", async (CancellationToken token) =>
         {
             var status = await p.Lifecycle.GetStatusAsync(token);
-            if (status.NativeProcessId.HasValue || status.Ready)
+            if (status.ServerMayBeRunning)
                 return Results.Conflict(new ComponentUpdateResult(false, "Stop PalServer before updating PalDefender; its files are in use while it runs."));
             var result = await p.ComponentUpdates.UpdatePalDefenderAsync(token);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);

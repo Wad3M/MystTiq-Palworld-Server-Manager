@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Providers;
@@ -62,6 +62,8 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required CrashAlertObserver CrashAlerts { get; init; }
     public required SupervisorRecoveryStateStore RecoveryState { get; init; }
     public required HeadlessPalEditService PalEdit { get; init; }
+    // v1.0.4.0 (roadmap S-1, S-2): guarded inventory edits.
+    public required HeadlessInventoryEditService InventoryEdit { get; init; }
     public required HeadlessPlayerDeletionService PlayerDeletion { get; init; }
     public required HeadlessPlayerCopyService PlayerCopy { get; init; }
     public required HeadlessDiscordBotService DiscordBot { get; init; }

@@ -3826,5 +3826,22 @@
   "msg.frozen_activity": "フリーズしたサーバーを再起動しました",
   "dashboard.openAlertCenter": "アラートセンターを開く",
   "ui.browser_view": "読み取り専用のブラウザー表示",
-  "ui.browser_view_hint": "このアドレスをブラウザーで開き、MystTiq アカウントでサインインすると、各サーバーの状態、プレイヤー、バックアップを確認できます。何も変更できません。認証（リモートアクセス）が必要で、別のコンピューターからは TLS も必要です。"
+  "ui.browser_view_hint": "このアドレスをブラウザーで開き、MystTiq アカウントでサインインすると、各サーバーの状態、プレイヤー、バックアップを確認できます。何も変更できません。認証（リモートアクセス）が必要で、別のコンピューターからは TLS も必要です。",
+  "ui.inventory_saved": "ワールドセーブ内のインベントリ",
+  "ui.inventory_saved_hint": "選択したプレイヤーのメインインベントリ（ワールドセーブの内容）。1スタックを削除するか、上で選んだアイテムを追加します（数量欄で個数を指定）。編集できるのは通常のスタックのみで、サーバー停止中に限ります。各編集の前に新しい安全バックアップを作成して確認します。",
+  "ui.load_inventory": "インベントリを読み込む",
+  "ui.remove_selected_stack": "選択したスタックを削除",
+  "ui.add_to_inventory": "インベントリに追加",
+  "msg.inventory_has_own_record": "独自のレコードあり（ここでは削除不可）",
+  "msg.inventory_select_player": "先にプレイヤーを選択してください。",
+  "msg.inventory_select_stack": "先にインベントリでスタックを選択してください。",
+  "msg.inventory_pick_item": "先に上のリストでアイテムを選んでください。",
+  "msg.inventory_reading": "ワールドセーブを読み込み中…",
+  "msg.inventory_slots_used": "{1} スロット中 {0} 使用中。",
+  "msg.inventory_removed": "{0} × {1} を削除しました（スロット {2}）。",
+  "msg.inventory_added": "{0} × {1} を追加しました（スロット {2}）。",
+  "msg.inventory_stop_first": "先に PalServer を停止してください。セーブはサーバー停止中にのみ編集します。そうすれば誰もオンラインにおらず、ゲームに上書きされません。",
+  "msg.inventory_backup_first": "まず新しい安全バックアップを作成して確認し、変更はワールドを置き換える前に検証されます。",
+  "msg.inventory_full": "インベントリがいっぱいです（{0} スロット）。",
+  "msg.inventory_no_plain_stack": "ワールドに {0} の通常スタックがないため、MystTiq は安全に追加できません。"
 }

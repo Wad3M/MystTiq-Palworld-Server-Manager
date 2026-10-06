@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -255,6 +255,14 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     // v0.8.4.0: outside delivery pause and a test notification through the normal path.
     public async Task<NotificationDeliveryStateDto> GetNotificationDeliveryAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<NotificationDeliveryStateDto>("/api/v1/notifications/delivery", cancellationToken) ?? new(); }
+    // v1.0.4.0 (roadmap S-1, S-2): a player's main inventory, and the guarded remove/add.
+    public async Task<InventoryViewDto> GetInventoryAsync(ConnectionProfile profile, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<InventoryViewDto>($"/api/v1/players/{Uri.EscapeDataString(playerId)}/inventory", cancellationToken) ?? new(); }
+    public async Task<InventoryEditPreviewDto> PreviewInventoryEditAsync(ConnectionProfile profile, InventoryEditRequestDto request, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsJsonAsync("/api/v1/players/inventory/preview", request, cancellationToken); return await ReadOperationAsync<InventoryEditPreviewDto>(response, cancellationToken); }
+    public async Task<InventoryEditResultDto> ApplyInventoryEditAsync(ConnectionProfile profile, string token, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsJsonAsync("/api/v1/players/inventory/apply", new { token, confirmed = true }, cancellationToken); return await ReadOperationAsync<InventoryEditResultDto>(response, cancellationToken); }
+
     // v1.0.2.0 (roadmap R-2): each outside channel's delivery health and the latest sends.
     public async Task<NotificationDeliveryHealthDto> GetNotificationDeliveryHealthAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<NotificationDeliveryHealthDto>("/api/v1/notifications/delivery-health", cancellationToken) ?? new(); }

@@ -1,4 +1,4 @@
-// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
 using MystTiq.Core.Models;
 using MystTiq.Core.Services;
 
@@ -47,7 +47,7 @@ public sealed class HeadlessWorldCloneService
             return HeadlessWorldCloneResult.Failure("The new profile ID must be different from the source profile.");
 
         var status = await lifecycle.GetStatusAsync(cancellationToken);
-        if (status.NativeProcessId.HasValue || status.Ready)
+        if (status.ServerMayBeRunning)
             return HeadlessWorldCloneResult.Failure("Stop this server before cloning its world -- files cannot be safely copied while PalServer has them open.");
 
         var sourceRoot = Path.GetFullPath(paths.ServerRoot);
