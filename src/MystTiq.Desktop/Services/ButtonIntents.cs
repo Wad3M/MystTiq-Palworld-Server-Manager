@@ -1,4 +1,4 @@
-// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
 using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
@@ -13,7 +13,7 @@ namespace MystTiq.Desktop.Services;
 ///   open    purple goes somewhere or shows something      Open, Browse, Show on map, Open guild, Choose ZIP
 ///   verify  green  checks without changing                Verify, Recheck, Scan, Test, Validate, Analyze, Doctor
 ///   apply   blue   makes the change asked for             Save, Apply, Create, Add, Install, Send, Connect, Update
-///   info    teal   reads again, previews or copies out    Refresh, Preview, Load, Export, Copy, Fetch, Discover
+///   info    teal   reads again, previews or copies out    Refresh, Preview, Load, Export, Copy, Fetch, Discover, Search
 ///   caution amber  undoes, resets or pauses               Restore, Reset, Restart, Repair, Pause, Mute, Release
 ///   plain   neutral moves through a flow or backs out     Cancel, Back, Next, Dismiss, Sign Out
 /// A button's XAML carries its intent as a class; the ArtworkHarness checks every one against this table (by the English
@@ -43,7 +43,7 @@ public static class ButtonIntents
         (R(@"^(open|browse|show on|show files|look up|choose|manage|view|go to)"), Open),
         (R(@"^(verify|rescan|recheck|validate|validator|scan|↻ scan|test|check|diagnose|analyze|⚕|doctor|run reachability|run doctor|refresh capture|find the)"), Verify),
         (R(@"^(reset|restore|restart|repair|release|pause|mute|lift|leave running|clear background|enable / disable|toggle|pin / unpin)"), Caution),
-        (R(@"^(refresh|↻|preview|load|export|copy id|copy |fetch|discover|auto-detect|latest|trending|🎲|set source)"), Info),
+        (R(@"^(refresh|↻|preview|load|export|copy id|copy |fetch|discover|auto-detect|latest|trending|🎲|set source|search)"), Info),
         (R(@"^(save|apply|create|\+ create|add|install|📦|reserve|send|➤|give|import|use it|connect|● connect|sign in|allow|enable|new|download|bootstrap|capture|teleport|fix|clone|prepare|resume|unmute|unban|update|backup|run now)"), Apply),
         (R(@"^(cancel|← back|back|next|continue|dismiss|advanced settings|simple settings|sign out)"), Plain),
     ];

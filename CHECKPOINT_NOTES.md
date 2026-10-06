@@ -1,64 +1,84 @@
-<!-- MystTiq v1.0.4.0: file reviewed for this release (2026-10-05). -->
-# MystTiq v1.0.4.0 Checkpoint: Guarded Save Edits (Items)
+<!-- MystTiq v1.0.5.0: file reviewed for this release (2026-10-06). -->
+# MystTiq v1.0.5.0 Checkpoint: MOD Browser
 
-The third milestone of your roadmap: S-1 remove an item, S-2 add an item, S-3 add and remove a Pal. Decision D-2 holds:
-guarded edits only, each with a backup first and a restore check.
+The fourth milestone of your roadmap: M-1, the MOD browser. It covers the repositories you chose on 2026-10-06 (recorded
+as D-8): your Downloads folder or other folders, Nexus Mods (free account), Thunderstore, CurseForge and GitHub releases.
 
-## S-1 remove an item, S-2 add an item — Built
+## M-1 MOD browser — Built
 
-- **Players > Inventory in the world save** (admins): **Load Inventory** shows the selected player's main inventory
-  slot by slot, as the world save holds it.
-- **Remove Selected Stack** takes one stack out. **Add To Inventory** puts the item picked in the list above into the
-  first free slot, with the amount from the amount box.
-- Every edit:
-  - runs only while the server is stopped;
-  - is previewed, and you confirm it (red for a removal);
-  - takes a fresh safety backup that must pass its check before anything is touched;
-  - is decoded again and must show exactly that one change, then replaces the world in one step;
-  - puts the original back on any failure;
-  - is in the Activity log with the backup's name.
-- Only plain stacks: coins, ores, Pal Spheres, food and the like. Tools, weapons, armour and eggs carry their own record
-  in the save and are left alone. An item can be added only if the world already holds it as a plain stack.
-- **Owed for Done:** on the clone, a player confirms in game that the stack is gone, then that the added one is there.
+**Mods > MOD Library > MOD Browser.** Pick a source and search:
 
-## S-3 add and remove a Pal — moved
+- **Downloads and folders**: ZIPs that hold a MOD, newest first. Add or remove folders there.
+- **Thunderstore**: Palworld's community. It is small, and its packages mostly need unreal_shimloader, which MystTiq
+  does not manage, so the browser marks them.
+- **CurseForge**: paste your API key from console.curseforge.com and Save Key. It is stored encrypted on this PC and sent
+  only to CurseForge.
+- **GitHub releases**: only repositories you add. An open GitHub search for Palworld MODs turned out to be mostly cheat
+  and "free download" lure repositories, several pushed today, so there is none.
+- **Nexus Mods**: uses your key from the Nexus Mods card. Your account is free, so files come through the site's Mod
+  Manager Download button. Press **Allow MystTiq to Take Mod Manager Download Links** once. I haven't pressed it on this
+  PC: it changes your Windows settings for nxm links.
 
-A Pal is two linked records (the character entry and its Pal box slot) whose fields must agree with the game's own
-species record. Per the roadmap rule it moves to the milestone after v1.0.5.0 with this note, rather than shipping
-without its restore check.
+**Install Selected File:**
+- downloads only from that source's own sites;
+- shows what the archive holds and whether MystTiq can install it;
+- asks you, then installs as before, with the server stopped.
 
-## Fixed on the way
+**Owed for Done:** one install on the clone through Nexus with your account.
 
-After a PalServer crashed or was ended outside MystTiq, backup restores, save edits and MOD changes kept answering "Stop
-PalServer first" until the server was started again. Pressing Stop on the crashed server didn't clear it. The status
-kept the dead process's id, and 23 guards counted that as running. They now look for a live process or an open game
-port. The inventory smoke found it.
+## Archives are checked before any install
+
+This also applies to a ZIP dropped on the page. Two problems turned up while building the browser:
+
+1. A UE4SS MOD packed inside a folder (the usual layout) landed one folder too deep and did not load. It now installs
+   from its own folder, under that folder's name.
+2. Some archives were installed wrongly without a word:
+   - a PAK with Lua scripts (the scripts were dropped);
+   - a LogicMods PAK (put in ~mods);
+   - several PAKs (they overwrote each other).
+
+   These are now refused with the reason, as are shimloader packages, loader DLLs, archives containing a program and
+   archives with no MOD. Nothing is written, and the refusal is in the Activity log.
+
+Installing the refused layouts properly is proposed as **M-2** for v1.0.6.0, with **S-3** (Pal add and remove). That
+milestone is a proposal for you to confirm.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.0.4.0-Logic.ps1 -RunBuild`: 306 / 306 passed, with the inventory smoke. The 5 Linux VM
-  checks were skipped because 192.168.1.122 could not be reached. Every v1.0.3.0 check is carried, and the frozen
-  v1.0.3.0 gate passes on its own checkpoint.
-- **Static gate:** 253 / 253. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-- **Inventory smoke** (a copy of the clone's world, the real save tools, an isolated service):
-  - a player's main inventory read from the save (5 slots used);
-  - one stack removed and one added, each after a fresh safety backup that passed its check, with only that slot changed;
-  - an item the world holds nowhere as a plain stack refused;
-  - any edit refused while a PalServer ran from the server folder;
-  - with that server killed, the status still named the dead process (the case behind the fix), and restoring the first
-    edit's safety backup gave the pre-edit Level.sav byte for byte;
-  - every edit in the Activity log.
-- **LogicHarness:** the inventory edits (remove, add, every refusal, only that slot changed) and the crashed-status rule.
-  **ArtworkHarness:** 795 checks pass, including the inventory card.
-- **Live look** at the published v1.0.4.0 desktop: Players > Inventory in the world save, with Load Inventory, a red
-  Remove Selected Stack and Add To Inventory.
-- Your own MystTiq (v1.0.0.0) was running during the gate; nothing of it was touched.
+- **Full gate** `scripts\Test-v1.0.5.0-Logic.ps1 -RunBuild`: 312 / 312 passed, with the MOD archive smoke. The 5 Linux VM
+  checks were skipped because 192.168.1.122 could not be reached. Every v1.0.4.0 check is carried, and the frozen
+  v1.0.4.0 gate passes on its own checkpoint.
+- **Static gate:** 258 / 258. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **MOD archive smoke** (isolated service, stand-in UE4SS):
+  - a PAK and a UE4SS MOD packed in a folder install, the latter at the right depth and enabled;
+  - eight wrong layouts are refused with nothing written, and each refusal is logged;
+  - real archives: GuildFeedBox 0.4.1 from a GitHub release installs, while Thunderstore's ElementalRebalance
+    (shimloader) and BasesPlus (a PAK with scripts) and PalDefender's own release ZIP are refused.
+- **Live on your clone** (isolated service, port 18652, a throwaway token):
+  - the browser's own sources found GuildFeedBox on GitHub and downloaded it from github.com only;
+  - the check read a UE4SS MOD in a folder, and it installed as GuildFeedBox, enabled and listed;
+  - it was removed again, and the clone's MOD folders and mods.txt match their before-state hash for hash;
+  - BasesPlus from Thunderstore was refused on the clone with its reason;
+  - CurseForge without a key asked for one.
+- **Live look** at the published v1.0.5.0 desktop:
+  - all five sources show in the picker;
+  - a Thunderstore search listed 13 packages;
+  - Install Selected File on BasesPlus downloaded it and refused it on this PC with the reason, before anything reached
+    the server. Your own v1.0.0.0 service was connected; nothing was installed there.
+- **LogicHarness:** the archive check on the real layouts. **ArtworkHarness:** 810 checks pass, including stand-in
+  Thunderstore, CurseForge and GitHub, the host checks, a folder of ZIPs, the nxm handoff, the card and German.
 
 ## For you
 
-- **S-1/S-2:** on the clone, with the server stopped, remove a stack from your character and add one, start it, and
-  tell me what you see in game.
-- **Still owed:** R-2 (a Discord or email channel and a test send), R-3 (the Linux VM switched on), W-1 (the browser view
-  from another computer over TLS), X-1 (your Xbox account in the clone).
-- **Pushed and tagged** with your go-ahead (push through v1.0.5.0).
-- **Next:** v1.0.5.0, the MOD browser. The roadmap says its repositories are agreed with you before work starts.
+- **M-1:** in MystTiq, press Allow MystTiq to Take Mod Manager Download Links (it names any program that has them
+  now). Then on Nexus click Mod Manager Download for a Palworld MOD, and Install from link with the clone stopped and
+  selected.
+- **Optional:** a CurseForge API key, if you want CurseForge searched.
+- **v1.0.6.0:** confirm or change the proposed milestone (S-3 Pal add and remove, M-2 game-folder layouts).
+- **Still owed:**
+  - S-1/S-2: an in-game check on the clone;
+  - R-2: a channel and a test send;
+  - R-3: the Linux VM;
+  - W-1: TLS from another computer;
+  - X-1: your Xbox account.
+- **Pushed and tagged** with your go-ahead. This was the last version of the run you authorised (through v1.0.5.0).

@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.4.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.5.0: file reviewed for this release (2026-10-06). -->
 # Product roadmap
 
-Updated 2026-10-05. **Current version: v1.0.4.0. Accepted baseline: v1.0.0.0. Next milestone: v1.0.5.0 (MOD browser).**
+Updated 2026-10-06. **Current version: v1.0.5.0. Accepted baseline: v1.0.0.0. Next milestone: v1.0.6.0 (proposed, to agree with the owner).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -27,6 +27,7 @@ This is the active plan. Completed work and the per-version detail behind every 
 | D-5 | Xbox test account | The owner's own Xbox account is available for live discovery. |
 | D-6 | Docker test host | Docker Desktop on the owner's Windows machine, used for local container tests. |
 | D-7 | First save edit | Remove an item, then add an item, then add and remove a Pal. |
+| D-8 | MOD browser repositories (2026-10-06) | The owner's Downloads folder or other folders, Nexus Mods (the owner's account is free: Mod Manager Download links), Thunderstore, CurseForge, GitHub releases. |
 
 ## v1.0.2.0 — Unattended reliability
 
@@ -94,9 +95,20 @@ These were `Built` or partly verified at 1.0. Each stays open until its evidence
 
 Exit gate: M-1 is `Done`. Repositories to cover are agreed with the owner before work starts.
 
+Repositories agreed 2026-10-06 (D-8). Released 2026-10-06 as v1.0.5.0 with M-1 `Built`: the real Nexus install with the owner's account is owed.
+
 | ID | Item | Acceptance | Evidence required | Status |
 | --- | --- | --- | --- | --- |
-| M-1 | MOD browser (Nexus Mods and other repositories) | Search, read and install MODs from inside MystTiq. Builds on the Nexus catalog, the website-sourced MOD descriptions and the existing MOD install, update and rollback paths. | Harness with stand-in repositories. Live: one install on the clone through the real Nexus path, using the owner's account. Requested 2026-09-30. | Planned |
+| M-1 | MOD browser (Nexus Mods and other repositories) | Search, read and install MODs from inside MystTiq. Builds on the Nexus catalog, the website-sourced MOD descriptions and the existing MOD install, update and rollback paths. | Harness with stand-in repositories. Live: one install on the clone through the real Nexus path, using the owner's account. Requested 2026-09-30. Recorded (v1.0.5.0): stand-in repositories in the ArtworkHarness; the archive check in the LogicHarness and through the service with real GitHub and Thunderstore archives; live, on the clone through an isolated service, the browser's own sources fetched a UE4SS MOD from a GitHub release (GuildFeedBox 0.4.1, from github.com only), the archive check read it as a UE4SS MOD in a subfolder, it installed as GuildFeedBox at the right depth, enabled and listed, and was removed again with the clone's MOD folders and mods.txt unchanged; Thunderstore's BasesPlus (a PAK with scripts) and ElementalRebalance (shimloader) were refused with their reasons. The Nexus install with the owner's account is owed. | Built |
+
+## v1.0.6.0 — Carried and follow-ups (proposed)
+
+Proposed by the build of v1.0.5.0, not yet agreed with the owner.
+
+| ID | Item | Acceptance | Evidence required | Status |
+| --- | --- | --- | --- | --- |
+| S-3 | Add and remove a Pal | Moved from v1.0.4.0 (see there). | Same as S-1, run on a clone with a test Pal. | Planned |
+| M-2 | Install MODs laid out as the game folder | Archives the v1.0.5.0 check refuses today: a PAK with UE4SS scripts, LogicMods PAKs (with UE4SS's BPModLoader), each file placed where the game loads it, with rollback and removal. | Harness on the real layouts (BasesPlus). Live: one such MOD installed and removed on the clone. | Planned |
 
 ## Backlog (not scheduled)
 

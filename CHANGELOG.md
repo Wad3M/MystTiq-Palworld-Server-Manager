@@ -1,4 +1,19 @@
-<!-- MystTiq v1.0.4.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.5.0: file reviewed for this release (2026-10-06). -->
+## v1.0.5.0 — MOD Browser
+
+- M-1 MOD browser (repositories agreed with the owner, D-8): the MOD Library page's MOD Browser searches the Downloads
+  folder and other folders, Thunderstore, CurseForge (the owner's key), GitHub releases of repositories the owner adds,
+  and Nexus Mods (free accounts through Mod Manager Download links, which MystTiq takes once the owner allows it).
+  Install Selected File downloads only from the source's own hosts, checks the archive, asks, and installs through the
+  validated ZIP install. Live: on the clone through an isolated service, the browser's own sources fetched a UE4SS MOD from a GitHub release (GuildFeedBox 0.4.1, from github.com only), the archive check read it as a UE4SS MOD in a subfolder, it installed as GuildFeedBox at the right depth, enabled and listed, and was removed again with the clone's MOD folders and mods.txt unchanged; Thunderstore's BasesPlus (a PAK with scripts) and ElementalRebalance (shimloader) were refused with their reasons. The real Nexus install with the owner's account is owed.
+- Archives are checked before any install (also for a dropped ZIP): a UE4SS MOD packed in a folder installs from that
+  folder (it landed one level too deep); a PAK with scripts, a LogicMods PAK, several PAKs, shimloader packages, loader
+  DLLs, programs and archives with no MOD are refused with the reason instead of installed wrongly.
+- Tests: the v1.0.5.0 gate regenerated from v1.0.4.0 (every earlier check kept), the MOD archive smoke with real
+  repository archives, a LogicHarness scenario and ArtworkHarness checks with stand-in repositories; 92 new texts in
+  all 12 languages.
+- Version advanced to 1.0.5.0.
+
 ## v1.0.4.0 — Guarded Save Edits: Items
 
 - S-1 remove an item and S-2 add an item: the Players page's inventory card (admins) shows a player's main inventory

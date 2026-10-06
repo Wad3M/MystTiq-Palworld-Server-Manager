@@ -1,4 +1,4 @@
-# MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
+# MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
 """MystTiq test fixture (v0.8.13.0): write a tiny Unreal pak (version 11, uncompressed) holding the two English name
 tables the game-name extractor reads, with made-up rows. Used by Test-v0.8.13.0-RouteSmoke.ps1 so the smoke needs no
 game files and no Oodle module.

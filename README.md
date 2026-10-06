@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.4.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.5.0: file reviewed for this release (2026-10-06). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,13 +21,15 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.4.0 · Accepted baseline: v1.0.0.0**
+**Current version: v1.0.5.0 · Accepted baseline: v1.0.0.0**
 
 MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.4.0
+## What's new in v1.0.5.0
 
-**Guarded save edits.** On the Players page, remove a stack from a player's saved inventory or add an item to it. Each edit is previewed and confirmed, runs only while the server is stopped, takes a checked safety backup first, and is verified before it replaces the world.
+**A MOD browser.** On the MOD Library page, search your Downloads folder, Thunderstore, CurseForge, GitHub releases you trust, or Nexus Mods, and install a MOD's file in one step. MystTiq downloads only from that source, shows what the archive holds, and asks first. Archives that would install wrongly are refused with the reason, and a UE4SS MOD packed in a folder now installs correctly.
+
+**Also new since 1.0 (v1.0.4.0): guarded save edits.** On the Players page, remove a stack from a player's saved inventory or add an item to it. Each edit is previewed and confirmed, runs only while the server is stopped, takes a checked safety backup first, and is verified before it replaces the world.
 
 **Also new since 1.0 (v1.0.3.0): a read-only browser view and a Docker image.** Open `/web` on your MystTiq service in any browser, sign in with your MystTiq account, and see each server's status, players and backups. It can't change anything. The headless service also comes as a Linux container image that keeps everything in one mounted folder and runs the Palworld server inside it.
 
@@ -47,7 +49,7 @@ MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Win
 
 **Also new since 1.0 (v1.0.0.1): launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
 
-[Release notes](release-notes/v1.0.4.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v1.0.5.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -117,8 +119,9 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v0.9.0.0 – v0.9.4.0 | Delivered | 12 display languages for labels, messages and game names; roles explained; accessible names and keyboard reach |
 | v0.9.5.0 – v0.9.8.0 | Delivered | Servers never start each other; true update checks; firewall per server port; fast server search; Avalonia 12; alerts when a component falls behind; Linux install |
 | v0.9.9.0 – v0.9.10.0 | Delivered | One local helper; running servers survive adding one; crash causes for joins; UE4SS compared automatically; names kept in every language |
-| v1.0.4.0 | Current | Guarded save edits: remove or add an item in a player's saved inventory, with a checked backup first |
-| v1.0.3.0 | Previous | A read-only browser view (status, players, backups) and a Docker image of the headless service |
+| v1.0.5.0 | Current | A MOD browser: your Downloads folder, Thunderstore, CurseForge, GitHub releases and Nexus Mods, each archive checked before it installs |
+| v1.0.4.0 | Previous | Guarded save edits: remove or add an item in a player's saved inventory, with a checked backup first |
+| v1.0.3.0 | Earlier | A read-only browser view (status, players, backups) and a Docker image of the headless service |
 | v1.0.2.0 | Earlier | A frozen server is restarted; proof that alerts reach Discord, email and webhooks; the Linux service tested under systemd |
 | v1.0.1.0 | Earlier | Update on every Update Center row: MystTiq, the server, UE4SS, PalDefender, pip and Save Tools, or the official page |
 | v1.0.0.6 | Earlier | Buttons and tags coloured by what they do: Delete red, Open purple, Verify green, the same on every page |
@@ -128,7 +131,6 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v1.0.0.2 | Earlier | Unique player names: each name belongs to one account, case ignored |
 | v1.0.0.1 | Earlier | Server > Launcher; characters protected on join; help for stuck starts; addresses on the Dashboard; a clean Exit from the tray |
 | v1.0.0.0 | Stable baseline | The first stable release |
-| v1.0.5.0 | Planned | A MOD browser connected to Nexus Mods and other online repositories |
 
 What comes next is in the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md). Release history lives in the [changelog](CHANGELOG.md).
 

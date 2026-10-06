@@ -1,4 +1,4 @@
-// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -376,6 +376,33 @@ public sealed partial class MainWindow : Window
             Localizer.T(action == "remove" ? "Remove" : "Add"), danger: action == "remove");
         if (await dialog.ShowDialog<bool>(this) != true) return;
         await vm.ApplyInventoryEditAsync(token);
+    }
+
+    // v1.0.5.0 (roadmap M-1): the MOD browser fetches the file and reads what it holds, then asks before installing.
+    private async void InstallBrowserMod_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        var prepared = await vm.PrepareModBrowserInstallAsync();
+        if (prepared is null) return;
+        var dialog = new Views.ConfirmOperationDialog(
+            string.Format(Localizer.T("Install {0} from {1}?"), prepared.Package, Localizer.T(prepared.SourceName)),
+            [Localizer.T(prepared.Plan.Summary), Localizer.T("PalServer must be stopped; MystTiq refuses the install while it runs.")],
+            Localizer.T("Install"), danger: false);
+        if (await dialog.ShowDialog<bool>(this) != true) { vm.DiscardPreparedMod(prepared); return; }
+        await vm.InstallPreparedModAsync(prepared);
+    }
+
+    // v1.0.5.0: Nexus Mod Manager Download links open MystTiq; another program holding them is named and replaced only on a yes.
+    private async void UseMystTiqForNxm_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        if (vm.OtherNxmHandler is { } other)
+        {
+            var dialog = new Views.ConfirmOperationDialog(Localizer.T("Let MystTiq take Mod Manager Download links instead?"),
+                [string.Format(Localizer.T("They open with this program now: {0}"), other)], Localizer.T("Allow"), danger: false);
+            if (await dialog.ShowDialog<bool>(this) != true) return;
+        }
+        vm.UseMystTiqForNxmLinks();
     }
 
     private async void WipeBase_OnClick(object? sender, RoutedEventArgs e)

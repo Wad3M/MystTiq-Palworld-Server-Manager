@@ -1,4 +1,4 @@
-// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -424,6 +424,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (Avalonia.Application.Current?.PlatformSettings is { } platformSettings)
             platformSettings.ColorValuesChanged += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(OnSystemThemeChanged);
         InitializeNexusMods();
+        // v1.0.5.0 (roadmap M-1): the MOD browser.
+        InitializeModBrowser();
         // v0.8.5.0: the saved display language, before anything is shown.
         Localizer.Instance.SetLanguage(_languageStore.Load());
         Localizer.Instance.LanguageChanged += OnLanguageChanged;
@@ -9917,6 +9919,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                     : "That download is not a ZIP archive, so MystTiq will not install it.";
                 return;
             }
+
+            // v1.0.5.0 (roadmap M-1): the same layout check as the MOD browser, before anything is sent to the server.
+            if (ModSourceHttp.PlanZip(temp) is { Installable: false } plan) { NexusStatusText = plan.Summary; return; }
 
             NexusStatusText = "Downloaded. Installing through the validated ZIP install…";
             IsBusy = false; // InstallModZipAsync manages the busy flag itself

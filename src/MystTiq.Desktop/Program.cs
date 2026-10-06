@@ -1,4 +1,4 @@
-// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
 using System.Runtime.InteropServices;
 using Avalonia;
 
@@ -16,10 +16,13 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // v1.0.5.0 (roadmap M-1): started by the browser with a Nexus "Mod Manager Download" link. The link goes to the
+        // inbox; the running MystTiq (or this one, once started) picks it up from there.
+        var nxmDelivered = Services.NxmLinkHandoff.FindLink(args) is { } nxm && TryDeliver(nxm);
         singleInstanceMutex = new Mutex(initiallyOwned: true, name: SingleInstanceMutexName, createdNew: out var createdNew);
         if (!createdNew)
         {
-            NotifyAlreadyRunning();
+            if (!nxmDelivered) NotifyAlreadyRunning();
             return;
         }
 
@@ -32,6 +35,12 @@ internal static class Program
             singleInstanceMutex.ReleaseMutex();
             singleInstanceMutex.Dispose();
         }
+    }
+
+    private static bool TryDeliver(string link)
+    {
+        try { return new Services.NxmLinkHandoff().Deliver(link); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }
 
     public static AppBuilder BuildAvaloniaApp() =>

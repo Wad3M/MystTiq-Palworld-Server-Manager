@@ -1,4 +1,4 @@
-// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -1822,6 +1822,42 @@ try
         Assert(alive.ServerMayBeRunning, "a live process did not count as running");
         Assert((gone with { Ready = true }).ServerMayBeRunning, "an open game port did not count as running");
         Assert((alive with { NativeProcessId = null }).ServerMayBeRunning, "a live process without a native id did not count as running");
+    }, failures);
+
+    // ---- v1.0.5.0 (roadmap M-1): what a MOD archive holds and whether MystTiq installs it (layouts seen on 2026-10-06) ----
+    RunScenario("MOD archive check: PAK and UE4SS layouts install (a UE4SS MOD from its own folder); mixed, LogicMods, several PAKs, shimloader, programs, loader DLLs, no MOD and unsafe paths are refused", () =>
+    {
+        ModArchivePlan P(params string[] entries) => ModArchivePlanner.Plan(entries);
+        var pak = P("Plain/Plain_P.pak", "Plain/Plain_P.ucas", "Plain/Plain_P.utoc", "readme.txt");
+        Assert(pak is { Kind: ModArchiveKind.Pak, Installable: true, InstallType: "PAK" }, $"plain PAK: {pak.Kind}");
+        // GitHub: Stians92/palworld-guild-feed-box-sync v0.4.1 (manual ZIP).
+        var nested = P("GuildFeedBox/enabled.txt", "GuildFeedBox/INSTALL.md", "GuildFeedBox/Scripts/main.lua", "GuildFeedBox/Scripts/config.lua");
+        Assert(nested is { Kind: ModArchiveKind.Ue4ss, Installable: true, InstallType: "UE4SS", Ue4ssRoot: "GuildFeedBox/" }, $"nested UE4SS: {nested.Kind} {nested.Ue4ssRoot}");
+        var top = P("enabled.txt", "Scripts/main.lua");
+        Assert(top is { Kind: ModArchiveKind.Ue4ss, Ue4ssRoot: "" } && top.Summary.Contains("at the archive's top"), "UE4SS at the top");
+        var cpp = P("CppMod/dlls/main.dll", "CppMod/enabled.txt");
+        Assert(cpp is { Kind: ModArchiveKind.Ue4ss, Ue4ssRoot: "CppMod/" }, "C++ UE4SS MOD (dlls/main.dll)");
+        var deep = P("Pal/Binaries/Win64/Mods/BasesOnly/Scripts/main.lua");
+        Assert(deep is { Kind: ModArchiveKind.Ue4ss, Ue4ssRoot: "Pal/Binaries/Win64/Mods/BasesOnly/" }, "UE4SS laid out as the game folder");
+        // Thunderstore: PalModders-BasesPlus 1.1.1 (game-folder layout, a LogicMods PAK and a Lua script).
+        Assert(P("Pal/Binaries/Win64/Mods/BasesPlus/Enabled.txt", "Pal/Binaries/Win64/Mods/BasesPlus/Scripts/main.lua", "Pal/Content/Paks/LogicMods/BasesPlus.pak", "manifest.json", "icon.png").Kind == ModArchiveKind.MixedPakAndScripts, "BasesPlus is mixed");
+        Assert(P("Pal/Content/Paks/LogicMods/Bp.pak").Kind == ModArchiveKind.LogicModsPak, "LogicMods PAK");
+        var several = P("Option A/Big.pak", "Option B/Small.pak");
+        Assert(several.Kind == ModArchiveKind.SeveralPaks && several.Summary.Contains("2 different PAKs"), "several PAKs");
+        // Thunderstore: dubcats-ElementalRebalance 1.0.1 and localcc-ReplicationEnabler 1.0.2 (unreal_shimloader layout).
+        Assert(P("icon.png", "manifest.json", "mod/enabled.txt", "mod/scripts/main.lua", "pak/ElementalRebalance_P.pak", "README.md").Kind == ModArchiveKind.Shimloader, "shimloader (Lua and PAK)");
+        Assert(P("icon.png", "manifest.json", "mod/dlls/main.dll", "mod/enabled.txt", "README.md").Kind == ModArchiveKind.Shimloader, "shimloader (DLL)");
+        Assert(P("A/Scripts/main.lua", "B/scripts/MAIN.lua").Kind == ModArchiveKind.SeveralUe4ssMods, "two UE4SS MODs (case-insensitive)");
+        var exe = P("Tool/Scripts/main.lua", "Tool/setup.exe");
+        Assert(exe.Kind == ModArchiveKind.Executable && exe.Summary.Contains("setup.exe") && !exe.Installable, "a program");
+        Assert(P("Mod/Scripts/main.lua", "install.bat").Kind == ModArchiveKind.Executable, "a batch file");
+        Assert(P("PalDefender.dll", "d3d9.dll").Kind == ModArchiveKind.NativeLoader && P("dwmapi.dll", "Mods/X/Scripts/main.lua").Kind == ModArchiveKind.NativeLoader, "loader DLLs");
+        Assert(P("readme.txt", "docs/guide.md").Kind == ModArchiveKind.NoMod && P().Kind == ModArchiveKind.NoMod, "no MOD");
+        Assert(P("../escape.pak").Kind == ModArchiveKind.UnsafePath && P("/abs/x.pak").Kind == ModArchiveKind.UnsafePath && P("C:/x.pak").Kind == ModArchiveKind.UnsafePath, "unsafe paths");
+        Assert(P("Mod\\Scripts\\main.lua") is { Kind: ModArchiveKind.Ue4ss, Ue4ssRoot: "Mod/" }, "backslash entry names");
+        Assert(P("Folder/", "Folder/Scripts/", "Folder/Scripts/main.lua").Kind == ModArchiveKind.Ue4ss, "directory entries are ignored");
+        foreach (var refused in new[] { ModArchiveKind.MixedPakAndScripts, ModArchiveKind.LogicModsPak, ModArchiveKind.SeveralPaks, ModArchiveKind.Shimloader, ModArchiveKind.NativeLoader, ModArchiveKind.Executable, ModArchiveKind.NoMod, ModArchiveKind.UnsafePath, ModArchiveKind.SeveralUe4ssMods })
+            Assert(new ModArchivePlan(refused, false, "", null, []).InstallType is null, $"{refused} has no install type");
     }, failures);
 
     // ---- v1.0.2.0 (roadmap R-1): frozen-server watchdog ----------

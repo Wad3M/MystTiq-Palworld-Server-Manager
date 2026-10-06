@@ -1,4 +1,4 @@
-// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -82,10 +82,19 @@ public sealed class HeadlessModManagementService
             // v1.0.0.3: a PalDefender (or other loader-DLL) archive would otherwise install as a UE4SS folder and never load.
             if (Directory.EnumerateFiles(extracted, "*.dll", SearchOption.AllDirectories).Any(f => Path.GetFileName(f).Equals("PalDefender.dll", StringComparison.OrdinalIgnoreCase)))
                 return HeadlessModMutationResult.Failure("This is PalDefender, which is not installed as a MOD folder: with the server stopped, put PalDefender.dll and d3d9.dll from its release into the server's Pal\\Binaries\\Win64 folder. It then appears on the MODs page as a NATIVE MOD.");
-            var detectedType = DetectModType(extracted);
+            // v1.0.5.0 (roadmap M-1): the archive's layout decides, by the same rules the MOD browser shows before an install.
+            // Archives that would install wrongly (a PAK with scripts, a LogicMods PAK, several PAKs, shimloader packages,
+            // loader DLLs, programs) are refused with the reason; a UE4SS MOD in a subfolder installs from that folder.
+            var plan = ModArchivePlanner.Plan(Directory.EnumerateFiles(extracted, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(extracted, f)));
+            if (!plan.Installable)
+            {
+                activity.Record("Warning", "MODs", "MOD archive refused", $"package={package}; kind={plan.Kind}; {plan.Summary}");
+                return HeadlessModMutationResult.Failure(plan.Summary);
+            }
+            var detectedType = plan.InstallType!;
             var changed = detectedType.Equals("PAK", StringComparison.OrdinalIgnoreCase)
                 ? InstallPakFiles(extracted, package)
-                : InstallUe4ssFiles(extracted, package);
+                : InstallUe4ssFiles(Path.Combine(extracted, plan.Ue4ssRoot ?? string.Empty), package);
             var typeNote = string.Equals(detectedType, type, StringComparison.OrdinalIgnoreCase)
                 ? string.Empty
                 : $"; requestedType={type.ToUpperInvariant()} (auto-corrected from archive contents)";
@@ -656,13 +665,6 @@ public sealed class HeadlessModManagementService
         client.DefaultRequestHeaders.UserAgent.ParseAdd("MystTiq-Palworld-Server-Manager");
         return client;
     }
-
-    // v0.7.39.0: real-content detection backing InstallZipAsync's auto-detect -- any .pak/.ucas/
-    // .utoc file anywhere in the extracted archive is PAK; otherwise it's treated as UE4SS.
-    private static string DetectModType(string extracted) =>
-        Directory.EnumerateFiles(extracted, "*", SearchOption.AllDirectories)
-            .Any(x => PakExtensions.Contains(Path.GetExtension(x), StringComparer.OrdinalIgnoreCase))
-            ? "PAK" : "UE4SS";
 
     private int InstallPakFiles(string extracted, string package)
     {

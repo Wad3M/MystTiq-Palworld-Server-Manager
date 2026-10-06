@@ -1,4 +1,4 @@
-// MystTiq v1.0.4.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.5.0: file reviewed for this release (2026-10-06).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1566,6 +1566,159 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         $"The Players page's inventory card lists the saved slots, Remove red, Add and Load styled, a recorded item marked [{list?.ItemCount} rows; {classes}]");
     vm.InventorySlots.Clear();
 }
+// v1.0.5.0 (roadmap M-1): the MOD browser against stand-in repositories (Thunderstore, CurseForge, GitHub), a folder of
+// ZIPs, the download host checks, the nxm:// handoff and the card on the MOD Library page.
+{
+    void Wait(Task task) { var clock = Stopwatch.StartNew(); while (!task.IsCompleted && clock.Elapsed < TimeSpan.FromSeconds(20)) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); } task.GetAwaiter().GetResult(); }
+    T Run<T>(Task<T> task) { Wait(task); return task.Result; }
+    byte[] Zip(params string[] entries)
+    {
+        using var ms = new MemoryStream();
+        using (var z = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+            foreach (var e in entries) using (var w = new StreamWriter(z.CreateEntry(e).Open())) w.Write("x");
+        return ms.ToArray();
+    }
+    var repos = new StandInRepos();
+    repos.Json["https://thunderstore.io/c/palworld/api/v1/package/"] = """
+        [{"name":"Pal_Party","full_name":"Darudge-PalParty","owner":"Darudge","package_url":"https://thunderstore.io/c/palworld/p/Darudge/PalParty/","date_updated":"2026-08-17T00:00:00Z","is_deprecated":false,"has_nsfw_content":false,"categories":["Mods"],
+          "versions":[{"full_name":"Darudge-PalParty-0.4.19","description":"Party tools","version_number":"0.4.19","dependencies":["Thunderstore-unreal_shimloader-1.1.7"],"download_url":"https://thunderstore.io/package/download/Darudge/PalParty/0.4.19/","downloads":243,"date_created":"2026-08-17T00:00:00Z","file_size":193564}]},
+         {"name":"CoolMod","full_name":"Someone-CoolMod","owner":"Someone","package_url":"https://thunderstore.io/c/palworld/p/Someone/CoolMod/","date_updated":"2026-09-01T00:00:00Z","is_deprecated":false,"has_nsfw_content":false,"categories":["Mods"],
+          "versions":[{"full_name":"Someone-CoolMod-1.2.0","description":"A cool UE4SS mod","version_number":"1.2.0","dependencies":[],"download_url":"https://thunderstore.io/package/download/Someone/CoolMod/1.2.0/","downloads":10,"date_created":"2026-09-01T00:00:00Z","file_size":900},
+                     {"full_name":"Someone-CoolMod-1.1.0","description":"A cool UE4SS mod","version_number":"1.1.0","dependencies":[],"download_url":"https://thunderstore.io/package/download/Someone/CoolMod/1.1.0/","downloads":5,"date_created":"2026-08-01T00:00:00Z","file_size":800}]},
+         {"name":"Old","full_name":"X-Old","owner":"X","is_deprecated":true,"categories":[],"versions":[{"full_name":"X-Old-1.0.0","version_number":"1.0.0","dependencies":[],"download_url":"https://thunderstore.io/x/"}]}]
+        """;
+    repos.Redirects["https://thunderstore.io/package/download/Someone/CoolMod/1.2.0/"] = "https://ccdn.thunderstore.io/live/repository/packages/Someone-CoolMod-1.2.0.zip";
+    repos.Files["https://ccdn.thunderstore.io/live/repository/packages/Someone-CoolMod-1.2.0.zip"] = Zip("manifest.json", "CoolMod/enabled.txt", "CoolMod/Scripts/main.lua");
+    repos.Redirects["https://thunderstore.io/package/download/Someone/CoolMod/1.1.0/"] = "https://files.example.net/CoolMod.zip";
+    repos.Json["https://api.curseforge.com/v1/games?index=0&pageSize=50"] = """{"data":[{"id":432,"name":"Minecraft","slug":"minecraft"},{"id":85196,"name":"Palworld","slug":"palworld"}]}""";
+    repos.Json["https://api.curseforge.com/v1/mods/search?gameId=85196&searchFilter=feed&sortField=2&sortOrder=desc&pageSize=30"] = """
+        {"data":[{"id":7,"name":"Feed Helper","summary":"Feeds","authors":[{"name":"ann"}],"downloadCount":1200,"dateModified":"2026-09-10T00:00:00Z","links":{"websiteUrl":"https://www.curseforge.com/palworld/mods/feed-helper"},"allowModDistribution":true},
+                 {"id":8,"name":"Feed Locked","summary":"Site only","authors":[],"allowModDistribution":false}]}
+        """;
+    repos.Json["https://api.curseforge.com/v1/mods/8/files?pageSize=15"] = """{"data":[{"id":81,"displayName":"1.0","fileName":"locked.zip","fileLength":2048,"fileDate":"2026-09-01T00:00:00Z","downloadUrl":null}]}""";
+    repos.Status["https://api.curseforge.com/v1/mods/8/files/81/download-url"] = HttpStatusCode.Forbidden;
+    repos.Json["https://api.github.com/repos/Stians92/palworld-guild-feed-box-sync"] = """{"name":"palworld-guild-feed-box-sync","description":"Palworld mod that syncs food across a guild's existing vanilla Feed Boxes.","pushed_at":"2026-09-20T00:00:00Z","html_url":"https://github.com/Stians92/palworld-guild-feed-box-sync","owner":{"login":"Stians92"}}""";
+    repos.Json["https://api.github.com/repos/Stians92/palworld-guild-feed-box-sync/releases?per_page=10"] = """
+        [{"tag_name":"v0.4.1","draft":false,"prerelease":false,"assets":[{"id":1,"name":"GuildFeedBox-0.4.1-manual.zip","size":15861,"updated_at":"2026-09-20T00:00:00Z","browser_download_url":"https://github.com/Stians92/palworld-guild-feed-box-sync/releases/download/v0.4.1/GuildFeedBox-0.4.1-manual.zip"},{"id":2,"name":"GuildFeedBox-0.4.1-manual.zip.sha256","size":97}]},
+         {"tag_name":"v0.5.0-beta","draft":false,"prerelease":true,"assets":[{"id":3,"name":"GuildFeedBox-0.5.0.zip","size":16000,"browser_download_url":"https://github.com/x/y/releases/download/v0.5.0/GuildFeedBox-0.5.0.zip"}]},
+         {"tag_name":"draft","draft":true,"assets":[{"id":4,"name":"secret.zip","size":1}]}]
+        """;
+    var http = ModSourceHttp.Create(repos);
+    var thunder = new ThunderstoreModSource(http);
+    var found = Run(thunder.SearchAsync(""));
+    Check(found.Ok && found.Value!.Count == 2 && found.Value[0].Name == "CoolMod" && found.Value[1].Note == "Needs unreal_shimloader, which MystTiq does not manage." && found.Value.All(l => l.Name != "Old"),
+        $"Thunderstore (stand-in): deprecated packages hidden, a shimloader package marked and listed last [{string.Join(", ", found.Value?.Select(l => l.Name + ":" + l.Note) ?? [])}]");
+    var coolFiles = Run(thunder.GetFilesAsync(found.Value![0]));
+    Check(coolFiles.Ok && coolFiles.Value!.Count == 2 && coolFiles.Value[0].Version == "1.2.0" && Run(thunder.SearchAsync("party tools")).Value!.Single().Id == "Darudge-PalParty",
+        "Thunderstore: every version is a file, newest first; the search reads names and descriptions");
+    var dlPath = Path.Combine(Path.GetTempPath(), "mysttiq-browser-" + Guid.NewGuid().ToString("N") + ".zip");
+    var good = Run(ModSourceHttp.DownloadAsync(http, thunder, new Uri(coolFiles.Value[0].DownloadUrl!), dlPath, null));
+    var goodPlan = good is null ? ModSourceHttp.PlanZip(dlPath) : null;
+    var redirected = Run(ModSourceHttp.DownloadAsync(http, thunder, new Uri(coolFiles.Value[1].DownloadUrl!), dlPath + ".2", null));
+    var outside = Run(ModSourceHttp.DownloadAsync(http, thunder, new Uri("https://thunderstore.io.evil.example/x.zip"), dlPath + ".3", null));
+    Check(good is null && goodPlan is { Kind: ModArchiveKind.Ue4ss, Ue4ssRoot: "CoolMod/" } && redirected?.Contains("files.example.net") == true && outside?.Contains("outside Thunderstore") == true && !File.Exists(dlPath + ".3"),
+        $"Downloads stay on the source's hosts: Thunderstore's CDN is followed, a redirect elsewhere and a look-alike host are refused [{redirected} | {outside}]");
+    File.Delete(dlPath); if (File.Exists(dlPath + ".2")) File.Delete(dlPath + ".2");
+    Check(thunder.IsAllowedDownloadHost(new Uri("https://ccdn.thunderstore.io/a.zip")) && !thunder.IsAllowedDownloadHost(new Uri("http://thunderstore.io/a.zip")) &&
+          new GitHubReleasesModSource(http, () => []).IsAllowedDownloadHost(new Uri("https://release-assets.githubusercontent.com/a")) &&
+          !new GitHubReleasesModSource(http, () => []).IsAllowedDownloadHost(new Uri("https://githubusercontent.com.example.org/a")) &&
+          new CurseForgeModSource(http, () => "k").IsAllowedDownloadHost(new Uri("https://edge.forgecdn.net/files/1/2/a.zip")),
+        "Each source allows only its own hosts, over HTTPS");
+
+    var cfKey = "";
+    var curse = new CurseForgeModSource(http, () => cfKey);
+    var noKey = Run(curse.SearchAsync("feed"));
+    cfKey = "stand-in-key";
+    var cf = Run(curse.SearchAsync("feed"));
+    var locked = cf.Ok ? Run(curse.GetFilesAsync(cf.Value![1])) : null;
+    var lockedLink = locked?.Ok == true ? Run(curse.ResolveDownloadAsync(cf.Value![1], locked.Value![0])) : null;
+    Check(!noKey.Ok && noKey.Error!.Contains("API key") && cf.Ok && cf.Value!.Count == 2 && cf.Value[0].Downloads == 1200 && cf.Value[1].Note == "The author allows downloads only on CurseForge's site." &&
+          repos.Seen.Any(r => r.Url.Contains("/v1/games") && r.ApiKey == "stand-in-key") && lockedLink is { Ok: false } && lockedLink.Error!.Contains("Open Page"),
+        "CurseForge (stand-in): needs the key, finds Palworld by its slug, and a MOD whose author keeps downloads on the site says so");
+
+    var ghRepos = new List<string>();
+    var github = new GitHubReleasesModSource(http, () => ghRepos);
+    var none = Run(github.SearchAsync(""));
+    ghRepos.Add(GitHubReleasesModSource.NormalizeRepository("https://github.com/Stians92/palworld-guild-feed-box-sync/releases")!);
+    var gh = Run(github.SearchAsync("feed"));
+    var ghFiles = gh.Ok ? Run(github.GetFilesAsync(gh.Value![0])) : null;
+    Check(!none.Ok && none.Error!.Contains("repository you trust") && gh.Ok && gh.Value!.Single().Author == "Stians92" &&
+          ghFiles is { Ok: true } && ghFiles.Value!.Count == 2 && ghFiles.Value[0].Name == "GuildFeedBox-0.4.1-manual.zip" && ghFiles.Value[1].Note == "A pre-release.",
+        $"GitHub (stand-in): only repositories added by hand; release ZIPs listed (not checksums, not drafts), a pre-release marked [{string.Join(", ", ghFiles?.Value?.Select(f => f.Name) ?? [])}]");
+    Check(GitHubReleasesModSource.NormalizeRepository("Stians92/palworld-guild-feed-box-sync.git") == "Stians92/palworld-guild-feed-box-sync" &&
+          GitHubReleasesModSource.NormalizeRepository("https://gitlab.com/a/b") is null && GitHubReleasesModSource.NormalizeRepository("a/b/../c") is null &&
+          GitHubReleasesModSource.NormalizeRepository("just-a-name") is null,
+        "A GitHub repository is accepted as owner/repo or a github.com address, nothing else");
+    Check(MainWindowViewModel.PackageNameFor("Pal Party: Deluxe!", "x.zip") == "Pal_Party_Deluxe" && MainWindowViewModel.PackageNameFor("", "GuildFeedBox-0.4.1-manual.zip") == "GuildFeedBox-0.4.1-manual" &&
+          MainWindowViewModel.PackageNameFor("../..", "a.zip") == "Mod",
+        "The package name comes from the MOD's name, made safe for a folder");
+
+    // A folder of ZIPs: MODs listed (one MystTiq would refuse marked), unrelated ZIPs hidden, .7z counted as skipped.
+    var folder = Path.Combine(Path.GetTempPath(), "mysttiq-folder-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(Path.Combine(folder, "sub"));
+    File.WriteAllBytes(Path.Combine(folder, "GuildFeedBox-0.4.1-manual.zip"), Zip("GuildFeedBox/enabled.txt", "GuildFeedBox/Scripts/main.lua"));
+    File.WriteAllBytes(Path.Combine(folder, "sub", "BasesPlus.zip"), Zip("Pal/Content/Paks/LogicMods/BasesPlus.pak", "Pal/Binaries/Win64/Mods/BasesPlus/Scripts/main.lua"));
+    File.WriteAllBytes(Path.Combine(folder, "photos.zip"), Zip("a.jpg", "b.jpg"));
+    File.WriteAllBytes(Path.Combine(folder, "installer.zip"), Zip("setup.exe", "Mod/Scripts/main.lua"));
+    File.WriteAllText(Path.Combine(folder, "other.7z"), "7z");
+    var vmFolders = (System.Collections.ObjectModel.ObservableCollection<string>)typeof(MainWindowViewModel).GetProperty("ModBrowserFolders")!.GetValue(vm)!;
+    var savedFolders = vmFolders.ToList(); vmFolders.Clear(); vmFolders.Add(folder);
+    selectedPage.SetValue(vm, NavigationPage.ModLibrary);
+    vm.SelectedModSource = vm.ModSourceOptions.First(o => o.Id == "folders");
+    Wait((Task)typeof(MainWindowViewModel).GetMethod("SearchModBrowserAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, null)!);
+    var listed = vm.ModBrowserResults.Select(l => l.Name).ToList();
+    Check(listed.Count == 2 && listed.Contains("GuildFeedBox-0.4.1-manual") && listed.Contains("BasesPlus") && vm.ModBrowserStatus.Contains("1 .7z or .rar") &&
+          vm.ModBrowserResults.Single(l => l.Name == "BasesPlus").HasNote,
+        $"Downloads and folders: MOD ZIPs listed (one MystTiq cannot install marked), others hidden, .7z counted [{string.Join(", ", listed)}; {vm.ModBrowserStatus}]");
+    vm.SelectedModListing = vm.ModBrowserResults.Single(l => l.Name == "BasesPlus");
+    var clock = Stopwatch.StartNew(); while (vm.SelectedModFile is null && clock.ElapsedMilliseconds < 5000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
+    var refusedPrep = Run(vm.PrepareModBrowserInstallAsync());
+    var refusedText = vm.ModBrowserStatus;
+    vm.SelectedModListing = vm.ModBrowserResults.Single(l => l.Name == "GuildFeedBox-0.4.1-manual");
+    clock.Restart(); while ((vm.SelectedModFile is null || !vm.SelectedModFile.Name.StartsWith("GuildFeedBox")) && clock.ElapsedMilliseconds < 5000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
+    var prepared = Run(vm.PrepareModBrowserInstallAsync());
+    Check(refusedPrep is null && refusedText.Contains("PAK and UE4SS scripts together") && prepared is { IsTemporary: false, Plan.Kind: ModArchiveKind.Ue4ss, Package: "GuildFeedBox" },
+        $"Install Selected File reads the archive first: a mixed one is refused with the reason, a UE4SS MOD is ready to confirm under its own folder's name [{refusedText}]");
+    if (prepared is not null) vm.DiscardPreparedMod(prepared);
+    Check(File.Exists(Path.Combine(folder, "GuildFeedBox-0.4.1-manual.zip")), "A file from a folder on this PC is never deleted by the browser");
+
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var browserCard = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "ModBrowserCard");
+    bool Shown(string name) => browserCard?.GetVisualDescendants().OfType<StackPanel>().FirstOrDefault(s => s.Name == name)?.IsVisible == true;
+    var foldersShown = Shown("ModBrowserFoldersSetup") && !Shown("ModBrowserGitHubSetup");
+    vm.SelectedModSource = vm.ModSourceOptions.First(o => o.Id == "github");
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var githubShown = Shown("ModBrowserGitHubSetup") && !Shown("ModBrowserFoldersSetup") && vm.ModBrowserResults.Count == 0;
+    Check(browserCard is { IsVisible: true } && foldersShown && githubShown && vm.ModSourceOptions.Count == 5,
+        $"The MOD Library page has the MOD browser; each source shows its own setup (folders, GitHub repositories) [{vm.ModSourceOptions.Count} sources]");
+    vmFolders.Clear(); foreach (var f in savedFolders) vmFolders.Add(f);
+    Directory.Delete(folder, true);
+
+    // nxm:// links handed over by a second MystTiq: kept only when fresh and well-formed, filled in, never installed alone.
+    var inbox = Path.Combine(Path.GetTempPath(), "mysttiq-nxm-" + Guid.NewGuid().ToString("N"));
+    var handoff = new NxmLinkHandoff(inbox);
+    var link = "nxm://palworld/mods/3329/files/12345?key=AbC&expires=1900000000&user_id=99";
+    var delivered = handoff.Deliver(link) && !handoff.Deliver("https://example.com/x") && NxmLinkHandoff.FindLink(["--x", link]) == link;
+    File.WriteAllText(Path.Combine(inbox, "0000000000000000001-old.nxm"), link);
+    File.SetLastWriteTimeUtc(Path.Combine(inbox, "0000000000000000001-old.nxm"), DateTime.UtcNow.AddMinutes(-30));
+    var taken = handoff.TakeAll();
+    Check(delivered && taken.Count == 1 && taken[0] == link && !Directory.EnumerateFiles(inbox).Any(), "nxm:// handoff: a fresh link is passed on once; stale ones and other addresses are dropped");
+    typeof(MainWindowViewModel).GetField("_nxmHandoff", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(vm, handoff);
+    handoff.Deliver(link);
+    selectedPage.SetValue(vm, NavigationPage.Dashboard);
+    vm.ReceiveNxmLinks();
+    Dispatcher.UIThread.RunJobs();
+    Check(vm.NexusNxmLinkText == link && vm.SelectedModSource?.Id == "nexus" && vm.ModBrowserStatus.Contains("MOD 3329, file 12345") && vm.SelectedPage == NavigationPage.ModLibrary,
+        $"A link from Nexus fills in the Nexus card and opens the MOD Library; it waits for Install from link [{vm.ModBrowserStatus}]");
+    Directory.Delete(inbox, true);
+
+    Localizer.Instance.SetLanguage("de");
+    var deSummary = Localizer.T(ModArchivePlanner.Plan(["GuildFeedBox/Scripts/main.lua"]).Summary);
+    var deStatus = Localizer.T("3 found. 2 .7z or .rar archives were skipped: MystTiq installs .zip only.");
+    Check(deSummary.StartsWith("Ein UE4SS-MOD", StringComparison.Ordinal) && deSummary.Contains("GuildFeedBox") && deStatus.StartsWith("3 gefunden", StringComparison.Ordinal),
+        $"German: the archive check and the browser's messages are translated, names kept [{deSummary}]");
+    Localizer.Instance.SetLanguage("en");
+}
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
 // Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.
 {
@@ -1649,4 +1802,29 @@ sealed class FakeGitHub(Dictionary<string, byte[]> responses) : HttpMessageHandl
         Task.FromResult(responses.TryGetValue(request.RequestUri!.AbsolutePath, out var body)
             ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(body) }
             : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+}
+
+// v1.0.5.0 (roadmap M-1): stand-in repositories for the MOD browser: JSON answers, files, redirects and refusals by URL.
+sealed class StandInRepos : HttpMessageHandler
+{
+    public Dictionary<string, string> Json { get; } = [];
+    public Dictionary<string, byte[]> Files { get; } = [];
+    public Dictionary<string, string> Redirects { get; } = [];
+    public Dictionary<string, HttpStatusCode> Status { get; } = [];
+    public List<(string Url, string? ApiKey)> Seen { get; } = [];
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var url = request.RequestUri!.AbsoluteUri;
+        Seen.Add((url, request.Headers.TryGetValues("x-api-key", out var keys) ? keys.First() : null));
+        // A redirect is followed here, as HttpClient's own handler would, so the final address is the response's request.
+        if (Redirects.TryGetValue(url, out var to)) { url = to; request = new HttpRequestMessage(request.Method, to); }
+        HttpResponseMessage response =
+            Status.TryGetValue(url, out var status) ? new HttpResponseMessage(status)
+            : Json.TryGetValue(url, out var json) ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") }
+            : Files.TryGetValue(url, out var bytes) ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) }
+            : new HttpResponseMessage(HttpStatusCode.NotFound);
+        response.RequestMessage = request;
+        return Task.FromResult(response);
+    }
 }

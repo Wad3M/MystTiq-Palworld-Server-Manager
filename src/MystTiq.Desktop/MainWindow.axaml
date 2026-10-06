@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.4.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.5.0: file reviewed for this release (2026-10-06). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -2461,6 +2461,101 @@
               </StackPanel>
             </Border>
           </Grid>
+
+          <!-- v1.0.5.0 (roadmap M-1; owner decision 2026-10-06): the MOD browser. One search across a chosen source (the
+               Downloads folder and other folders, Thunderstore, CurseForge, GitHub releases of repositories the owner adds,
+               Nexus Mods); Install Selected File fetches only from that source's hosts, shows what the archive holds, asks,
+               and installs through the validated ZIP install. -->
+          <Border x:Name="ModBrowserCard" Classes="card accentMods" IsVisible="{Binding IsModLibraryPage}">
+            <Expander IsExpanded="True">
+              <Expander.Header><TextBlock Text="{services:Tr ui.mod_browser}" FontSize="17" FontWeight="SemiBold"/></Expander.Header>
+              <StackPanel Spacing="10" Margin="0,8,0,0">
+                <TextBlock Text="{services:Tr ui.mod_browser_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
+                <Grid ColumnDefinitions="220,*,Auto" ColumnSpacing="8">
+                  <ComboBox AutomationProperties.Name="{services:Tr ui.mod_source}" ItemsSource="{Binding ModSourceOptions}" SelectedItem="{Binding SelectedModSource}" HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="models:ModSourceOption">
+                        <TextBlock Text="{services:TrText Name}"/>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBox Grid.Column="1" Text="{Binding ModBrowserQuery, Mode=TwoWay}" PlaceholderText="{services:Tr ui.mod_browser_query}"/>
+                  <Button Classes="info" Grid.Column="2" Content="{services:Tr ui.search_mods}" Command="{Binding SearchModBrowserCommand}" IsDefault="False"/>
+                </Grid>
+
+                <StackPanel x:Name="ModBrowserFoldersSetup" Spacing="6" IsVisible="{Binding IsFolderModSource}">
+                  <TextBlock Text="{services:Tr ui.mod_browser_folders_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="11" TextWrapping="Wrap"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.mod_browser_folders}" ItemsSource="{Binding ModBrowserFolders}" SelectedItem="{Binding SelectedModBrowserFolder}" MaxHeight="90" FontWeight="Normal" FontSize="12"/>
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <TextBox Text="{Binding NewModBrowserFolder, Mode=TwoWay}" PlaceholderText="{services:Tr ui.mod_browser_folder_placeholder}"/>
+                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.add_folder}" Command="{Binding AddModBrowserFolderCommand}"/>
+                    <Button Classes="danger" Grid.Column="2" Content="{services:Tr ui.remove_selected_folder}" Command="{Binding RemoveModBrowserFolderCommand}"/>
+                  </Grid>
+                </StackPanel>
+
+                <StackPanel x:Name="ModBrowserCurseForgeSetup" Spacing="6" IsVisible="{Binding IsCurseForgeModSource}">
+                  <TextBlock Text="{services:Tr ui.curseforge_key_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="11" TextWrapping="Wrap"/>
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <TextBox Text="{Binding CurseForgeKeyInput, Mode=TwoWay}" PasswordChar="●" PlaceholderText="{services:Tr ui.curseforge_api_key}"/>
+                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.save_key}" Command="{Binding SaveCurseForgeKeyCommand}"/>
+                    <Button Classes="danger" Grid.Column="2" Content="{services:Tr ui.forget_key}" Command="{Binding ForgetCurseForgeKeyCommand}"/>
+                  </Grid>
+                </StackPanel>
+
+                <StackPanel x:Name="ModBrowserGitHubSetup" Spacing="6" IsVisible="{Binding IsGitHubModSource}">
+                  <TextBlock Text="{services:Tr ui.github_repos_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="11" TextWrapping="Wrap"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.github_repositories}" ItemsSource="{Binding ModBrowserRepositories}" SelectedItem="{Binding SelectedModBrowserRepository}" MaxHeight="90" FontWeight="Normal" FontSize="12"/>
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <TextBox Text="{Binding NewModBrowserRepository, Mode=TwoWay}" PlaceholderText="{services:Tr ui.github_repo_placeholder}"/>
+                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.add_repository}" Command="{Binding AddModBrowserRepositoryCommand}"/>
+                    <Button Classes="danger" Grid.Column="2" Content="{services:Tr ui.remove_selected_repository}" Command="{Binding RemoveModBrowserRepositoryCommand}"/>
+                  </Grid>
+                </StackPanel>
+
+                <StackPanel x:Name="ModBrowserNexusSetup" Spacing="6" IsVisible="{Binding IsNexusModSource}">
+                  <TextBlock Text="{services:Tr ui.nexus_browser_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText NxmHandlerText}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
+                  <WrapPanel>
+                    <Button Classes="apply" Content="{services:Tr ui.allow_nxm_links}" Click="UseMystTiqForNxm_OnClick" Margin="0,0,8,6"/>
+                    <Button Classes="danger" Content="{services:Tr ui.stop_taking_nxm_links}" Command="{Binding StopUsingMystTiqForNxmLinksCommand}" Margin="0,0,8,6"/>
+                  </WrapPanel>
+                </StackPanel>
+
+                <Grid ColumnDefinitions="3*,2*" ColumnSpacing="10">
+                  <ListBox x:Name="ModBrowserResultsList" AutomationProperties.Name="{services:Tr ui.mod_browser_results}" ItemsSource="{Binding ModBrowserResults}" SelectedItem="{Binding SelectedModListing}" MaxHeight="260">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="models:ModListing">
+                        <StackPanel Margin="0,4">
+                          <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                          <TextBlock Text="{Binding ByLineVerbatim}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal"/>
+                          <TextBlock Text="{Binding SummaryVerbatim}" FontSize="11" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" TextWrapping="Wrap" MaxHeight="34"/>
+                          <TextBlock Text="{services:TrText NoteText}" IsVisible="{Binding HasNote}" FontSize="11" Foreground="{DynamicResource AmberBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <StackPanel Grid.Column="1" Spacing="8">
+                    <ListBox AutomationProperties.Name="{services:Tr ui.a11y_mod_files}" ItemsSource="{Binding ModBrowserFiles}" SelectedItem="{Binding SelectedModFile}" MaxHeight="180">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:ModListingFile">
+                          <StackPanel Margin="0,3">
+                            <TextBlock Text="{Binding RowVerbatim}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
+                            <TextBlock Text="{services:TrText NoteText}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
+                          </StackPanel>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                    <WrapPanel>
+                      <Button Classes="apply" Content="{services:Tr ui.install_selected_file}" Click="InstallBrowserMod_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
+                      <Button Classes="open" Content="{services:Tr ui.open_page}" Command="{Binding OpenModBrowserPageCommand}" Margin="0,0,8,6"/>
+                    </WrapPanel>
+                  </StackPanel>
+                </Grid>
+                <TextBlock Text="{services:TrText ModBrowserStatus}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:Tr ui.mod_browser_attribution}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Expander>
+          </Border>
 
           <!-- v0.7.93.0: Nexus Mods catalog. Collapsed by default. Uses the person's own Nexus API key
                from this PC (never sent to the MystTiq server). Nexus's public API lists only 10 mods
