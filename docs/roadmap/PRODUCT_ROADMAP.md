@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.3.0: file reviewed for this release (2026-10-05). -->
 # Product roadmap
 
-Updated 2026-10-05. **Current version: v1.0.2.0. Accepted baseline: v1.0.0.0. Next milestone: v1.0.3.0 (packaging and read-only access).**
+Updated 2026-10-05. **Current version: v1.0.3.0. Accepted baseline: v1.0.0.0. Next milestone: v1.0.4.0 (guarded save edits).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -44,11 +44,13 @@ Released 2026-10-05 as v1.0.2.0 with R-1 `Done`. R-2 and R-3 are `Built` and car
 
 Exit gate: P-1 `Done`, W-1 `Done`, and X-1 has a recorded discovery result (it may be `Blocked` if Xbox data proves unavailable, with the reason written down).
 
+Released 2026-10-05 as v1.0.3.0. W-1 is `Built` (the remote TLS session is owed) and X-1 is `Blocked` on the owner's Xbox session; both are carried into the v1.0.4.0 exit gate.
+
 | ID | Item | Acceptance | Evidence required | Status |
 | --- | --- | --- | --- | --- |
-| P-1 | Docker image for the headless service | A Linux container image runs the headless service with a mounted data folder. It starts, serves the local API and runs a clone server. | Built and run on Docker Desktop with clone data. Image tagged with the MystTiq version. | Planned |
-| W-1 | Read-only browser view | A browser page shows server status, players and backups. It has no write routes; every write request is refused. Remote sign-in uses the existing roles and TLS pinning. | Harness: every write route returns refusal in the browser session. Live: one remote browser session on the clone. | Planned |
-| X-1 | Xbox player discovery | Establish what the save and REST data show for an Xbox player (identity, name, Pal and item data), read-only, using the owner's Xbox test account. Result recorded before any build. | Live discovery on the clone with the owner's account. Written findings in `docs/architecture/`. | Planned |
+| P-1 | Docker image for the headless service | A Linux container image runs the headless service with a mounted data folder. It starts, serves the local API and runs a clone server. | Built and run on Docker Desktop with clone data. Image tagged with the MystTiq version. Recorded 2026-10-05 (v1.0.3.0) on Docker Desktop: the image built and labelled with the version, the server installed in the container through MystTiq, the clone's world run there (REST answering, Day 173 11:02 read from its save) and stopped cleanly. | Done |
+| W-1 | Read-only browser view | A browser page shows server status, players and backups. It has no write routes; every write request is refused. Remote sign-in uses the existing roles and TLS pinning. | Harness: every write route returns refusal in the browser session. Live: one remote browser session on the clone. Harness recorded (v1.0.3.0): 114 change routes refused. Live on the clone through loopback (sign-in, reads, a Start refused 403); a session from another computer over TLS is owed. | Built |
+| X-1 | Xbox player discovery | Establish what the save and REST data show for an Xbox player (identity, name, Pal and item data), read-only, using the owner's Xbox test account. Result recorded before any build. | Live discovery on the clone with the owner's account. Written findings in `docs/architecture/`. Blocked 2026-10-05: no Xbox session yet; the capture script and procedure are in `docs/architecture/v1.0.3.0-xbox-player-discovery.md`. | Blocked |
 
 ## v1.0.4.0 — Guarded save edits
 

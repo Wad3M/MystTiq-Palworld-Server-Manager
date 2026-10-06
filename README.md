@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.3.0: file reviewed for this release (2026-10-05). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,13 +21,15 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.2.0 · Accepted baseline: v1.0.0.0**
+**Current version: v1.0.3.0 · Accepted baseline: v1.0.0.0**
 
 MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.2.0
+## What's new in v1.0.3.0
 
-**Unattended reliability.** A server that is still running but has stopped answering is now restarted, with an alert, and a healthy one is never touched. Every alert MystTiq sends to Discord, email or a webhook is recorded with its result, and the Dashboard warns when a channel has not delivered for a week or its last send failed.
+**A read-only browser view and a Docker image.** Open `/web` on your MystTiq service in any browser, sign in with your MystTiq account, and see each server's status, players and backups. It can't change anything. The headless service also comes as a Linux container image that keeps everything in one mounted folder and runs the Palworld server inside it.
+
+**Also new since 1.0 (v1.0.2.0): unattended reliability.** A server that is still running but has stopped answering is now restarted, with an alert, and a healthy one is never touched. Every alert MystTiq sends to Discord, email or a webhook is recorded with its result, and the Dashboard warns when a channel has not delivered for a week or its last send failed.
 
 **Also new since 1.0 (v1.0.1.0): Update, on every row.** Every component in the Update Center has an Update button. MystTiq downloads and checks its own new version; the server, UE4SS, PalDefender, pip and Save Tools update in place; the rest open their official download page. SteamCMD's is greyed out, because it updates itself.
 
@@ -43,7 +45,7 @@ MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Win
 
 **Also new since 1.0 (v1.0.0.1): launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
 
-[Release notes](release-notes/v1.0.2.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v1.0.3.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -113,8 +115,9 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v0.9.0.0 – v0.9.4.0 | Delivered | 12 display languages for labels, messages and game names; roles explained; accessible names and keyboard reach |
 | v0.9.5.0 – v0.9.8.0 | Delivered | Servers never start each other; true update checks; firewall per server port; fast server search; Avalonia 12; alerts when a component falls behind; Linux install |
 | v0.9.9.0 – v0.9.10.0 | Delivered | One local helper; running servers survive adding one; crash causes for joins; UE4SS compared automatically; names kept in every language |
-| v1.0.2.0 | Current | A frozen server is restarted; proof that alerts reach Discord, email and webhooks; the Linux service tested under systemd |
-| v1.0.1.0 | Previous | Update on every Update Center row: MystTiq, the server, UE4SS, PalDefender, pip and Save Tools, or the official page |
+| v1.0.3.0 | Current | A read-only browser view (status, players, backups) and a Docker image of the headless service |
+| v1.0.2.0 | Previous | A frozen server is restarted; proof that alerts reach Discord, email and webhooks; the Linux service tested under systemd |
+| v1.0.1.0 | Earlier | Update on every Update Center row: MystTiq, the server, UE4SS, PalDefender, pip and Save Tools, or the official page |
 | v1.0.0.6 | Earlier | Buttons and tags coloured by what they do: Delete red, Open purple, Verify green, the same on every page |
 | v1.0.0.5 | Earlier | Bases and Guilds pages that look and work differently: places with locations and workers, people with a roster |
 | v1.0.0.4 | Earlier | Restores report the world's day; each backup shows its day; the Dashboard's day is current; restores no longer fail on a briefly busy file |

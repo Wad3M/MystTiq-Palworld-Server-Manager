@@ -1,4 +1,4 @@
-// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -108,6 +108,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         // v0.7.114.0: named user accounts (username + password -> session token); see HeadlessUserAccountService.
         var userAccounts = new HeadlessUserAccountService(fleetPaths, fleetActivity);
         var authAbuseGuard = new HeadlessAuthAbuseGuardService(fleetActivity);
+        // v1.0.3.0 (roadmap W-1): the read-only browser view's sessions.
+        var browserSessions = new BrowserSessionRegistry();
         var fleetConfigurationApi = new HeadlessFleetConfigurationService(effectiveConfigurationPath);
 
         // v0.6.13.0: one fleet-wide crash-recovery policy, shared by every profile's own recovery
@@ -324,6 +326,12 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
 
         app.Use(async (context, next) =>
         {
+            // v1.0.3.0 (roadmap W-1): the browser view's page holds no data; what it shows comes from authenticated calls.
+            if (HttpMethods.IsGet(context.Request.Method) && BrowserView.IsPagePath(context.Request.Path.Value))
+            {
+                await next();
+                return;
+            }
             if (!configuration.Api.Authentication.Enabled || string.Equals(context.Request.Path.Value, "/healthz", StringComparison.OrdinalIgnoreCase))
             {
                 // Auth disabled (today's default) => every request resolves to LegacyOwner, so
@@ -344,7 +352,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
 
             // v0.7.114.0: signing in is the one call that cannot carry a token yet. The route itself feeds
             // failures into the same per-IP guard checked just above.
-            if (string.Equals(context.Request.Path.Value, "/api/v1/auth/login", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(context.Request.Path.Value, "/api/v1/auth/login", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(context.Request.Path.Value, "/api/v1/auth/browser-login", StringComparison.OrdinalIgnoreCase))
             {
                 await next();
                 return;
@@ -378,6 +387,13 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             }
 
             authAbuseGuard.RecordSuccess(remoteIp);
+            // v1.0.3.0 (roadmap W-1): a browser-view session reads and signs out; every change is refused.
+            if (browserSessions.IsBrowserSession(supplied) && !BrowserView.BrowserSessionAllows(context.Request.Method, context.Request.Path.Value))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new { error = "read-only-browser-session", message = "The browser view is read-only; make changes in the MystTiq desktop." });
+                return;
+            }
             context.Items[RbacEndpointExtensions.PrincipalItemKey] = principal;
             await next();
         });
@@ -447,7 +463,28 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         {
             var header = context.Request.Headers["Authorization"].ToString();
             var token = header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? header[7..].Trim() : string.Empty;
+            browserSessions.Remove(token);
             return Results.Ok(new { signedOut = userAccounts.Logout(token) });
+        });
+        // v1.0.3.0 (roadmap W-1): the read-only browser view: its page, and a sign-in whose session can only read.
+        app.MapGet("/web", (HttpContext context) => BrowserView.Page(context, BrowserView.Html, "text/html"));
+        app.MapGet("/web/app.js", (HttpContext context) => BrowserView.Page(context, BrowserView.Script, "text/javascript"));
+        app.MapGet("/web/app.css", (HttpContext context) => BrowserView.Page(context, BrowserView.Style, "text/css"));
+        app.MapPost("/api/v1/auth/browser-login", (UserLoginRequest request, HttpContext context) =>
+        {
+            if (!configuration.Api.Authentication.Enabled)
+                return Results.Conflict(new UserLoginResult(false, "The browser view needs authentication on this MystTiq (remote access), so that it has accounts to sign in with.", null, null, null));
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var result = userAccounts.Login(request.Username, request.Password);
+            if (result.Success && result.Token is { } issued)
+            {
+                authAbuseGuard.RecordSuccess(remoteIp);
+                browserSessions.Add(issued, result.ExpiresUtc);
+                fleetActivity.Record("Information", "Security", "Browser view signed in", request.Username);
+                return Results.Ok(result);
+            }
+            authAbuseGuard.RecordFailure(remoteIp);
+            return Results.Json(result, statusCode: StatusCodes.Status401Unauthorized);
         });
         app.MapPost("/api/v1/auth/password", (UserOwnPasswordRequest request, HttpContext context) =>
         {

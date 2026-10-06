@@ -3824,5 +3824,7 @@
   "msg.delivery_flagged": "{0}: no proven delivery in the last {1} days. Open Alert Center.",
   "msg.frozen_alert_title": "{0}: server stopped responding, restarting (attempt {1} of {2})",
   "msg.frozen_activity": "Frozen server restarted",
-  "dashboard.openAlertCenter": "Open Alert Center"
+  "dashboard.openAlertCenter": "Open Alert Center",
+  "ui.browser_view": "Read-only browser view",
+  "ui.browser_view_hint": "Open this address in a browser and sign in with a MystTiq account to see each server's status, players and backups. It cannot change anything. It needs authentication on (remote access), and from another computer also TLS."
 }

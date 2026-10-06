@@ -1,4 +1,4 @@
-// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1538,6 +1538,15 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
           Localizer.T("Email, Webhook: no proven delivery in the last 7 days. Open Alert Center.") != "Email, Webhook: no proven delivery in the last 7 days. Open Alert Center." &&
           Localizer.T("Not proven") != "Not proven", "German: the delivery warning and states are translated, the channel names kept");
     Localizer.Instance.SetLanguage("en");
+}
+// v1.0.3.0 (roadmap W-1): the Security page names the read-only browser view's address (the API's own, under /web).
+{
+    selectedPage.SetValue(vm, NavigationPage.Security);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var card = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "BrowserViewCard");
+    var address = card?.GetVisualDescendants().OfType<SelectableTextBlock>().FirstOrDefault()?.Text;
+    Check(card is { IsEffectivelyVisible: true } && address == "http://127.0.0.1:1/web",
+        $"The Security page names the read-only browser view at the API's address under /web [{address}]");
 }
 // v0.9.10.0 (external review): a recorded helper that is alive but slow to answer was forgotten and a second one started.
 // Stand-in helpers (this harness, started again) answer late or never; the bootstrapper uses its own runtime folder here.

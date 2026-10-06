@@ -3824,5 +3824,7 @@
   "msg.delivery_flagged": "{0}：過去 {1} 日間に確認された配信がありません。アラートセンターを開いてください。",
   "msg.frozen_alert_title": "{0}：サーバーが応答しなくなりました。再起動中（{2} 回中 {1} 回目）",
   "msg.frozen_activity": "フリーズしたサーバーを再起動しました",
-  "dashboard.openAlertCenter": "アラートセンターを開く"
+  "dashboard.openAlertCenter": "アラートセンターを開く",
+  "ui.browser_view": "読み取り専用のブラウザー表示",
+  "ui.browser_view_hint": "このアドレスをブラウザーで開き、MystTiq アカウントでサインインすると、各サーバーの状態、プレイヤー、バックアップを確認できます。何も変更できません。認証（リモートアクセス）が必要で、別のコンピューターからは TLS も必要です。"
 }

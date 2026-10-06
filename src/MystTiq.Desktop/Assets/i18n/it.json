@@ -3824,5 +3824,7 @@
   "msg.delivery_flagged": "{0}: nessuna consegna verificata negli ultimi {1} giorni. Apri il Centro avvisi.",
   "msg.frozen_alert_title": "{0}: il server non risponde più, riavvio (tentativo {1} di {2})",
   "msg.frozen_activity": "Server bloccato riavviato",
-  "dashboard.openAlertCenter": "Apri Centro avvisi"
+  "dashboard.openAlertCenter": "Apri Centro avvisi",
+  "ui.browser_view": "Vista browser in sola lettura",
+  "ui.browser_view_hint": "Apri questo indirizzo in un browser e accedi con un account MystTiq per vedere stato, giocatori e backup di ogni server. Non può modificare nulla. Richiede l'autenticazione attiva (accesso remoto) e, da un altro computer, anche TLS."
 }

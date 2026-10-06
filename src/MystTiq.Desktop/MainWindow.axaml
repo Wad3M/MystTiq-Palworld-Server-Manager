@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.3.0: file reviewed for this release (2026-10-05). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -3361,6 +3361,14 @@
         <StackPanel IsVisible="{Binding IsSecurityPage}" Spacing="12">
           <!-- v0.7.42.0: Refresh moved to the ribbon. -->
           <Border Classes="card accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.security}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText SecurityState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+          <!-- v1.0.3.0 (roadmap W-1, owner decision D-1): a read-only view in any browser, signed in with a MystTiq account. -->
+          <Border x:Name="BrowserViewCard" Classes="card accentSystem">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{services:Tr ui.browser_view}" FontSize="17" FontWeight="SemiBold"/>
+              <TextBlock Text="{services:Tr ui.browser_view_hint}" Classes="muted" TextWrapping="Wrap"/>
+              <SelectableTextBlock Text="{Binding BrowserViewUrlVerbatim}" FontFamily="Consolas, monospace"/>
+            </StackPanel>
+          </Border>
           <Border Classes="card accentSystem" IsVisible="{Binding HasLastCreatedPrincipalToken}"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.new_token_shown_once_copy_it_now}" FontWeight="SemiBold" Foreground="{DynamicResource AmberBrush}"/><SelectableTextBlock Text="{Binding LastCreatedPrincipalToken}" FontFamily="Consolas, monospace"/></StackPanel></Border>
           <Border Classes="card accentSystem" IsVisible="{Binding CanManagePrincipals}" IsEnabled="{Binding CanManagePrincipals}">
             <StackPanel Spacing="10">

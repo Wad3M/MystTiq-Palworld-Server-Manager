@@ -3824,5 +3824,7 @@
   "msg.delivery_flagged": "{0}: son {1} günde kanıtlanmış teslim yok. Uyarı Merkezini açın.",
   "msg.frozen_alert_title": "{0}: sunucu yanıt vermeyi bıraktı, yeniden başlatılıyor (deneme {1}/{2})",
   "msg.frozen_activity": "Donmuş sunucu yeniden başlatıldı",
-  "dashboard.openAlertCenter": "Uyarı Merkezini aç"
+  "dashboard.openAlertCenter": "Uyarı Merkezini aç",
+  "ui.browser_view": "Salt okunur tarayıcı görünümü",
+  "ui.browser_view_hint": "Her sunucunun durumunu, oyuncularını ve yedeklerini görmek için bu adresi bir tarayıcıda açın ve bir MystTiq hesabıyla oturum açın. Hiçbir şeyi değiştiremez. Kimlik doğrulamanın açık olması (uzaktan erişim), başka bir bilgisayardan ise TLS de gerekir."
 }

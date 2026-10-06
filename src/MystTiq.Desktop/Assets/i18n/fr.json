@@ -3824,5 +3824,7 @@
   "msg.delivery_flagged": "{0} : aucune livraison prouvée ces {1} derniers jours. Ouvrez le centre d’alertes.",
   "msg.frozen_alert_title": "{0} : le serveur ne répond plus, redémarrage (tentative {1} sur {2})",
   "msg.frozen_activity": "Serveur figé redémarré",
-  "dashboard.openAlertCenter": "Ouvrir le centre d’alertes"
+  "dashboard.openAlertCenter": "Ouvrir le centre d’alertes",
+  "ui.browser_view": "Vue navigateur en lecture seule",
+  "ui.browser_view_hint": "Ouvrez cette adresse dans un navigateur et connectez-vous avec un compte MystTiq pour voir l'état, les joueurs et les sauvegardes de chaque serveur. Rien ne peut y être modifié. L'authentification doit être activée (accès à distance), et depuis un autre ordinateur, TLS aussi."
 }

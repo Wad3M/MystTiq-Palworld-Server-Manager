@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.3.0: file reviewed for this release (2026-10-05). -->
 # Platform Completion Audit — v0.2.16.4
 
 ## Completed backend seams

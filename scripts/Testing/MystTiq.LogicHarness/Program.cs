@@ -1,4 +1,4 @@
-// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -1760,6 +1760,14 @@ try
         Assert(kinds.Contains(SupervisorEventKind.RecoverySuppressed) && kinds.Contains(SupervisorEventKind.ManualRecovery) &&
                Array.IndexOf(kinds, SupervisorEventKind.ManualRecovery) > Array.IndexOf(kinds, SupervisorEventKind.RecoverySuppressed),
             $"give-up must come before the manual recovery it explains, got: {string.Join(", ", kinds)}");
+    }, failures);
+    // v1.0.3.0: SteamCMD's first-run "Missing configuration" is recognised (and retried once by the install).
+    RunScenario("SteamCMD: a first app install that fails with 'Missing configuration' is recognised; other failures are not", () =>
+    {
+        Assert(SteamCmdFailure.IsMissingConfiguration(["Waiting for user info...OK", "\u001b[0mERROR! Failed to install app '2394010' (Missing configuration)"]),
+            "the line SteamCMD printed in the new container is recognised");
+        Assert(!SteamCmdFailure.IsMissingConfiguration(["ERROR! Failed to install app '2394010' (No subscription)", "Missing configuration file elsewhere"]),
+            "another install failure, or the words on separate lines, is not");
     }, failures);
     // ---- v1.0.2.0 (roadmap R-1): frozen-server watchdog ----------
     RunScenario("Frozen-server watchdog: only a server that answered and then stayed silent for the whole limit is frozen; a healthy one never is", () =>

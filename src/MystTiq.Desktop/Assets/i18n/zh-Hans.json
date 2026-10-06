@@ -3824,5 +3824,7 @@
   "msg.delivery_flagged": "{0}：过去 {1} 天内没有确认送达。请打开警报中心。",
   "msg.frozen_alert_title": "{0}：服务器停止响应，正在重启（第 {1} 次，共 {2} 次）",
   "msg.frozen_activity": "已重启无响应的服务器",
-  "dashboard.openAlertCenter": "打开警报中心"
+  "dashboard.openAlertCenter": "打开警报中心",
+  "ui.browser_view": "只读浏览器视图",
+  "ui.browser_view_hint": "在浏览器中打开此地址并使用 MystTiq 账户登录，即可查看每台服务器的状态、玩家和备份。它无法更改任何内容。需要开启身份验证（远程访问）；从其他电脑访问时还需要 TLS。"
 }

@@ -1,4 +1,17 @@
-<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
+<!-- MystTiq v1.0.3.0: file reviewed for this release (2026-10-05). -->
+## v1.0.3.0 — Packaging and Read-only Access
+
+- W-1 read-only browser view: `/web` (static page, strict content policy, no data in it), `auth/browser-login`, and
+  every change refused for a browser session (403); roles apply; the Security page shows the address. Proven against an
+  isolated service (114 change routes refused) and live on the clone.
+- P-1 Docker image (`deploy/docker`): non-root, everything in `/data`, first start creates the configuration, an API
+  token and a TLS certificate and serves the API on 8213. Recorded 2026-10-05 (v1.0.3.0) on Docker Desktop: the image built and labelled with the version, the server installed in the container through MystTiq, the clone's world run there (REST answering, Day 173 11:02 read from its save) and stopped cleanly.
+- X-1 Xbox player discovery: the read-only capture script and procedure; blocked on the owner's Xbox session.
+- Fixed: SteamCMD's first-run "Missing configuration" is retried once.
+- Tests: the v1.0.3.0 gate regenerated from v1.0.2.0 (every earlier check kept), the browser view smoke and the Docker
+  check in the gate; 2 new texts in all 12 languages.
+- Version advanced to 1.0.3.0.
+
 ## v1.0.2.0 — Unattended Reliability
 
 - R-1 frozen-server watchdog: a running server whose REST API stops answering (after it has answered) for 3 minutes is

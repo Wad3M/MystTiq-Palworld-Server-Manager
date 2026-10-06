@@ -1,4 +1,4 @@
-// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1118,6 +1118,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(IsBusy));
         RaisePropertyChanged(nameof(ServerIsRunning));
         RaisePropertyChanged(nameof(IsLocalProfile));
+        RaisePropertyChanged(nameof(BrowserViewUrlVerbatim));
         RaisePropertyChanged(nameof(IsCreatingNewProfile));
         RaisePropertyChanged(nameof(IsWizardStep1));
         RaisePropertyChanged(nameof(IsWizardStepWorldSource));
@@ -1255,6 +1256,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         tab.Profile = updated;
         RaisePropertyChanged(nameof(SelectedProfile));
         RaisePropertyChanged(nameof(IsLocalProfile));
+        RaisePropertyChanged(nameof(BrowserViewUrlVerbatim));
         RaisePropertyChanged(nameof(IsCreatingNewProfile));
         RaisePropertyChanged(nameof(IsWizardStep1));
         RaisePropertyChanged(nameof(IsWizardStepWorldSource));
@@ -1483,6 +1485,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // and IsCreatingNewProfile (which gates the relocated "In-Game Server Defaults" card)
             // depends on exactly that transition, not just a real profile being selected.
             RaisePropertyChanged(nameof(IsLocalProfile));
+            RaisePropertyChanged(nameof(BrowserViewUrlVerbatim));
             RaisePropertyChanged(nameof(IsCreatingNewProfile));
             RaisePropertyChanged(nameof(IsWizardStep1));
             RaisePropertyChanged(nameof(IsWizardStepWorldSource));
@@ -3577,6 +3580,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ConnectionKind = string.Empty;
         NewServerWizardStep = 0;
         RaisePropertyChanged(nameof(IsLocalProfile));
+        RaisePropertyChanged(nameof(BrowserViewUrlVerbatim));
         (DeleteProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
     }
 

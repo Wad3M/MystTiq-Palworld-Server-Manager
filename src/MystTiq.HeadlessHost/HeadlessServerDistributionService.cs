@@ -1,4 +1,4 @@
-// MystTiq v1.0.2.0: file reviewed for this release (2026-10-05).
+// MystTiq v1.0.3.0: file reviewed for this release (2026-10-05).
 using System.Diagnostics;
 using MystTiq.Core.Services;
 
@@ -163,6 +163,17 @@ public sealed class HeadlessServerDistributionService
                 }
             }
 
+            // v1.0.3.0: a SteamCMD that has just installed itself can fail its first app install with "Missing
+            // configuration" (its app configuration is not downloaded yet); the same command works when run again. Seen
+            // live installing the Linux server into a new Docker container (roadmap P-1).
+            if (run.ExitCode != 0 && SteamCmdFailure.IsMissingConfiguration(run.Output))
+            {
+                run = await RunSteamCmdAsync(workingDirectory, validate, cancellationToken);
+                retryNote = (retryNote ?? string.Empty) + (run.ExitCode == 0
+                    ? " SteamCMD's first try failed with \"Missing configuration\" (a new SteamCMD); the second worked."
+                    : " SteamCMD failed with \"Missing configuration\" twice.");
+            }
+
             var tail = run.Output.TakeLast(40).ToArray();
             if (run.ExitCode != 0)
             {
@@ -288,6 +299,12 @@ public sealed record HeadlessServerDistributionOperationResult(
 // v0.9.5.0: what a failed SteamCMD run means, from its output and the lines it added to logs/content_log.txt.
 public static class SteamCmdFailure
 {
+    // v1.0.3.0: SteamCMD's first app install after it installed itself ("ERROR! Failed to install app '2394010' (Missing
+    // configuration)"); running it again works.
+    public static bool IsMissingConfiguration(IEnumerable<string> output) =>
+        output.Any(line => line.Contains("Failed to install app", StringComparison.OrdinalIgnoreCase) &&
+                           line.Contains("Missing configuration", StringComparison.OrdinalIgnoreCase));
+
     public static bool IsManifestAccessDenied(IEnumerable<string> output, IEnumerable<string> contentLog) =>
         output.Concat(contentLog).Any(line =>
             line.Contains("Failed to get manifest request code", StringComparison.OrdinalIgnoreCase) &&

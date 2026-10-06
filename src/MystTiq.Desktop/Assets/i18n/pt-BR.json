@@ -3824,5 +3824,7 @@
   "msg.delivery_flagged": "{0}: nenhuma entrega comprovada nos últimos {1} dias. Abra a Central de alertas.",
   "msg.frozen_alert_title": "{0}: o servidor parou de responder, reiniciando (tentativa {1} de {2})",
   "msg.frozen_activity": "Servidor congelado reiniciado",
-  "dashboard.openAlertCenter": "Abrir Central de alertas"
+  "dashboard.openAlertCenter": "Abrir Central de alertas",
+  "ui.browser_view": "Visualização somente leitura no navegador",
+  "ui.browser_view_hint": "Abra este endereço em um navegador e entre com uma conta do MystTiq para ver o status, os jogadores e os backups de cada servidor. Ele não pode alterar nada. Exige a autenticação ativada (acesso remoto) e, de outro computador, também TLS."
 }

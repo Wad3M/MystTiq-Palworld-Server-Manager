@@ -3824,5 +3824,7 @@
   "msg.delivery_flagged": "{0}: brak potwierdzonego dostarczenia w ciągu ostatnich {1} dni. Otwórz Centrum alertów.",
   "msg.frozen_alert_title": "{0}: serwer przestał odpowiadać, ponowne uruchamianie (próba {1} z {2})",
   "msg.frozen_activity": "Zawieszony serwer uruchomiony ponownie",
-  "dashboard.openAlertCenter": "Otwórz Centrum alertów"
+  "dashboard.openAlertCenter": "Otwórz Centrum alertów",
+  "ui.browser_view": "Widok w przeglądarce (tylko odczyt)",
+  "ui.browser_view_hint": "Otwórz ten adres w przeglądarce i zaloguj się kontem MystTiq, aby zobaczyć stan, graczy i kopie zapasowe każdego serwera. Niczego nie można tam zmienić. Wymaga włączonego uwierzytelniania (dostęp zdalny), a z innego komputera także TLS."
 }

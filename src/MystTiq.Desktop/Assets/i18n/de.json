@@ -3824,5 +3824,7 @@
   "msg.delivery_flagged": "{0}: keine nachgewiesene Zustellung in den letzten {1} Tagen. Öffne die Alarmzentrale.",
   "msg.frozen_alert_title": "{0}: Server antwortet nicht mehr, Neustart (Versuch {1} von {2})",
   "msg.frozen_activity": "Eingefrorener Server neu gestartet",
-  "dashboard.openAlertCenter": "Alarmzentrale öffnen"
+  "dashboard.openAlertCenter": "Alarmzentrale öffnen",
+  "ui.browser_view": "Schreibgeschützte Browseransicht",
+  "ui.browser_view_hint": "Öffne diese Adresse in einem Browser und melde dich mit einem MystTiq-Konto an, um Status, Spieler und Sicherungen jedes Servers zu sehen. Ändern lässt sich dort nichts. Dafür muss die Authentifizierung an sein (Fernzugriff), von einem anderen Computer aus auch TLS."
 }

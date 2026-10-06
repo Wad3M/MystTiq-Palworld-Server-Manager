@@ -1,64 +1,72 @@
-<!-- MystTiq v1.0.2.0: file reviewed for this release (2026-10-05). -->
-# MystTiq v1.0.2.0 Checkpoint: Unattended Reliability
+<!-- MystTiq v1.0.3.0: file reviewed for this release (2026-10-05). -->
+# MystTiq v1.0.3.0 Checkpoint: Packaging and Read-only Access
 
-The first milestone of your new roadmap: R-1 frozen-server watchdog, R-2 alert delivery proof, R-3 the Linux service
-under systemd.
+The second milestone of your roadmap: P-1 Docker image, W-1 read-only browser view, X-1 Xbox player discovery.
 
-## R-1: a frozen server is restarted — Done
+## P-1: a Docker image — Done
 
-A server that hung but kept running looked fine to MystTiq, because its game port stayed open. Now:
-- MystTiq asks each running server's REST API about every 30 seconds whether it still answers.
-- A server that has answered and then stays silent for 3 minutes is restarted. You get "server stopped responding,
-  restarting", then "server is back up", and an Activity entry.
-- It never touches a healthy server, or one with the REST API switched off.
-- The restart counts toward the same limit as crash restarts. When that limit is used up, MystTiq tells you once and
-  leaves the server alone.
-- The time is `lifecycle.unresponsiveRestartSeconds` in `mysttiq.json` (0 switches it off). Your config doesn't set it,
-  so it's 3 minutes.
+- The headless service as a Linux container image (`deploy/docker`), labelled with the MystTiq version.
+- It runs as its own user, not root, and keeps everything in `/data`: configuration, server files, backups, the API
+  token and the TLS certificate.
+- On the first start it creates its configuration, a token and a certificate, and serves the API on port 8213 over TLS
+  with that token.
+- Proven on your Docker Desktop:
+  - MystTiq installed the Linux Palworld server inside the container;
+  - it ran your clone's world there (REST answering, Day 173 11:02 read from the save);
+  - it stopped cleanly.
+- Use a Docker volume for `/data`. With a Windows folder mounted instead, the server exited before it was ready.
 
-## R-2: proof that alerts arrive — Built (needs you)
+## W-1: a read-only browser view — Built
 
-- Every send to Discord, email or a webhook is now recorded with its result.
-- **Alert Center > Delivery** shows each channel as Delivered, Failing or Not proven (nothing delivered in 7 days),
-  with the latest sends.
-- The Dashboard warns when a switched-on channel is failing or not proven.
-- **Owed:** none of your servers has a Discord or email channel set up, so there's nothing real to send to yet.
+- Open `/web` on your MystTiq address (for example `https://your-host:8213/web`) and sign in with a MystTiq account. It
+  shows each server's status, who's online (no IP addresses) and the latest backups, refreshed every 30 seconds.
+- It can't change anything. All 114 change routes are refused for a browser session, whatever the account may do in
+  the desktop. Roles still decide what it can read.
+- **Security** in the desktop shows the address.
+- Proven on the clone through an isolated service: signed in, the page showed the clone, and a Start sent from the
+  page was refused.
+- **Owed:** a session from another computer over TLS. The browser rejects MystTiq's self-signed certificate, and I
+  don't install certificates into Windows.
 
-## R-3: the Linux service under systemd — Built (needs the VM)
+## X-1: Xbox discovery — Blocked (needs you)
 
-- The unit already restarts on failure, starts at boot and stops cleanly.
-- `scripts\Test-v1.0.2.0-LinuxSystemd.ps1` now proves that on the Linux VM, using its own test unit: install, crash
-  (SIGKILL), reboot, stop and clean up. It checks your real unit is unchanged.
-- The gate runs it (without the reboot) whenever the VM answers. Today it didn't (192.168.1.122).
+The script (`scripts\Discover-v1.0.3.0-XboxPlayer.ps1`) and the procedure
+(`docs\architecture\v1.0.3.0-xbox-player-discovery.md`) are ready. They need your Xbox account in the clone's world.
+
+## Fixed on the way
+
+A brand-new SteamCMD failed its first server install with "Missing configuration". MystTiq now runs it once more,
+which works. Found installing the server into the container.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.0.2.0-Logic.ps1 -RunBuild`: 293 / 293 passed. The 5 Linux VM checks (R-3's systemd check included) were skipped because 192.168.1.122 could not be reached. Every v1.0.1.0 check is carried, and the frozen v1.0.1.0 gate passes on its own checkpoint.
-- **Static gate:** 243 / 243. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-- **LogicHarness**, six new scenarios:
-  - the watchdog's rules (healthy never frozen; never-answered, REST off and not ready never judged; frozen after exactly the limit; a new process starts clean; 0 is off);
-  - the recovery loop: a frozen server restarted once with FrozenDetected then RecoverySucceeded, a give-up said once and left alone, a replaced process announced;
-  - REST off: never restarted;
-  - the probe against real sockets (a 401 counts as an answer; silence doesn't), the alert text and the mute rule;
-  - the delivery states (Delivered, Failing, Not proven, Off);
-  - real sends to an answering endpoint and a failing one, each recorded, kept across a restart, capped at 500.
-- **ArtworkHarness:** 793 checks pass, including the Dashboard warning, Open Alert Center landing on the Delivery card, the
-  tag colours and German.
-- **Live R-1 on your clone** (`second-local`, run by an isolated service on its own port; your live config and main
-  server not touched):
-  - frozen with NtSuspendProcess at 16:23:07, with a 60 s limit;
-  - the service logged "has not answered its REST API for 1 minute(s). Frozen-server restart attempt 1/5";
-  - a new process was ready 84 s after the freeze, and the frozen one was gone;
-  - the alerts "server stopped responding, restarting (attempt 1 of 5)" and "server is back up" were raised, and the
-    Activity log has "Frozen server restarted";
-  - no outside channel is set up anywhere on this machine, so nothing was sent out.
-- **Live, published v1.0.2.0:** Alert Center shows the new Delivery card (Webhook, Discord and Email all Off, "Switched off.").
+- **Full gate** `scripts\Test-v1.0.3.0-Logic.ps1 -RunBuild`: 300 / 300 passed. It includes the browser view smoke and the Docker image check. The 5 Linux VM checks were skipped because 192.168.1.122 could not be reached. Every v1.0.2.0 check is carried, and the frozen v1.0.2.0 gate passes on its own checkpoint.
+- **Static gate:** 248 / 248. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **Browser view smoke** (isolated service, authentication on):
+  - the page has no data and a strict content policy;
+  - browser sign-in reads status, players and backups;
+  - all 114 change routes are refused for the browser session;
+  - the same account signed in the desktop's way still writes;
+  - a Viewer can't read the account list;
+  - sign-out ends the session.
+- **Docker** (`Test-v1.0.3.0-Docker.ps1 -RunServer`, image `mysttiq-headless:1.0.3.0`), 11 / 11:
+  - version label, Linux, remote-secured;
+  - paths under `/data`, non-root user;
+  - 401 without the token, status with it;
+  - SteamCMD installed the server (the first try failed with "Missing configuration" and the new retry worked);
+  - the clone's world ran (REST answering);
+  - clean stop.
+- **Live W-1 on your clone** (isolated service, a test account, loopback):
+  - signed in, the page showed the clone (Stopped, 1 backup, Verified);
+  - a Start sent from the page's own session got 403 read-only, while reads got 200.
+- **LogicHarness:** the SteamCMD "Missing configuration" rule. **ArtworkHarness:** 794 checks pass, including the browser view card on Security.
+- Your own MystTiq (v1.0.0.0, started 18:36) was running during the gate; nothing of it was touched.
 
 ## For you
 
-- **R-2:** set up a Discord webhook and/or email in Alert Center, then press **Send test notification**. The Delivery
-  card shows whether it arrived. Tell me it did, and R-2 can be marked Done.
-- **R-3:** when the Linux VM is on, I can run the systemd test with the reboot (it reboots the VM).
+- **X-1:** join the clone from Xbox and run the discovery script (about 5 minutes).
+- **W-1:** open the browser view from another computer over TLS (accept the certificate warning once), sign in, and
+  tell me it worked.
+- **Still from v1.0.2.0:** R-2, a Discord or email channel and a test send; R-3, the Linux VM switched on.
 - **Pushed and tagged** with your go-ahead (push through v1.0.5.0).
-- **Next:** v1.0.3.0. P-1 Docker (Docker Desktop runs here) and W-1 the read-only browser view I can build and prove on the
-  clone. X-1 Xbox discovery needs your Xbox account in the clone's world.
+- **Next:** v1.0.4.0, guarded save edits (remove and add an item first; adding and removing a Pal is the larger part).
