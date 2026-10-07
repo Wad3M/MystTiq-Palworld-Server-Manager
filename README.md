@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.6.0: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,13 +21,15 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.6.0 · Accepted baseline: v1.0.0.0**
+**Current version: v1.0.6.1 · Accepted baseline: v1.0.0.0**
 
 MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.6.0
+## What's new in v1.0.6.1
 
-**Pals in the Pal box.** On the Players page, add a Pal to a player's Pal box or remove one, with the same preview, confirmation, checked safety backup and verification as the inventory edits. An added Pal is a copy of one of its kind already in a Pal box, so its stats are the game's own. **MODs laid out as the game folder** (blueprint MODs for UE4SS, a PAK with scripts) now install where the game loads them.
+**Your character, not a new one.** If the MystTiq service on your PC is older than the app, the Dashboard now says so and replaces it in one click, so fixes like the identity guard are really running your server. No Launcher preset adds the start options that gave players a different character any more, and the identity alert names them when it happens.
+
+**Also new since 1.0 (v1.0.6.0): Pals in the Pal box.** On the Players page, add a Pal to a player's Pal box or remove one, with the same preview, confirmation, checked safety backup and verification as the inventory edits. An added Pal is a copy of one of its kind already in a Pal box, so its stats are the game's own. **MODs laid out as the game folder** (blueprint MODs for UE4SS, a PAK with scripts) now install where the game loads them.
 
 **Also new since 1.0 (v1.0.5.0): a MOD browser.** On the MOD Library page, search your Downloads folder, Thunderstore, CurseForge, GitHub releases you trust, or Nexus Mods, and install a MOD's file in one step. MystTiq downloads only from that source, shows what the archive holds, and asks first. Archives that would install wrongly are refused with the reason, and a UE4SS MOD packed in a folder now installs correctly.
 
@@ -51,7 +53,7 @@ MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Win
 
 **Also new since 1.0 (v1.0.0.1): launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
 
-[Release notes](release-notes/v1.0.6.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v1.0.6.1.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -121,8 +123,9 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v0.9.0.0 – v0.9.4.0 | Delivered | 12 display languages for labels, messages and game names; roles explained; accessible names and keyboard reach |
 | v0.9.5.0 – v0.9.8.0 | Delivered | Servers never start each other; true update checks; firewall per server port; fast server search; Avalonia 12; alerts when a component falls behind; Linux install |
 | v0.9.9.0 – v0.9.10.0 | Delivered | One local helper; running servers survive adding one; crash causes for joins; UE4SS compared automatically; names kept in every language |
-| v1.0.6.0 | Current | Add or remove a Pal in a player's Pal box; MODs laid out as the game folder (LogicMods, PAK with scripts) install |
-| v1.0.5.0 | Previous | A MOD browser: your Downloads folder, Thunderstore, CurseForge, GitHub releases and Nexus Mods, each archive checked before it installs |
+| v1.0.6.1 | Current | Fixes a player getting a new character: an older MystTiq service still running is flagged and replaced in one click; no Launcher preset adds the options behind it |
+| v1.0.6.0 | Previous | Add or remove a Pal in a player's Pal box; MODs laid out as the game folder (LogicMods, PAK with scripts) install |
+| v1.0.5.0 | Earlier | A MOD browser: your Downloads folder, Thunderstore, CurseForge, GitHub releases and Nexus Mods, each archive checked before it installs |
 | v1.0.4.0 | Earlier | Guarded save edits: remove or add an item in a player's saved inventory, with a checked backup first |
 | v1.0.3.0 | Earlier | A read-only browser view (status, players, backups) and a Docker image of the headless service |
 | v1.0.2.0 | Earlier | A frozen server is restarted; proof that alerts reach Discord, email and webhooks; the Linux service tested under systemd |

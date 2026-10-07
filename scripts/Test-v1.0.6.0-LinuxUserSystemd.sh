@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+# MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 # v1.0.6.0 (roadmap R-3, carried): the headless service under systemd on the Linux test VM without sudo, as a per-user
 # unit (mysttiq-palworld-r3user.service in ~/.config/systemd/user), its own folder (~/mysttiq-r3user), API port 18432 and
 # game port 18612, with a stand-in server. The unit text is MystTiq's own (`service-unit`) with what a user unit needs

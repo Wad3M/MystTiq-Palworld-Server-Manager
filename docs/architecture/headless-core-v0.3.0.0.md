@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.6.0: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
 # Headless Core Architecture — v0.3.0.0
 
 ## Objective

@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -5008,6 +5008,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ConnectionState = "Connected";
             LocalApiStatus = SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id ? "Connected" : LocalApiStatus;
             Detail = $"Connected to MystTiq {health.Version} ({health.Platform}) at {profile.BaseAddress}.";
+            // v1.0.6.1: a local service older than this app runs the servers without the fixes since its version.
+            CheckLocalServiceVersion(health.Version, profile.BaseAddress);
 
             // v0.7.71.0: remember a successfully-used token (encrypted, see CredentialStore) so the
             // next connect to this same profile doesn't need it re-pasted. Only saves on a proven

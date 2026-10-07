@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 // MystTiq v1.0.0.1 launcher workspace + troubleshooting presets (2026-10-01).
 namespace MystTiq.Desktop.ViewModels;
 
@@ -9,10 +9,11 @@ public sealed partial class MainWindowViewModel
 
     private bool _configLauncherPortEnabled = true;
     private int _configLauncherPort = 8211;
-    private bool _configLauncherLog = true;
-    private bool _configLauncherStdout = true;
-    private bool _configLauncherFullStdOutLogOutput = true;
-    private bool _configLauncherAbsLog = true;
+    // v1.0.6.1: off by default: every start that gave players the wrong character had these on.
+    private bool _configLauncherLog;
+    private bool _configLauncherStdout;
+    private bool _configLauncherFullStdOutLogOutput;
+    private bool _configLauncherAbsLog;
     private string _configLauncherAbsLogPath = string.Empty;
     private bool _configLauncherUnattended;
     private bool _configLauncherUsePerfThreads;
@@ -100,11 +101,12 @@ public sealed partial class MainWindowViewModel
             ConfigLauncherRedirectStandardError = false;
             ConfigLauncherCaptureRedirectedOutput = true;
             ConfigLauncherPortEnabled = true;
-            ConfigLauncherLog = true;
-            ConfigLauncherStdout = true;
-            ConfigLauncherFullStdOutLogOutput = true;
-            ConfigLauncherAbsLog = true;
-            if (string.IsNullOrWhiteSpace(ConfigLauncherAbsLogPath)) ConfigLauncherAbsLogPath = DefaultIdentityLogPath();
+            // v1.0.6.1: no preset adds -log, -stdout, -FullStdOutLogOutput or -abslog any more: every start that gave players the
+            // wrong character had them (reported 2026-10-04 and again 2026-10-06, after the Show Window preset was saved).
+            ConfigLauncherLog = false;
+            ConfigLauncherStdout = false;
+            ConfigLauncherFullStdOutLogOutput = false;
+            ConfigLauncherAbsLog = false;
             ConfigLauncherUnattended = false;
             ConfigLauncherUsePerfThreads = false;
             ConfigLauncherNoAsyncLoadingThread = false;
@@ -218,12 +220,13 @@ public sealed partial class MainWindowViewModel
             }
             else
             {
-                // Match the effective behavior of the previous manual-parity hotfix until the first
-                // explicit save from the new launcher editor.
-                ConfigLauncherLog = true;
-                ConfigLauncherStdout = true;
-                ConfigLauncherFullStdOutLogOutput = true;
-                ConfigLauncherAbsLog = true;
+                // v1.0.6.1: a profile with no saved launcher settings starts with no arguments (v1.0.0.1), so the editor shows
+                // that. It used to show -log, -stdout, -FullStdOutLogOutput and -abslog here, and saving the page wrote them
+                // in: the options every wrong-character start had (seen on the owner's main server on 2026-10-06).
+                ConfigLauncherLog = false;
+                ConfigLauncherStdout = false;
+                ConfigLauncherFullStdOutLogOutput = false;
+                ConfigLauncherAbsLog = false;
                 ConfigLauncherUnattended = false;
                 ConfigLauncherUsePerfThreads = false;
                 ConfigLauncherNoAsyncLoadingThread = false;
@@ -327,8 +330,8 @@ public sealed partial class MainWindowViewModel
             warnings.Add("Custom executable is selected but no path is set.");
         if (ConfigLauncherWorkingDirectory == "Custom path" && string.IsNullOrWhiteSpace(ConfigLauncherCustomWorkingDirectory))
             warnings.Add("Custom working directory is selected but no path is set.");
-        if (!ConfigLauncherAbsLog && !ConfigLauncherRedirectStandardOutput && !ConfigLauncherRedirectStandardError)
-            warnings.Add("No -abslog and no redirected streams are enabled, so PalServer output may be limited in MystTiq Live Console.");
+        if (ConfigLauncherLog || ConfigLauncherStdout || ConfigLauncherFullStdOutLogOutput || ConfigLauncherAbsLog)
+            warnings.Add("Players were given the wrong character every time PalServer started with -log, -stdout, -FullStdOutLogOutput or -abslog, and kept theirs when it started like a double-click. Use Like double-click unless you are diagnosing.");
         if (ConfigLauncherExecutable != "PalServer.exe")
             warnings.Add("Direct Shipping executable modes bypass PalServer.exe and are intended for diagnosis/testing.");
 

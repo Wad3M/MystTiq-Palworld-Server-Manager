@@ -1,4 +1,4 @@
-# MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+# MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 [CmdletBinding()]
 param(
     # The MystTiq service running the clone (the desktop's helper or a service), and the clone's server id there.

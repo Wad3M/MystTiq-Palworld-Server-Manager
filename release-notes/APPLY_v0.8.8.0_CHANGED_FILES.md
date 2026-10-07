@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.6.0: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
 # v0.8.8.0 Changed Files
 
 The icons come from three user-supplied packages: `palworld_ribbon_icons_batch_1.zip`, `_batch_2.zip` and `_batch_3.zip`.

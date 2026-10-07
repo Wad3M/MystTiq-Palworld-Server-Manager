@@ -3961,5 +3961,15 @@
   "msg.mod_needs_ue4ss": "Bu MOD UE4SS gerektiriyor ve bu sunucuda kurulu değil. Önce UE4SS’i kendi sayfasından kurun.",
   "msg.mod_logic_exists": "Bu paket adında bir LogicMods MOD zaten var.",
   "msg.mod_installed_bpmodloader": "{0}, doğrulanmış ZIP arşivinden yüklendi (içerikten {1} algılandı). LogicMods PAK’ları UE4SS’in BPModLoaderMod’u ile yüklenir; o, mods.txt’de açık değil.",
-  "msg.restore_rollback_denied": "Not: Geri yüklemeden önceki dünyanın geçici kopyası ({0}) tutuldu: içindeki bazı dosyalar yöneticilere ait. Yedekler sayfasındaki Kayıt Klasörü Erişimini Düzelt, MystTiq’in onu bir dahaki sefere kaldırmasını sağlar; silmek güvenlidir."
+  "msg.restore_rollback_denied": "Not: Geri yüklemeden önceki dünyanın geçici kopyası ({0}) tutuldu: içindeki bazı dosyalar yöneticilere ait. Yedekler sayfasındaki Kayıt Klasörü Erişimini Düzelt, MystTiq’in onu bir dahaki sefere kaldırmasını sağlar; silmek güvenlidir.",
+  "dashboard.updateLocalService": "Hizmeti Bu Sürüme Güncelle",
+  "msg.service_outdated": "Bu bilgisayardaki MystTiq hizmeti v{0}; bu uygulamadan (v{1}) eski. Sunucularınız onun üzerinden çalışıyor; bu yüzden v{0} sonrasındaki değişiklikler, başlatma düzeltmeleri ve kimlik koruması dahil, orada geçerli değil.",
+  "msg.service_update_confirm": "MystTiq hizmeti bu sürüme güncellensin mi?",
+  "msg.service_update_detail": "Bu bilgisayardaki eski hizmet durdurulur ve bu uygulamanınki başlatılır. Çalışan PalServer çalışmaya devam eder; oyuncular bağlı kalır.",
+  "msg.service_update_refused": "Eski hizmet durdurulamadı: {0}",
+  "msg.service_update_none": "Bu bilgisayarda çalışan daha eski bir MystTiq hizmeti bulunamadı.",
+  "msg.service_update_done": "Eski hizmet durduruldu; sunucularınızı artık bu uygulamanın hizmeti (v{0}) çalıştırıyor.",
+  "msg.service_update_failed": "Eski hizmet durduruldu ama bu uygulamanın hizmeti başlamadı: {0}",
+  "msg.identity_launch_advice": "Bu sunucu PalServer’ı {0} ile başlatıyor. -log, -stdout veya -FullStdOutLogOutput ile her başladığında oyunculara yanlış karakter verildi; çift tıklama gibi başladığında kendi karakterleri kaldı: Sunucu > Başlatıcı’da Çift tıklama gibi’yi seçip kaydedin, sunucuyu yeniden başlatın ve tekrar katılmalarını isteyin.",
+  "msg.launcher_identity_warning": "PalServer -log, -stdout, -FullStdOutLogOutput veya -abslog ile her başladığında oyunculara yanlış karakter verildi; çift tıklama gibi başladığında kendi karakterleri kaldı. Sorun incelemiyorsanız Çift tıklama gibi’yi kullanın."
 }

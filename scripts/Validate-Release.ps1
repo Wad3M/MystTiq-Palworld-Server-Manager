@@ -1,4 +1,4 @@
-# MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+# MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 [CmdletBinding()]
 # v0.7.115.0: -AllowBuildOutputs skips ONLY the hygiene check for build output (bin, obj, artifacts, publish and
 # anything inside them). The logic gates validate mid-run, after they themselves have built, published and
@@ -80,6 +80,9 @@ $versionParts = $version.Split('.')
 $releaseLinePrefix = [regex]::Escape(($versionParts[0..2] -join '.'))
 $versionPattern = "(?<!\d)$releaseLinePrefix\.\d+(?:-[0-9A-Za-z.-]+)?(?!\d)"
 foreach ($file in $activeFiles) {
+    # v1.0.6.1: a script named for its own release ("Test-v1.0.6.0-ModLayoutSmoke.ps1") names that release in its paths and
+    # messages; that is the script's identity, not a stale application version, once a fourth-number release follows it.
+    $ownVersion = if ($file.Name -match '^Test-v(\d+\.\d+\.\d+\.\d+)-') { $Matches[1] } else { $null }
     foreach ($lineMatch in Select-String -Path $file.FullName -Pattern $versionPattern -AllMatches -ErrorAction SilentlyContinue) {
         # Release-review stamps intentionally record the release in which a file was last reviewed. They are
         # provenance, not an active application-version value, so a patch release must not report every older
@@ -97,7 +100,8 @@ foreach ($file in $activeFiles) {
             $older = $false
             try { $older = [version]($_.Value -replace '-.*$', '') -lt [version]($version -replace '-.*$', '') } catch { }
             $isHistoryComment = $older -and $_.Index -gt 0 -and $line[$_.Index - 1] -eq 'v' -and $line.TrimStart() -match '^(//|#|<!--|\*|/\*)'
-            -not $isHistoryMarker -and -not $isHistoryComment -and ($_.Value -replace '-.*$', '') -ne ($version -replace '-.*$', '') })
+            $isOwnRelease = $null -ne $ownVersion -and ($_.Value -replace '-.*$', '') -eq $ownVersion
+            -not $isHistoryMarker -and -not $isHistoryComment -and -not $isOwnRelease -and ($_.Value -replace '-.*$', '') -ne ($version -replace '-.*$', '') })
         if ($stale.Count -gt 0) {
             Add-Issue Warning 'Version consistency' "Possible stale version in $($file.FullName.Substring($root.Length + 1)):$($lineMatch.LineNumber): $($lineMatch.Line.Trim())"
         }

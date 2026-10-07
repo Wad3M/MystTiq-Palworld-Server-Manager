@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.6.0: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
 # File audit — v0.8.26.0
 
 Every file in the repository was reviewed for v0.8.26.0 (2026-09-27). This page summarises the review; [FILE_AUDIT_v0.8.26.0.csv](FILE_AUDIT_v0.8.26.0.csv) lists every file, one row each, with what was done to it. The comparison is against the v0.8.25.0 accepted-baseline source.

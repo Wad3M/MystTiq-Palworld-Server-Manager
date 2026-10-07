@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+# MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 # v1.0.2.0 (roadmap R-3): the headless service under systemd on the Linux test VM, run phase by phase by
 # Test-v1.0.2.0-LinuxSystemd.ps1: install, crash, after-reboot, stop, cleanup. Everything lives in its own unit
 # (mysttiq-palworld-r3test.service), folder (/opt/mysttiq-r3test), config, API port 18431 and game port 18611, with a

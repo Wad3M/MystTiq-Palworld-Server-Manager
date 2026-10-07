@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 using System.Diagnostics;
 using System.Text.Json;
 using MystTiq.Core.Providers;
@@ -28,8 +28,14 @@ public sealed class HeadlessIdentityGuardService
     private readonly HashSet<string> handledThisSession = new(StringComparer.OrdinalIgnoreCase);
     private IdentityGuardConfig config;
 
-    public HeadlessIdentityGuardService(IServerPathProfile paths, HeadlessActivityLogService activity, HeadlessNotificationService notifications, PlayerModerationCoordinator playerModeration)
+    private readonly Func<IReadOnlyList<string>> launchArguments;
+
+    // v1.0.6.1: launchArguments are the server's saved start arguments, named in the alert (the wrong-character starts all
+    // had -log, -stdout or -FullStdOutLogOutput; double-click starts, with no arguments, kept the players' characters).
+    public HeadlessIdentityGuardService(IServerPathProfile paths, HeadlessActivityLogService activity, HeadlessNotificationService notifications, PlayerModerationCoordinator playerModeration,
+        Func<IReadOnlyList<string>>? launchArguments = null)
     {
+        this.launchArguments = launchArguments ?? (() => []);
         this.paths = paths;
         this.activity = activity;
         this.notifications = notifications;
@@ -87,7 +93,8 @@ public sealed class HeadlessIdentityGuardService
             }
 
             var name = string.IsNullOrWhiteSpace(player.Name) ? userId : player.Name;
-            var message = $"{name} ({userId}) was not given their character: the server assigned {verdict.AssignedDisplay}, but their Steam ID's character is {verdict.Expected[..8]}.{kickNote} Their character is safe. Restart the server and have them join again. If it happens again, compare the launch on Server > Launcher with a manual start.";
+            var message = $"{name} ({userId}) was not given their character: the server assigned {verdict.AssignedDisplay}, but their Steam ID's character is {verdict.Expected[..8]}.{kickNote} Their character is safe. "
+                + IdentityGuard.LaunchAdvice(launchArguments());
             activity.Record("Warning", "Players", "Identity guard", message);
             notifications.Create("Critical", "Player not given their character", message, pinned: true);
             Append(new IdentityGuardEvent(DateTimeOffset.UtcNow, name, userId, verdict.Assigned, verdict.Expected, kicked, SteamClientRunning(), message));
@@ -150,6 +157,21 @@ public sealed record IdentityVerdict(string Assigned, string Expected)
 /// <summary>v1.0.0.1: the identity guard's rule, pure so the logic harness covers it.</summary>
 public static class IdentityGuard
 {
+    // v1.0.6.1: the start options present in every wrong-character start (2026-10-04, 2026-10-06), never in a good one.
+    public static readonly string[] SuspectArguments = ["-log", "-stdout", "-FullStdOutLogOutput"];
+
+    public static bool HasSuspectArguments(IEnumerable<string> arguments) =>
+        arguments.Any(a => SuspectArguments.Any(s => a.Equals(s, StringComparison.OrdinalIgnoreCase)) || a.StartsWith("-abslog=", StringComparison.OrdinalIgnoreCase));
+
+    // What the alert advises, from the arguments the server was started with (MystTiq's own @mysttiq: options left out).
+    public static string LaunchAdvice(IReadOnlyList<string> arguments)
+    {
+        var shown = arguments.Where(a => !a.StartsWith("@mysttiq:", StringComparison.OrdinalIgnoreCase)).ToList();
+        return HasSuspectArguments(shown)
+            ? $"This server starts PalServer with {string.Join(" ", shown)}. Players were given the wrong character every time it started with -log, -stdout or -FullStdOutLogOutput, and kept theirs when it started like a double-click: choose Like double-click on Server > Launcher, save, restart the server, then have them join again."
+            : "Restart the server and have them join again. If it happens again, compare the launch on Server > Launcher with a manual start.";
+    }
+
     public static IdentityVerdict? Judge(string userId, string? assignedPlayerId, Func<string, bool> characterExists)
     {
         var expected = SteamPlayerUid.FromUserId(userId);

@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -1822,6 +1822,20 @@ try
         Assert(alive.ServerMayBeRunning, "a live process did not count as running");
         Assert((gone with { Ready = true }).ServerMayBeRunning, "an open game port did not count as running");
         Assert((alive with { NativeProcessId = null }).ServerMayBeRunning, "a live process without a native id did not count as running");
+    }, failures);
+
+    // ---- v1.0.6.1 (reported 2026-10-06: a player got the wrong character again) ----
+    RunScenario("Identity alert advice: a server started with -log, -stdout, -FullStdOutLogOutput or -abslog is told to start like a double-click; MystTiq's own options are not shown; a plain start gets the old advice", () =>
+    {
+        // The owner's saved arguments for the main server on 2026-10-06.
+        string[] saved = ["@mysttiq:launcherVersion=1", "@mysttiq:executable=PalServer.exe", "@mysttiq:windowStyle=Normal", "-port=8211", "-log", "-stdout", "-FullStdOutLogOutput",
+            @"-abslog=C:\GameServers\Palworld\Server\Pal\Saved\Logs\Identity-Diagnostic.log"];
+        var advice = IdentityGuard.LaunchAdvice(saved);
+        Assert(IdentityGuard.HasSuspectArguments(saved) && advice.Contains("Like double-click") && advice.Contains("-port=8211 -log -stdout -FullStdOutLogOutput") && !advice.Contains("@mysttiq"),
+            $"the saved set is named and Like double-click advised: {advice}");
+        Assert(IdentityGuard.HasSuspectArguments([@"-abslog=C:\x.log"]) && IdentityGuard.HasSuspectArguments(["-STDOUT"]), "-abslog and any case count");
+        Assert(!IdentityGuard.HasSuspectArguments(["-port=8311", "-useperfthreads"]) && !IdentityGuard.HasSuspectArguments([]), "other options and no options do not");
+        Assert(IdentityGuard.LaunchAdvice([]).StartsWith("Restart the server and have them join again.", StringComparison.Ordinal), "a plain start keeps the old advice");
     }, failures);
 
     // ---- v1.0.6.0 (roadmap M-2): MODs laid out as the game folder ----

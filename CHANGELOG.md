@@ -1,4 +1,18 @@
-<!-- MystTiq v1.0.6.0: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
+## v1.0.6.1 — Your Character, Not a New One
+
+- Fixed (reported 2026-10-06): a player joining with his Steam account got a new character. A v1.0.6.0 desktop was
+  driving a v1.0.0.0 service left running, which started PalServer with `-log -stdout -FullStdOutLogOutput -abslog`, the
+  options present in every wrong-character start, and had no identity guard.
+  - The desktop now flags a local service older than itself on the Dashboard; Update Service To This Version stops it and
+    starts its own (a running PalServer keeps running).
+  - No Launcher preset adds those options any more, a server with no saved launch settings shows them off (saving the
+    page used to write them in), and the Launcher warns when they are on.
+  - The identity alert names the options the server started with and advises Like double-click.
+- Tests: the v1.0.6.1 gate regenerated from v1.0.6.0 (every earlier check kept), a LogicHarness scenario and ArtworkHarness
+  checks; 10 texts in 12 languages.
+- Version advanced to 1.0.6.1.
+
 ## v1.0.6.0 — Pals in the Pal Box, and MODs Laid Out as the Game
 
 - S-3 add and remove a Pal: the Players page's Pal box card (admins) lists a player's Pal box from the world save. One Pal

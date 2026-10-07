@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
@@ -7,6 +7,9 @@ using System.Text.Json;
 using MystTiq.Core.Services;
 
 namespace MystTiq.Desktop.Services;
+
+// v1.0.6.1: what StopOutdatedLocalServicesAsync did: the older services stopped, and those it could not stop (with why).
+public sealed record OutdatedServiceStop(IReadOnlyList<string> Stopped, IReadOnlyList<string> Refused);
 
 public sealed record LocalManagementBootstrapResult(bool Available, bool Started, string Endpoint, string Detail, string? BackendVersion = null,
     bool StaleInstanceDetected = false, string? StaleInstanceEndpoint = null, string? StaleInstanceVersion = null);
@@ -20,6 +23,12 @@ public interface ILocalManagementBootstrapper
     // connection profile could silently attach to a different already-running MystTiq instance.
     Task<LocalManagementBootstrapResult> EnsureAvailableAsync(LocalInstallationSnapshot snapshot, string expectedServerProfileId = "default", CancellationToken cancellationToken = default);
     Task<bool> StopOwnedSidecarAsync(CancellationToken cancellationToken = default);
+
+    // v1.0.6.1 (reported 2026-10-06: a v1.0.6.0 desktop ran the server through a v1.0.0.0 service left running, so the
+    // later launch fixes and the identity guard never applied and a player got the wrong character): stops MystTiq services
+    // on this computer older than this app, never this app's own. A PalServer they run keeps running; the next service
+    // adopts it. The owner asks for it on the Dashboard; it is never done on its own.
+    Task<OutdatedServiceStop> StopOutdatedLocalServicesAsync(Version appVersion, CancellationToken cancellationToken = default);
 
     // v1.0.0.1: the endpoint of the helper this desktop owns (started, or reused from its record), or null. Exit uses it to
     // stop every server that helper runs before stopping the helper itself.
@@ -344,6 +353,31 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MystTiq", "runtime");
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(home, ".local", "state", "mysttiq", "runtime");
+    }
+
+    public Task<OutdatedServiceStop> StopOutdatedLocalServicesAsync(Version appVersion, CancellationToken cancellationToken = default)
+    {
+        var ours = FindPackagedHeadlessExecutable();
+        var stopped = new List<string>(); var refused = new List<string>();
+        foreach (var process in Process.GetProcessesByName("mysttiq-server"))
+        {
+            using (process)
+            {
+                string? path;
+                try { path = process.MainModule?.FileName; }
+                catch { refused.Add($"process {process.Id} runs as another account (for example the Windows service); update it from Security > Service"); continue; }
+                if (path is null || (ours is not null && string.Equals(Path.GetFullPath(path), Path.GetFullPath(ours), StringComparison.OrdinalIgnoreCase))) continue;
+                if (!Version.TryParse(FileVersionInfo.GetVersionInfo(path).FileVersion, out var version) || version >= appVersion) continue;
+                try
+                {
+                    process.Kill();
+                    process.WaitForExit(15000);
+                    stopped.Add($"v{version} ({path})");
+                }
+                catch (Exception ex) { refused.Add($"v{version} ({path}): {ex.Message}"); }
+            }
+        }
+        return Task.FromResult(new OutdatedServiceStop(stopped, refused));
     }
 
     private static string? FindPackagedHeadlessExecutable()

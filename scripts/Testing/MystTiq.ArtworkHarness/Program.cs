@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1565,6 +1565,38 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
           vm.InventorySlots[1].RecordText.Length > 0 && vm.InventorySlots[0].RecordText.Length == 0,
         $"The Players page's inventory card lists the saved slots, Remove red, Add and Load styled, a recorded item marked [{list?.ItemCount} rows; {classes}]");
     vm.InventorySlots.Clear();
+}
+// v1.0.6.1 (reported 2026-10-06): an older local service is flagged on the Dashboard with Update Service To This Version;
+// a remote one is not; no Launcher preset adds -log, -stdout, -FullStdOutLogOutput or -abslog, and those options warn.
+{
+    var local = new Uri("http://127.0.0.1:8213");
+    Check(MainWindowViewModel.IsOlderLocalService("1.0.0.0", local, new Version(1, 0, 6, 1)) && !MainWindowViewModel.IsOlderLocalService("1.0.6.1", local, new Version(1, 0, 6, 1)) &&
+          !MainWindowViewModel.IsOlderLocalService("1.0.7.0", local, new Version(1, 0, 6, 1)) && !MainWindowViewModel.IsOlderLocalService("1.0.0.0", new Uri("https://192.168.1.122:8213"), new Version(1, 0, 6, 1)) &&
+          !MainWindowViewModel.IsOlderLocalService("unknown", local, new Version(1, 0, 6, 1)),
+        "An older service on this PC is flagged; the same or a newer one, a remote one and an unknown version are not");
+    typeof(MainWindowViewModel).GetMethod("CheckLocalServiceVersion", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, ["1.0.0.0", local]);
+    selectedPage.SetValue(vm, NavigationPage.Dashboard);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var outdated = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "OutdatedServiceBanner");
+    var update = outdated?.GetLogicalDescendants().OfType<Button>().FirstOrDefault();
+    Check(outdated is { IsEffectivelyVisible: true } && update is not null && update.Classes.Contains("apply") && vm.LocalServiceOutdatedText.Contains("v1.0.0.0") && vm.LocalServiceOutdatedText.Contains("identity guard"),
+        $"The Dashboard says the local service is older and offers Update Service To This Version [{vm.LocalServiceOutdatedText}]");
+    typeof(MainWindowViewModel).GetMethod("CheckLocalServiceVersion", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, [MainWindowViewModel.AppVersion.ToString(), local]);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    Check(outdated is { IsEffectivelyVisible: false }, "With this app's own version the banner is gone");
+    var preset = vm.ApplyLauncherPresetCommand;
+    var flags = new[] { "ConfigLauncherLog", "ConfigLauncherStdout", "ConfigLauncherFullStdOutLogOutput", "ConfigLauncherAbsLog" };
+    bool AnyFlag() => flags.Any(f => (bool)typeof(MainWindowViewModel).GetProperty(f)!.GetValue(vm)!);
+    var clean = new[] { "ShowWindow", "NoMods", "DoubleClick" }.All(p => { preset.Execute(p); Dispatcher.UIThread.RunJobs(); return !AnyFlag(); });
+    // A profile with no saved launcher settings loads with those options off, so saving the page cannot write them in.
+    var loadLauncher = typeof(MainWindowViewModel).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic).FirstOrDefault(m => m.Name == "LoadLauncherConfiguration" && m.GetParameters().Length == 1);
+    if (loadLauncher is not null) { loadLauncher.Invoke(vm, [new List<string> { "-port=8211" }]); Dispatcher.UIThread.RunJobs(); clean &= !AnyFlag(); }
+    typeof(MainWindowViewModel).GetProperty("ConfigLauncherStdout")!.SetValue(vm, true);
+    Dispatcher.UIThread.RunJobs();
+    var warned = vm.ConfigLauncherWarning.Contains("wrong character") && vm.ConfigLauncherWarning.Contains("Like double-click");
+    preset.Execute("DoubleClick"); Dispatcher.UIThread.RunJobs();
+    Check(clean && warned && !vm.ConfigLauncherWarning.Contains("wrong character"),
+        $"No Launcher preset adds -log, -stdout, -FullStdOutLogOutput or -abslog; switching one on warns [{vm.ConfigLauncherWarning}]");
 }
 // v1.0.6.0 (roadmap S-3): the Players page's Pal box card lists the box, Remove is red, Add an apply button beside the
 // species picker, and both are Admin controls.

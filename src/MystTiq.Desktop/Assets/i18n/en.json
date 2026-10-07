@@ -3961,5 +3961,15 @@
   "msg.mod_needs_ue4ss": "This MOD needs UE4SS, which is not installed on this server. Install UE4SS from its page first.",
   "msg.mod_logic_exists": "A LogicMods MOD with this package name already exists.",
   "msg.mod_installed_bpmodloader": "Installed {0} from validated ZIP archive ({1} detected from contents). LogicMods PAKs load through UE4SS's BPModLoaderMod, which is not switched on in mods.txt.",
-  "msg.restore_rollback_denied": "Note: the temporary copy of the world from before the restore ({0}) was kept: some files in it belong to administrators. Fix Save Folder Access on the Backups page lets MystTiq remove it next time; it is safe to delete."
+  "msg.restore_rollback_denied": "Note: the temporary copy of the world from before the restore ({0}) was kept: some files in it belong to administrators. Fix Save Folder Access on the Backups page lets MystTiq remove it next time; it is safe to delete.",
+  "dashboard.updateLocalService": "Update Service To This Version",
+  "msg.service_outdated": "The MystTiq service on this PC is v{0}, older than this app (v{1}). Your servers run through it, so what changed since v{0} is not in effect there, including the launch fixes and the identity guard.",
+  "msg.service_update_confirm": "Update the MystTiq service to this version?",
+  "msg.service_update_detail": "The older service on this PC is stopped and this app's own is started. A running PalServer keeps running; players stay connected.",
+  "msg.service_update_refused": "The older service could not be stopped: {0}",
+  "msg.service_update_none": "No older MystTiq service was found running on this PC.",
+  "msg.service_update_done": "The older service was stopped and this app's own (v{0}) runs your servers now.",
+  "msg.service_update_failed": "The older service was stopped, but this app's service did not start: {0}",
+  "msg.identity_launch_advice": "This server starts PalServer with {0}. Players were given the wrong character every time it started with -log, -stdout or -FullStdOutLogOutput, and kept theirs when it started like a double-click: choose Like double-click on Server > Launcher, save, restart the server, then have them join again.",
+  "msg.launcher_identity_warning": "Players were given the wrong character every time PalServer started with -log, -stdout, -FullStdOutLogOutput or -abslog, and kept theirs when it started like a double-click. Use Like double-click unless you are diagnosing."
 }

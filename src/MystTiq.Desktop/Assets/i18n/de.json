@@ -3961,5 +3961,15 @@
   "msg.mod_needs_ue4ss": "Dieser MOD braucht UE4SS, das auf diesem Server nicht installiert ist. Installiere zuerst UE4SS auf seiner Seite.",
   "msg.mod_logic_exists": "Ein LogicMods-MOD mit diesem Paketnamen existiert bereits.",
   "msg.mod_installed_bpmodloader": "{0} aus geprüftem ZIP-Archiv installiert ({1} am Inhalt erkannt). LogicMods-PAKs laden über BPModLoaderMod von UE4SS, der in mods.txt nicht eingeschaltet ist.",
-  "msg.restore_rollback_denied": "Hinweis: Die vorläufige Kopie der Welt von vor der Wiederherstellung ({0}) blieb erhalten: Einige Dateien darin gehören Administratoren. Mit „Zugriff auf den Spielstandordner reparieren“ auf der Seite Sicherungen kann MystTiq sie nächstes Mal entfernen; sie kann gefahrlos gelöscht werden."
+  "msg.restore_rollback_denied": "Hinweis: Die vorläufige Kopie der Welt von vor der Wiederherstellung ({0}) blieb erhalten: Einige Dateien darin gehören Administratoren. Mit „Zugriff auf den Spielstandordner reparieren“ auf der Seite Sicherungen kann MystTiq sie nächstes Mal entfernen; sie kann gefahrlos gelöscht werden.",
+  "dashboard.updateLocalService": "Dienst auf diese Version aktualisieren",
+  "msg.service_outdated": "Der MystTiq-Dienst auf diesem PC ist v{0}, älter als diese App (v{1}). Deine Server laufen über ihn, daher gilt dort nicht, was sich seit v{0} geändert hat, auch nicht die Startkorrekturen und der Identitätsschutz.",
+  "msg.service_update_confirm": "MystTiq-Dienst auf diese Version aktualisieren?",
+  "msg.service_update_detail": "Der ältere Dienst auf diesem PC wird gestoppt und der dieser App gestartet. Ein laufender PalServer läuft weiter; Spieler bleiben verbunden.",
+  "msg.service_update_refused": "Der ältere Dienst ließ sich nicht stoppen: {0}",
+  "msg.service_update_none": "Auf diesem PC läuft kein älterer MystTiq-Dienst.",
+  "msg.service_update_done": "Der ältere Dienst wurde gestoppt; jetzt betreibt der Dienst dieser App (v{0}) deine Server.",
+  "msg.service_update_failed": "Der ältere Dienst wurde gestoppt, aber der Dienst dieser App startete nicht: {0}",
+  "msg.identity_launch_advice": "Dieser Server startet PalServer mit {0}. Spieler bekamen jedes Mal den falschen Charakter, wenn er mit -log, -stdout oder -FullStdOutLogOutput startete, und behielten ihren, wenn er wie per Doppelklick startete: Wähle unter Server > Starter „Wie Doppelklick“, speichere, starte den Server neu und lass sie erneut beitreten.",
+  "msg.launcher_identity_warning": "Spieler bekamen jedes Mal den falschen Charakter, wenn PalServer mit -log, -stdout, -FullStdOutLogOutput oder -abslog startete, und behielten ihren, wenn er wie per Doppelklick startete. Nutze „Wie Doppelklick“, außer du suchst einen Fehler."
 }

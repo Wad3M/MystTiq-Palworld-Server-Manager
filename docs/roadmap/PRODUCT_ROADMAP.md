@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.6.0: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
 # Product roadmap
 
-Updated 2026-10-06. **Current version: v1.0.6.0. Accepted baseline: v1.0.0.0. Next milestone: none scheduled yet (to agree with the owner).**
+Updated 2026-10-06. **Current version: v1.0.6.1. Accepted baseline: v1.0.0.0. Next milestone: none scheduled yet (to agree with the owner).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -103,7 +103,7 @@ Repositories agreed 2026-10-06 (D-8). Released 2026-10-06 as v1.0.5.0 with M-1 `
 
 ## v1.0.6.0 — Carried and follow-ups
 
-Exit gate: S-3 and M-2 `Done`. Agreed with the owner 2026-10-06. Released 2026-10-06 as v1.0.6.0 with M-2 `Done` and S-3 `Built` (a player seeing the Pal in game on the clone is owed).
+Exit gate: S-3 and M-2 `Done`. Agreed with the owner 2026-10-06. Released 2026-10-06 as v1.0.6.0 with M-2 `Done` and S-3 `Built` (a player seeing the Pal in game on the clone is owed). v1.0.6.1 (same day) fixed the owner's wrong-character report: an older local service is flagged and replaced, no Launcher preset adds `-log`, `-stdout`, `-FullStdOutLogOutput` or `-abslog`, and the identity alert names them (see `docs/architecture/v1.0.6.1-wrong-character-again.md`).
 
 | ID | Item | Acceptance | Evidence required | Status |
 | --- | --- | --- | --- | --- |

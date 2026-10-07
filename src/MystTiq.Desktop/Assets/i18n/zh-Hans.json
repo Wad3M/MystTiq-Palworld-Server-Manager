@@ -3961,5 +3961,15 @@
   "msg.mod_needs_ue4ss": "此 MOD 需要 UE4SS，而该服务器尚未安装。请先在 UE4SS 页面安装它。",
   "msg.mod_logic_exists": "已存在同名的 LogicMods MOD。",
   "msg.mod_installed_bpmodloader": "已从经过验证的 ZIP 压缩包安装 {0}（根据内容检测为 {1}）。LogicMods PAK 通过 UE4SS 的 BPModLoaderMod 加载，而它在 mods.txt 中未启用。",
-  "msg.restore_rollback_denied": "注意：恢复前世界的临时副本（{0}）被保留了，因为其中一些文件属于管理员。在“备份”页面使用“修复存档文件夹访问”后，MystTiq 下次就能删除它；手动删除也是安全的。"
+  "msg.restore_rollback_denied": "注意：恢复前世界的临时副本（{0}）被保留了，因为其中一些文件属于管理员。在“备份”页面使用“修复存档文件夹访问”后，MystTiq 下次就能删除它；手动删除也是安全的。",
+  "dashboard.updateLocalService": "将服务更新到此版本",
+  "msg.service_outdated": "此电脑上的 MystTiq 服务是 v{0}，比此应用（v{1}）旧。你的服务器通过它运行，因此 v{0} 之后的改动（包括启动修复和身份保护）在那里都未生效。",
+  "msg.service_update_confirm": "将 MystTiq 服务更新到此版本？",
+  "msg.service_update_detail": "将停止此电脑上较旧的服务并启动此应用自带的服务。正在运行的 PalServer 会继续运行，玩家保持连接。",
+  "msg.service_update_refused": "无法停止较旧的服务：{0}",
+  "msg.service_update_none": "在此电脑上没有发现正在运行的较旧 MystTiq 服务。",
+  "msg.service_update_done": "已停止较旧的服务，现在由此应用自带的服务（v{0}）运行你的服务器。",
+  "msg.service_update_failed": "已停止较旧的服务，但此应用的服务未能启动：{0}",
+  "msg.identity_launch_advice": "此服务器以 {0} 启动 PalServer。每次带有 -log、-stdout 或 -FullStdOutLogOutput 启动时，玩家都被分配到错误的角色；像双击那样启动时则保留了自己的角色：请在“服务器 > 启动器”中选择“像双击一样”，保存，重启服务器，然后让他们重新加入。",
+  "msg.launcher_identity_warning": "每次 PalServer 带有 -log、-stdout、-FullStdOutLogOutput 或 -abslog 启动时，玩家都被分配到错误的角色；像双击那样启动时则保留了自己的角色。除非在排查问题，请使用“像双击一样”。"
 }

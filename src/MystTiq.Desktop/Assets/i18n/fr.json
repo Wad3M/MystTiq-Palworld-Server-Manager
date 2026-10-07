@@ -3961,5 +3961,15 @@
   "msg.mod_needs_ue4ss": "Ce MOD nécessite UE4SS, qui n'est pas installé sur ce serveur. Installez d'abord UE4SS depuis sa page.",
   "msg.mod_logic_exists": "Un MOD LogicMods avec ce nom de paquet existe déjà.",
   "msg.mod_installed_bpmodloader": "{0} installé depuis une archive ZIP validée ({1} détecté d'après le contenu). Les PAK LogicMods se chargent via BPModLoaderMod d'UE4SS, qui n'est pas activé dans mods.txt.",
-  "msg.restore_rollback_denied": "Remarque : la copie temporaire du monde d'avant la restauration ({0}) a été conservée : certains de ses fichiers appartiennent aux administrateurs. Réparer l'accès au dossier de sauvegarde sur la page Sauvegardes permet à MystTiq de la supprimer la prochaine fois ; on peut la supprimer sans risque."
+  "msg.restore_rollback_denied": "Remarque : la copie temporaire du monde d'avant la restauration ({0}) a été conservée : certains de ses fichiers appartiennent aux administrateurs. Réparer l'accès au dossier de sauvegarde sur la page Sauvegardes permet à MystTiq de la supprimer la prochaine fois ; on peut la supprimer sans risque.",
+  "dashboard.updateLocalService": "Mettre à jour le service vers cette version",
+  "msg.service_outdated": "Le service MystTiq de ce PC est en v{0}, plus ancien que cette application (v{1}). Vos serveurs passent par lui, donc ce qui a changé depuis la v{0} n'y est pas appliqué, y compris les correctifs de démarrage et la protection d'identité.",
+  "msg.service_update_confirm": "Mettre à jour le service MystTiq vers cette version ?",
+  "msg.service_update_detail": "Le service plus ancien de ce PC est arrêté et celui de cette application démarre. Un PalServer en cours continue de tourner ; les joueurs restent connectés.",
+  "msg.service_update_refused": "Le service plus ancien n'a pas pu être arrêté : {0}",
+  "msg.service_update_none": "Aucun service MystTiq plus ancien n'a été trouvé en cours sur ce PC.",
+  "msg.service_update_done": "Le service plus ancien a été arrêté ; celui de cette application (v{0}) fait maintenant tourner vos serveurs.",
+  "msg.service_update_failed": "Le service plus ancien a été arrêté, mais celui de cette application n'a pas démarré : {0}",
+  "msg.identity_launch_advice": "Ce serveur démarre PalServer avec {0}. Les joueurs ont reçu le mauvais personnage chaque fois qu'il a démarré avec -log, -stdout ou -FullStdOutLogOutput, et ont gardé le leur quand il a démarré comme un double-clic : choisissez Comme un double-clic dans Serveur > Lanceur, enregistrez, redémarrez le serveur, puis faites-les rejoindre à nouveau.",
+  "msg.launcher_identity_warning": "Les joueurs ont reçu le mauvais personnage chaque fois que PalServer a démarré avec -log, -stdout, -FullStdOutLogOutput ou -abslog, et ont gardé le leur quand il a démarré comme un double-clic. Utilisez Comme un double-clic sauf pour un diagnostic."
 }

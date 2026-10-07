@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.6.0: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -348,6 +348,13 @@
           </Border>
 
           <!-- v1.0.2.0 (roadmap R-2): a switched-on outside channel with no proven delivery in 7 days, or whose last send failed. -->
+          <!-- v1.0.6.1: the local service is older than this app (its fixes are not running for the servers). -->
+          <Border x:Name="OutdatedServiceBanner" Classes="statuscard" BorderBrush="{DynamicResource RedBrush}" BorderThickness="1" Padding="10,7" IsVisible="{Binding IsLocalServiceOutdated}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <TextBlock Text="{services:TrText LocalServiceOutdatedText}" Foreground="{DynamicResource RedBrush}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Classes="apply" Content="{services:Tr dashboard.updateLocalService}" Click="UpdateLocalService_OnClick"/>
+            </Grid>
+          </Border>
           <Border x:Name="DeliveryWarningBanner" Classes="statuscard" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" Padding="10,7" IsVisible="{Binding DeliveryHealth.AnyFlagged}">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
               <TextBlock Text="{services:TrText DeliveryHealth.Summary}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"/>

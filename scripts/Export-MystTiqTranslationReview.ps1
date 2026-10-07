@@ -1,4 +1,4 @@
-# MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+# MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 #requires -Version 7.0
 # v0.9.3.0: writes one review sheet per language (CSV, opens in any spreadsheet): every text the Desktop can show, the
 # English beside the translation, what kind of text it is and where it is used, and empty columns for the reviewer.

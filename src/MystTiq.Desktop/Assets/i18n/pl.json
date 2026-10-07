@@ -3961,5 +3961,15 @@
   "msg.mod_needs_ue4ss": "Ten MOD wymaga UE4SS, którego nie ma na tym serwerze. Najpierw zainstaluj UE4SS na jego stronie.",
   "msg.mod_logic_exists": "MOD LogicMods o tej nazwie pakietu już istnieje.",
   "msg.mod_installed_bpmodloader": "Zainstalowano {0} ze sprawdzonego archiwum ZIP (wykryto po zawartości: {1}). PAK-i LogicMods ładuje BPModLoaderMod z UE4SS, który nie jest włączony w mods.txt.",
-  "msg.restore_rollback_denied": "Uwaga: tymczasową kopię świata sprzed przywrócenia ({0}) zachowano: część plików w niej należy do administratorów. Napraw dostęp do folderu zapisów na stronie Kopie zapasowe pozwoli MystTiq usunąć ją następnym razem; można ją bezpiecznie usunąć."
+  "msg.restore_rollback_denied": "Uwaga: tymczasową kopię świata sprzed przywrócenia ({0}) zachowano: część plików w niej należy do administratorów. Napraw dostęp do folderu zapisów na stronie Kopie zapasowe pozwoli MystTiq usunąć ją następnym razem; można ją bezpiecznie usunąć.",
+  "dashboard.updateLocalService": "Zaktualizuj usługę do tej wersji",
+  "msg.service_outdated": "Usługa MystTiq na tym komputerze to v{0}, starsza niż ta aplikacja (v{1}). Twoje serwery działają przez nią, więc zmiany od v{0}, w tym poprawki uruchamiania i ochrona tożsamości, tam nie obowiązują.",
+  "msg.service_update_confirm": "Zaktualizować usługę MystTiq do tej wersji?",
+  "msg.service_update_detail": "Starsza usługa na tym komputerze zostanie zatrzymana, a uruchomi się usługa tej aplikacji. Działający PalServer działa dalej; gracze pozostają połączeni.",
+  "msg.service_update_refused": "Nie udało się zatrzymać starszej usługi: {0}",
+  "msg.service_update_none": "Na tym komputerze nie działa żadna starsza usługa MystTiq.",
+  "msg.service_update_done": "Starsza usługa została zatrzymana; teraz Twoje serwery obsługuje usługa tej aplikacji (v{0}).",
+  "msg.service_update_failed": "Starsza usługa została zatrzymana, ale usługa tej aplikacji się nie uruchomiła: {0}",
+  "msg.identity_launch_advice": "Ten serwer uruchamia PalServer z {0}. Gracze dostawali złą postać za każdym razem, gdy startował z -log, -stdout lub -FullStdOutLogOutput, a zachowywali swoją, gdy startował jak po dwukliku: wybierz Jak dwuklik w Serwer > Uruchamianie, zapisz, uruchom serwer ponownie i poproś ich o ponowne dołączenie.",
+  "msg.launcher_identity_warning": "Gracze dostawali złą postać za każdym razem, gdy PalServer startował z -log, -stdout, -FullStdOutLogOutput lub -abslog, a zachowywali swoją, gdy startował jak po dwukliku. Używaj Jak dwuklik, chyba że szukasz przyczyny problemu."
 }

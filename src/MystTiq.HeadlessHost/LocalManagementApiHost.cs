@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -203,7 +203,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var playerModeration = new PlayerModerationCoordinator([playerAdmin, rconModeration]);
             var whitelist = new HeadlessWhitelistService(paths, activity, playerModeration);
             // v1.0.0.1: notices a Steam player who was not given their own character (see HeadlessIdentityGuardService).
-            var identityGuard = new HeadlessIdentityGuardService(paths, activity, notifications, playerModeration);
+            var identityGuard = new HeadlessIdentityGuardService(paths, activity, notifications, playerModeration, () => serverConfig.LaunchArguments ?? []);
             // v1.0.0.2: unique player names (see HeadlessNameGuardService).
             var nameGuard = new HeadlessNameGuardService(paths, activity, notifications, playerModeration, playerRegistry);
             var kits = new HeadlessKitService(paths, activity, playerRegistry, new RconKitCommandRunner(paths, rcon));

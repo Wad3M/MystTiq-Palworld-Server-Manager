@@ -3961,5 +3961,15 @@
   "msg.mod_needs_ue4ss": "この MOD には UE4SS が必要ですが、このサーバーにはインストールされていません。先に UE4SS のページからインストールしてください。",
   "msg.mod_logic_exists": "このパッケージ名の LogicMods MOD はすでにあります。",
   "msg.mod_installed_bpmodloader": "検証済み ZIP から {0} をインストールしました（内容から {1} と判定）。LogicMods の PAK は UE4SS の BPModLoaderMod で読み込まれますが、mods.txt で有効になっていません。",
-  "msg.restore_rollback_denied": "注意: 復元前のワールドの一時コピー（{0}）は残りました。中の一部のファイルが管理者のものだからです。「バックアップ」ページで「セーブフォルダーのアクセス修正」を行うと、次回 MystTiq が削除できます。削除しても安全です。"
+  "msg.restore_rollback_denied": "注意: 復元前のワールドの一時コピー（{0}）は残りました。中の一部のファイルが管理者のものだからです。「バックアップ」ページで「セーブフォルダーのアクセス修正」を行うと、次回 MystTiq が削除できます。削除しても安全です。",
+  "dashboard.updateLocalService": "サービスをこのバージョンに更新",
+  "msg.service_outdated": "この PC の MystTiq サービスは v{0} で、このアプリ（v{1}）より古いです。サーバーはこのサービスで動いているため、v{0} 以降の変更（起動の修正や本人確認ガードを含む）は適用されていません。",
+  "msg.service_update_confirm": "MystTiq サービスをこのバージョンに更新しますか？",
+  "msg.service_update_detail": "この PC の古いサービスを停止し、このアプリのサービスを起動します。実行中の PalServer は動き続け、プレイヤーの接続も保たれます。",
+  "msg.service_update_refused": "古いサービスを停止できませんでした: {0}",
+  "msg.service_update_none": "この PC で動いている古い MystTiq サービスは見つかりませんでした。",
+  "msg.service_update_done": "古いサービスを停止しました。今はこのアプリのサービス（v{0}）がサーバーを動かしています。",
+  "msg.service_update_failed": "古いサービスは停止しましたが、このアプリのサービスが起動しませんでした: {0}",
+  "msg.identity_launch_advice": "このサーバーは {0} で PalServer を起動します。-log、-stdout、-FullStdOutLogOutput 付きで起動したときは毎回プレイヤーに別のキャラクターが割り当てられ、ダブルクリックと同じ起動では自分のキャラクターのままでした。「サーバー > ランチャー」で「ダブルクリックと同じ」を選んで保存し、サーバーを再起動してから入り直してもらってください。",
+  "msg.launcher_identity_warning": "PalServer を -log、-stdout、-FullStdOutLogOutput、-abslog 付きで起動したときは毎回プレイヤーに別のキャラクターが割り当てられ、ダブルクリックと同じ起動では自分のキャラクターのままでした。原因を調べるとき以外は「ダブルクリックと同じ」を使ってください。"
 }

@@ -3961,5 +3961,15 @@
   "msg.mod_needs_ue4ss": "Questo MOD richiede UE4SS, che non è installato su questo server. Installa prima UE4SS dalla sua pagina.",
   "msg.mod_logic_exists": "Esiste già un MOD LogicMods con questo nome di pacchetto.",
   "msg.mod_installed_bpmodloader": "{0} installato da un archivio ZIP convalidato ({1} rilevato dal contenuto). I PAK LogicMods si caricano tramite BPModLoaderMod di UE4SS, che non è attivo in mods.txt.",
-  "msg.restore_rollback_denied": "Nota: la copia temporanea del mondo di prima del ripristino ({0}) è stata conservata: alcuni file al suo interno appartengono agli amministratori. Correggi accesso alla cartella dei salvataggi nella pagina Backup consente a MystTiq di rimuoverla la prossima volta; è sicuro eliminarla."
+  "msg.restore_rollback_denied": "Nota: la copia temporanea del mondo di prima del ripristino ({0}) è stata conservata: alcuni file al suo interno appartengono agli amministratori. Correggi accesso alla cartella dei salvataggi nella pagina Backup consente a MystTiq di rimuoverla la prossima volta; è sicuro eliminarla.",
+  "dashboard.updateLocalService": "Aggiorna il servizio a questa versione",
+  "msg.service_outdated": "Il servizio MystTiq su questo PC è v{0}, più vecchio di questa app (v{1}). I tuoi server funzionano tramite esso, quindi ciò che è cambiato dalla v{0} lì non è attivo, comprese le correzioni di avvio e la protezione dell'identità.",
+  "msg.service_update_confirm": "Aggiornare il servizio MystTiq a questa versione?",
+  "msg.service_update_detail": "Il servizio più vecchio su questo PC viene fermato e si avvia quello di questa app. Un PalServer in esecuzione continua a funzionare; i giocatori restano connessi.",
+  "msg.service_update_refused": "Impossibile fermare il servizio più vecchio: {0}",
+  "msg.service_update_none": "Nessun servizio MystTiq più vecchio in esecuzione trovato su questo PC.",
+  "msg.service_update_done": "Il servizio più vecchio è stato fermato e ora i tuoi server girano con quello di questa app (v{0}).",
+  "msg.service_update_failed": "Il servizio più vecchio è stato fermato, ma quello di questa app non è partito: {0}",
+  "msg.identity_launch_advice": "Questo server avvia PalServer con {0}. I giocatori hanno ricevuto il personaggio sbagliato ogni volta che è partito con -log, -stdout o -FullStdOutLogOutput, e hanno tenuto il loro quando è partito come con un doppio clic: scegli Come doppio clic in Server > Avvio, salva, riavvia il server e falli rientrare.",
+  "msg.launcher_identity_warning": "I giocatori hanno ricevuto il personaggio sbagliato ogni volta che PalServer è partito con -log, -stdout, -FullStdOutLogOutput o -abslog, e hanno tenuto il loro quando è partito come con un doppio clic. Usa Come doppio clic, a meno che tu non stia facendo una diagnosi."
 }

@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.0: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -403,6 +403,17 @@ public sealed partial class MainWindow : Window
             if (await dialog.ShowDialog<bool>(this) != true) return;
         }
         vm.UseMystTiqForNxmLinks();
+    }
+
+    // v1.0.6.1: stop the older local service and start this app's own, after a confirmation.
+    private async void UpdateLocalService_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        var dialog = new Views.ConfirmOperationDialog(Localizer.T("Update the MystTiq service to this version?"),
+            [Localizer.T("The older service on this PC is stopped and this app's own is started. A running PalServer keeps running; players stay connected.")],
+            Localizer.T("Update"), danger: false);
+        if (await dialog.ShowDialog<bool>(this) != true) return;
+        await vm.UpdateLocalServiceAsync();
     }
 
     // v1.0.6.0 (roadmap S-3): add or remove one Pal in the player's Pal box, after the preview and a confirmation.
