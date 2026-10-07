@@ -120,9 +120,6 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v0.9.0.0 – v0.9.4.0 | Delivered | 12 display languages for labels, messages and game names; roles explained; accessible names and keyboard reach |
-| v0.9.5.0 – v0.9.8.0 | Delivered | Servers never start each other; true update checks; firewall per server port; fast server search; Avalonia 12; alerts when a component falls behind; Linux install |
-| v0.9.9.0 – v0.9.10.0 | Delivered | One local helper; running servers survive adding one; crash causes for joins; UE4SS compared automatically; names kept in every language |
 | v1.0.6.1 | Current | Fixes a player getting a new character: an older MystTiq service still running is flagged and replaced in one click; no Launcher preset adds the options behind it |
 | v1.0.6.0 | Previous | Add or remove a Pal in a player's Pal box; MODs laid out as the game folder (LogicMods, PAK with scripts) install |
 | v1.0.5.0 | Earlier | A MOD browser: your Downloads folder, Thunderstore, CurseForge, GitHub releases and Nexus Mods, each archive checked before it installs |
