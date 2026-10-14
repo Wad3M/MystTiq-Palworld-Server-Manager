@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.9: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.0: file reviewed for this release (2026-10-12).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -284,8 +284,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ConnectRemoteServerTabCommand = new RelayCommand(OpenConnectRemoteServerTab);
         WizardAdvanceCommand = new RelayCommand(AdvanceWizardStep);
         WizardBackCommand = new RelayCommand(GoBackWizardStep);
-        ChooseLocalConnectionCommand = new RelayCommand(ChooseLocalConnection);
-        ChooseRemoteConnectionCommand = new RelayCommand(ChooseRemoteConnection);
         DetectLocalServiceCommand = new AsyncCommand(DetectLocalServiceAsync, () => !IsBusy);
         ChooseCloneWorldSourceCommand = new RelayCommand(() => ChooseNewServerWorldSource("Clone"));
         ChooseNewWorldSourceCommand = new RelayCommand(() => ChooseNewServerWorldSource("NewWorld"));
@@ -445,8 +443,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string WizardStep1NextButtonLabel => IsNewServerSetupFlow ? "Next: Choose World Source →" : "Next: Server Defaults →";
     public string WizardStepSettingsLabel => "Step 2 of 3 — In-Game Server Defaults (new server only)";
     public string WizardStepConfirmLabel => IsNewServerSetupFlow ? "Step 8 of 8 — Confirm & Finish" : "Step 3 of 3 — Confirm & Finish";
-    public ICommand ChooseLocalConnectionCommand { get; }
-    public ICommand ChooseRemoteConnectionCommand { get; }
     public ICommand DetectLocalServiceCommand { get; }
 
     // v0.7.81.0: delegates to ActiveTab.IsNewServerSetupFlow/WorldSource the same way

@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.8.9: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.0: file reviewed for this release (2026-10-12). -->
 # Product roadmap
 
-Updated 2026-10-08. **Current version: v1.0.8.9. Accepted baseline: v1.0.0.0. Next milestone: none scheduled (the ViewModel split C-0 to C-9 is complete; Q-10's 24-hour runs are collected after 03:00 UTC on 2026-10-13).**
+Updated 2026-10-08. **Current version: v1.0.9.0. Accepted baseline: v1.0.0.0. Next milestone: v1.0.9.1 (B-4, Discord control commands; scheduled by the owner 2026-10-12, D-11).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -30,6 +30,7 @@ This is the active plan. Completed work and the per-version detail behind every 
 | D-8 | MOD browser repositories (2026-10-06) | The owner's Downloads folder or other folders, Nexus Mods (the owner's account is free: Mod Manager Download links), Thunderstore, CurseForge, GitHub releases. |
 | D-9 | Outside review (2026-10-08) | **Every item is scheduled**: the quality and safety items in v1.0.7.0 and the releases after it, the ViewModel split as v1.0.8.0 and then v1.0.8.1, v1.0.8.2, v1.0.8.3 and on, one area per release. Verdicts: [ANALYSIS_REVIEW_2026-10-07.md](ANALYSIS_REVIEW_2026-10-07.md). |
 | D-10 | A saved list that cannot be read (Q-1), 2026-10-08 | **Keep a copy of the bad file and load the last good copy.** If there is no good copy, refuse changes to that list and alert the owner, with the alert linking to the repair function. |
+| D-11 | The backlog (2026-10-12) | **Build B-4, B-3 and B-2** ("fix the bugs, and complete the roadmap"): Discord control commands, MOD load order with profile export and import, and level-gap scans. B-5 (full web admin) stays not planned. Afterwards: a documentation pass, a release, and that release as the new accepted baseline (T-2). |
 
 ## v1.0.2.0 — Unattended reliability
 
@@ -70,7 +71,7 @@ Every edit in this milestone follows the same rules:
 | --- | --- | --- | --- | --- |
 | S-1 | Remove an item from a player | One named item is removed from one player's inventory. Other items are unchanged. The backup restores byte for byte. | Harness on a copy of a save. Live: clone server, player confirms, restore check. Recorded (v1.0.4.0): the logic harness, and on a copy of the clone's world one stack was removed and one added through the API, each after a fresh safety backup that passed its check, with only that slot changed; an item the world holds nowhere as a plain stack was refused, as was any edit while a server ran; and restoring the first edit's safety backup gave the pre-edit Level.sav byte for byte. A player confirming in game is owed. Recorded (v1.0.6.0, 2026-10-06) on the clone's real world: a stack removed, then PalServer loaded the world, saved and stopped; in the save the game wrote it was still gone; the safety backup restored the pre-edit Level.sav byte for byte. A player looking in game is owed. | Built |
 | S-2 | Add an item to a player | One item is added to one player's inventory. Refused if the inventory is full or the player is online. | Same as S-1, plus a refused-case check. Recorded (v1.0.4.0) with S-1, plus the refusals (an item the world holds nowhere as a plain stack, a full inventory in the harness, any edit while a server runs). A player confirming in game is owed. Recorded (v1.0.6.0, 2026-10-06) with S-1: the added stack was still there in the save the game wrote. | Built |
-| S-3 | Add and remove a Pal | One Pal is added to, and then removed from, one player. Pal data is checked against the game's own record. | Same as S-1, run on a clone with a test Pal. | Planned |
+| S-3 | Add and remove a Pal | One Pal is added to, and then removed from, one player. Pal data is checked against the game's own record. | Same as S-1, run on a clone with a test Pal. | Moved to v1.0.6.0 (Built there) |
 
 ## Carried from v1.0 (evidence still owed)
 
@@ -174,13 +175,23 @@ Exit gate (per release):
 | C-8 | v1.0.8.8 | Update Center, Doctor, Crash Analyzer, Diagnostics Center. Recorded (v1.0.8.8, 2026-10-12): `DiagnosticsViewModel` (`vm.Diagnostics`: the Update Center, Server Doctor, the Crash Analyzer, the Diagnostics Center with network, reachability, firewall, UPnP, anti-cheat and console capture); the server-files and pip updates and the instance list stay with the window, handed in; the session gained `ServerIsRunning`. The full gate and the ArtworkHarness pass. `MainWindowViewModel.cs` 312,738 bytes; all its files 339,118 (were 375,111). | Built |
 | C-9 | v1.0.8.9 | Settings, Security, Fleet, browser view. What is left is the window shell and tab coordination. Recorded (v1.0.8.9, 2026-10-12): `SecurityViewModel` (`vm.Security`: principals, user accounts, the browser view's address) and `FleetViewModel` (`vm.Fleet`: servers, Clone World and its restart, the fleet actions). Signing in, the role gates, the setup wizard and the Settings page (the connection, profile editor, wizard and tab theme: tab coordination) stay with the window shell. Fixed while moving: window raises of page properties reached no binding (the Automation no-rules card since v1.0.8.7, the Workspace discovery status since v1.0.8.4); `PageViewModel.Raise`, a gate check and a harness check. The full gate and the ArtworkHarness pass. `MainWindowViewModel.cs` 295,337 bytes; all its files 321,400 (were 339,118; 732,039 before C-0). | Built |
 
+## v1.0.9.0 and after — The backlog, scheduled (D-11)
+
+Exit gate per release: the item is `Built` with its harness evidence; a live check the owner must run is listed under
+"Carried" until it is recorded. B-4 was found to exist already (since v0.6.17.0, see below), so its release closes the gaps.
+
+| ID | Release | Item | Status |
+| --- | --- | --- | --- |
+| T-1 | v1.0.9.0 | Commands nothing can run are removed (`ToggleWorldMapCommand`, the setup wizard's former Local/Remote choice commands), and a gate check keeps every command reachable from a button, the Ribbon or code. Recorded (v1.0.9.0, 2026-10-12): The three commands removed; the gate's reachability check passes on 251 commands and was shown to fail, naming the command, on an added unused one. | Built |
+| B-4 | v1.0.9.1 | Discord control commands. The bot already has `/mysttiq-status`, `-players`, `-start`, `-stop`, `-restart`, `-save`, `-backup`, `-broadcast`, `-kick`, `-ban` and `-unban`, each with a mapped MystTiq role and the coordinator's locks. Gaps closed here: a long command (start, stop, restart, backup) answers within Discord's 3-second limit and then reports its result (today nothing defers, so Discord shows "did not respond"); a Discord start runs the same pre-start MOD check as the REST start. Evidence: a harness on the command flow (deferral, refusals by role, conflicts). Live: the owner's bot runs a backup and a restart. | Planned |
+| B-3 | v1.0.9.2 | MOD load order and profile export and import. The MOD library shows the order MODs load in (UE4SS MODs by `mods.txt`, PAKs by how the game mounts them) and the UE4SS order can be changed. A profile (each MOD, on or off, its order, version, source and file hash) exports to a file; importing it sets order and on/off for the MODs present and lists the missing ones with their sources. Refused while the server runs; the previous `mods.txt` is kept. Evidence: a harness on a temporary MOD tree; live on the clone. | Planned |
+| B-2 | v1.0.9.3 | Anti-cheat level-gap scans from save data. A player whose level is out of line with their recorded playtime, or who gained more levels between two world days than the playtime between them allows, is reported as a finding with the numbers behind it. Findings only, never an automatic kick or ban. The thresholds are set from a copy of the real world and its backups, never the live world. Evidence: a harness with made-up histories at and past each threshold; the scan run on a copy of the real world, with its results and thresholds recorded. | Planned |
+| T-2 | v1.1.0.0 | Documentation pass and the new accepted baseline (asked 2026-10-12, after the backlog): every user and developer document read against the code and brought up to date, a full release packaged, and v1.1.0.0 named the accepted baseline in place of v1.0.0.0. | Planned |
+
 ## Backlog (not scheduled)
 
 | ID | Item | Note |
 | --- | --- | --- |
-| B-2 | Anti-cheat level-gap scans from save data | Competitor gap (PalSupervisor). Needs real data to tune thresholds. Would be a candidate for the milestone after v1.0.4.0. |
-| B-3 | Mod load order and profile export and import | Competitor gap (PalSupervisor). |
-| B-4 | Discord control commands | Start, stop, restart and backup from Discord, with role checks. Confirm current Discord code first (alerts only today). |
 | B-5 | Full web admin UI | Write access in the browser. Not planned: needs a hardened authentication model first. |
 
 ## Not planned

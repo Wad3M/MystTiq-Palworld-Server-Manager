@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.9: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.0: file reviewed for this release (2026-10-12).
 namespace MystTiq.Core.Services;
 
 // v0.8.3.0: the item picker's search box. Palworld ids are CamelCase words joined by underscores ("PalSphere_Mega",

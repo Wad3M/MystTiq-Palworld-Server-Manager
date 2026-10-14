@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.9: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.0: file reviewed for this release (2026-10-12).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -30,11 +30,6 @@ public sealed class MapViewModel : PageViewModel
         TeleportToPlayerCommand = new AsyncCommand(() => RunTeleportAsync(toMe: false), () => !Session.IsBusy && Players.SelectedPlayerRecord?.Online == true);
         ClearMapBackgroundCommand = new RelayCommand(ClearMapBackground);
         SetMapPresetCommand = new RelayCommand<MapPreset>(SetMapPreset);
-        ToggleWorldMapCommand = new RelayCommand(() =>
-        {
-            IsWorldMapExpanded = !IsWorldMapExpanded;
-            if (IsWorldMapExpanded) LoadMapBasesIfNeeded();
-        });
         RefreshMapBasesCommand = new AsyncCommand(RefreshMapBasesAsync, () => !Session.IsBusy);
         SelectMapPlayerCommand = new RelayCommand<string>(SelectMapPlayer);
         ResetMapViewCommand = new RelayCommand(ResetMapView);
@@ -662,7 +657,6 @@ public sealed class MapViewModel : PageViewModel
 
     public bool IsWorldMapExpanded { get => _isWorldMapExpanded; internal set => SetField(ref _isWorldMapExpanded, value); }
 
-    public ICommand ToggleWorldMapCommand { get; }
 
     // v0.7.92.0: guild-base markers and click-to-select on the live map.
     private IReadOnlyList<BaseLocationDto> _lastBaseLocations = [];

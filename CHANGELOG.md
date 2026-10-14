@@ -1,4 +1,13 @@
-<!-- MystTiq v1.0.8.9: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.0: file reviewed for this release (2026-10-12). -->
+## v1.0.9.0 — Every Command Reachable; the Backlog Scheduled
+
+- Roadmap T-1: `ToggleWorldMapCommand`, `ChooseLocalConnectionCommand` and `ChooseRemoteConnectionCommand` removed (only
+  declared and assigned; nothing could run them). The gate now checks every desktop command is used beyond its
+  declaration.
+- Roadmap D-11: the owner scheduled the backlog (B-4 v1.0.9.1, B-3 v1.0.9.2, B-2 v1.0.9.3) and a documentation pass with
+  a new accepted baseline (T-2, v1.1.0.0). S-3's original v1.0.4.0 row now reads as moved.
+- Version advanced to 1.0.9.0.
+
 ## v1.0.8.9 — Security and Fleet, Tidied; the Split Is Done
 
 - Roadmap C-9: the Security page (principals, user accounts, the browser view's address) moved into

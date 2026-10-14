@@ -1,4 +1,4 @@
-# MystTiq v1.0.8.9: file reviewed for this release (2026-10-12).
+# MystTiq v1.0.9.0: file reviewed for this release (2026-10-12).
 [CmdletBinding()]
 param(
     [ValidateSet('Debug','Release')][string]$Configuration = 'Release',
