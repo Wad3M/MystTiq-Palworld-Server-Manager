@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -258,6 +258,8 @@ public interface IMystTiqApiClient
 
     Task<BackupVerificationResultDto> VerifyBackupAsync(ConnectionProfile profile, string fileName, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<BackupVerificationBatchDto> VerifyAllBackupsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v1.0.7.2 (roadmap Q-12): stops the backup scan running now.
+    Task CancelBackupScanAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<BackupRetentionPreviewDto> PreviewBackupRetentionAsync(ConnectionProfile profile, int keepLatest, int maxAgeDays, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<BackupRetentionApplyResultDto> ApplyBackupRetentionAsync(ConnectionProfile profile, string token, string? bearerToken = null, CancellationToken cancellationToken = default);
 

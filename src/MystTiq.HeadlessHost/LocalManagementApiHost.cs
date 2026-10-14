@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -1483,6 +1483,10 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
 
         routes.MapPost("/backups/{fileName}/verify", async (string fileName, CancellationToken token) =>
             Results.Ok(await p.Backups.VerifyAsync(fileName, token))).RequireRole(MystTiqRole.Operator, p.Id);
+
+        // v1.0.7.2 (roadmap Q-12): stops the backup scan running now (Verify All, or reading world days).
+        routes.MapPost("/backups/scan/cancel", () =>
+            Results.Ok(new { cancelled = p.Backups.CancelScan() })).RequireRole(MystTiqRole.Operator, p.Id);
 
         routes.MapPost("/backups/verify-all", async (CancellationToken token) =>
             Results.Ok(await p.Backups.VerifyAllAsync(token))).RequireRole(MystTiqRole.Operator, p.Id);

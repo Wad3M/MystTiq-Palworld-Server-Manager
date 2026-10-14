@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.1: file reviewed for this release (2026-10-08). -->
+<!-- MystTiq v1.0.7.2: file reviewed for this release (2026-10-11). -->
 # v1.0.2.0 Changed Files
 
 - `src/MystTiq.Core/Services/FrozenServerWatchdog.cs` (new): when a running server counts as frozen; the probe interface.

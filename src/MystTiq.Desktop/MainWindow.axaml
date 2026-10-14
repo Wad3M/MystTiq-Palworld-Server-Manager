@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.1: file reviewed for this release (2026-10-08). -->
+<!-- MystTiq v1.0.7.2: file reviewed for this release (2026-10-11). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -317,7 +317,7 @@
               </StackPanel>
             </Grid>
           </ScrollViewer>
-          <Border Grid.Row="1" Classes="statuscard" Margin="7,5,7,9" Padding="10"><StackPanel Spacing="3"><TextBlock Text="{services:TrText ServerState}" FontWeight="SemiBold" Foreground="{DynamicResource GreenBrush}"/><TextBlock Text="{services:TrText ConnectionState}" FontSize="10" Foreground="{DynamicResource BlueBrush}" TextWrapping="Wrap"/></StackPanel></Border>
+          <Border Grid.Row="1" Classes="statuscard" Margin="7,5,7,9" Padding="10"><StackPanel Spacing="3"><TextBlock Text="{services:TrText ServerState}" FontWeight="SemiBold" Foreground="{DynamicResource GreenBrush}"/><TextBlock Text="{services:TrText ConnectionState}" FontSize="10" Foreground="{DynamicResource BlueBrush}" TextWrapping="Wrap"/><TextBlock x:Name="ConnectionCauseText" Text="{services:TrText ConnectionCauseText}" FontSize="10" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding HasConnectionCause}"/></StackPanel></Border>
         </Grid>
       </Border>
       <Grid Grid.Column="1" ClipToBounds="True">
@@ -330,6 +330,10 @@
         <!-- v0.8.14.0: says so when cards are hidden or read-only because of the signed-in role (RoleAccess). -->
         <Border x:Name="RoleHiddenNotice" Classes="statuscard" Padding="10,6" IsVisible="{Binding HasRoleHiddenNotice}">
           <TextBlock Text="{services:TrText RoleHiddenNotice}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap"/>
+        </Border>
+        <!-- v1.0.7.2 (roadmap Q-13): a page opened while the app is busy says what it is waiting for. -->
+        <Border x:Name="PageWaitBanner" Classes="statuscard" Padding="10,6" IsVisible="{Binding HasPageWait}">
+          <TextBlock Text="{services:TrText PageWaitText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap"/>
         </Border>
         <!-- v1.0.7.0 (roadmap Q-2): an error nobody caught is shown here, on every page, instead of closing the app. -->
         <Border x:Name="UnexpectedErrorBanner" Classes="statuscard" BorderBrush="{DynamicResource RedBrush}" BorderThickness="1" Padding="10,7" IsVisible="{Binding HasUnexpectedError}">
@@ -396,11 +400,13 @@
 
           <Grid ColumnDefinitions="1.15*,1.15*,1.15*,1.15*" ColumnSpacing="8">
             <Border Classes="statuscard" Padding="8,6" Classes.glowGreen="{Binding IsServerGlowGreen}" Classes.glowRed="{Binding IsServerGlowRed}" Classes.glowAmber="{Binding IsServerGlowAmber}">
-              <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
                 <TextBlock Text="{services:Tr dashboard.server}" Classes="muted"/>
                 <TextBlock Grid.Row="1" Text="{services:TrText ServerState}" FontSize="15" FontWeight="SemiBold"/>
                 <TextBlock Grid.Row="2" Text="{services:TrText DashboardSessionText}" Classes="muted"/>
-                <Border Grid.Column="1" Grid.RowSpan="3" Background="{DynamicResource CardStrongBrush}" BorderBrush="{DynamicResource BlueAccentBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="8,3" VerticalAlignment="Center"><TextBlock Text="{services:TrText UptimeText}" Foreground="{DynamicResource BlueBrush}" FontWeight="Bold" FontSize="12"/></Border>
+                <!-- v1.0.7.2 (roadmap Q-8): the step a running start is at, and for how long. -->
+                <TextBlock x:Name="StartupStageText" Grid.Row="3" Text="{services:TrText StartupStageText}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasStartupStage}"/>
+                <Border Grid.Column="1" Grid.RowSpan="4" Background="{DynamicResource CardStrongBrush}" BorderBrush="{DynamicResource BlueAccentBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="8,3" VerticalAlignment="Center"><TextBlock Text="{services:TrText UptimeText}" Foreground="{DynamicResource BlueBrush}" FontWeight="Bold" FontSize="12"/></Border>
               </Grid>
             </Border>
             <Border Grid.Column="1" Classes="card glowDarkGreen" Padding="8,6">
@@ -2246,6 +2252,16 @@
           </Grid>
 
           <TextBlock Text="{services:TrText BackupDetail}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
+          <!-- v1.0.7.2 (roadmap Q-12): how far a backup scan is, Cancel while it runs, and the archives it could not read. -->
+          <Border x:Name="BackupScanCard" Classes="statuscard" Padding="10,6" IsVisible="{Binding HasBackupScan}">
+            <StackPanel Spacing="4">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <TextBlock Text="{services:TrText BackupScanText}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Classes="plain" Content="{services:Tr ui.cancel}" Command="{Binding CancelBackupScanCommand}" IsVisible="{Binding IsBackupScanRunning}"/>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding BackupScanProblems}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:BackupScanProblemDto"><TextBlock Text="{services:TrText Text}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="11"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+            </StackPanel>
+          </Border>
         </StackPanel>
 
         <StackPanel IsVisible="{Binding IsModsPage}" Spacing="12">

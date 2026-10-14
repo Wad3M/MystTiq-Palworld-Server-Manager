@@ -1,4 +1,4 @@
-# MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+# MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 [CmdletBinding()]
 # v0.7.115.0: -AllowBuildOutputs skips ONLY the hygiene check for build output (bin, obj, artifacts, publish and
 # anything inside them). The logic gates validate mid-run, after they themselves have built, published and

@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -40,6 +40,33 @@ public sealed class BackupInventoryDto
     // v1.0.0.4: whether restores can replace the save folder, and the Pal\Saved folder a fix applies to.
     [JsonPropertyName("saveFolderReplaceable")] public bool SaveFolderReplaceable { get; init; } = true;
     [JsonPropertyName("savedFolderPath")] public string? SavedFolderPath { get; init; }
+    // v1.0.7.2 (roadmap Q-12): the backup scan running now (reading world days, Verify All), or the last one.
+    [JsonPropertyName("scan")] public BackupScanProgressDto? Scan { get; init; }
+}
+
+// v1.0.7.2 (roadmap Q-12): a backup scan's progress, and the archives it could not read.
+public sealed class BackupScanProgressDto
+{
+    [JsonPropertyName("kind")] public string Kind { get; init; } = string.Empty;
+    [JsonPropertyName("done")] public int Done { get; init; }
+    [JsonPropertyName("total")] public int Total { get; init; }
+    [JsonPropertyName("current")] public string? Current { get; init; }
+    [JsonPropertyName("unreadable")] public IReadOnlyList<BackupScanProblemDto> Unreadable { get; init; } = [];
+    [JsonPropertyName("startedUtc")] public DateTimeOffset StartedUtc { get; init; }
+    [JsonPropertyName("finishedUtc")] public DateTimeOffset? FinishedUtc { get; init; }
+    [JsonPropertyName("cancelled")] public bool Cancelled { get; init; }
+
+    [JsonIgnore] public bool Running => FinishedUtc is null;
+    [JsonIgnore] public string Text => Running
+        ? $"{Kind}: {Done} of {Total}"
+        : Cancelled ? $"{Kind}: {Done} of {Total}, cancelled" : $"{Kind}: {Done} of {Total}, done";
+}
+
+public sealed class BackupScanProblemDto
+{
+    [JsonPropertyName("fileName")] public string FileName { get; init; } = string.Empty;
+    [JsonPropertyName("reason")] public string Reason { get; init; } = string.Empty;
+    [JsonIgnore] public string Text => $"Could not read {FileName}: {Reason}";
 }
 
 public sealed class BackupOperationResultDto

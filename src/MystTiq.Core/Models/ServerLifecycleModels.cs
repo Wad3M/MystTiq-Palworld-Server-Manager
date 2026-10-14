@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 namespace MystTiq.Core.Models;
 
 public enum ServerLifecyclePhase
@@ -52,6 +52,11 @@ public sealed record ServerLifecycleSnapshot(
     // guards that refused on NativeProcessId blocked backup restores and save edits until the next start (found by the
     // v1.0.4.0 inventory smoke). Every "stop PalServer first" guard uses this.
     public bool ServerMayBeRunning => Processes.Count > 0 || Ready;
+
+    // v1.0.7.2 (roadmap Q-8): while a start runs, the step it is at (StartupStage), since when, and when the start began.
+    public string? StartupStage { get; init; }
+    public DateTimeOffset? StartupStageSinceUtc { get; init; }
+    public DateTimeOffset? StartupBeganUtc { get; init; }
 }
 
 public sealed record ServerLifecycleOperationResult(

@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 namespace MystTiq.Core.Models;
 
 // v0.6.11.0: external/WAN reachability is the genuine gap left after v0.6.4.0's Local Machine

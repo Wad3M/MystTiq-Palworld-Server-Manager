@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -4128,6 +4128,79 @@ try
             HeadlessNotificationRoutingService.RepeatCheckEvery = tick;
             listener.Stop();
         }
+    }, failures);
+
+    // v1.0.7.2 (roadmap Q-8): a start's stages, carried by status reads, and named when a start fails.
+    RunScenario("Start-up steps (Q-8): every status read during a start carries its step and since when; a start that fails names the step it stopped at; a duplicate start does not", () =>
+    {
+        var now = new DateTimeOffset(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
+        var progress = new StartupProgress(() => now);
+        var idle = new ServerLifecycleSnapshot(ServerLifecyclePhase.Stopped, null, [], [], false, false, now, null, "stopped");
+        Assert(progress.Decorate(idle).StartupStage is null, "no start, no step");
+        progress.Begin();
+        Assert(progress.Decorate(idle) is { StartupStage: StartupStage.CheckingSettings, StartupBeganUtc: { } began } && began == now, "a start begins by checking settings");
+        now = now.AddSeconds(2); progress.Enter(StartupStage.Launching);
+        now = now.AddSeconds(1); progress.Enter(StartupStage.WaitingForGamePort);
+        var waiting = progress.Decorate(idle);
+        Assert(waiting.StartupStage == StartupStage.WaitingForGamePort && waiting.StartupStageSinceUtc == now && waiting.StartupBeganUtc == now.AddSeconds(-3), "it moves through launching to waiting for the game port, each with its time");
+        var timeout = progress.Conclude(new ServerLifecycleOperationResult(HeadlessExitCode.StartupTimeout, idle, false, "UDP 8211 was not confirmed."));
+        Assert(timeout.Message == "The start stopped at \"Waiting for the game port\": UDP 8211 was not confirmed.", $"a failed start names its step [{timeout.Message}]");
+        var duplicate = progress.Conclude(new ServerLifecycleOperationResult(HeadlessExitCode.AlreadyRunning, idle, false, "PalServer is already running."));
+        Assert(duplicate.Message == "PalServer is already running.", "a duplicate start is not called a failure at a step");
+        var ok = progress.Conclude(new ServerLifecycleOperationResult(HeadlessExitCode.Success, idle, false, "PalServer started."));
+        Assert(ok.Message == "PalServer started.", "a successful start is left as it is");
+        progress.End();
+        Assert(progress.Decorate(idle).StartupStage is null, "when the start ends, the step is gone");
+    }, failures);
+
+    // v1.0.7.2 (roadmap Q-7): the connection line names the cause.
+    RunScenario("Connection status (Q-7): service unreachable, reconnecting, sign-in rejected, certificate rejected and a service error are told apart, each with a next step; a REST API not answering while Palworld runs is named", () =>
+    {
+        var at = new Uri("http://127.0.0.1:8213/");
+        var refused = new HttpRequestException("No connection could be made", new SocketException(10061));
+        Assert(MystTiq.Desktop.Services.ConnectionCause.ForFailure(refused, false, 1, at) is (MystTiq.Desktop.Services.ConnectionCause.Unreachable, var u) && u.Contains("http://127.0.0.1:8213") && u.Contains("Start the MystTiq service"), "never connected: unreachable, with the address and what to do");
+        Assert(MystTiq.Desktop.Services.ConnectionCause.ForFailure(refused, true, 3, at) is (MystTiq.Desktop.Services.ConnectionCause.Reconnecting, var r) && r.Contains("attempt 3"), "connected before: reconnecting, with the attempt");
+        Assert(MystTiq.Desktop.Services.ConnectionCause.ForFailure(new TaskCanceledException("timeout"), true, 1, at).State == MystTiq.Desktop.Services.ConnectionCause.Reconnecting, "a timeout after a working connection is reconnecting");
+        Assert(MystTiq.Desktop.Services.ConnectionCause.ForFailure(new HttpRequestException("401", null, System.Net.HttpStatusCode.Unauthorized), true, 1, at).State == MystTiq.Desktop.Services.ConnectionCause.SignInRejected, "401 is a rejected sign-in, not a lost service");
+        Assert(MystTiq.Desktop.Services.ConnectionCause.ForFailure(new HttpRequestException("403", null, System.Net.HttpStatusCode.Forbidden), false, 1, at).State == MystTiq.Desktop.Services.ConnectionCause.SignInRejected, "so is 403");
+        Assert(MystTiq.Desktop.Services.ConnectionCause.ForFailure(new HttpRequestException("tls", new System.Security.Authentication.AuthenticationException("pin")), false, 1, at).State == MystTiq.Desktop.Services.ConnectionCause.CertificateRejected, "a certificate mismatch says so");
+        Assert(MystTiq.Desktop.Services.ConnectionCause.ForFailure(new HttpRequestException("500", null, System.Net.HttpStatusCode.InternalServerError), true, 1, at) is (MystTiq.Desktop.Services.ConnectionCause.ServiceError, var e) && e.Contains("HTTP 500"), "a server error is named with its code");
+        Assert(MystTiq.Desktop.Services.ConnectionCause.ForConnected(true, false, "REST answered 503.").StartsWith("Palworld is running, but its REST API is not answering", StringComparison.Ordinal), "running with REST down is named");
+        Assert(MystTiq.Desktop.Services.ConnectionCause.ForConnected(false, false, "stopped") == string.Empty && MystTiq.Desktop.Services.ConnectionCause.ForConnected(true, true, "") == string.Empty, "a stopped server or a working REST API has nothing to add");
+    }, failures);
+
+    // v1.0.7.2 (roadmap Q-12): Verify All shows how far it is, names an archive it cannot read, and can be cancelled.
+    RunScenarioAsync("Backup scans (Q-12): Verify All reports 'N of M', names each archive it cannot read, and Cancel stops it with the ones done so far kept", async () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "q12-scan-" + Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(paths.BackupRoot);
+        var random = new Random(7);
+        for (var i = 0; i < 40; i++)
+        {
+            using var zip = System.IO.Compression.ZipFile.Open(Path.Combine(paths.BackupRoot, $"Palworld_2026-10-08_10-00-{i:00}-000.zip"), System.IO.Compression.ZipArchiveMode.Create);
+            var data = new byte[1_500_000]; random.NextBytes(data);
+            using var s = zip.CreateEntry("SaveGames/0/W/Level.sav", System.IO.Compression.CompressionLevel.NoCompression).Open();
+            s.Write(data);
+        }
+        File.WriteAllText(Path.Combine(paths.BackupRoot, "Palworld_2026-10-08_09-00-00-000.zip"), "not a zip");
+        var operations = new MystTiq.Core.Operations.OperationCoordinator(paths);
+        var backups = new HeadlessBackupService(paths, new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped }, new HeadlessActivityLogService(paths), operations, new MystTiq.Core.Operations.ServerProfileId("default"));
+
+        var all = await backups.VerifyAllAsync(CancellationToken.None);
+        var scan = backups.GetScan();
+        Assert(scan is { Kind: "Verifying backups", Done: 41, Total: 41, Cancelled: false, FinishedUtc: not null }, $"a finished scan says 41 of 41, done [{scan?.Done} of {scan?.Total}]");
+        Assert(scan!.Unreadable.Count == 1 && scan.Unreadable[0].FileName == "Palworld_2026-10-08_09-00-00-000.zip" && all.Results.Count(r => !r.Success) == 1, "the archive it cannot read is named, with why");
+        Assert(backups.GetInventory().Scan?.Done == 41, "the backup list carries the scan");
+        Assert(!backups.CancelScan(), "nothing to cancel once it is done");
+
+        var running = backups.VerifyAllAsync(CancellationToken.None);
+        var cancelled = false;
+        for (var i = 0; i < 2000 && !cancelled; i++) { if (backups.GetScan() is { Done: >= 1, FinishedUtc: null }) cancelled = backups.CancelScan(); else await Task.Delay(2); }
+        var partial = await running;
+        var stopped = backups.GetScan();
+        Assert(cancelled && stopped is { Cancelled: true } && stopped.Done < 41 && partial.Message.StartsWith("Cancelled after", StringComparison.Ordinal) && partial.Results.Count == stopped.Done,
+            $"Cancel stops it after the archive in hand, keeping the ones done [{partial.Message}]");
+        Assert(HeadlessBackupService.WorldDaySaveEvery == 10, "world days are saved every 10 backups, not after each");
     }, failures);
 }
 finally

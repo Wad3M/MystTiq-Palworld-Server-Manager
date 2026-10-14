@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -17,6 +17,17 @@ public sealed class ServerStatusDto
     // v1.0.0.1: when the process started, and whether it has been starting too long without opening its port.
     [JsonPropertyName("nativeStartedAt")] public DateTimeOffset? NativeStartedAt { get; init; }
     [JsonPropertyName("startupStuck")] public bool StartupStuck { get; init; }
+    // v1.0.7.2 (roadmap Q-8): while a start runs, the step it is at, since when, and when the start began.
+    [JsonPropertyName("startupStage")] public string? StartupStage { get; init; }
+    [JsonPropertyName("startupStageSinceUtc")] public DateTimeOffset? StartupStageSinceUtc { get; init; }
+    [JsonPropertyName("startupBeganUtc")] public DateTimeOffset? StartupBeganUtc { get; init; }
+
+    /// <summary>v1.0.7.2 (Q-8): "Waiting for the game port: 40 s (starting for 85 s)" while a start runs, else empty.</summary>
+    public string StartupStageText(DateTimeOffset now) => StartupStage is { Length: > 0 } stage
+        ? $"{stage}: {Seconds(now, StartupStageSinceUtc)} s (starting for {Seconds(now, StartupBeganUtc)} s)"
+        : string.Empty;
+
+    private static int Seconds(DateTimeOffset now, DateTimeOffset? since) => since is { } s ? (int)Math.Max(0, (now - s).TotalSeconds) : 0;
 
     // v0.7.88.0 bug fix: NativeProcessId alone is not "a process is alive right now" -- both
     // WindowsServerLifecycleService and LinuxServerLifecycleService (MystTiq.Core) deliberately keep

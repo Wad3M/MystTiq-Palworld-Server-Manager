@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -58,6 +58,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private NavigationPage _selectedPage = NavigationPage.Dashboard;
 
     private string _serverState = "Unknown";
+    private string _startupStageText = string.Empty;
+    public string StartupStageText { get => _startupStageText; private set { if (SetField(ref _startupStageText, value)) RaisePropertyChanged(nameof(HasStartupStage)); } }
+    public bool HasStartupStage => StartupStageText.Length > 0;
     private string _serviceState = "Unknown";
     private string _detail = "Choose a connection profile or configure a secured remote MystTiq service.";
     private string _nativePidText = "—";
@@ -546,6 +549,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RestoreBackupCommand = new AsyncCommand(RestoreBackupAsync, () => !IsBusy && SelectedBackup is not null && BackupRestoreConfirmed);
         VerifySelectedBackupCommand = new AsyncCommand(VerifySelectedBackupAsync, () => !IsBusy && SelectedBackup is not null);
         VerifyAllBackupsCommand = new AsyncCommand(VerifyAllBackupsAsync, () => !IsBusy && ManagementApiConnected);
+        // v1.0.7.2 (roadmap Q-12): works while Verify All keeps the window busy.
+        CancelBackupScanCommand = new RelayCommand(() => RunUi(() => CancelBackupScanAsync()));
         PreviewBackupRetentionCommand = new AsyncCommand(PreviewBackupRetentionAsync, () => !IsBusy && ManagementApiConnected);
         ApplyBackupRetentionCommand = new AsyncCommand(ApplyBackupRetentionAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(BackupRetentionToken));
         OpenBackupRootCommand = new RelayCommand(OpenBackupRoot, () => !string.IsNullOrWhiteSpace(BackupRootPath));
@@ -2519,6 +2524,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     private void RaiseIsBusyDependents(bool value)
     {
+            SignalBusy(value);
             if (value)
             {
                 _busyStartedAt = DateTimeOffset.UtcNow;
@@ -2801,6 +2807,32 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand RestoreBackupCommand { get; }
     public ICommand VerifySelectedBackupCommand { get; }
     public ICommand VerifyAllBackupsCommand { get; }
+    public ICommand CancelBackupScanCommand { get; }
+
+    // v1.0.7.2 (roadmap Q-12): the backup scan's progress ("Verifying backups: 3 of 47"), whether it runs, and what it could not read.
+    private string _backupScanText = string.Empty;
+    private bool _isBackupScanRunning;
+    public string BackupScanText { get => _backupScanText; private set { if (SetField(ref _backupScanText, value)) RaisePropertyChanged(nameof(HasBackupScan)); } }
+    public bool HasBackupScan => BackupScanText.Length > 0;
+    public bool IsBackupScanRunning { get => _isBackupScanRunning; private set => SetField(ref _isBackupScanRunning, value); }
+    public ObservableCollection<BackupScanProblemDto> BackupScanProblems { get; } = [];
+
+    private void ApplyBackupScan(BackupScanProgressDto? scan)
+    {
+        BackupScanText = scan?.Text ?? string.Empty;
+        IsBackupScanRunning = scan?.Running == true;
+        BackupScanProblems.Clear();
+        foreach (var problem in scan?.Unreadable ?? []) BackupScanProblems.Add(problem);
+    }
+
+    private async Task CancelBackupScanAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { BackupDetail = ex.Message; return; }
+        await _api.CancelBackupScanAsync(profile, BearerToken);
+        BackupDetail = "Cancelling: the scan stops after the backup in hand.";
+    }
     public ICommand PreviewBackupRetentionCommand { get; }
     public ICommand ApplyBackupRetentionCommand { get; }
     public ICommand OpenBackupRootCommand { get; }
@@ -3078,6 +3110,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private void PopulateBackupItems(BackupInventoryDto inventory)
     {
         ApplySaveFolderAccess(inventory);
+        ApplyBackupScan(inventory.Scan);
         BackupItems.Clear();
         foreach (var item in inventory.Items) BackupItems.Add(item);
         RaisePropertyChanged(nameof(BackupArchiveCountText));
@@ -3405,6 +3438,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     private void PerformNavigation(NavigationPage page)
     {
+        CancelPageWait();
         SelectedPage = page;
         RunUi(() => RefreshPageForNavigationAsync(page));
     }
@@ -3441,8 +3475,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // was pressed. These two show live data, so they wait for the busy state to clear (up to a
             // minute) and load if the user is still on the page. Other pages keep the old behaviour.
             if (page is not (NavigationPage.Map or NavigationPage.Players)) return;
-            for (var i = 0; i < 120 && IsBusy; i++) await Task.Delay(500);
-            if (IsBusy || SelectedPage != page) return;
+            // v1.0.7.2 (roadmap Q-13): a signal and a message instead of polling; leaving the page ends the wait.
+            if (!await WaitUntilNotBusyAsync(page)) return;
         }
         switch (page)
         {
@@ -4955,12 +4989,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ApplyDashboardSupport(snapshot);
             ManagementApiConnected = true;
             ConnectionState = "Connected";
+            NoteConnected(snapshot.Status, snapshot.Players);
             StatusBarText = $"Connected — {ServerState} — {snapshot.Players.OnlineCount} player(s)";
             StatusBarObservedText = $"Updated {snapshot.ObservedAt.ToLocalTime():HH:mm:ss}";
         }
         catch (Exception ex)
         {
             if (!ReferenceEquals(requestTab, ActiveTab)) return;
+            // v1.0.7.2 (roadmap Q-7): the recurring poll names the cause too (and says when it is reconnecting).
+            NoteConnectionFailure(ex, profile.BaseAddress);
             StatusBarText = $"Status unavailable — {ex.Message}";
             StatusBarObservedText = $"Failed {DateTimeOffset.Now:HH:mm:ss}";
         }
@@ -5074,6 +5111,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             ManagementApiConnected = false;
             ConnectionState = "Connection failed";
+            NoteConnectionFailure(ex, SelectedProfile?.BaseAddress);
             if (SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id)
             {
                 if (LocalApiStatus != "Authentication required")
@@ -8060,7 +8098,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         IsBusy = true;
         try
         {
-            var result = await _api.VerifyAllBackupsAsync(profile, BearerToken);
+            // v1.0.7.2 (roadmap Q-12): the progress is read every 1.5 s while Verify All runs.
+            var verify = _api.VerifyAllBackupsAsync(profile, BearerToken);
+            while (await Task.WhenAny(verify, Task.Delay(1500)) != verify)
+            {
+                try { ApplyBackupScan((await _api.GetBackupsAsync(profile, BearerToken)).Scan); }
+                catch (Exception) { /* progress is a convenience; the verify itself still reports */ }
+            }
+            var result = await verify;
             BackupDetail = $"{result.Message} Passed: {result.Results.Count(x => x.Success)}; failed: {result.Results.Count(x => !x.Success)}.";
             await RefreshBackupsCoreAsync(profile);
         }
@@ -10441,6 +10486,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                     : "Stopped / Not ready";
         // v1.0.0.1: a start that has run for StartupWatch.StuckAfter without opening its port offers the stuck-start test.
         IsStartupStuck = status.StartupStuck && status.IsProcessLive;
+        // v1.0.7.2 (roadmap Q-8): the step a running start is at.
+        StartupStageText = status.StartupStageText(DateTimeOffset.UtcNow);
 
         NativePidText = status.NativeProcessId?.ToString() ?? "—";
         ListenerText = status.GuardedListeningPorts.Count > 0

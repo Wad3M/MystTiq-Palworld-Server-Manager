@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using Avalonia;
 using Avalonia.Media;
 using MystTiq.Desktop.Models;
@@ -129,7 +129,10 @@ public sealed class TabSession : ViewModelBase
         // v0.7.23.0: "Incompatible API version"/"Needs bearer token" are the two new specific
         // failure reasons RefreshTabLightweightAsync can now report (previously both collapsed
         // into "Connection failed") -- still real connection failures, still the red dot.
-        "Connection failed" or "Invalid profile" or "Incompatible API version" or "Needs bearer token" => "Red",
+        // v1.0.7.2 (roadmap Q-7): the named causes.
+        "Reconnecting" => "Amber",
+        "Connection failed" or "Invalid profile" or "Incompatible API version" or "Needs bearer token" or
+            "Service unreachable" or "Sign-in rejected" or "Certificate rejected" or "Service error" => "Red",
         "Connected" => IsBusy ? "Amber" : (ServerIsRunning ? "Green" : "Red"),
         _ => "Muted"
     };

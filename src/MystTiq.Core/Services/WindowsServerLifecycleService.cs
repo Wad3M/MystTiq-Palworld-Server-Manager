@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -51,7 +51,7 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
     public Task<ServerLifecycleSnapshot> GetStatusAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        lock (stateGate) return ReadStatus();
+        lock (stateGate) return Task.FromResult(startup.Decorate(ReadStatus().Result));
     }
 
     private Task<ServerLifecycleSnapshot> ReadStatus()
@@ -119,7 +119,17 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
             persisted?.Phase == ServerLifecyclePhase.Crashed ? persisted.Detail : "PalServer is not running."));
     }
 
+    // v1.0.7.2 (roadmap Q-8): the start's stages, carried by every status read while it runs.
+    private readonly StartupProgress startup = new();
+
     public async Task<ServerLifecycleOperationResult> StartAsync(IReadOnlyList<string> serverArguments, TimeSpan startupTimeout, CancellationToken cancellationToken = default)
+    {
+        startup.Begin();
+        try { return startup.Conclude(await StartCoreAsync(serverArguments, startupTimeout, cancellationToken)); }
+        finally { startup.End(); }
+    }
+
+    private async Task<ServerLifecycleOperationResult> StartCoreAsync(IReadOnlyList<string> serverArguments, TimeSpan startupTimeout, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(serverArguments);
         var launcher = LauncherRuntimeOptions.Parse(serverArguments);
@@ -152,6 +162,7 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
             return new ServerLifecycleOperationResult(HeadlessExitCode.PortConflict, await GetStatusAsync(cancellationToken), false,
                 $"UDP port {expectedGamePort} is already in use by another process on this machine. Stop whatever's using it, or change this server's configured port, before starting -- launching anyway would leave PalServer running but unable to bind its game port, indistinguishable from a hang.");
 
+        startup.Enter(StartupStage.Launching);
         Directory.CreateDirectory(paths.ManagerRuntimeRoot);
         // v0.8.18.0: the server's bandwidth policy goes into Engine.ini just before it starts (never blocks the start).
         var networkLine = EngineNetworkSettings.ApplyBeforeStart(paths);
@@ -212,6 +223,7 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
             return new ServerLifecycleOperationResult(HeadlessExitCode.LaunchFailed, await GetStatusAsync(cancellationToken), false, failed.Detail);
         }
 
+        startup.Enter(StartupStage.WaitingForGamePort);
         var deadline = DateTimeOffset.UtcNow + startupTimeout;
         ServerLifecycleSnapshot? last = null;
         while (DateTimeOffset.UtcNow < deadline)

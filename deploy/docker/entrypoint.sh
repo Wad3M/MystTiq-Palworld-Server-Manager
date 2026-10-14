@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+# MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 # v1.0.3.0 (roadmap P-1): the container's start. On the first start with an empty /data it writes a configuration whose
 # every path is under /data, an API bearer token and a self-signed TLS certificate, and switches the API on for remote
 # use (all addresses, port 8213): outside its container the API is reached through the published port, which needs

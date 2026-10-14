@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using MystTiq.Core.Models;
@@ -72,7 +72,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
     public Task<ServerLifecycleSnapshot> GetStatusAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        lock (stateGate) return ReadStatus();
+        lock (stateGate) return Task.FromResult(startup.Decorate(ReadStatus().Result));
     }
 
     private Task<ServerLifecycleSnapshot> ReadStatus()
@@ -162,7 +162,17 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                 : "PalServer is not running."));
     }
 
-    public async Task<ServerLifecycleOperationResult> StartAsync(
+    // v1.0.7.2 (roadmap Q-8): the start's stages, carried by every status read while it runs.
+    private readonly StartupProgress startup = new();
+
+    public async Task<ServerLifecycleOperationResult> StartAsync(IReadOnlyList<string> serverArguments, TimeSpan startupTimeout, CancellationToken cancellationToken = default)
+    {
+        startup.Begin();
+        try { return startup.Conclude(await StartCoreAsync(serverArguments, startupTimeout, cancellationToken)); }
+        finally { startup.End(); }
+    }
+
+    private async Task<ServerLifecycleOperationResult> StartCoreAsync(
         IReadOnlyList<string> serverArguments,
         TimeSpan startupTimeout,
         CancellationToken cancellationToken = default)
@@ -205,6 +215,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                 $"UDP port {expectedGamePort} is already in use by another process on this machine. Stop whatever's using it, or change this server's configured port, before starting -- launching anyway would leave PalServer running but unable to bind its game port, indistinguishable from a hang.");
         }
 
+        startup.Enter(StartupStage.Launching);
         Directory.CreateDirectory(paths.ManagerRuntimeRoot);
         var now = DateTimeOffset.UtcNow;
         stateStore.Write(new PersistedServerLifecycleState(
@@ -246,6 +257,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                 failedState.Detail);
         }
 
+        startup.Enter(StartupStage.WaitingForGamePort);
         var deadline = DateTimeOffset.UtcNow + startupTimeout;
         ServerLifecycleSnapshot? lastSnapshot = null;
 

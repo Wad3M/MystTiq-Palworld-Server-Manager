@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 // MystTiq v1.0.0.1: startup-window console capture controls.
 using MystTiq.Desktop.Models;
 

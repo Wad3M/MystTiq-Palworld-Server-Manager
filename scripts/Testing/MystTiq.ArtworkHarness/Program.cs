@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1720,6 +1720,69 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     Check(queueText?.Text?.StartsWith("Nothing is waiting to go out.", StringComparison.Ordinal) == true, "and says when nothing is waiting");
     typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.NotificationDelivery))!.SetValue(vm, new NotificationDeliveryStateDto());
+}
+// v1.0.7.2 (roadmap Q-8, Q-12, Q-13, Q-7): the start's step on the Dashboard, the backup scan card, a page opened while
+// busy saying what it waits for, and the connection line naming the cause.
+{
+    var now = DateTimeOffset.UtcNow;
+    var starting = new ServerStatusDto { Phase = 3, StartupStage = "Waiting for the game port", StartupStageSinceUtc = now.AddSeconds(-40), StartupBeganUtc = now.AddSeconds(-85) };
+    Check(starting.StartupStageText(now) == "Waiting for the game port: 40 s (starting for 85 s)" && new ServerStatusDto().StartupStageText(now) == string.Empty,
+        $"A running start reads as its step and times [{starting.StartupStageText(now)}]");
+    typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.StartupStageText))!.SetValue(vm, starting.StartupStageText(now));
+    vm.NavigateCommand.Execute(nameof(NavigationPage.Dashboard));
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var stageText = window.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Name == "StartupStageText");
+    Check(stageText is { IsEffectivelyVisible: true } && stageText.Text!.StartsWith("Waiting for the game port", StringComparison.Ordinal), "The Dashboard's server tile shows the step a start is at");
+    typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.StartupStageText))!.SetValue(vm, string.Empty);
+
+    var apply = typeof(MainWindowViewModel).GetMethod("ApplyBackupScan", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    apply.Invoke(vm, [new BackupScanProgressDto { Kind = "Verifying backups", Done = 3, Total = 47, Current = "Palworld_x.zip", StartedUtc = now,
+        Unreadable = [new BackupScanProblemDto { FileName = "Palworld_bad.zip", Reason = "not a zip" }] }]);
+    vm.NavigateCommand.Execute(nameof(NavigationPage.Backups));
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var scanCard = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "BackupScanCard");
+    var cancelScan = scanCard?.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.IsEffectivelyVisible);
+    var problemLine = scanCard?.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text?.StartsWith("Could not read", StringComparison.Ordinal) == true);
+    Check(scanCard is { IsEffectivelyVisible: true } && vm.BackupScanText == "Verifying backups: 3 of 47" && cancelScan is not null && cancelScan.Classes.Contains("plain") &&
+          problemLine?.Text == "Could not read Palworld_bad.zip: not a zip",
+        $"The Backups page shows the scan's progress, Cancel while it runs, and the archive it could not read [{vm.BackupScanText}]");
+    apply.Invoke(vm, [new BackupScanProgressDto { Kind = "Verifying backups", Done = 11, Total = 47, StartedUtc = now, FinishedUtc = now, Cancelled = true }]);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    Check(vm.BackupScanText == "Verifying backups: 11 of 47, cancelled" && scanCard?.GetVisualDescendants().OfType<Button>().All(b => !b.IsEffectivelyVisible) == true, "a cancelled scan says so and Cancel is gone");
+    apply.Invoke(vm, [null]);
+
+    var busy = typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.IsBusy))!;
+    var waitMethod = typeof(MainWindowViewModel).GetMethod("WaitUntilNotBusyAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    vm.BusyReason = "Creating backup…";
+    busy.SetValue(vm, true);
+    typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.SelectedPage))!.SetValue(vm, NavigationPage.Map);
+    var waitTask = (Task<bool>)waitMethod.Invoke(vm, [NavigationPage.Map])!;
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var waitBanner = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "PageWaitBanner");
+    var shownAtOnce = waitBanner is { IsEffectivelyVisible: true } && vm.PageWaitText == "Waiting for \"Creating backup\" to finish, then this page loads.";
+    busy.SetValue(vm, false);
+    for (var i = 0; i < 50 && !waitTask.IsCompleted; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
+    var loadedOnSignal = waitTask.IsCompleted && waitTask.Result && !vm.HasPageWait;
+    busy.SetValue(vm, true);
+    var leftTask = (Task<bool>)waitMethod.Invoke(vm, [NavigationPage.Map])!;
+    typeof(MainWindowViewModel).GetMethod("CancelPageWait", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, []);
+    for (var i = 0; i < 50 && !leftTask.IsCompleted; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
+    var stoppedOnLeave = leftTask.IsCompleted && !leftTask.Result && !vm.HasPageWait;
+    busy.SetValue(vm, false); vm.BusyReason = null;
+    Check(shownAtOnce && loadedOnSignal && stoppedOnLeave,
+        $"Map opened while busy says at once what it waits for, loads when the work ends, and stops waiting when left [{shownAtOnce}/{loadedOnSignal}/{stoppedOnLeave}]");
+
+    var failure = typeof(MainWindowViewModel).GetMethod("NoteConnectionFailure", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    vm.NavigateCommand.Execute(nameof(NavigationPage.Dashboard));
+    for (var i = 0; i < 20; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
+    failure.Invoke(vm, [new HttpRequestException("401", null, HttpStatusCode.Unauthorized), new Uri("http://127.0.0.1:8213/")]);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var causeText = window.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Name == "ConnectionCauseText");
+    Check(vm.ConnectionState == "Sign-in rejected" && causeText is { IsEffectivelyVisible: true } && causeText.Text!.Contains("Sign in again"),
+        $"The connection line names the cause and the next step [{vm.ConnectionState}: {causeText?.Text}]");
+    typeof(MainWindowViewModel).GetMethod("NoteConnected", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, [new ServerStatusDto { Phase = 3, Ready = true }, new PlayersSnapshotDto { Available = true }]);
+    Dispatcher.UIThread.RunJobs();
+    Check(!vm.HasConnectionCause, "a working connection clears it");
 }
 // v1.0.5.0 (roadmap M-1): the MOD browser against stand-in repositories (Thunderstore, CurseForge, GitHub), a folder of
 // ZIPs, the download host checks, the nxm:// handoff and the card on the MOD Library page.

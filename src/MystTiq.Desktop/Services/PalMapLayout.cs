@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 namespace MystTiq.Desktop.Services;
 
 // v0.8.11.0: the Pals layer on the World Map. Pure, so the logic harness can compile this file directly.

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.1: file reviewed for this release (2026-10-08). -->
+<!-- MystTiq v1.0.7.2: file reviewed for this release (2026-10-11). -->
 # Passwordless Linux Deployment & SSH Trust Architecture — v0.3.0.5
 
 ## Goal

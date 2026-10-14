@@ -1,4 +1,19 @@
-<!-- MystTiq v1.0.7.1: file reviewed for this release (2026-10-08). -->
+<!-- MystTiq v1.0.7.2: file reviewed for this release (2026-10-11). -->
+## v1.0.7.2 — Progress You Can See
+
+From the outside quality review (roadmap Q-8, Q-12, Q-13, Q-7).
+- A server start shows its step (checking settings, launching PalServer, waiting for the game port) and how long, on
+  every status read and the Dashboard; a failed start names the step it stopped at.
+- Verify All and the backups' world-day reading show "N of M", name each archive they cannot read, and can be
+  cancelled (Verify All keeps the results so far); world days are saved every 10 backups.
+- Map and Players opened while busy say at once what they wait for, load when it ends (a signal, no polling) and stop
+  waiting when left.
+- The connection line tells apart service unreachable, reconnecting, sign-in rejected, certificate rejected and a
+  service error, each with a next step, and names a REST API not answering while Palworld runs.
+- Tests: the v1.0.7.2 gate regenerated from v1.0.7.1 (every earlier check kept), a progress route smoke, LogicHarness
+  scenarios and ArtworkHarness checks; 26 texts in 12 languages.
+- Version advanced to 1.0.7.2.
+
 ## v1.0.7.1 — Conflicts Refused, Alert Storms Bounded
 
 From the outside quality review (roadmap Q-4, Q-11).

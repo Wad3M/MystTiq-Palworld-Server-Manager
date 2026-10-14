@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -573,6 +573,13 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         using var client = BuildClient(profile, bearerToken);
         using var response = await client.PostAsync("/api/v1/backups/verify-all", null, cancellationToken);
         return await ReadOperationAsync<BackupVerificationBatchDto>(response, cancellationToken);
+    }
+
+    public async Task CancelBackupScanAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/backups/scan/cancel", null, cancellationToken);
+        response.EnsureSuccessStatusCode();
     }
 
     public async Task<BackupRetentionPreviewDto> PreviewBackupRetentionAsync(ConnectionProfile profile, int keepLatest, int maxAgeDays, string? bearerToken = null, CancellationToken cancellationToken = default)

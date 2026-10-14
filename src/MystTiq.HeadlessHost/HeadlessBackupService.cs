@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -27,6 +27,60 @@ public sealed class HeadlessBackupService
     private readonly object worldDaysGate = new();
     private readonly Dictionary<string, HeadlessBackupWorldDay> worldDays;
     private int worldDayReaderRunning;
+
+    // v1.0.7.2 (roadmap Q-12): the scan running now (reading backups' world days, or Verify All), or the last one.
+    private readonly object scanGate = new();
+    private BackupScanProgress? scan;
+    private CancellationTokenSource? scanCancel;
+    // Only the newest scan writes its progress (Verify All takes the slot from a world-day read; that read does not
+    // start while Verify All runs).
+    private long scanId;
+    public const int WorldDaySaveEvery = 10;
+
+    public BackupScanProgress? GetScan() { lock (scanGate) return scan; }
+
+    /// <summary>Stops the scan running now. False when none runs.</summary>
+    public bool CancelScan()
+    {
+        lock (scanGate)
+        {
+            if (scan is not { FinishedUtc: null } || scanCancel is null) return false;
+            scanCancel.Cancel();
+            return true;
+        }
+    }
+
+    private (CancellationTokenSource Cancel, long Id) BeginScan(string kind, int total, CancellationToken token)
+    {
+        lock (scanGate)
+        {
+            scanCancel?.Dispose();
+            scanCancel = CancellationTokenSource.CreateLinkedTokenSource(token);
+            scan = new BackupScanProgress(kind, 0, total, null, [], DateTimeOffset.UtcNow, null, false);
+            return (scanCancel, ++scanId);
+        }
+    }
+
+    private bool VerifyAllRunning()
+    {
+        lock (scanGate) return scan is { Kind: "Verifying backups", FinishedUtc: null };
+    }
+
+    private void StepScan(long id, string? current, bool done, string? problemFile = null, string? problem = null)
+    {
+        lock (scanGate)
+        {
+            if (scan is null || id != scanId) return;
+            var problems = problem is null ? scan.Unreadable : [.. scan.Unreadable, new BackupScanProblem(problemFile ?? current ?? string.Empty, problem)];
+            scan = scan with { Done = scan.Done + (done ? 1 : 0), Current = current, Unreadable = problems };
+        }
+    }
+
+    private void FinishScan(long id, bool cancelled)
+    {
+        lock (scanGate)
+            if (scan is not null && id == scanId) scan = scan with { Current = null, FinishedUtc = DateTimeOffset.UtcNow, Cancelled = cancelled };
+    }
 
     public HeadlessBackupService(
         IServerPathProfile paths,
@@ -77,6 +131,8 @@ public sealed class HeadlessBackupService
         {
             // v1.0.0.4: restores need to replace SaveGames; the Desktop offers to fix the Saved folder's access when they cannot.
             SaveFolderReplaceable = SaveFolderAccess.CanReplace(paths.SaveRoot),
+            // v1.0.7.2 (roadmap Q-12): the scan running now, or the last one.
+            Scan = GetScan(),
             SavedFolderPath = Path.GetDirectoryName(paths.SaveRoot.TrimEnd(Path.DirectorySeparatorChar)),
         };
     }
@@ -393,27 +449,52 @@ public sealed class HeadlessBackupService
     {
         if (worldClock is null || Interlocked.Exchange(ref worldDayReaderRunning, 1) == 1) return;
         // v1.0.7.0 (roadmap Q-3): stops at shutdown, and a failure is logged instead of dropped.
-        BackgroundWork.Shared.Run("backup world days", async token =>
+        // v1.0.7.2 (roadmap Q-12): says how far it is ("12 of 47"), names each archive it cannot read, can be cancelled, and
+        // saves the list every WorldDaySaveEvery backups and at the end, not after every one.
+        _ = BackgroundWork.Shared.Run("backup world days", async token =>
         {
+            CancellationTokenSource? cancel = null;
+            long id = 0;
+            var unsaved = 0;
             try
             {
-                foreach (var file in Directory.EnumerateFiles(paths.BackupRoot, $"{Prefix}*.zip", SearchOption.TopDirectoryOnly)
-                             .Select(f => new FileInfo(f)).OrderByDescending(f => f.LastWriteTimeUtc))
-                {
-                    token.ThrowIfCancellationRequested();
-                    HeadlessBackupWorldDay? known;
-                    lock (worldDaysGate) worldDays.TryGetValue(file.Name, out known);
-                    if (known is not null && (known.Ticks is not null || DateTimeOffset.UtcNow - known.ReadUtc < TimeSpan.FromHours(1))) continue;
-                    var result = await worldClock.ReadBackupAsync(file.FullName, token);
-                    lock (worldDaysGate)
+                var pending = Directory.EnumerateFiles(paths.BackupRoot, $"{Prefix}*.zip", SearchOption.TopDirectoryOnly)
+                    .Select(f => new FileInfo(f)).OrderByDescending(f => f.LastWriteTimeUtc)
+                    .Where(file =>
                     {
-                        worldDays[file.Name] = new HeadlessBackupWorldDay(result.Ticks, result.Error, DateTimeOffset.UtcNow);
-                        File.WriteAllText(worldDaysPath, JsonSerializer.Serialize(worldDays));
-                    }
+                        HeadlessBackupWorldDay? known;
+                        lock (worldDaysGate) worldDays.TryGetValue(file.Name, out known);
+                        return known is null || (known.Ticks is null && DateTimeOffset.UtcNow - known.ReadUtc >= TimeSpan.FromHours(1));
+                    })
+                    .ToList();
+                if (pending.Count == 0 || VerifyAllRunning()) return;
+                (cancel, id) = BeginScan("Reading world days", pending.Count, token);
+                foreach (var file in pending)
+                {
+                    cancel.Token.ThrowIfCancellationRequested();
+                    StepScan(id, file.Name, done: false);
+                    var result = await worldClock.ReadBackupAsync(file.FullName, cancel.Token);
+                    StepScan(id, file.Name, done: true, file.Name, result.Ticks is null ? result.Error ?? "its world day could not be read" : null);
+                    lock (worldDaysGate) worldDays[file.Name] = new HeadlessBackupWorldDay(result.Ticks, result.Error, DateTimeOffset.UtcNow);
+                    if (++unsaved >= WorldDaySaveEvery) { SaveWorldDays(); unsaved = 0; }
                 }
+                FinishScan(id, cancelled: false);
             }
-            finally { Interlocked.Exchange(ref worldDayReaderRunning, 0); }
+            catch (OperationCanceledException) when (cancel?.IsCancellationRequested == true)
+            {
+                FinishScan(id, cancelled: true);
+            }
+            finally
+            {
+                if (unsaved > 0) SaveWorldDays();
+                Interlocked.Exchange(ref worldDayReaderRunning, 0);
+            }
         });
+    }
+
+    private void SaveWorldDays()
+    {
+        lock (worldDaysGate) File.WriteAllText(worldDaysPath, JsonSerializer.Serialize(worldDays));
     }
 
     private Dictionary<string, HeadlessBackupWorldDay> LoadWorldDays()
@@ -453,15 +534,33 @@ public sealed class HeadlessBackupService
         if (!await backupGate.WaitAsync(0, cancellationToken))
             return new([], DateTimeOffset.UtcNow, "A backup operation is already in progress.");
 
+        // v1.0.7.2 (roadmap Q-12): "3 of 47" while it runs, each failing archive named, and Cancel stops it after the
+        // archive in hand (the ones done so far are kept).
+        var items = GetInventory().Items;
+        var (cancel, id) = BeginScan("Verifying backups", items.Count, cancellationToken);
+        var results = new List<HeadlessBackupVerificationResult>();
         try
         {
-            var results = new List<HeadlessBackupVerificationResult>();
-            foreach (var item in GetInventory().Items)
-                results.Add(await VerifyInternalAsync(ResolveManagedBackup(item.FileName, true), cancellationToken));
+            foreach (var item in items)
+            {
+                cancel.Token.ThrowIfCancellationRequested();
+                StepScan(id, item.FileName, done: false);
+                var result = await VerifyInternalAsync(ResolveManagedBackup(item.FileName, true), cancel.Token);
+                results.Add(result);
+                StepScan(id, item.FileName, done: true, item.FileName, result.Success ? null : result.Message);
+            }
+            FinishScan(id, cancelled: false);
             PersistVerification(results);
             activity.Record(results.All(x => x.Success) ? "Information" : "Warning", "Backups", "Verified all backups",
                 $"count={results.Count}; passed={results.Count(x => x.Success)}");
             return new(results, DateTimeOffset.UtcNow, $"Verified {results.Count} managed backup(s).");
+        }
+        catch (OperationCanceledException) when (cancel.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            FinishScan(id, cancelled: true);
+            PersistVerification(results);
+            activity.Record("Information", "Backups", "Verify All cancelled", $"after {results.Count} of {items.Count}");
+            return new(results, DateTimeOffset.UtcNow, $"Cancelled after {results.Count} of {items.Count} backup(s).");
         }
         finally { backupGate.Release(); }
     }
@@ -730,6 +829,8 @@ public sealed record HeadlessBackupInventory(
 {
     public bool SaveFolderReplaceable { get; init; } = true;
     public string? SavedFolderPath { get; init; }
+    // v1.0.7.2 (roadmap Q-12): the scan running now, or the last one.
+    public BackupScanProgress? Scan { get; init; }
 }
 
 public sealed record HeadlessBackupOperationResult(
@@ -758,6 +859,11 @@ public sealed record HeadlessBackupVerificationResult(bool Success, string FileN
 {
     public static HeadlessBackupVerificationResult Conflict(string fileName) => new(false, fileName, null, 0, 0, DateTimeOffset.UtcNow, "A backup operation is already in progress.");
 }
+// v1.0.7.2 (roadmap Q-12): a backup scan's progress: what it is doing, how far, the archive in hand, and the archives it
+// could not read (with why).
+public sealed record BackupScanProgress(string Kind, int Done, int Total, string? Current, IReadOnlyList<BackupScanProblem> Unreadable,
+    DateTimeOffset StartedUtc, DateTimeOffset? FinishedUtc, bool Cancelled);
+public sealed record BackupScanProblem(string FileName, string Reason);
 public sealed record HeadlessBackupVerificationBatch(IReadOnlyList<HeadlessBackupVerificationResult> Results, DateTimeOffset VerifiedAt, string Message);
 // IReadOnlyCollection, not IReadOnlySet -- System.Text.Json's default deserializer cannot
 // populate an IReadOnlySet<T> from a JSON array (it's abstract/read-only from its perspective),

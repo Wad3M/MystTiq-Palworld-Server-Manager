@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
 namespace MystTiq.Desktop.Models;
 
 // v0.6.4.0 unified diagnostics. State mirrors Core's DiagnosticState int values exactly
