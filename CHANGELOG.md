@@ -1,4 +1,17 @@
-<!-- MystTiq v1.0.7.2: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.7.3: file reviewed for this release (2026-10-11). -->
+## v1.0.7.3 — Joining Again, and a Lighter Console
+
+- Fixed (owner report 2026-10-11, "unable to connect"): the identity guard kicked a returning player 8 s after he
+  connected, while the server still listed him with no character because he was loading. A player with no character
+  now gets 90 s; still none after that is kicked once per stay; a different character is kicked at once, as before
+  (roadmap Q-16).
+- The console does only the work that changed (roadmap Q-6): an unchanged poll changes nothing, a new tail replaces each
+  list in one update, an untimed line keeps the time it was first seen, and the Console's filters run only while the
+  page is open.
+- Tests: the v1.0.7.3 gate regenerated from v1.0.7.2 (every earlier check kept), a LogicHarness scenario replaying the
+  owner's join, ArtworkHarness checks with notification counts and 10,000 lines.
+- Version advanced to 1.0.7.3.
+
 ## v1.0.7.2 — Progress You Can See
 
 From the outside quality review (roadmap Q-8, Q-12, Q-13, Q-7).

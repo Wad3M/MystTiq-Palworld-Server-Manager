@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.2: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.7.3: file reviewed for this release (2026-10-11). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,13 +21,15 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.7.2 · Accepted baseline: v1.0.0.0**
+**Current version: v1.0.7.3 · Accepted baseline: v1.0.0.0**
 
 MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.7.2
+## What's new in v1.0.7.3
 
-**Progress you can see.** A server start shows the step it is at (checking settings, launching, waiting for the game port) and how long, and a failed start says where it stopped. Verify All and the backups' world-day reading show "12 of 47", list any archive they can't read, and can be cancelled. A page opened while MystTiq is busy says what it is waiting for, and the connection line tells a stopped service from a rejected sign-in or a server whose REST API isn't answering.
+**Joining works again with the identity guard on.** A player still loading into the world was taken for one on the new-character screen and kicked; the guard now gives a loading player 90 seconds before it acts, and still kicks at once a player handed a different character. **A lighter console**: it only redraws when there are new lines, and a line's time no longer changes on every refresh.
+
+**Also new since 1.0 (v1.0.7.2): progress you can see.** A server start shows the step it is at (checking settings, launching, waiting for the game port) and how long, and a failed start says where it stopped. Verify All and the backups' world-day reading show "12 of 47", list any archive they can't read, and can be cancelled. A page opened while MystTiq is busy says what it is waiting for, and the connection line tells a stopped service from a rejected sign-in or a server whose REST API isn't answering.
 
 **Also new since 1.0 (v1.0.7.1): one thing at a time.** A backup, a server update, a MOD change or a PalDefender update can no longer run while the server is starting or a save is being edited: whichever comes second is refused with the reason, and scheduled automation simply waits its turn. **Calm during alert storms**: Discord, email and webhook sends are queued, the same alert repeated within 10 minutes is sent once with a count, and Alert Center shows what is waiting.
 
@@ -59,7 +61,7 @@ MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Win
 
 **Also new since 1.0 (v1.0.0.1): launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
 
-[Release notes](release-notes/v1.0.7.2.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v1.0.7.3.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -126,8 +128,9 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v1.0.7.2 | Current | Server starts show their steps, backup scans show progress and can be cancelled, and the connection line says what is wrong |
-| v1.0.7.1 | Previous | Backups, updates and MOD changes can no longer overlap a server start or a save edit; a burst of alerts is queued and repeats combined |
+| v1.0.7.3 | Current | Players are no longer kicked by the identity guard while their character loads; the console only redraws what changed |
+| v1.0.7.2 | Previous | Server starts show their steps, backup scans show progress and can be cancelled, and the connection line says what is wrong |
+| v1.0.7.1 | Earlier | Backups, updates and MOD changes can no longer overlap a server start or a save edit; a burst of alerts is queued and repeats combined |
 | v1.0.7.0 | Earlier | A damaged saved list can no longer wipe your accounts or settings; errors are recorded and shown instead of closing the app |
 | v1.0.6.1 | Earlier | Fixes a player getting a new character: an older MystTiq service still running is flagged and replaced in one click; no Launcher preset adds the options behind it |
 | v1.0.6.0 | Earlier | Add or remove a Pal in a player's Pal box; MODs laid out as the game folder (LogicMods, PAK with scripts) install |

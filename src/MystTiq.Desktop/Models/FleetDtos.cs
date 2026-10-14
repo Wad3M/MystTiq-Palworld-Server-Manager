@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
 namespace MystTiq.Desktop.Models;
 
 // v0.6.2.0 Multi-Server Fleet: mirrors the anonymous JSON shapes LocalManagementApiHost's

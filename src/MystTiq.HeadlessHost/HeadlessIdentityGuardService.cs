@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
 using System.Diagnostics;
 using System.Text.Json;
 using MystTiq.Core.Providers;
@@ -26,6 +26,9 @@ public sealed class HeadlessIdentityGuardService
     private readonly string eventsPath;
     private readonly object gate = new();
     private readonly HashSet<string> handledThisSession = new(StringComparer.OrdinalIgnoreCase);
+    // v1.0.7.3: when each online player was first seen with no character yet (still loading, or on the new-character screen).
+    private readonly Dictionary<string, DateTimeOffset> noCharacterSince = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Func<DateTimeOffset> clock;
     private IdentityGuardConfig config;
 
     private readonly Func<IReadOnlyList<string>> launchArguments;
@@ -33,8 +36,9 @@ public sealed class HeadlessIdentityGuardService
     // v1.0.6.1: launchArguments are the server's saved start arguments, named in the alert (the wrong-character starts all
     // had -log, -stdout or -FullStdOutLogOutput; double-click starts, with no arguments, kept the players' characters).
     public HeadlessIdentityGuardService(IServerPathProfile paths, HeadlessActivityLogService activity, HeadlessNotificationService notifications, PlayerModerationCoordinator playerModeration,
-        Func<IReadOnlyList<string>>? launchArguments = null)
+        Func<IReadOnlyList<string>>? launchArguments = null, Func<DateTimeOffset>? clock = null)
     {
+        this.clock = clock ?? (() => DateTimeOffset.UtcNow);
         this.launchArguments = launchArguments ?? (() => []);
         this.paths = paths;
         this.activity = activity;
@@ -77,7 +81,25 @@ public sealed class HeadlessIdentityGuardService
             if (userId.Length == 0) continue;
             online.Add(userId);
             var verdict = IdentityGuard.Judge(userId, player.PlayerId, ExistingCharacter);
-            if (verdict is null) continue;
+            if (verdict is null)
+            {
+                lock (gate) noCharacterSince.Remove(userId);
+                continue;
+            }
+            // v1.0.7.3 (owner report 2026-10-11): a returning player is listed with no character ("None") while still loading
+            // into the world. The guard used to kick at once, so the owner (Wade) was kicked 8 s after connecting, twice,
+            // before his own character had loaded. No character now waits LoadingGrace; a different character is acted on
+            // at once, as before.
+            if (verdict.Assigned == "None")
+            {
+                var now = clock();
+                DateTimeOffset since;
+                lock (gate)
+                {
+                    if (!noCharacterSince.TryGetValue(userId, out since)) noCharacterSince[userId] = since = now;
+                }
+                if (!IdentityGuard.NoCharacterIsDue(since, now)) continue;
+            }
             lock (gate) if (!handledThisSession.Add(userId)) continue;
             if (!snapshot.Enabled) continue;
 
@@ -99,7 +121,11 @@ public sealed class HeadlessIdentityGuardService
             Append(new IdentityGuardEvent(DateTimeOffset.UtcNow, name, userId, verdict.Assigned, verdict.Expected, kicked, SteamClientRunning(), message));
         }
 
-        lock (gate) handledThisSession.RemoveWhere(id => !online.Contains(id));
+        lock (gate)
+        {
+            handledThisSession.RemoveWhere(id => !online.Contains(id));
+            foreach (var gone in noCharacterSince.Keys.Where(id => !online.Contains(id)).ToList()) noCharacterSince.Remove(gone);
+        }
     }
 
     // Whether the world has a character file for this player ID (any world under the save root, not the backup copies).
@@ -168,6 +194,15 @@ public static class IdentityGuard
             ? $"This server starts PalServer with {string.Join(" ", shown)}. Players were given the wrong character every time it started with -log, -stdout or -FullStdOutLogOutput, and kept theirs when it started like a double-click: choose Like double-click on Server > Launcher, save, restart the server, then have them join again."
             : "Restart the server and have them join again. If it happens again, compare the launch on Server > Launcher with a manual start.";
     }
+
+    /// <summary>
+    /// v1.0.7.3: how long a player listed with no character is given to finish loading before the guard acts. A returning
+    /// player's character appears within seconds; making a new character on the new-character screen takes longer.
+    /// </summary>
+    public static TimeSpan LoadingGrace { get; set; } = TimeSpan.FromSeconds(90);
+
+    /// <summary>True once a player first seen with no character at <paramref name="since"/> has had the loading grace.</summary>
+    public static bool NoCharacterIsDue(DateTimeOffset since, DateTimeOffset now) => now - since >= LoadingGrace;
 
     public static IdentityVerdict? Judge(string userId, string? assignedPlayerId, Func<string, bool> characterExists)
     {

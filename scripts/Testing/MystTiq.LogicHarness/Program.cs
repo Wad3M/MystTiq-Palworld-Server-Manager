@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -4201,6 +4201,46 @@ try
         Assert(cancelled && stopped is { Cancelled: true } && stopped.Done < 41 && partial.Message.StartsWith("Cancelled after", StringComparison.Ordinal) && partial.Results.Count == stopped.Done,
             $"Cancel stops it after the archive in hand, keeping the ones done [{partial.Message}]");
         Assert(HeadlessBackupService.WorldDaySaveEvery == 10, "world days are saved every 10 backups, not after each");
+    }, failures);
+
+    // v1.0.7.3 (owner report 2026-10-11): the identity guard kicked the owner while his character was still loading.
+    RunScenarioAsync("Identity guard (2026-10-11): a player still loading (no character yet) is not kicked; still none after the loading grace is; a different character is kicked at once, as before", async () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "guard-loading-" + Guid.NewGuid().ToString("N")));
+        var players = Path.Combine(paths.SaveRoot, "SaveGames", "0", "World", "Players");
+        Directory.CreateDirectory(players);
+        File.WriteAllText(Path.Combine(players, "67D8D355000000000000000000000000.sav"), "x");
+        var activity = new HeadlessActivityLogService(paths);
+        var fake = new FakeModerationProvider();
+        var now = new DateTimeOffset(2026, 10, 8, 18, 12, 17, TimeSpan.Zero);
+        var guard = new HeadlessIdentityGuardService(paths, activity, new HeadlessNotificationService(paths, activity), new PlayerModerationCoordinator([fake]), null, () => now);
+        guard.SaveConfig(new IdentityGuardConfig(true, true));
+        const string wade = "steam_76561197962020201";
+        HeadlessPlayersSnapshot Online(string playerId) => new(true, 1, [new HeadlessPlayerSnapshot("Wade", wade, "76561197962020201", playerId, "", "", "Steam", "1", "0")], now, "test");
+        HeadlessPlayersSnapshot Nobody() => new(true, 0, [], now, "test");
+
+        // The owner's join: listed with no character 8 s after connecting, then his own character.
+        now = now.AddSeconds(8); await guard.EnforceAsync(Online("None"), CancellationToken.None);
+        now = now.AddSeconds(30); await guard.EnforceAsync(Online("None"), CancellationToken.None);
+        Assert(fake.Calls.Count == 0, $"a player still loading is not kicked [{Describe(fake.Calls)}]");
+        now = now.AddSeconds(10); await guard.EnforceAsync(Online("67D8D355000000000000000000000000"), CancellationToken.None);
+        Assert(fake.Calls.Count == 0 && guard.RecentEvents().Count == 0, "once his character loads there is nothing to do, and nothing is recorded");
+
+        // Leaves, and joins again stuck on the new-character screen.
+        await guard.EnforceAsync(Nobody(), CancellationToken.None);
+        await guard.EnforceAsync(Online("None"), CancellationToken.None);
+        now = now.AddSeconds(89); await guard.EnforceAsync(Online("None"), CancellationToken.None);
+        Assert(fake.Calls.Count == 0, "inside the loading grace, still no kick");
+        now = now.AddSeconds(2); await guard.EnforceAsync(Online("None"), CancellationToken.None);
+        Assert(fake.Calls.Count == 1 && fake.Calls[0] == ("kick", wade), $"still no character after {IdentityGuard.LoadingGrace.TotalSeconds:0} s: kicked, so no new character is made [{Describe(fake.Calls)}]");
+        now = now.AddSeconds(5); await guard.EnforceAsync(Online("None"), CancellationToken.None);
+        Assert(fake.Calls.Count == 1, "kicked once per stay, not on every poll");
+
+        // A different character (the 2026-10-06 case) is acted on at once.
+        await guard.EnforceAsync(Nobody(), CancellationToken.None);
+        await guard.EnforceAsync(Online("E290DA9A000000000000000000000000"), CancellationToken.None);
+        Assert(fake.Calls.Count == 2, "a different character is kicked at once, as before");
+        Assert(IdentityGuard.LoadingGrace == TimeSpan.FromSeconds(90), "the loading grace is 90 s");
     }, failures);
 }
 finally

@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1321,8 +1321,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<DiscoveredMystTiqService> DiscoveredServices { get; } = [];
     public ObservableCollection<PlayerSnapshotDto> OnlinePlayers { get; } = [];
     public ObservableCollection<PlayerMapPointDto> PlayerMapPoints { get; } = [];
-    public ObservableCollection<string> LogLines { get; } = [];
-    public ObservableCollection<string> FilteredLogLines { get; } = [];
+    // v1.0.7.3 (roadmap Q-6): replaced in one update, not line by line.
+    public BulkObservableCollection<string> LogLines { get; } = [];
+    public BulkObservableCollection<string> FilteredLogLines { get; } = [];
     public ObservableCollection<string> RconOutputLines { get; } = [];
     public IReadOnlyList<string> ConsoleSeverityOptions { get; } = ["All", "Errors", "Warnings", "Information"];
     public IReadOnlyList<string> ConsoleCategoryOptions { get; } = ["All", "MystTiq", "PalServer", "REST", "Mods"];
@@ -1357,7 +1358,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<MetricHistoryPoint> MetricHistory { get; } = [];
     public ObservableCollection<HistoricalMetricPointDto> ResourceHistory { get; } = [];
     public IReadOnlyList<string> HistoryRanges { get; } = ["1 Hour", "6 Hours", "24 Hours", "7 Days", "30 Days"];
-    public ObservableCollection<string> DashboardActivityLines { get; } = [];
+    public BulkObservableCollection<string> DashboardActivityLines { get; } = [];
     public ObservableCollection<EnvironmentChecklistItemDto> EnvironmentItems { get; } = [];
     public ObservableCollection<BackupItemDto> BackupItems { get; } = [];
     public ObservableCollection<BackupRetentionItemDto> BackupRetentionItems { get; } = [];
@@ -2636,6 +2637,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // (the single setter every navigation already funnels through) rather than at each
             // call site, so no future navigation call site can forget it.
             if (ActiveTab is not null) ActiveTab.LastPage = value;
+            // v1.0.7.3 (roadmap Q-6): the Console's filtered view is rebuilt only while it is shown.
+            if (value == NavigationPage.Console) EnsureConsoleFilterCurrent();
 
             RaisePropertyChanged(nameof(PageTitle));
             RaisePropertyChanged(nameof(PageSubtitle));
@@ -5841,38 +5844,64 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private static double? TryParseCoordinate(string value) =>
         double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
 
+    // v1.0.7.3 (roadmap Q-6): the tail last applied, each line's first-seen time, and whether the Console's filtered view
+    // is behind (it is only rebuilt while the Console page is open).
+    private IReadOnlyList<string> _lastLogTail = [];
+    private readonly Dictionary<string, DateTimeOffset> _lineFirstSeen = new(StringComparer.Ordinal);
+    private bool _consoleFilterStale;
+    public const int LineFirstSeenLimit = 3000;
+    private static readonly System.Text.RegularExpressions.Regex ConsoleTimestamp = new(@"^\[\d{4}-\d{2}-\d{2}[ T]", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     private void ApplyLogs(LogTailSnapshotDto snapshot)
     {
-        LogLines.Clear();
-        foreach (var line in snapshot.Lines)
-            LogLines.Add(EnsureConsoleTimestampFirst(line, snapshot.ObservedAt));
-
         LogFileText = snapshot.Available
             ? snapshot.FileName ?? "Palworld log"
             : "Log unavailable";
-        if (!ConsolePaused) ApplyConsoleFilter();
-
-        DashboardActivityLines.Clear();
-        foreach (var line in snapshot.Lines.Where(x => !string.IsNullOrWhiteSpace(x)).TakeLast(8))
-            DashboardActivityLines.Add(EnsureConsoleTimestampFirst(line, snapshot.ObservedAt));
-        DashboardLastActivityText = DashboardActivityLines.Count > 0 ? DashboardActivityLines[^1] : "No recent console activity";
-
         if (!snapshot.Available)
             MonitoringDetail = snapshot.Detail;
+
+        // v1.0.7.3 (roadmap Q-6): a poll with no new lines changes nothing (it used to rebuild about 1,000 list rows).
+        if (snapshot.Lines.SequenceEqual(_lastLogTail)) return;
+        _lastLogTail = snapshot.Lines.ToArray();
+
+        var stamped = snapshot.Lines.Select(line => EnsureConsoleTimestampFirst(line, snapshot.ObservedAt)).ToList();
+        LogLines.ReplaceAll(stamped);
+        if (!ConsolePaused)
+        {
+            if (IsConsolePage) ApplyConsoleFilter();
+            else _consoleFilterStale = true;
+        }
+
+        DashboardActivityLines.ReplaceAll(snapshot.Lines.Where(x => !string.IsNullOrWhiteSpace(x)).TakeLast(8)
+            .Select(line => EnsureConsoleTimestampFirst(line, snapshot.ObservedAt)));
+        DashboardLastActivityText = DashboardActivityLines.Count > 0 ? DashboardActivityLines[^1] : "No recent console activity";
+        if (_lineFirstSeen.Count > LineFirstSeenLimit)
+        {
+            var keep = snapshot.Lines.ToHashSet(StringComparer.Ordinal);
+            foreach (var old in _lineFirstSeen.Keys.Where(k => !keep.Contains(k)).ToList()) _lineFirstSeen.Remove(old);
+        }
     }
 
-    private static string EnsureConsoleTimestampFirst(string line, DateTimeOffset observedAt)
+    // v1.0.7.3 (roadmap Q-6): a line without its own timestamp is stamped with the time MystTiq first saw it, once. It used
+    // to get each poll's time, so the same line showed a new time on every refresh.
+    private string EnsureConsoleTimestampFirst(string line, DateTimeOffset observedAt)
     {
-        if (string.IsNullOrWhiteSpace(line)) return line;
-        return System.Text.RegularExpressions.Regex.IsMatch(line, @"^\[\d{4}-\d{2}-\d{2}[ T]")
-            ? line
-            : $"[{observedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss.fff}] {line}";
+        if (string.IsNullOrWhiteSpace(line) || ConsoleTimestamp.IsMatch(line)) return line;
+        if (!_lineFirstSeen.TryGetValue(line, out var seen)) _lineFirstSeen[line] = seen = observedAt;
+        return $"[{seen.ToLocalTime():yyyy-MM-dd HH:mm:ss.fff}] {line}";
+    }
+
+    // The Console's filtered view, brought up to date when it is needed (the page opens, or it is exported).
+    public void EnsureConsoleFilterCurrent()
+    {
+        if (_consoleFilterStale && !ConsolePaused) ApplyConsoleFilter();
     }
 
     private void ApplyConsoleFilter()
     {
         if (ConsolePaused) return;
-        FilteredLogLines.Clear();
+        _consoleFilterStale = false;
+        var filtered = new List<string>();
         // v0.7.46.0: LogLines stays in its original chronological (oldest-first) order --
         // DashboardActivityLines still wants that -- but the Console page's own live view reads
         // newest-first, matching the request to show the most recent activity at the top. Export
@@ -5883,8 +5912,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             if (!ConsoleSeverityMatches(line, ConsoleSeverityFilter)) continue;
             if (!ConsoleCategoryMatches(line, ConsoleCategoryFilter)) continue;
             if (!string.IsNullOrWhiteSpace(ConsoleSearchText) && !line.Contains(ConsoleSearchText, StringComparison.OrdinalIgnoreCase)) continue;
-            FilteredLogLines.Add(line);
+            filtered.Add(line);
         }
+        FilteredLogLines.ReplaceAll(filtered);
         ConsoleViewState = $"Live · {FilteredLogLines.Count}/{LogLines.Count} lines";
     }
 

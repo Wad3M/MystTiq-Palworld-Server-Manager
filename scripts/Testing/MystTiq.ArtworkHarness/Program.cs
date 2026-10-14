@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.2: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1783,6 +1783,51 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     typeof(MainWindowViewModel).GetMethod("NoteConnected", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, [new ServerStatusDto { Phase = 3, Ready = true }, new PlayersSnapshotDto { Available = true }]);
     Dispatcher.UIThread.RunJobs();
     Check(!vm.HasConnectionCause, "a working connection clears it");
+}
+// v1.0.7.3 (roadmap Q-6): the console does only the work that changed: an unchanged poll touches nothing, a changed one is
+// one update per list, a line without a timestamp keeps the time it was first seen, and 10,000 lines stay quick.
+{
+    var applyLogs = typeof(MainWindowViewModel).GetMethod("ApplyLogs", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    var t1 = new DateTimeOffset(2026, 10, 11, 12, 0, 0, TimeSpan.Zero);
+    LogTailSnapshotDto Tail(IEnumerable<string> lines, DateTimeOffset at) => new() { Available = true, FileName = "Pal.log", Lines = lines.ToList(), ObservedAt = at };
+    vm.NavigateCommand.Execute(nameof(NavigationPage.Console));
+    Dispatcher.UIThread.RunJobs();
+    var lines = Enumerable.Range(0, 500).Select(i => i % 2 == 0 ? $"[2026-10-11 12:00:{i % 60:00}.000] line {i}" : $"untimed line {i}").ToList();
+    applyLogs.Invoke(vm, [Tail(lines, t1)]);
+    var changes = 0;
+    void Count(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => changes++;
+    vm.LogLines.CollectionChanged += Count; vm.FilteredLogLines.CollectionChanged += Count;
+    applyLogs.Invoke(vm, [Tail(lines, t1.AddSeconds(5))]);
+    var unchanged = changes;
+    var firstStamp = vm.LogLines.First(l => l.EndsWith("untimed line 1", StringComparison.Ordinal));
+    changes = 0;
+    applyLogs.Invoke(vm, [Tail(lines.Skip(1).Append("untimed line 500"), t1.AddSeconds(10))]);
+    var changed = changes;
+    var laterStamp = vm.LogLines.First(l => l.EndsWith("untimed line 1", StringComparison.Ordinal));
+    var newStamp = vm.LogLines.First(l => l.EndsWith("untimed line 500", StringComparison.Ordinal));
+    Check(unchanged == 0 && changed == 2, $"An unchanged poll touches nothing and a changed one is one update per list [unchanged {unchanged}, changed {changed}; was about 1,000 rows each poll]");
+    Check(firstStamp == laterStamp && firstStamp.StartsWith($"[{t1.ToLocalTime():yyyy-MM-dd HH:mm:ss}", StringComparison.Ordinal) && newStamp.StartsWith($"[{t1.AddSeconds(10).ToLocalTime():yyyy-MM-dd HH:mm:ss}", StringComparison.Ordinal),
+        $"A line without a timestamp keeps the time it was first seen; a new one gets its own [{firstStamp[..25]} / {newStamp[..25]}]");
+
+    changes = 0;
+    var clock = Stopwatch.StartNew();
+    for (var poll = 0; poll < 20; poll++)
+        applyLogs.Invoke(vm, [Tail(Enumerable.Range(poll * 500, 500).Select(i => $"chatty line {i}"), t1.AddSeconds(20 + poll * 5))]);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    clock.Stop();
+    Check(changes == 40 && vm.LogLines.Count == 500 && clock.ElapsedMilliseconds < 5000,
+        $"10,000 lines in 20 polls: 40 list updates, the list stays at 500, and it took {clock.ElapsedMilliseconds} ms");
+
+    vm.NavigateCommand.Execute(nameof(NavigationPage.Dashboard));
+    Dispatcher.UIThread.RunJobs();
+    changes = 0;
+    applyLogs.Invoke(vm, [Tail(new[] { "while the console is hidden" }, t1.AddMinutes(5))]);
+    var hiddenFilterChanges = changes - 1;
+    vm.NavigateCommand.Execute(nameof(NavigationPage.Console));
+    Dispatcher.UIThread.RunJobs();
+    Check(hiddenFilterChanges == 0 && vm.FilteredLogLines.Count == 1 && vm.FilteredLogLines[0].EndsWith("while the console is hidden", StringComparison.Ordinal),
+        "While the Console page is hidden its filtered view waits, and opening the page brings it up to date");
+    vm.LogLines.CollectionChanged -= Count; vm.FilteredLogLines.CollectionChanged -= Count;
 }
 // v1.0.5.0 (roadmap M-1): the MOD browser against stand-in repositories (Thunderstore, CurseForge, GitHub), a folder of
 // ZIPs, the download host checks, the nxm:// handoff and the card on the MOD Library page.
