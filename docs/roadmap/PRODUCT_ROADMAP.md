@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.8.3: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.4: file reviewed for this release (2026-10-12). -->
 # Product roadmap
 
-Updated 2026-10-08. **Current version: v1.0.8.3. Accepted baseline: v1.0.0.0. Next milestone: v1.0.8.4 (the ViewModel split: C-4, Server; agreed with the owner 2026-10-08).**
+Updated 2026-10-08. **Current version: v1.0.8.4. Accepted baseline: v1.0.0.0. Next milestone: v1.0.8.5 (the ViewModel split: C-5, Backups and Save Tools; agreed with the owner 2026-10-08).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -167,7 +167,7 @@ Exit gate (per release):
 | C-1 | v1.0.8.1 | Dashboard, HOST, addresses, bandwidth. Recorded (v1.0.8.1, 2026-10-11): `HostPageViewModel` (`vm.Host`, the three HOST partial files merged) and `DashboardViewModel` (`vm.Dashboard`: the 20 card texts, recent activity, the addresses line); the health state stays with the window (its glow follows the server's start and stop). The full gate and the ArtworkHarness pass with the HOST checks reading `vm.Host`. `MainWindowViewModel.cs` 606,140 bytes; all its files 704,238 (were 732,039). | Built |
 | C-2 | v1.0.8.2 | Players: moderation lists, name guard, kits, Give Item, inventory and Pal box edits. Recorded (v1.0.8.2, 2026-10-12): `PlayersViewModel` (`vm.Players`, with the NameGuard, PalBox and Inventory partial files, the kits and Give Item sections); the page's refresh and the map's teleport buttons stay with the window. A reusable mover does the extraction. The busy-state refresh now covers every page's commands (Save names and Save Whitelist stayed disabled without it). The full gate and the ArtworkHarness pass. `MainWindowViewModel.cs` 558,219 bytes; all its files 644,530 (were 704,238). | Built |
 | C-3 | v1.0.8.3 | World: Map, Bases, Guilds, Inspector, world transactions. Recorded (v1.0.8.3, 2026-10-12): `MapViewModel` (`vm.Map`: background, viewport, markers, teleport points) and `WorldViewModel` (`vm.World`: Inspector and Pal editor, Bases, Guilds, migration, world transactions); the refreshes that feed several pages stay with the window, which hands the page what it needs. The role audit now follows code-behind calls through a page. The full gate and the ArtworkHarness pass. `MainWindowViewModel.cs` 482,828 bytes; all its files 569,569 (were 644,530). | Built |
-| C-4 | v1.0.8.4 | Server: setup wizard, Configuration, Launcher, Workspace. | Planned |
+| C-4 | v1.0.8.4 | Server: setup wizard, Configuration, Launcher, Workspace. Recorded (v1.0.8.4, 2026-10-12): `ConfigurationViewModel` (`vm.Configuration`: the Palworld settings editor, MystTiq's service settings, the Launcher's start options) and `WorkspaceViewModel` (`vm.Workspace`); they follow each other through events. The setup wizard stays with the window: it creates the profile and the tab, which is tab coordination (C-9). The full gate and the ArtworkHarness pass. `MainWindowViewModel.cs` 435,282 bytes; all its files 493,942 (were 569,569). | Built |
 | C-5 | v1.0.8.5 | Backups and Save Tools. | Planned |
 | C-6 | v1.0.8.6 | MODs: MOD dashboard, library, UE4SS, MOD browser. | Planned |
 | C-7 | v1.0.8.7 | Automation, Notifications, Alert Center, Activity and audit, delivery. | Planned |

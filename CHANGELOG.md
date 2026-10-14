@@ -1,4 +1,15 @@
-<!-- MystTiq v1.0.8.3: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.4: file reviewed for this release (2026-10-12). -->
+## v1.0.8.4 — The Configuration and Workspace Pages, Tidied
+
+- Roadmap C-4: the Configuration page (the Palworld settings editor and presets, MystTiq's service settings and the
+  Launcher's start options) moved into `ConfigurationViewModel` (the Launcher partial file removed), and the Workspace page
+  into `WorkspaceViewModel`. The window keeps the unsaved-changes guard and the setup wizard (it creates the profile and
+  the tab). The session gained `IsLocalProfile`. The `MainWindowViewModel` files total 493,942 bytes (were 569,569).
+  Nothing the owner sees changes.
+- Tests: the v1.0.8.4 gate regenerated from v1.0.8.3; a harness check that skipped itself when a method moved now fails
+  instead.
+- Version advanced to 1.0.8.4.
+
 ## v1.0.8.3 — The Map and World Pages, Tidied
 
 - Roadmap C-3: the Map page (background and presets, viewport, player, base and Pal markers, teleport points and the

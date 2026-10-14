@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -34,10 +34,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string? _busyServerName;
     private string _busyElapsedText = string.Empty;
     private readonly DispatcherTimer _busyElapsedTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    // v0.7.96.0: on by default. The old image mapping assumed the pre-expansion frame; the
-    // conversion is now calibrated to the bundled expanded map (see PalworldMapCoordinates). It
-    // only ever applies while the Palpagos map is the background (Map.IsPalpagosMapActive).
-    private readonly LocalConfigPresetStore _configPresetStore = new();
     // v0.7.79.0: theme is now per-tab (read/written through ActiveTab.Profile.AccentTheme/
     // ThemeVariant -- see SelectedAccentTheme/IsLightMode below), so the app-wide
     // LocalThemePreferencesStore fields this class used to hold are gone. App.axaml.cs still loads
@@ -90,24 +86,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _backupRetentionToken = string.Empty;
     private string _backupRetentionState = "Preview a policy before cleanup.";
 
-    private bool _configLoaded;
-    private bool _configApiEnabled;
-    private string _configBindAddress = "127.0.0.1";
-    private int _configPort = 8213;
-    private int _startupTimeoutSeconds = 90;
-    private int _stopTimeoutSeconds = 30;
-    private int _servicePollSeconds = 5;
-    private int _recoveryBackoffSeconds = 10;
-    private int _maximumRecoveryAttempts = 5;
-    private int _recoveryWindowSeconds = 300;
-    private string _configServerRoot = string.Empty;
-    private string _configSteamCmdPath = string.Empty;
-    private string _configBackupRoot = string.Empty;
-    private string _configRuntimeRoot = string.Empty;
-    private string _configLaunchArguments = string.Empty;
-    private string _configSecurityText = "Not loaded";
-    private string _configState = "Not loaded";
-    private string _workspaceState = "Load the managed configuration to inspect server paths.";
     private string _doctorStatus = "Not run";
     private string _doctorSummary = "Connect to a MystTiq service, then run Doctor.";
     private string _doctorCheckedAt = "Never";
@@ -123,19 +101,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _distributionPlanText = string.Empty;
     private string _distributionOutputText = string.Empty;
     private bool _validateServerFiles = true;
-    private string _activeWorldIdText = "—";
-    private string _worldCountText = "—";
-    private string _worldFileCountText = "—";
-    private string _worldPlayerSaveCountText = "—";
-    private string _worldSizeText = "—";
-    private string _worldSaveRootText = "—";
-    private string _worldSaveDataCountText = "—";
-    private string _worldDiagnosticCountText = "—";
-    private string _worldEmptyCountText = "—";
-    private string _worldAgeRangeText = "—";
-    private string _worldIntegrityState = "Not checked";
-    private WorldFileDto? _selectedWorldFile;
-    private string _worldValidationState = "Not validated";
     private string _semanticStateText = "—";
     private string _semanticSourceText = "—";
     private PlayerSnapshotDto? _selectedOnlinePlayer;
@@ -257,22 +222,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _saveToolsState = "Open Save Tools to inspect server-side dependencies and saves.";
     private string _saveToolsPaths = "Not inspected";
     private SaveFileDto? _selectedSaveFile;
-    private string _palworldConfigState = "Not loaded";
-    private string _palworldConfigPath = "Not loaded";
-    private bool _palworldConfigLoaded;
-    private bool _isConfigSimpleView = true;
     private bool _isWanDiagnosticsExpanded;
     private bool _isLocalDiagnosticsExpanded;
     private bool _isDiscordBotExpanded;
     private bool _isAntiCheatExpanded;
-    private string _configSearchText = string.Empty;
-    private string _selectedConfigCategory = "All Categories";
-    private string _selectedConfigPreset = "Balanced QoL";
-    private IReadOnlyList<string> _palworldConfigPresets = ["Official / Vanilla", "Balanced QoL", "Relaxed QoL", "Custom"];
-    private string _newConfigPresetName = string.Empty;
-    private string _palworldConfigDirtyText = "No unsaved changes";
-    private string _palworldConfigValidationText = "Load the active configuration to validate settings.";
-    private bool _palworldConfigHasValidationErrors;
     private string _environmentHealthText = "Checking…";
     private string _setupOperationState = "IDLE";
     private string _setupOperationTitle = "No operation currently running";
@@ -308,8 +261,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         Dashboard = new DashboardViewModel(Session);
         Players = new PlayersViewModel(Session, RefreshActivityAsync, RefreshPlayersPageAsync);
         Map = new MapViewModel(Session, Players);
-        World = new WorldViewModel(Session, Map, Players, RefreshOperationsAsync, ValidateActiveWorldAsync, RefreshPalsAsync, RefreshPlayersPageAsync, RefreshWorldExplorerAsync, RefreshPlayerGuildExplorerAsync, OpenSelectedGuildLeaderAsync);
-        _pages = [Logs, Host, Dashboard, Players, Map, World];
+        World = new WorldViewModel(Session, Map, Players, RefreshOperationsAsync, () => Workspace!.ValidateActiveWorldAsync(), RefreshPalsAsync, RefreshPlayersPageAsync, RefreshWorldExplorerAsync, RefreshPlayerGuildExplorerAsync, OpenSelectedGuildLeaderAsync);
+        Configuration = new ConfigurationViewModel(Session, state => Workspace!.WorkspaceState = state);
+        Workspace = new WorkspaceViewModel(Session, Configuration, EnvironmentItems);
+        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace];
+        // v1.0.8.4 (roadmap C-4): the Workspace page and the wizard follow the Configuration page.
+        Configuration.ConfigurationLoaded += () => { Workspace.ValidateWorkspacePaths(); Workspace.RaiseWorkspaceSummaryProperties(); };
+        Configuration.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(ConfigurationViewModel.PalworldConfigLoaded)) return;
+            (GenerateServerNameCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            Workspace.RaiseWorkspaceSummaryProperties();
+        };
         // The map's teleport buttons follow the Players page's selected player.
         Players.CommandStatesChanged += () =>
         {
@@ -425,16 +388,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         PreviewBackupRetentionCommand = new AsyncCommand(PreviewBackupRetentionAsync, () => !IsBusy && ManagementApiConnected);
         ApplyBackupRetentionCommand = new AsyncCommand(ApplyBackupRetentionAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(BackupRetentionToken));
         OpenBackupRootCommand = new RelayCommand(OpenBackupRoot, () => !string.IsNullOrWhiteSpace(BackupRootPath));
-        LoadConfigurationCommand = new AsyncCommand(LoadConfigurationAsync, () => !IsBusy);
-        SaveConfigurationCommand = new AsyncCommand(SaveConfigurationAsync, () => !IsBusy && ConfigLoaded);
-        ValidateWorkspaceCommand = new RelayCommand(ValidateWorkspacePaths, () => ConfigLoaded);
         BootstrapLocalCommand = new AsyncCommand(BootstrapLocalAsync, () => !IsBusy && IsLocalProfile);
-        SavePalworldConfigurationCommand = new AsyncCommand(SavePalworldConfigurationAsync, () => !IsBusy && PalworldConfigLoaded && PalworldConfigIsDirty && !PalworldConfigHasValidationErrors);
-        ApplyStarterPresetCommand = new AsyncCommand(ApplyStarterPresetAsync, () => !IsBusy);
-        ShowSimpleConfigCommand = new RelayCommand(() => SetConfigurationView(true));
-        ShowAdvancedConfigCommand = new RelayCommand(() => SetConfigurationView(false));
-        ResetConfigChangesCommand = new RelayCommand(ResetPalworldConfigurationChanges, () => PalworldConfigLoaded && PalworldConfigIsDirty && !IsBusy);
-        GenerateServerNameCommand = new RelayCommand(GenerateServerName, () => PalworldConfigLoaded && !IsBusy);
+        GenerateServerNameCommand = new RelayCommand(GenerateServerName, () => Configuration.PalworldConfigLoaded && !IsBusy);
         GenerateSetupServerNameCommand = new RelayCommand(() => SetupServerName = GenerateRandomServerName());
         RunDoctorCommand = new AsyncCommand(RunDoctorAsync, () => !IsBusy);
         RecheckDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy) RunUi(() => RecheckDiagnosticAsync(f)); });
@@ -461,15 +416,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         UpdateComponentCommand = new RelayCommand<ComponentVersionDto>(UpdateComponent, component => component?.CanUpdate == true);
         // v1.0.4.0 (roadmap S-1, S-2): the selected player's inventory (MainWindowViewModel.Inventory.cs).
         RefreshWorldExplorerCommand = new AsyncCommand(RefreshWorldExplorerAsync, () => !IsBusy);
-        ValidateActiveWorldCommand = new AsyncCommand(ValidateActiveWorldAsync, () => !IsBusy && ManagementApiConnected);
         RefreshOperationsCommand = new AsyncCommand(RefreshOperationsAsync, () => !IsBusy && ManagementApiConnected);
         RefreshPlayerGuildExplorerCommand = new AsyncCommand(RefreshPlayerGuildExplorerAsync, () => !IsBusy);
         RefreshPalsCommand = new AsyncCommand(RefreshPalsAsync, () => !IsBusy);
         // The "nothing is scheduled" hint follows the collection, so it disappears the moment a rule is created.
         AutomationRules.CollectionChanged += (_, _) => RaisePropertyChanged(nameof(HasNoAutomationRules));
         Map.LoadMapBackgroundPreference();
-        SaveCurrentAsPresetCommand = new RelayCommand(SaveCurrentAsPreset, () => PalworldConfigLoaded && !IsBusy && !string.IsNullOrWhiteSpace(NewConfigPresetName));
-        RebuildConfigPresetList();
+        Configuration.RebuildConfigPresetList();
         RefreshModsCommand = new AsyncCommand(RefreshModsAsync, () => !IsBusy);
         VerifyModsCommand = new AsyncCommand(VerifyModsAsync, () => !IsBusy);
         EnableSelectedModCommand = new AsyncCommand(() => SetSelectedModEnabledAsync(true), () => !IsBusy);
@@ -973,7 +926,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(IsWorldSourceImport));
         RaisePropertyChanged(nameof(ActiveTabAccentBrush));
         RaisePropertyChanged(nameof(ActiveTabAccentGlowShadow));
-        RaiseWorkspaceSummaryProperties();
+        Workspace.RaiseWorkspaceSummaryProperties();
         RaiseManagementApiConnectedDependents();
         RaiseConnectionStateDependents();
         RaiseServerIsRunningDependents();
@@ -1172,10 +1125,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<EnvironmentChecklistItemDto> EnvironmentItems { get; } = [];
     public ObservableCollection<BackupItemDto> BackupItems { get; } = [];
     public ObservableCollection<BackupRetentionItemDto> BackupRetentionItems { get; } = [];
-    public ObservableCollection<WorldCandidateDto> WorldCandidates { get; } = [];
-    public ObservableCollection<WorldFileDto> WorldFiles { get; } = [];
-    public ObservableCollection<string> WorldIntegrityFindings { get; } = [];
-    public ObservableCollection<WorldValidationFindingDto> WorldValidationFindings { get; } = [];
     public ObservableCollection<OperationRecordDto> RecentOperations { get; } = [];
     public ObservableCollection<ModItemDto> ModItems { get; } = [];
     public IEnumerable<ModItemDto> ModsNeedingAttention => ModItems.Where(m => m.Health is not ("Healthy" or "Disabled" or "Active / Unverified"));
@@ -1187,18 +1136,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<WanReachabilityCheckDto> WanReachabilityChecks { get; } = [];
     public ObservableCollection<DiagnosticFindingDto> LocalConnectionFindings { get; } = [];
     public ObservableCollection<DiagnosticFindingDto> LocalMachineFindings { get; } = [];
-    public ObservableCollection<PalworldSettingDto> PalworldSettings { get; } = [];
-    public ObservableCollection<PalworldSettingDto> FilteredPalworldSettings { get; } = [];
-    // v0.7.38.0: was one flat SimplePalworldSettings collection; split into the three World
-    // Settings sub-sections (World / Player & Pal / Items & Work) so the page can render labeled
-    // groups instead of one long list.
-    public ObservableCollection<PalworldSimpleSettingItem> SimpleWorldRateSettings { get; } = [];
-    public ObservableCollection<PalworldSimpleSettingItem> SimplePlayerPalRateSettings { get; } = [];
-    public ObservableCollection<PalworldSimpleSettingItem> SimpleItemsWorkRateSettings { get; } = [];
-    public ObservableCollection<PalworldSimpleToggleItem> SimpleToggleSettings { get; } = [];
-    public ObservableCollection<PalworldSettingDto> SimpleNetworkSettings { get; } = [];
-    public ObservableCollection<string> PalworldConfigCategories { get; } = ["All Categories"];
-    public IReadOnlyList<string> PalworldConfigPresets { get => _palworldConfigPresets; private set => SetField(ref _palworldConfigPresets, value); }
 
     public PlayerSnapshotDto? SelectedOnlinePlayer
     {
@@ -1279,10 +1216,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             RaisePropertyChanged(nameof(SelectedThemeModeIndex));
             RaisePropertyChanged(nameof(PageArtwork));
             RaisePropertyChanged(nameof(SetupArtwork));
-            WorkspaceState = IsLocalProfile
+            Workspace.WorkspaceState = IsLocalProfile
                 ? "Local profile: browse and open actions use this computer."
                 : "Remote profile: paths belong to the managed server; local browse/open actions are disabled.";
-            RaiseWorkspaceSummaryProperties();
+            Workspace.RaiseWorkspaceSummaryProperties();
             (DeleteProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (BootstrapLocalCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         }
@@ -1688,24 +1625,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string BackupRetentionToken { get => _backupRetentionToken; private set { if (SetField(ref _backupRetentionToken, value)) (ApplyBackupRetentionCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string BackupRetentionState { get => _backupRetentionState; private set => SetField(ref _backupRetentionState, value); }
 
-    public bool ConfigLoaded { get => _configLoaded; private set => SetField(ref _configLoaded, value); }
-    public bool ConfigApiEnabled { get => _configApiEnabled; set => SetField(ref _configApiEnabled, value); }
-    public string ConfigBindAddress { get => _configBindAddress; set => SetField(ref _configBindAddress, value); }
-    public int ConfigPort { get => _configPort; set => SetField(ref _configPort, value); }
-    public int StartupTimeoutSeconds { get => _startupTimeoutSeconds; set => SetField(ref _startupTimeoutSeconds, value); }
-    public int StopTimeoutSeconds { get => _stopTimeoutSeconds; set => SetField(ref _stopTimeoutSeconds, value); }
-    public int ServicePollSeconds { get => _servicePollSeconds; set => SetField(ref _servicePollSeconds, value); }
-    public int RecoveryBackoffSeconds { get => _recoveryBackoffSeconds; set => SetField(ref _recoveryBackoffSeconds, value); }
-    public int MaximumRecoveryAttempts { get => _maximumRecoveryAttempts; set => SetField(ref _maximumRecoveryAttempts, value); }
-    public int RecoveryWindowSeconds { get => _recoveryWindowSeconds; set => SetField(ref _recoveryWindowSeconds, value); }
-    public string ConfigServerRoot { get => _configServerRoot; set { if (SetField(ref _configServerRoot, value)) LauncherConfigurationChanged(); } }
-    public string ConfigSteamCmdPath { get => _configSteamCmdPath; set => SetField(ref _configSteamCmdPath, value); }
-    public string ConfigBackupRoot { get => _configBackupRoot; set => SetField(ref _configBackupRoot, value); }
-    public string ConfigRuntimeRoot { get => _configRuntimeRoot; set => SetField(ref _configRuntimeRoot, value); }
-    public string ConfigLaunchArguments { get => _configLaunchArguments; set => SetField(ref _configLaunchArguments, value); }
-    public string ConfigSecurityText { get => _configSecurityText; private set => SetField(ref _configSecurityText, value); }
-    public string ConfigState { get => _configState; private set => SetField(ref _configState, value); }
-    public string WorkspaceState { get => _workspaceState; private set => SetField(ref _workspaceState, value); }
     public string DoctorStatus { get => _doctorStatus; private set => SetField(ref _doctorStatus, value); }
     public string DoctorSummary { get => _doctorSummary; private set => SetField(ref _doctorSummary, value); }
     public string DoctorCheckedAt { get => _doctorCheckedAt; private set => SetField(ref _doctorCheckedAt, value); }
@@ -1732,19 +1651,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
     public bool HasDistributionOutput => !string.IsNullOrEmpty(DistributionOutputText);
     public bool ValidateServerFiles { get => _validateServerFiles; set => SetField(ref _validateServerFiles, value); }
-    public string ActiveWorldIdText { get => _activeWorldIdText; private set => SetField(ref _activeWorldIdText, value); }
-    public string WorldCountText { get => _worldCountText; private set => SetField(ref _worldCountText, value); }
-    public string WorldFileCountText { get => _worldFileCountText; private set => SetField(ref _worldFileCountText, value); }
-    public string WorldPlayerSaveCountText { get => _worldPlayerSaveCountText; private set => SetField(ref _worldPlayerSaveCountText, value); }
-    public string WorldSizeText { get => _worldSizeText; private set => SetField(ref _worldSizeText, value); }
-    public string WorldSaveRootText { get => _worldSaveRootText; private set => SetField(ref _worldSaveRootText, value); }
-    public string WorldSaveDataCountText { get => _worldSaveDataCountText; private set => SetField(ref _worldSaveDataCountText, value); }
-    public string WorldDiagnosticCountText { get => _worldDiagnosticCountText; private set => SetField(ref _worldDiagnosticCountText, value); }
-    public string WorldEmptyCountText { get => _worldEmptyCountText; private set => SetField(ref _worldEmptyCountText, value); }
-    public string WorldAgeRangeText { get => _worldAgeRangeText; private set => SetField(ref _worldAgeRangeText, value); }
-    public string WorldIntegrityState { get => _worldIntegrityState; private set => SetField(ref _worldIntegrityState, value); }
-    public WorldFileDto? SelectedWorldFile { get => _selectedWorldFile; set => SetField(ref _selectedWorldFile, value); }
-    public string WorldValidationState { get => _worldValidationState; private set => SetField(ref _worldValidationState, value); }
     public string SemanticStateText { get => _semanticStateText; private set => SetField(ref _semanticStateText, value); }
     public string SemanticSourceText { get => _semanticSourceText; private set => SetField(ref _semanticSourceText, value); }
     public IReadOnlyList<string> PalGenderOptions { get; } = ["Male", "Female"];
@@ -2002,17 +1908,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             (PreviewUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (ApplyUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RollbackUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (ValidateActiveWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Workspace.ValidateActiveWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (World.ApplyWorldTransactionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (LoadConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (SaveConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (SavePalworldConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Configuration.LoadConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Configuration.SaveConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Configuration.SavePalworldConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             // v0.7.82.0 bug fix: both also gate on !IsBusy but were never re-queried here, only from
-            // the PalworldConfigLoaded setter -- which fires mid-load, while IsBusy is still true, so
+            // the Configuration.PalworldConfigLoaded setter -- which fires mid-load, while IsBusy is still true, so
             // CanExecute evaluated false right then and stayed stuck disabled for the rest of the
             // session even after IsBusy went back to false (nothing else ever re-raised these two).
             (GenerateServerNameCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (SaveCurrentAsPresetCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (Configuration.SaveCurrentAsPresetCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (RestartAfterCloneCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -2224,14 +2130,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand PreviewBackupRetentionCommand { get; }
     public ICommand ApplyBackupRetentionCommand { get; }
     public ICommand OpenBackupRootCommand { get; }
-    public ICommand LoadConfigurationCommand { get; }
-    public ICommand SaveConfigurationCommand { get; }
-    public ICommand SavePalworldConfigurationCommand { get; }
-    public ICommand ApplyStarterPresetCommand { get; }
-    public ICommand ShowSimpleConfigCommand { get; }
-    public ICommand ShowAdvancedConfigCommand { get; }
-    public ICommand ResetConfigChangesCommand { get; }
-    public ICommand SaveCurrentAsPresetCommand { get; }
     public ICommand GenerateServerNameCommand { get; }
     public ICommand GenerateSetupServerNameCommand { get; }
     public ICommand RunDoctorCommand { get; }
@@ -2247,7 +2145,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand InstallPalworldServerFromWizardCommand { get; }
     public ICommand InstallPalworldServerWithExtrasCommand { get; }
     public ICommand RefreshWorldExplorerCommand { get; }
-    public ICommand ValidateActiveWorldCommand { get; }
     public ICommand RefreshOperationsCommand { get; }
     public ICommand RefreshPlayerGuildExplorerCommand { get; }
     public ICommand RefreshPalsCommand { get; }
@@ -2322,60 +2219,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string SaveToolsPaths { get => _saveToolsPaths; private set => SetField(ref _saveToolsPaths, value); }
     public SaveFileDto? SelectedSaveFile { get => _selectedSaveFile; set => SetField(ref _selectedSaveFile, value); }
 
-    public string PalworldConfigState { get => _palworldConfigState; private set => SetField(ref _palworldConfigState, value); }
-    public string PalworldConfigPath { get => _palworldConfigPath; private set => SetField(ref _palworldConfigPath, value); }
-    public bool PalworldConfigLoaded
-    {
-        get => _palworldConfigLoaded;
-        private set
-        {
-            if (!SetField(ref _palworldConfigLoaded, value)) return;
-            (SavePalworldConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (ResetConfigChangesCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (GenerateServerNameCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (SaveCurrentAsPresetCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            RaisePropertyChanged(nameof(WorkspaceHealthText));
-        }
-    }
 
-    public bool IsConfigSimpleView => _isConfigSimpleView;
-    public bool IsConfigAdvancedView => !_isConfigSimpleView;
-    public PalworldSettingDto? ServerNameSetting => PalworldSettings.FirstOrDefault(x => x.Name.Equals("ServerName", StringComparison.OrdinalIgnoreCase));
-    public PalworldSettingDto? ServerDescriptionSetting => PalworldSettings.FirstOrDefault(x => x.Name.Equals("ServerDescription", StringComparison.OrdinalIgnoreCase));
-    public PalworldSettingDto? AdminPasswordSetting => PalworldSettings.FirstOrDefault(x => x.Name.Equals("AdminPassword", StringComparison.OrdinalIgnoreCase));
-    public PalworldSettingDto? ServerPasswordSetting => PalworldSettings.FirstOrDefault(x => x.Name.Equals("ServerPassword", StringComparison.OrdinalIgnoreCase));
-    public string NewConfigPresetName
-    {
-        get => _newConfigPresetName;
-        set { if (SetField(ref _newConfigPresetName, value ?? string.Empty)) (SaveCurrentAsPresetCommand as RelayCommand)?.RaiseCanExecuteChanged(); }
-    }
-    public string ConfigSearchText
-    {
-        get => _configSearchText;
-        set { if (SetField(ref _configSearchText, value)) ApplyPalworldConfigurationFilter(); }
-    }
-    public string SelectedConfigCategory
-    {
-        get => _selectedConfigCategory;
-        set { if (SetField(ref _selectedConfigCategory, value ?? "All Categories")) ApplyPalworldConfigurationFilter(); }
-    }
-    public string SelectedConfigPreset
-    {
-        get => _selectedConfigPreset;
-        set
-        {
-            if (!SetField(ref _selectedConfigPreset, value ?? "Custom")) return;
-            // "Custom" means "current values don't match any known preset" -- there's nothing to
-            // apply for it. DetectAndSyncConfigPreset() bypasses this setter entirely (direct field
-            // assignment) specifically so that reverse-detected selection never re-triggers this.
-            if (PalworldConfigLoaded && !IsBusy && !string.Equals(_selectedConfigPreset, "Custom", StringComparison.Ordinal))
-                ApplySelectedConfigurationPreset();
-        }
-    }
-    public string PalworldConfigDirtyText { get => _palworldConfigDirtyText; private set => SetField(ref _palworldConfigDirtyText, value); }
-    public string PalworldConfigValidationText { get => _palworldConfigValidationText; private set => SetField(ref _palworldConfigValidationText, value); }
-    public bool PalworldConfigHasValidationErrors { get => _palworldConfigHasValidationErrors; private set => SetField(ref _palworldConfigHasValidationErrors, value); }
-    public bool PalworldConfigIsDirty => PalworldSettings.Any(x => x.IsDirty);
 
     public string EnvironmentHealthText { get => _environmentHealthText; private set => SetField(ref _environmentHealthText, value); }
     public string SetupOperationState { get => _setupOperationState; private set => SetField(ref _setupOperationState, value); }
@@ -2483,15 +2327,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(BackupPendingCountText));
     }
 
-    public string WorkspaceDeploymentMode => !IsLocalProfile ? "REMOTE" : AppContext.BaseDirectory.Contains("artifacts", StringComparison.OrdinalIgnoreCase) ? "PORTABLE / DEVELOPMENT" : "INSTALLED";
-    public string WorkspaceHealthText => ConfigLoaded ? "CONFIGURATION LOADED" : "NOT VALIDATED";
-    public string WorkspaceDiscoveryText => EnvironmentItems.Count == 0 ? "NOT CHECKED" : EnvironmentItems.All(x => x.IsReady) ? "SERVER READY" : "ATTENTION REQUIRED";
-    public string WorkspaceExecutableRoot => AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-    public string WorkspaceApplicationData => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "MystTiqPalworldServer");
-    public string WorkspaceRoot => Path.Combine(WorkspaceApplicationData, "Workspace");
-    public string WorkspaceDownloadsRoot => Path.Combine(WorkspaceRoot, "Downloads");
-    public string WorkspaceExportsRoot => Path.Combine(WorkspaceApplicationData, "Exports");
-    public string WorkspaceLogsRoot => Path.Combine(WorkspaceApplicationData, "Logs");
 
     public string NetworkHealth { get => _networkHealth; private set => SetField(ref _networkHealth, value); }
     public string LocalDiagnosticsState { get => _localDiagnosticsState; private set => SetField(ref _localDiagnosticsState, value); }
@@ -2521,44 +2356,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand RepairUpnpMappingCommand { get; }
     public ICommand OpenExternalPortCheckerCommand { get; }
     public ICommand RestartFromDiagnosticsCommand { get; }
-    public ICommand ValidateWorkspaceCommand { get; }
     public ICommand BootstrapLocalCommand { get; }
 
-    public bool TryGetLocalWorkspacePath(string key, out string path)
-    {
-        path = key switch
-        {
-            "server" => ConfigServerRoot,
-            "steamcmd" => ConfigSteamCmdPath,
-            "backup" => ConfigBackupRoot,
-            "runtime" => ConfigRuntimeRoot,
-            "executable" => WorkspaceExecutableRoot,
-            "workspace" => WorkspaceRoot,
-            "appdata" => WorkspaceApplicationData,
-            "downloads" => WorkspaceDownloadsRoot,
-            "exports" => WorkspaceExportsRoot,
-            "logs" => WorkspaceLogsRoot,
-            _ => string.Empty
-        };
-        if (!IsLocalProfile)
-        {
-            WorkspaceState = "Open is unavailable for remote profiles because server paths do not belong to this computer.";
-            return false;
-        }
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            WorkspaceState = "The selected workspace path is empty.";
-            return false;
-        }
-        return true;
-    }
 
-    private void RaiseWorkspaceSummaryProperties()
-    {
-        RaisePropertyChanged(nameof(WorkspaceDeploymentMode));
-        RaisePropertyChanged(nameof(WorkspaceHealthText));
-        RaisePropertyChanged(nameof(WorkspaceDiscoveryText));
-    }
 
     public string BuildRedactedSupportReport()
     {
@@ -2571,23 +2371,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             $"Profile: {ProfileName}", $"Endpoint: {endpoint}", $"Connection: {ConnectionState}",
             $"Authentication supplied: {(!string.IsNullOrWhiteSpace(BearerToken) ? "yes (redacted)" : "no")}",
             $"TLS pin supplied: {(!string.IsNullOrWhiteSpace(CertificateSha256) ? "yes (redacted)" : "no")}", "",
-            NetworkReportText, "", "Workspace", $"State: {WorkspaceState}",
-            $"Server root: {ConfigServerRoot}", $"SteamCMD: {ConfigSteamCmdPath}", $"Backup root: {ConfigBackupRoot}", $"Runtime root: {ConfigRuntimeRoot}"
+            NetworkReportText, "", "Workspace", $"State: {Workspace.WorkspaceState}",
+            $"Server root: {Configuration.ConfigServerRoot}", $"SteamCMD: {Configuration.ConfigSteamCmdPath}", $"Backup root: {Configuration.ConfigBackupRoot}", $"Runtime root: {Configuration.ConfigRuntimeRoot}"
         });
     }
 
-    private static bool IsAbsoluteServerPath(string value) =>
-        value.StartsWith("/", StringComparison.Ordinal) || value.StartsWith("\\\\", StringComparison.Ordinal) ||
-        (value.Length >= 3 && char.IsLetter(value[0]) && value[1] == ':' && (value[2] == '\\' || value[2] == '/'));
 
-    private void ValidateWorkspacePaths()
-    {
-        var paths = new[] { ("Server root", ConfigServerRoot), ("SteamCMD", ConfigSteamCmdPath), ("Backup root", ConfigBackupRoot), ("Runtime root", ConfigRuntimeRoot) };
-        var invalid = paths.Where(x => string.IsNullOrWhiteSpace(x.Item2) || !IsAbsoluteServerPath(x.Item2.Trim())).Select(x => x.Item1).ToArray();
-        WorkspaceState = invalid.Length == 0
-            ? "Path syntax is valid. Save Paths uses the authenticated headless configuration route for authoritative validation and rollback-safe persistence."
-            : $"Path validation failed: {string.Join(", ", invalid)} must use absolute server paths.";
-    }
 
     private async Task BootstrapLocalAsync()
     {
@@ -2791,7 +2580,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (!Enum.TryParse<NavigationPage>(pageName, ignoreCase: true, out var page))
             return;
 
-        if (SelectedPage == NavigationPage.Configuration && page != NavigationPage.Configuration && PalworldConfigIsDirty)
+        if (SelectedPage == NavigationPage.Configuration && page != NavigationPage.Configuration && Configuration.PalworldConfigIsDirty)
         {
             _pendingNavigationAfterConfigPrompt = page;
             ConfigurationUnsavedChangesNavigationBlocked?.Invoke();
@@ -2813,7 +2602,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         var target = _pendingNavigationAfterConfigPrompt;
         _pendingNavigationAfterConfigPrompt = null;
         if (target is null) return;
-        await SavePalworldConfigurationAsync();
+        await Configuration.SavePalworldConfigurationAsync();
         PerformNavigation(target.Value);
     }
 
@@ -2822,7 +2611,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         var target = _pendingNavigationAfterConfigPrompt;
         _pendingNavigationAfterConfigPrompt = null;
         if (target is null) return;
-        ResetPalworldConfigurationChanges();
+        Configuration.ResetPalworldConfigurationChanges();
         PerformNavigation(target.Value);
     }
 
@@ -2858,15 +2647,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             case NavigationPage.Configuration:
                 // v0.7.87.0: direct live feedback -- Configuration should always start on Server
                 // Settings, not silently remember Advanced from a previous visit this session.
-                SetConfigurationView(true);
-                await LoadConfigurationAsync();
-                if (!IsBusy) await LoadPalworldConfigurationAsync();
+                Configuration.SetConfigurationView(true);
+                await Configuration.LoadConfigurationAsync();
+                if (!IsBusy) await Configuration.LoadPalworldConfigurationAsync();
                 break;
             case NavigationPage.Workspace:
-                await LoadConfigurationAsync();
+                await Configuration.LoadConfigurationAsync();
                 break;
             case NavigationPage.Launcher:
-                await LoadConfigurationAsync();
+                await Configuration.LoadConfigurationAsync();
                 break;
             case NavigationPage.Backups:
                 await RefreshBackupsAsync();
@@ -3126,8 +2915,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         NewServerInstallDirectoryStatusText = "Checking the configured server directory…";
         try
         {
-            await LoadConfigurationAsync();
-            var root = ConfigServerRoot;
+            await Configuration.LoadConfigurationAsync();
+            var root = Configuration.ConfigServerRoot;
             NewServerInstallDirectoryOccupied = !string.IsNullOrWhiteSpace(root) && Directory.Exists(root) && Directory.EnumerateFileSystemEntries(root).Any();
             NewServerInstallDirectoryEffectivePath = NewServerInstallDirectoryOccupied
                 ? DeriveAvailableSiblingServerRoot(root, string.IsNullOrWhiteSpace(SetupServerName) ? "server" : SetupServerName)
@@ -3217,10 +3006,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 Id = candidateId,
                 Name = string.IsNullOrWhiteSpace(SetupServerName) ? candidateId : SetupServerName.Trim(),
                 ServerRoot = newServerRoot,
-                SteamCmdPath = ConfigSteamCmdPath,
+                SteamCmdPath = Configuration.ConfigSteamCmdPath,
                 BackupRoot = Path.Combine(newServerRoot, "Backups"),
-                RuntimeRoot = Path.Combine(Path.GetDirectoryName(ConfigRuntimeRoot) ?? ConfigRuntimeRoot, candidateId),
-                LaunchArguments = LaunchArgumentsText.WithPort(ConfigLaunchArguments, SetupGamePort),
+                RuntimeRoot = Path.Combine(Path.GetDirectoryName(Configuration.ConfigRuntimeRoot) ?? Configuration.ConfigRuntimeRoot, candidateId),
+                LaunchArguments = LaunchArgumentsText.WithPort(Configuration.ConfigLaunchArguments, SetupGamePort),
                 Runtime = runtime
             };
 
@@ -3259,7 +3048,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     // v0.7.82.0: replaces the plain WizardAdvanceCommand on the Install step's own "Next" button --
     // advances to Confirm (7), then automatically applies the Identity & Ports values collected back
     // at step 3 (CreateDefaultServerSettingsAsync, reused as-is) and, if a preset was chosen at step
-    // 4, applies it too (ApplyStarterPresetAsync, reused as-is). Both already require the
+    // 4, applies it too (Configuration.ApplyStarterPresetAsync, reused as-is). Both already require the
     // just-installed PalWorldSettings.ini to exist, which is exactly why this runs after Install
     // rather than before.
     private async Task FinishInstallAndAdvanceAsync()
@@ -3269,8 +3058,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         SetupCreateConfirmed = true;
         await CreateDefaultServerSettingsAsync();
-        if (IsWorldSettingsChoicePreset && SelectedConfigPreset is not null)
-            await ApplyStarterPresetAsync();
+        if (IsWorldSettingsChoicePreset && Configuration.SelectedConfigPreset is not null)
+            await Configuration.ApplyStarterPresetAsync();
 
         // v0.7.89.0: direct live feedback -- "step 7 should automatically search for workshop
         // mods," instead of requiring a manual "Scan Workshop Mods" click on arrival. Mirrors the
@@ -3594,8 +3383,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             [
                 new("⇧", "Import", "Import configuration", null, null, RibbonIconColor.Amber, NativeDialogAction: "ImportConfig"),
                 new("⇩", "Export", "Export configuration", null, null, RibbonIconColor.Cyan, NativeDialogAction: "ExportConfig"),
-                new("✓", "Save", "Save configuration changes", SavePalworldConfigurationCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
-                new("↺", "Reset", "Reset unsaved configuration changes", ResetConfigChangesCommand, null, RibbonIconColor.Blue),
+                new("✓", "Save", "Save configuration changes", Configuration.SavePalworldConfigurationCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("↺", "Reset", "Reset unsaved configuration changes", Configuration.ResetConfigChangesCommand, null, RibbonIconColor.Blue),
             ]));
         }
         else if (IsConsolePage)
@@ -3612,7 +3401,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("Workspace",
             [
-                new("↻", "Refresh", "Refresh workspace paths", LoadConfigurationCommand, null, RibbonIconColor.Amber),
+                new("↻", "Refresh", "Refresh workspace paths", Configuration.LoadConfigurationCommand, null, RibbonIconColor.Amber),
             ]));
         }
         else if (IsBackupsPage)
@@ -3698,7 +3487,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("World Transactions",
             [
-                new("✓", "Validate", "Validate active world", ValidateActiveWorldCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("✓", "Validate", "Validate active world", Workspace.ValidateActiveWorldCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
                 new("⇩", "Export Report", "Export world validation report", null, null, RibbonIconColor.Cyan, NativeDialogAction: "ExportWorldValidation"),
                 new("↻", "Refresh Ops", "Refresh operation platform", RefreshOperationsCommand, null, RibbonIconColor.Amber),
             ]));
@@ -4109,7 +3898,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         DiscoveryProgressValue = 0;
         DiscoveredServices.Clear();
         DiscoveryStateText = "Scanning local IPv4 networks for MystTiq services…";
-        var port = ConfigPort is > 0 and <= 65535 ? ConfigPort : 8213;
+        var port = Configuration.ConfigPort is > 0 and <= 65535 ? Configuration.ConfigPort : 8213;
         DiscoveryProgress? last = null;
         var finished = false;
         var progress = new Progress<DiscoveryProgress>(update =>
@@ -4274,13 +4063,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         try
         {
             var world = await _api.GetWorldExplorerAsync(profile, BearerToken);
-            ActiveWorldIdText = world.ActiveWorldId ?? "Not resolved";
-            WorldCountText = world.WorldCount.ToString();
-            WorldPlayerSaveCountText = world.PlayerSaveCount.ToString();
-            WorldSizeText = $"{world.TotalSizeBytes / 1024d / 1024d:F2} MB";
+            Workspace.ActiveWorldIdText = world.ActiveWorldId ?? "Not resolved";
+            Workspace.WorldCountText = world.WorldCount.ToString();
+            Workspace.WorldPlayerSaveCountText = world.PlayerSaveCount.ToString();
+            Workspace.WorldSizeText = $"{world.TotalSizeBytes / 1024d / 1024d:F2} MB";
             Dashboard.WorldNicknameText = BuildWorldNickname(world.ActiveWorldId);
-            Dashboard.WorldText = world.Available ? ActiveWorldIdText : "Unavailable";
-            Dashboard.WorldPulseText = world.Available ? $"{WorldPlayerSaveCountText} player saves · {WorldSizeText}" : "World data unavailable";
+            Dashboard.WorldText = world.Available ? Workspace.ActiveWorldIdText : "Unavailable";
+            Dashboard.WorldPulseText = world.Available ? $"{Workspace.WorldPlayerSaveCountText} player saves · {Workspace.WorldSizeText}" : "World data unavailable";
         }
         catch (Exception ex) { World.WorldExplorerDetail = $"Dashboard world load: {ex.Message}"; }
 
@@ -4606,6 +4395,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public PlayersViewModel Players { get; }
     public MapViewModel Map { get; }
     public WorldViewModel World { get; }
+    public ConfigurationViewModel Configuration { get; }
+    public WorkspaceViewModel Workspace { get; }
     private readonly IReadOnlyList<PageViewModel> _pages;
 
     // v1.0.8.2 (roadmap C-2): the Players page refresh is one part of the whole status refresh, so it stays here.
@@ -4744,12 +4535,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         var world = snapshot.World;
         if (world.Available)
         {
-            ActiveWorldIdText = world.ActiveWorldId ?? "Not resolved";
+            Workspace.ActiveWorldIdText = world.ActiveWorldId ?? "Not resolved";
             Dashboard.WorldNicknameText = BuildWorldNickname(world.ActiveWorldId);
-            Dashboard.WorldText = ActiveWorldIdText;
-            WorldPlayerSaveCountText = world.PlayerSaveCount.ToString();
-            WorldSizeText = $"{world.TotalSizeBytes / 1024d / 1024d:F2} MB";
-            Dashboard.WorldPulseText = $"{world.PlayerSaveCount} player save(s) · {WorldSizeText}";
+            Dashboard.WorldText = Workspace.ActiveWorldIdText;
+            Workspace.WorldPlayerSaveCountText = world.PlayerSaveCount.ToString();
+            Workspace.WorldSizeText = $"{world.TotalSizeBytes / 1024d / 1024d:F2} MB";
+            Dashboard.WorldPulseText = $"{world.PlayerSaveCount} player save(s) · {Workspace.WorldSizeText}";
             Dashboard.WorldClockText = world.WorldDayNumber.HasValue
                 ? $"Day {world.WorldDayNumber.Value:N0} • {world.WorldTimeText ?? "--:--"}"
                 : "Day — • --:--";
@@ -4770,16 +4561,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // same "Active World" card (ID, player-save count, size) as a completely different,
             // already-running server, with no clone involved. Root cause: these fields are plain
             // top-level ViewModel properties (not per-tab), and this branch only ever reset the
-            // clock/save-age text -- ActiveWorldIdText/Dashboard.WorldNicknameText/Dashboard.WorldText/
-            // WorldPlayerSaveCountText/WorldSizeText/Dashboard.WorldPulseText kept whatever the
+            // clock/save-age text -- Workspace.ActiveWorldIdText/Dashboard.WorldNicknameText/Dashboard.WorldText/
+            // Workspace.WorldPlayerSaveCountText/Workspace.WorldSizeText/Dashboard.WorldPulseText kept whatever the
             // previously active tab's last successful poll had set, since a genuinely fresh server
             // (world.Available == false, e.g. still starting and hasn't generated Level.sav yet)
             // never got a chance to overwrite them with its own -- or lack of -- data.
-            ActiveWorldIdText = "Not resolved";
+            Workspace.ActiveWorldIdText = "Not resolved";
             Dashboard.WorldNicknameText = string.Empty;
             Dashboard.WorldText = "Unavailable";
-            WorldPlayerSaveCountText = "0";
-            WorldSizeText = "0.00 MB";
+            Workspace.WorldPlayerSaveCountText = "0";
+            Workspace.WorldSizeText = "0.00 MB";
             Dashboard.WorldPulseText = "World telemetry unavailable";
             Dashboard.WorldClockText = "Day — • --:--";
             Dashboard.WorldClockDetailText = "World telemetry unavailable";
@@ -6148,281 +5939,28 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         BackupRootPath = inventory.RootPath;
     }
 
-    private static readonly HashSet<string> SimpleConfigurationNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "ServerName", "ServerDescription", "ServerPassword", "AdminPassword", "PublicPort", "ServerPlayerMaxNum",
-        "RESTAPIEnabled", "RESTAPIPort", "RCONEnabled", "RCONPort",
-        "DayTimeSpeedRate", "NightTimeSpeedRate", "ExpRate", "PalCaptureRate", "PalSpawnNumRate",
-        "PlayerDamageRateAttack", "PlayerDamageRateDefense", "PlayerStomachDecreaceRate", "PlayerStaminaDecreaceRate",
-        "PlayerAutoHPRegeneRate", "PalStomachDecreaceRate", "PalStaminaDecreaceRate", "PalAutoHPRegeneRate",
-        "CollectionDropRate", "CollectionObjectRespawnSpeedRate", "WorkSpeedRate", "MonsterFarmActionSpeedRate",
-        "ItemWeightRate", "ItemCorruptionMultiplier", "EquipmentDurabilityDamageRate", "BaseCampWorkerMaxNum",
-        "BaseCampMaxNumInGuild", "BuildObjectDeteriorationDamageRate", "SupplyDropSpan"
-    };
 
-    // v0.7.29.0 bug fix: the gameplay-rate-only subset of SimpleConfigurationNames above -- deliberately
-    // excludes identity (ServerName/ServerDescription/ServerPassword/AdminPassword) and
-    // network/operational fields (PublicPort/ServerPlayerMaxNum/RESTAPIEnabled/RESTAPIPort/
-    // RCONEnabled/RCONPort). SimpleConfigurationNames itself stays untouched -- it's correctly used
-    // elsewhere to decide what the Simple Settings *view* shows, a different concern from what a QoL
-    // preset should actually mutate. ApplySelectedConfigurationPreset's "Official" branch used to
-    // reset every SimpleConfigurationNames entry, which silently wiped the server's name/description/
-    // passwords back to their defaults any time "Official / Vanilla" was selected.
-    private static readonly HashSet<string> GameplayRateConfigurationNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "DayTimeSpeedRate", "NightTimeSpeedRate", "ExpRate", "PalCaptureRate", "PalSpawnNumRate",
-        "PlayerDamageRateAttack", "PlayerDamageRateDefense", "PlayerStomachDecreaceRate", "PlayerStaminaDecreaceRate",
-        "PlayerAutoHPRegeneRate", "PalStomachDecreaceRate", "PalStaminaDecreaceRate", "PalAutoHPRegeneRate",
-        "CollectionDropRate", "CollectionObjectRespawnSpeedRate", "WorkSpeedRate", "MonsterFarmActionSpeedRate",
-        "ItemWeightRate", "ItemCorruptionMultiplier", "EquipmentDurabilityDamageRate", "BaseCampWorkerMaxNum",
-        "BaseCampMaxNumInGuild", "BuildObjectDeteriorationDamageRate", "SupplyDropSpan"
-    };
 
-    private void SetConfigurationView(bool simple)
-    {
-        if (_isConfigSimpleView == simple) return;
-        _isConfigSimpleView = simple;
-        RaisePropertyChanged(nameof(IsConfigSimpleView));
-        RaisePropertyChanged(nameof(IsConfigAdvancedView));
-        ApplyPalworldConfigurationFilter();
-    }
 
-    private void RebuildPalworldConfigurationCategories()
-    {
-        var selected = SelectedConfigCategory;
-        PalworldConfigCategories.Clear();
-        PalworldConfigCategories.Add("All Categories");
-        foreach (var category in PalworldSettings.Select(x => x.Category).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x))
-            PalworldConfigCategories.Add(category);
-        SelectedConfigCategory = PalworldConfigCategories.Contains(selected) ? selected : "All Categories";
-    }
 
-    private static bool MatchesConfigFilter(PalworldSettingDto setting, string search, string category) =>
-        (string.Equals(category, "All Categories", StringComparison.OrdinalIgnoreCase) || string.Equals(setting.Category, category, StringComparison.OrdinalIgnoreCase)) &&
-        (string.IsNullOrWhiteSpace(search) || setting.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || setting.DisplayName.Contains(search, StringComparison.OrdinalIgnoreCase) || setting.Category.Contains(search, StringComparison.OrdinalIgnoreCase));
 
-    private void ApplyPalworldConfigurationFilter()
-    {
-        var search = ConfigSearchText.Trim();
-        var category = SelectedConfigCategory;
-        var items = PalworldSettings.Where(setting =>
-            (!_isConfigSimpleView || SimpleConfigurationNames.Contains(setting.Name)) &&
-            MatchesConfigFilter(setting, search, category));
-        FilteredPalworldSettings.Clear();
-        foreach (var item in items) FilteredPalworldSettings.Add(item);
-        // Simple view previously ignored search/category entirely (a separate, unfiltered
-        // collection) -- rebuilding it here keeps both views' filtering behavior identical.
-        RebuildSimplePalworldSettings(search, category);
-    }
 
-    // Data-driven off the same SimpleConfigurationNames curated set that used to only
-    // gate a filter with no real UI effect -- one entry per name, control shape chosen by the
-    // setting's actual type, replacing the previous 8-item hardcoded slider array. Identity/
-    // credential fields (ServerName/ServerDescription/AdminPassword/ServerPassword) are excluded
-    // here -- they're bound directly in the Server Identity section of the page, not part of any
-    // of these three collections.
-    // v0.7.38.0: Group added so the formerly-flat GAMEPLAY RATES list can render as labeled
-    // sub-sections under the renamed WORLD SETTINGS heading, matching the v0.2.16.4 reference's
-    // grouping (its own listed examples -- "World": Death Penalty/Longer Days/Shorter
-    // Nights/More Item Drops/Faster Resource Respawn/Supply Drop Interval; "Player & Pal":
-    // Player/Pal Health Regeneration -- named only a few by example, not the full list; every
-    // curated rate below has been assigned to whichever of the three groups it actually belongs
-    // to semantically: World (environment/spawn/decay pacing), Player & Pal (survival/combat body
-    // stats), Items & Work (economy/base productivity/equipment).
-    private static readonly (string Name, string Title, string Description, double Min, double Max, double Step, string Unit, string Group)[] SimpleRateDefinitions =
-    [
-        ("DayTimeSpeedRate", "Daytime Speed", "Controls how quickly daylight passes.", 0.1, 5, 0.05, "x", "World"),
-        ("NightTimeSpeedRate", "Nighttime Speed", "Controls how quickly nighttime passes.", 0.1, 5, 0.05, "x", "World"),
-        ("ExpRate", "Experience Rate", "Controls experience earned by players and Pals.", 0.1, 20, 0.1, "x", "World"),
-        ("PalCaptureRate", "Pal Capture Rate", "Controls how easily Pals are captured.", 0.1, 5, 0.05, "x", "World"),
-        ("PalSpawnNumRate", "Pal Spawn Rate", "Controls how many Pals spawn in the world.", 0.1, 5, 0.05, "x", "World"),
-        ("SupplyDropSpan", "Supply Drop Interval", "Sets the time between supply drops.", 1, 360, 1, "min", "World"),
-        ("BuildObjectDeteriorationDamageRate", "Base Decay Rate", "Controls how quickly base structures deteriorate.", 0, 5, 0.05, "x", "World"),
-        ("PlayerDamageRateAttack", "Player Attack Damage", "Controls damage dealt by players.", 0.1, 10, 0.1, "x", "Player & Pal"),
-        ("PlayerDamageRateDefense", "Player Damage Taken", "Controls damage received by players.", 0.1, 10, 0.1, "x", "Player & Pal"),
-        ("PlayerStomachDecreaceRate", "Player Hunger Drain", "Controls how quickly player hunger depletes.", 0.1, 5, 0.05, "x", "Player & Pal"),
-        ("PlayerStaminaDecreaceRate", "Player Stamina Drain", "Controls how quickly player stamina depletes.", 0.1, 5, 0.05, "x", "Player & Pal"),
-        ("PlayerAutoHPRegeneRate", "Player Health Regeneration", "Increases automatic player health recovery.", 0.1, 10, 0.1, "x", "Player & Pal"),
-        ("PalStomachDecreaceRate", "Pal Hunger Drain", "Controls how quickly Pal hunger depletes.", 0.1, 5, 0.05, "x", "Player & Pal"),
-        ("PalStaminaDecreaceRate", "Pal Stamina Drain", "Controls how quickly Pal stamina depletes.", 0.1, 5, 0.05, "x", "Player & Pal"),
-        ("PalAutoHPRegeneRate", "Pal Health Regeneration", "Increases automatic Pal health recovery.", 0.1, 10, 0.1, "x", "Player & Pal"),
-        ("CollectionDropRate", "More Item Drops", "Increases resources dropped from collection objects.", 0.1, 10, 0.1, "x", "Items & Work"),
-        ("CollectionObjectRespawnSpeedRate", "Resource Respawn", "Controls how quickly collection objects return.", 0.1, 10, 0.1, "x", "Items & Work"),
-        ("WorkSpeedRate", "Work Speed", "Controls how quickly base tasks are completed.", 0.1, 10, 0.1, "x", "Items & Work"),
-        ("MonsterFarmActionSpeedRate", "Ranch Action Speed", "Controls how quickly ranch-type Pals produce.", 0.1, 20, 0.5, "x", "Items & Work"),
-        ("ItemWeightRate", "Item Weight", "Controls carried-item weight.", 0.1, 10, 0.1, "x", "Items & Work"),
-        // v0.7.102.0: minimum lowered from 0.1 to 0 (step 0.05). Real servers run below 0.1 (the Relaxed preset
-        // uses 0.25, and a hand-edited 0.05 was the value that exposed the phantom-change bug).
-        ("ItemCorruptionMultiplier", "Item Corruption Rate", "Controls how quickly items degrade.", 0, 10, 0.05, "x", "Items & Work"),
-        ("EquipmentDurabilityDamageRate", "Equipment Durability Loss", "Controls how quickly equipment durability drops.", 0.1, 5, 0.05, "x", "Items & Work")
-    ];
-    private static readonly (string Name, string Title, string Description)[] SimpleToggleDefinitions =
-    [
-        ("RESTAPIEnabled", "REST API Enabled", "Enables Palworld's own REST API, which MystTiq's player/world polling relies on."),
-        ("RCONEnabled", "RCON Enabled", "Enables Source RCON, which server broadcast/commands rely on.")
-    ];
-    private static readonly (string Name, string Title)[] SimpleNetworkDefinitions =
-    [
-        ("PublicPort", "Game Port"), ("ServerPlayerMaxNum", "Max Players"),
-        ("RESTAPIPort", "REST API Port"), ("RCONPort", "RCON Port"),
-        ("BaseCampWorkerMaxNum", "Base Workers (per base)"), ("BaseCampMaxNumInGuild", "Bases per Guild")
-    ];
 
-    // v0.7.1.0: makes visible what RebuildSimplePalworldSettings always silently skipped -- a
-    // curated setting whose name has no match in the live PalWorldSettings.ini at all (an older
-    // Palworld server build, typically) previously just vanished from Simple view with no
-    // indication. Computed independent of search/category filtering: existence in the live INI,
-    // not whether it currently matches the filter, is what "missing" means here.
-    public string SimpleSettingsGapText { get; private set; } = string.Empty;
-    public bool HasSimpleSettingsGap => SimpleSettingsGapText.Length > 0;
 
-    private void RebuildSimplePalworldSettings(string? search = null, string? category = null)
-    {
-        search ??= ConfigSearchText.Trim();
-        category ??= SelectedConfigCategory;
 
-        var curatedNames = SimpleRateDefinitions.Select(d => d.Name)
-            .Concat(SimpleToggleDefinitions.Select(d => d.Name))
-            .Concat(SimpleNetworkDefinitions.Select(d => d.Name));
-        var missing = curatedNames
-            .Where(name => !PalworldSettings.Any(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-            .ToList();
-        SimpleSettingsGapText = missing.Count == 0
-            ? string.Empty
-            : $"{missing.Count} of {SimpleRateDefinitions.Length + SimpleToggleDefinitions.Length + SimpleNetworkDefinitions.Length} curated settings aren't in this server's PalWorldSettings.ini (older server build?): {string.Join(", ", missing)}";
-        RaisePropertyChanged(nameof(SimpleSettingsGapText));
-        RaisePropertyChanged(nameof(HasSimpleSettingsGap));
 
-        SimpleWorldRateSettings.Clear();
-        SimplePlayerPalRateSettings.Clear();
-        SimpleItemsWorkRateSettings.Clear();
-        foreach (var definition in SimpleRateDefinitions)
-        {
-            var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase));
-            if (setting is null || !MatchesConfigFilter(setting, search, category)) continue;
-            var item = new PalworldSimpleSettingItem(setting, definition.Title, definition.Description, definition.Min, definition.Max, definition.Step, definition.Unit, definition.Group);
-            var target = definition.Group switch
-            {
-                "Player & Pal" => SimplePlayerPalRateSettings,
-                "Items & Work" => SimpleItemsWorkRateSettings,
-                _ => SimpleWorldRateSettings,
-            };
-            target.Add(item);
-        }
-        SimpleToggleSettings.Clear();
-        foreach (var definition in SimpleToggleDefinitions)
-        {
-            var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase));
-            if (setting is not null && MatchesConfigFilter(setting, search, category))
-                SimpleToggleSettings.Add(new PalworldSimpleToggleItem(setting, definition.Title, definition.Description));
-        }
-        SimpleNetworkSettings.Clear();
-        foreach (var definition in SimpleNetworkDefinitions)
-        {
-            var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase));
-            if (setting is not null && MatchesConfigFilter(setting, search, category))
-                SimpleNetworkSettings.Add(setting);
-        }
 
-        RaisePropertyChanged(nameof(ServerNameSetting));
-        RaisePropertyChanged(nameof(ServerDescriptionSetting));
-        RaisePropertyChanged(nameof(AdminPasswordSetting));
-        RaisePropertyChanged(nameof(ServerPasswordSetting));
-    }
 
-    private void PalworldSetting_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName != nameof(PalworldSettingDto.Value) && e.PropertyName != nameof(PalworldSettingDto.IsDirty)) return;
-        RefreshPalworldConfigurationState();
-        if (!string.IsNullOrWhiteSpace(ConfigSearchText)) ApplyPalworldConfigurationFilter();
-    }
 
-    private void RefreshPalworldConfigurationState()
-    {
-        var dirtyCount = PalworldSettings.Count(x => x.IsDirty);
-        PalworldConfigDirtyText = dirtyCount == 0 ? "No unsaved changes" : $"{dirtyCount} unsaved setting change(s)";
-        RaisePropertyChanged(nameof(PalworldConfigIsDirty));
-        var errors = ValidatePalworldConfiguration();
-        PalworldConfigHasValidationErrors = errors.Count > 0;
-        PalworldConfigValidationText = errors.Count == 0 ? "Configuration values pass client-side validation." : string.Join(" • ", errors.Take(4));
-        (SavePalworldConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (ResetConfigChangesCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        DetectAndSyncConfigPreset();
-    }
 
-    private static readonly string[] QolPresetComparisonKeys =
-    [
-        "DayTimeSpeedRate", "NightTimeSpeedRate", "PlayerAutoHPRegeneRate", "PalAutoHPRegeneRate",
-        "PlayerStomachDecreaceRate", "PalStomachDecreaceRate", "PlayerStaminaDecreaceRate", "PalStaminaDecreaceRate",
-        "ItemWeightRate", "ItemCorruptionMultiplier", "EquipmentDurabilityDamageRate", "WorkSpeedRate",
-        "MonsterFarmActionSpeedRate", "CollectionDropRate", "CollectionObjectRespawnSpeedRate",
-        "BaseCampWorkerMaxNum", "BaseCampMaxNumInGuild", "BuildObjectDeteriorationDamageRate", "SupplyDropSpan"
-    ];
 
-    private void DetectAndSyncConfigPreset()
-    {
-        if (!PalworldConfigLoaded || PalworldSettings.Count == 0) return;
-        string matched = "Custom";
-        foreach (var candidate in new[] { "Official / Vanilla", "Balanced QoL", "Relaxed QoL" })
-        {
-            if (MatchesConfigPreset(candidate)) { matched = candidate; break; }
-        }
-        if (!string.Equals(_selectedConfigPreset, matched, StringComparison.Ordinal))
-        {
-            _selectedConfigPreset = matched;
-            RaisePropertyChanged(nameof(SelectedConfigPreset));
-        }
-    }
-
-    private bool MatchesConfigPreset(string preset)
-    {
-        if (preset.StartsWith("Official", StringComparison.OrdinalIgnoreCase))
-        {
-            foreach (var key in QolPresetComparisonKeys)
-            {
-                var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(key, StringComparison.OrdinalIgnoreCase));
-                if (setting is not null && !ConfigValuesEqual(setting.Value, setting.DefaultValue)) return false;
-            }
-            return true;
-        }
-        foreach (var pair in GetQolPreset(preset))
-        {
-            var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(pair.Key, StringComparison.OrdinalIgnoreCase));
-            if (setting is not null && !ConfigValuesEqual(setting.Value, pair.Value)) return false;
-        }
-        return true;
-    }
-
-    private static bool ConfigValuesEqual(string a, string b)
-    {
-        if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase)) return true;
-        if (double.TryParse(a, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var da) &&
-            double.TryParse(b, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var db))
-            return Math.Abs(da - db) < 0.0001;
-        return false;
-    }
-
-    private List<string> ValidatePalworldConfiguration()
-    {
-        var errors = new List<string>();
-        foreach (var name in new[] { "PublicPort", "RESTAPIPort", "RCONPort" })
-        {
-            var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (setting is not null && (!int.TryParse(setting.Value, out var port) || port is < 1 or > 65535))
-                errors.Add($"{setting.DisplayName}: port must be 1-65535");
-        }
-        var maxPlayers = PalworldSettings.FirstOrDefault(x => x.Name.Equals("ServerPlayerMaxNum", StringComparison.OrdinalIgnoreCase));
-        if (maxPlayers is not null && (!int.TryParse(maxPlayers.Value, out var max) || max < 1))
-            errors.Add("Maximum Players must be at least 1");
-        return errors;
-    }
 
     private void GenerateServerName()
     {
-        var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals("ServerName", StringComparison.OrdinalIgnoreCase));
-        if (setting is null) { PalworldConfigState = "ServerName is not present in the active configuration."; return; }
+        var setting = Configuration.PalworldSettings.FirstOrDefault(x => x.Name.Equals("ServerName", StringComparison.OrdinalIgnoreCase));
+        if (setting is null) { Configuration.PalworldConfigState = "ServerName is not present in the active configuration."; return; }
         setting.Value = GenerateRandomServerName();
-        PalworldConfigState = "Generated a new server name locally. Save Changes to publish it to PalWorldSettings.ini.";
+        Configuration.PalworldConfigState = "Generated a new server name locally. Save Changes to publish it to PalWorldSettings.ini.";
     }
 
     private static string GenerateRandomServerName()
@@ -6432,296 +5970,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         return $"{adjectives[Random.Shared.Next(adjectives.Length)]} {nouns[Random.Shared.Next(nouns.Length)]} {Random.Shared.Next(1000, 10000)}";
     }
 
-    private void ResetPalworldConfigurationChanges()
-    {
-        foreach (var setting in PalworldSettings.Where(x => x.IsDirty).ToArray()) setting.Value = setting.OriginalValue;
-        PalworldConfigState = "Unsaved configuration changes were discarded.";
-        RefreshPalworldConfigurationState();
-    }
 
-    // v0.7.81.0: the new-server wizard's Settings step gained a starter preset picker (direct
-    // request: "choose one of the preset settings like vanilla or quality of life"), reusing the
-    // exact Load -> Apply -> Save sequence the Configuration page's own preset picker already does
-    // manually across three separate buttons, chained here into one action since the wizard only
-    // needs "apply this preset to the server I just created," not the Configuration page's fuller
-    // review-then-save workflow. No new backend -- LoadPalworldConfigurationAsync/
-    // SavePalworldConfigurationAsync already use BuildProfileFromEditor(SelectedProfile?.Id), so
-    // both already work mid-wizard where SelectedProfile is still null.
-    private async Task ApplyStarterPresetAsync()
-    {
-        await LoadPalworldConfigurationAsync();
-        if (!PalworldConfigLoaded) return;
-        ApplySelectedConfigurationPreset();
-        await SavePalworldConfigurationAsync();
-    }
 
-    private void ApplySelectedConfigurationPreset()
-    {
-        if (!PalworldConfigLoaded) return;
-        var presetKey = SelectedConfigPreset;
-        if (presetKey.StartsWith("Official", StringComparison.OrdinalIgnoreCase))
-        {
-            // v0.7.29.0 bug fix: was SimpleConfigurationNames, which also covers identity
-            // (ServerName/ServerDescription/ServerPassword/AdminPassword) -- resetting those
-            // whenever "Official / Vanilla" was selected silently wiped the server's name and
-            // passwords. Only gameplay rates should reset here, matching the Balanced/Relaxed
-            // branch below, which never touched identity or network settings either.
-            foreach (var setting in PalworldSettings.Where(x => GameplayRateConfigurationNames.Contains(x.Name))) setting.Value = setting.DefaultValue;
-        }
-        else
-        {
-            // Built-in presets (Balanced/Relaxed) come from GetQolPreset's hardcoded maps; anything
-            // else is a user-saved custom preset (the "MystTiq" preset included -- it's not a
-            // special case, just the first name someone saved) read from local disk.
-            var builtIn = GetQolPreset(presetKey);
-            var targets = builtIn.Count > 0 ? builtIn : _configPresetStore.LoadPreset(presetKey);
-            foreach (var pair in targets)
-            {
-                var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(pair.Key, StringComparison.OrdinalIgnoreCase));
-                if (setting is not null) setting.Value = pair.Value;
-            }
-        }
-        PalworldConfigState = $"{presetKey} preset loaded locally. Review highlighted changes, then Save Changes.";
-        RefreshPalworldConfigurationState();
-    }
 
-    private void RebuildConfigPresetList()
-    {
-        var custom = _configPresetStore.LoadPresetNames();
-        PalworldConfigPresets = new List<string> { "Official / Vanilla", "Balanced QoL", "Relaxed QoL" }.Concat(custom).Append("Custom").ToArray();
-    }
 
-    private void SaveCurrentAsPreset()
-    {
-        var name = NewConfigPresetName.Trim();
-        if (string.IsNullOrWhiteSpace(name) || !PalworldConfigLoaded) return;
-        var snapshot = PalworldSettings.ToDictionary(x => x.Name, x => x.Value, StringComparer.OrdinalIgnoreCase);
-        _configPresetStore.SavePreset(name, snapshot);
-        RebuildConfigPresetList();
-        // Direct field assignment, bypassing the public setter -- same bypass
-        // DetectAndSyncConfigPreset() already uses. The values just saved already match what's
-        // loaded; re-applying through the setter would be a harmless but pointless no-op.
-        _selectedConfigPreset = name;
-        RaisePropertyChanged(nameof(SelectedConfigPreset));
-        NewConfigPresetName = string.Empty;
-        PalworldConfigState = $"Saved the current settings locally as preset \"{name}\".";
-    }
 
-    private static IReadOnlyDictionary<string, string> GetQolPreset(string preset)
-    {
-        var p = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (preset.StartsWith("Balanced", StringComparison.OrdinalIgnoreCase))
-        {
-            p["DayTimeSpeedRate"]="0.85"; p["NightTimeSpeedRate"]="1.10";
-            p["PlayerAutoHPRegeneRate"]="1.5"; p["PalAutoHPRegeneRate"]="1.5";
-            p["PlayerStomachDecreaceRate"]="0.75"; p["PalStomachDecreaceRate"]="0.75";
-            p["PlayerStaminaDecreaceRate"]="0.80"; p["PalStaminaDecreaceRate"]="0.80";
-            p["ItemWeightRate"]="0.65"; p["ItemCorruptionMultiplier"]="0.50"; p["EquipmentDurabilityDamageRate"]="0.75";
-            p["WorkSpeedRate"]="1.25"; p["MonsterFarmActionSpeedRate"]="1.25";
-            p["CollectionDropRate"]="1.5"; p["CollectionObjectRespawnSpeedRate"]="1.25";
-            p["BaseCampWorkerMaxNum"]="30"; p["BaseCampMaxNumInGuild"]="6"; p["BuildObjectDeteriorationDamageRate"]="0";
-        }
-        else if (preset.StartsWith("Relaxed", StringComparison.OrdinalIgnoreCase))
-        {
-            p["DayTimeSpeedRate"]="0.75"; p["NightTimeSpeedRate"]="1.25";
-            p["PlayerAutoHPRegeneRate"]="2.0"; p["PalAutoHPRegeneRate"]="2.0";
-            p["PlayerStomachDecreaceRate"]="0.60"; p["PalStomachDecreaceRate"]="0.60";
-            p["PlayerStaminaDecreaceRate"]="0.65"; p["PalStaminaDecreaceRate"]="0.65";
-            p["ItemWeightRate"]="0.50"; p["ItemCorruptionMultiplier"]="0.25"; p["EquipmentDurabilityDamageRate"]="0.60";
-            p["WorkSpeedRate"]="1.50"; p["MonsterFarmActionSpeedRate"]="1.50";
-            p["CollectionDropRate"]="2.0"; p["CollectionObjectRespawnSpeedRate"]="1.50";
-            p["SupplyDropSpan"]="90"; p["BaseCampWorkerMaxNum"]="35"; p["BaseCampMaxNumInGuild"]="8"; p["BuildObjectDeteriorationDamageRate"]="0";
-        }
-        return p;
-    }
 
-    public string ExportPalworldConfigurationJson()
-    {
-        var document = new PalworldConfigurationExportDocument
-        {
-            SourcePath = PalworldConfigPath,
-            Settings = PalworldSettings.Select(x => new PalworldConfigurationExportSetting { Name = x.Name, Value = x.Value }).ToArray()
-        };
-        return JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true });
-    }
 
-    public void ReportPalworldConfigurationFileSuccess(string message) => PalworldConfigState = message;
-    public void ReportPalworldConfigurationFileError(string message) => PalworldConfigState = message;
 
-    public void ImportPalworldConfigurationJson(string json)
-    {
-        var document = JsonSerializer.Deserialize<PalworldConfigurationExportDocument>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-            ?? throw new InvalidOperationException("The selected file does not contain a MystTiq Palworld configuration export.");
-        if (document.SchemaVersion != 1) throw new InvalidOperationException($"Unsupported configuration export schema {document.SchemaVersion}.");
-        var applied = 0;
-        foreach (var imported in document.Settings)
-        {
-            if (string.IsNullOrWhiteSpace(imported.Name)) continue;
-            var setting = PalworldSettings.FirstOrDefault(x => x.Name.Equals(imported.Name, StringComparison.OrdinalIgnoreCase));
-            if (setting is null) continue;
-            setting.Value = imported.Value ?? string.Empty;
-            applied++;
-        }
-        PalworldConfigState = $"Imported {applied} setting value(s) into the local editor. Save Changes to write the server configuration.";
-        RefreshPalworldConfigurationState();
-        ApplyPalworldConfigurationFilter();
-    }
 
-    private async Task LoadPalworldConfigurationAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PalworldConfigState = ex.Message; return; }
-        IsBusy = true;
-        PalworldConfigState = "Loading PalWorldSettings.ini…";
-        try
-        {
-            var snapshot = await _api.GetPalworldConfigurationAsync(profile, BearerToken);
-            foreach (var existing in PalworldSettings) existing.PropertyChanged -= PalworldSetting_PropertyChanged;
-            PalworldSettings.Clear();
-            foreach (var setting in snapshot.Settings)
-            {
-                setting.MarkClean();
-                setting.PropertyChanged += PalworldSetting_PropertyChanged;
-                PalworldSettings.Add(setting);
-            }
-            PalworldConfigPath = snapshot.ConfigurationPath;
-            PalworldConfigLoaded = snapshot.Exists;
-            PalworldConfigState = snapshot.Detail;
-            RebuildPalworldConfigurationCategories();
-            RebuildSimplePalworldSettings();
-            ApplyPalworldConfigurationFilter();
-            RefreshPalworldConfigurationState();
-        }
-        catch (Exception ex) { PalworldConfigLoaded = false; PalworldConfigState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task SavePalworldConfigurationAsync()
-    {
-        if (!PalworldConfigLoaded) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PalworldConfigState = ex.Message; return; }
-        IsBusy = true;
-        PalworldConfigState = "Saving PalWorldSettings.ini…";
-        try
-        {
-            var result = await _api.SavePalworldConfigurationAsync(profile, PalworldSettings.ToArray(), BearerToken);
-            PalworldConfigState = result.Success ? result.Message : string.Join("; ", result.ValidationErrors.DefaultIfEmpty(result.Message));
-            if (result.Success) await LoadPalworldConfigurationAsync();
-        }
-        catch (Exception ex) { PalworldConfigState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task LoadConfigurationAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { ConfigState = ex.Message; return; }
 
-        IsBusy = true;
-        ConfigState = "Loading…";
-        try
-        {
-            var config = await _api.GetEditableConfigurationAsync(profile, BearerToken);
-
-            ConfigApiEnabled = config.Api.Enabled;
-            ConfigBindAddress = config.Api.BindAddress;
-            ConfigPort = config.Api.Port;
-
-            StartupTimeoutSeconds = config.Lifecycle.StartupTimeoutSeconds;
-            StopTimeoutSeconds = config.Lifecycle.StopTimeoutSeconds;
-            ServicePollSeconds = config.Lifecycle.ServicePollSeconds;
-            RecoveryBackoffSeconds = config.Lifecycle.RecoveryBackoffSeconds;
-            MaximumRecoveryAttempts = config.Lifecycle.MaximumRecoveryAttempts;
-            RecoveryWindowSeconds = config.Lifecycle.RecoveryWindowSeconds;
-
-            ConfigServerRoot = config.Server.ServerRoot;
-            ConfigSteamCmdPath = config.Server.SteamCmdPath;
-            ConfigBackupRoot = config.Server.BackupRoot;
-            ConfigRuntimeRoot = config.Server.RuntimeRoot;
-            LoadLauncherConfiguration(config.Server.LaunchArguments);
-
-            ConfigSecurityText =
-                $"Authentication: {(config.AuthenticationEnabled ? "Enabled" : "Disabled")} · TLS: {(config.TlsEnabled ? "Enabled" : "Disabled")}";
-
-            ConfigLoaded = true;
-            ConfigState = config.RestartRequired
-                ? "Loaded · service restart already required"
-                : "Loaded";
-            ValidateWorkspacePaths();
-            RaiseWorkspaceSummaryProperties();
-        }
-        catch (Exception ex)
-        {
-            ConfigLoaded = false;
-            ConfigState = ex.Message;
-            WorkspaceState = $"Workspace unavailable: {ex.Message}";
-        }
-        finally { IsBusy = false; }
-    }
-
-    private async Task SaveConfigurationAsync()
-    {
-        if (!ConfigLoaded) return;
-
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { ConfigState = ex.Message; return; }
-
-        var editable = new EditableConfigurationDto
-        {
-            Api = new EditableApiConfigurationDto
-            {
-                Enabled = ConfigApiEnabled,
-                BindAddress = ConfigBindAddress,
-                Port = ConfigPort
-            },
-            Lifecycle = new EditableLifecycleConfigurationDto
-            {
-                StartupTimeoutSeconds = StartupTimeoutSeconds,
-                StopTimeoutSeconds = StopTimeoutSeconds,
-                ServicePollSeconds = ServicePollSeconds,
-                RecoveryBackoffSeconds = RecoveryBackoffSeconds,
-                MaximumRecoveryAttempts = MaximumRecoveryAttempts,
-                RecoveryWindowSeconds = RecoveryWindowSeconds
-            },
-            Server = new EditableServerConfigurationDto
-            {
-                ServerRoot = ConfigServerRoot,
-                SteamCmdPath = ConfigSteamCmdPath,
-                BackupRoot = ConfigBackupRoot,
-                RuntimeRoot = ConfigRuntimeRoot,
-                LaunchArguments = BuildLauncherConfigurationArguments()
-            }
-        };
-
-        IsBusy = true;
-        ConfigState = "Saving…";
-        try
-        {
-            var result = await _api.SaveEditableConfigurationAsync(profile, editable, BearerToken);
-
-            if (!result.Success)
-            {
-                ConfigState = result.ValidationErrors.Count > 0
-                    ? "Validation failed: " + string.Join("; ", result.ValidationErrors)
-                    : result.Message;
-                return;
-            }
-
-            ConfigState = result.RestartRequired
-                ? "Saved · restart MystTiq service to apply"
-                : "Saved";
-            WorkspaceState = result.RestartRequired
-                ? "Paths saved with rollback backup · restart the MystTiq service to apply."
-                : "Paths saved through the managed headless configuration service.";
-        }
-        catch (Exception ex) { ConfigState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
     // v0.7.81.0: was a hard `if (SelectedProfile is null) return;` -- SelectedProfile is always
     // null throughout the entire "Set Up New Server" wizard (that's what IsCreatingNewProfile
@@ -6748,7 +6008,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             RaisePropertyChanged(nameof(SetupReadyCountText));
             RaisePropertyChanged(nameof(SetupAttentionCountText));
             RaisePropertyChanged(nameof(SetupComponentCountText));
-            RaisePropertyChanged(nameof(WorkspaceDiscoveryText));
+            RaisePropertyChanged(nameof(Workspace.WorkspaceDiscoveryText));
         }
         catch (Exception ex)
         {
@@ -6820,7 +6080,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 SetupAdminPassword = string.Empty;
                 SetupServerPassword = string.Empty;
                 SetupCreateConfirmed = false;
-                await LoadPalworldConfigurationAsync();
+                await Configuration.LoadPalworldConfigurationAsync();
                 await RefreshEnvironmentAsync();
             }
         }
@@ -7109,20 +6369,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { World.WorldTransactionState = "Operations: " + ex.Message; }
     }
 
-    private async Task ValidateActiveWorldAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var report = await _api.ValidateActiveWorldAsync(SelectedProfile, BearerToken);
-            WorldValidationFindings.Clear();
-            foreach (var finding in report.Findings) WorldValidationFindings.Add(finding);
-            WorldValidationState = report.Summary;
-        }
-        catch (Exception ex) { WorldValidationState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
     public async Task AnalyzeWorldArchiveAsync(Stream stream, string fileName)
     {
@@ -7180,8 +6426,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     public string ExportWorldValidationReport()
     {
-        var lines = new List<string> { "MystTiq World Validation Report", WorldValidationState, $"Exported: {DateTimeOffset.Now:O}", string.Empty };
-        lines.AddRange(WorldValidationFindings.Select(x => $"[{x.Severity}] {x.Category} / {x.Check}: {x.Detail}"));
+        var lines = new List<string> { "MystTiq World Validation Report", Workspace.WorldValidationState, $"Exported: {DateTimeOffset.Now:O}", string.Empty };
+        lines.AddRange(Workspace.WorldValidationFindings.Select(x => $"[{x.Severity}] {x.Category} / {x.Check}: {x.Detail}"));
         return string.Join(Environment.NewLine, lines);
     }
 
@@ -7201,30 +6447,30 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             var snapshot = await worldTask;
             var evidence = await evidenceTask;
 
-            WorldCandidates.Clear();
+            Workspace.WorldCandidates.Clear();
             foreach (var world in snapshot.Worlds)
-                WorldCandidates.Add(world);
+                Workspace.WorldCandidates.Add(world);
 
-            WorldFiles.Clear();
+            Workspace.WorldFiles.Clear();
             foreach (var file in snapshot.Files)
-                WorldFiles.Add(file);
+                Workspace.WorldFiles.Add(file);
 
-            SelectedWorldFile = WorldFiles.FirstOrDefault();
+            Workspace.SelectedWorldFile = Workspace.WorldFiles.FirstOrDefault();
 
-            ActiveWorldIdText = snapshot.ActiveWorldId ?? "Not resolved";
-            WorldCountText = snapshot.WorldCount.ToString();
-            WorldFileCountText = snapshot.FileCount.ToString();
-            WorldPlayerSaveCountText = snapshot.PlayerSaveCount.ToString();
-            WorldSizeText = $"{snapshot.TotalSizeBytes / 1024d / 1024d:F2} MB";
-            WorldSaveRootText = snapshot.SaveRoot;
-            WorldSaveDataCountText = snapshot.Statistics.SaveDataFiles.ToString();
-            WorldDiagnosticCountText = snapshot.Statistics.DiagnosticFiles.ToString();
-            WorldEmptyCountText = snapshot.Statistics.EmptyFiles.ToString();
-            WorldAgeRangeText = snapshot.Statistics.AgeRangeText;
-            WorldIntegrityState = snapshot.Integrity.State;
-            WorldIntegrityFindings.Clear();
-            foreach (var finding in snapshot.Integrity.Findings) WorldIntegrityFindings.Add(finding);
-            if (WorldIntegrityFindings.Count == 0) WorldIntegrityFindings.Add("Required world files are present and no structural issue was detected.");
+            Workspace.ActiveWorldIdText = snapshot.ActiveWorldId ?? "Not resolved";
+            Workspace.WorldCountText = snapshot.WorldCount.ToString();
+            Workspace.WorldFileCountText = snapshot.FileCount.ToString();
+            Workspace.WorldPlayerSaveCountText = snapshot.PlayerSaveCount.ToString();
+            Workspace.WorldSizeText = $"{snapshot.TotalSizeBytes / 1024d / 1024d:F2} MB";
+            Workspace.WorldSaveRootText = snapshot.SaveRoot;
+            Workspace.WorldSaveDataCountText = snapshot.Statistics.SaveDataFiles.ToString();
+            Workspace.WorldDiagnosticCountText = snapshot.Statistics.DiagnosticFiles.ToString();
+            Workspace.WorldEmptyCountText = snapshot.Statistics.EmptyFiles.ToString();
+            Workspace.WorldAgeRangeText = snapshot.Statistics.AgeRangeText;
+            Workspace.WorldIntegrityState = snapshot.Integrity.State;
+            Workspace.WorldIntegrityFindings.Clear();
+            foreach (var finding in snapshot.Integrity.Findings) Workspace.WorldIntegrityFindings.Add(finding);
+            if (Workspace.WorldIntegrityFindings.Count == 0) Workspace.WorldIntegrityFindings.Add("Required world files are present and no structural issue was detected.");
             World.WorldInspectorPlayerCountText = evidence.Players.Count.ToString();
             World.WorldInspectorGuildCountText = evidence.Guilds.Count.ToString();
             World.WorldInspectorBaseCountText = evidence.Guilds.Sum(x => x.BaseIds.Count).ToString();

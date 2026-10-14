@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 
@@ -50,6 +50,8 @@ public sealed class SessionContext
     public ConnectionProfile? Profile => _profile();
     /// <summary>The active tab's saved profile (what most commands send with), or null.</summary>
     public ConnectionProfile? SelectedProfile => _selectedProfile();
+    /// <summary>Whether the active tab is this computer's own MystTiq (the local default profile).</summary>
+    public bool IsLocalProfile => SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id;
     /// <summary>The tab now shown: a reply that arrives after the user switched tabs is dropped by comparing with it.</summary>
     public object? ActiveTab => _activeTab();
     /// <summary>The active tab's connection built from its fields; throws with the reason when they are incomplete.</summary>

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.3: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.4: file reviewed for this release (2026-10-12). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -779,19 +779,19 @@
 
           <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="12">
             <Border Classes="card accentWorld">
-              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.active_world}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Dashboard.WorldNicknameText}" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{services:TrText ActiveWorldIdText}" FontSize="11" TextWrapping="Wrap" FontFamily="Consolas, monospace" ToolTip.Tip="{services:Tr ui.full_canonical_active_world_id}"/><Button Classes="info" Content="{services:Tr ui.copy_world_id}" HorizontalAlignment="Left" Padding="8,3" Click="CopyActiveWorldId_Click"/></StackPanel>
+              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.active_world}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Dashboard.WorldNicknameText}" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Workspace.ActiveWorldIdText}" FontSize="11" TextWrapping="Wrap" FontFamily="Consolas, monospace" ToolTip.Tip="{services:Tr ui.full_canonical_active_world_id}"/><Button Classes="info" Content="{services:Tr ui.copy_world_id}" HorizontalAlignment="Left" Padding="8,3" Click="CopyActiveWorldId_Click"/></StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="card accentWorld">
-              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.worlds}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText WorldCountText}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
+              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.worlds}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Workspace.WorldCountText}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
             </Border>
             <Border Grid.Column="2" Classes="card accentWorld">
-              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.files}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText WorldFileCountText}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
+              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.files}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Workspace.WorldFileCountText}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
             </Border>
             <Border Grid.Column="3" Classes="card accentWorld">
-              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.player_saves}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText WorldPlayerSaveCountText}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
+              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.player_saves}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Workspace.WorldPlayerSaveCountText}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
             </Border>
             <Border Grid.Column="4" Classes="card accentWorld">
-              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.total_size}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText WorldSizeText}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
+              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.total_size}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Workspace.WorldSizeText}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
             </Border>
           </Grid>
 
@@ -806,7 +806,7 @@
           <Border Classes="card accentWorld">
             <StackPanel Spacing="6">
               <TextBlock Text="{services:Tr ui.server_authoritative_saveroot}" FontWeight="SemiBold" />
-              <TextBlock Text="{services:TrText WorldSaveRootText}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" FontFamily="Consolas, monospace" FontSize="11" />
+              <TextBlock Text="{services:TrText Workspace.WorldSaveRootText}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" FontFamily="Consolas, monospace" FontSize="11" />
               <TextBlock Text="{services:Tr ui.world_explorer_is_read_only_in_this_phase_it_inv_0dd60d}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
@@ -815,7 +815,7 @@
             <Border Classes="card accentWorld">
               <Grid RowDefinitions="Auto,*" RowSpacing="8">
                 <TextBlock Text="{services:Tr ui.discovered_worlds}" FontSize="17" FontWeight="SemiBold" />
-                <ListBox AutomationProperties.Name="{services:Tr ui.discovered_worlds}" Grid.Row="1" ItemsSource="{Binding WorldCandidates}" MaxHeight="390">
+                <ListBox AutomationProperties.Name="{services:Tr ui.discovered_worlds}" Grid.Row="1" ItemsSource="{Binding Workspace.WorldCandidates}" MaxHeight="390">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:WorldCandidateDto">
                       <StackPanel Margin="0,6">
@@ -833,7 +833,7 @@
             <Border Grid.Column="1" Classes="card accentWorld">
               <Grid RowDefinitions="Auto,*" RowSpacing="8">
                 <TextBlock Text="{services:Tr ui.active_world_files}" FontSize="17" FontWeight="SemiBold" />
-                <ListBox AutomationProperties.Name="{services:Tr ui.active_world_files}" Grid.Row="1" ItemsSource="{Binding WorldFiles}" SelectedItem="{Binding SelectedWorldFile}" MaxHeight="390">
+                <ListBox AutomationProperties.Name="{services:Tr ui.active_world_files}" Grid.Row="1" ItemsSource="{Binding Workspace.WorldFiles}" SelectedItem="{Binding Workspace.SelectedWorldFile}" MaxHeight="390">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:WorldFileDto">
                       <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="10" Margin="0,5">
@@ -856,10 +856,10 @@
 
           <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
             <Border Classes="card accentWorld">
-              <StackPanel Spacing="7"><TextBlock Text="{services:Tr ui.statistics_saves}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding WorldSaveDataCountText, StringFormat='Save-data files: {0}'}"/><TextBlock Text="{Binding WorldDiagnosticCountText, StringFormat='Decoded / diagnostic files: {0}'}"/><TextBlock Text="{Binding WorldEmptyCountText, StringFormat='Empty files: {0}'}"/><TextBlock Text="{Binding WorldAgeRangeText, StringFormat='File age range: {0}'}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/></StackPanel>
+              <StackPanel Spacing="7"><TextBlock Text="{services:Tr ui.statistics_saves}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding Workspace.WorldSaveDataCountText, StringFormat='Save-data files: {0}'}"/><TextBlock Text="{Binding Workspace.WorldDiagnosticCountText, StringFormat='Decoded / diagnostic files: {0}'}"/><TextBlock Text="{Binding Workspace.WorldEmptyCountText, StringFormat='Empty files: {0}'}"/><TextBlock Text="{Binding Workspace.WorldAgeRangeText, StringFormat='File age range: {0}'}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/></StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="card accentWorld">
-              <StackPanel Spacing="7"><TextBlock Text="{services:Tr ui.world_health_integrity}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:TrText WorldIntegrityState}" FontSize="20" Foreground="{DynamicResource VioletBrush}"/><ItemsControl ItemsSource="{Binding WorldIntegrityFindings}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{services:TrText}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,2"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><TextBlock Text="{services:Tr ui.read_only_structural_evidence_no_local_gui_files_cd5c95}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/></StackPanel>
+              <StackPanel Spacing="7"><TextBlock Text="{services:Tr ui.world_health_integrity}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Workspace.WorldIntegrityState}" FontSize="20" Foreground="{DynamicResource VioletBrush}"/><ItemsControl ItemsSource="{Binding Workspace.WorldIntegrityFindings}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{services:TrText}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,2"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><TextBlock Text="{services:Tr ui.read_only_structural_evidence_no_local_gui_files_cd5c95}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/></StackPanel>
             </Border>
           </Grid>
         </StackPanel>
@@ -1060,28 +1060,28 @@
                  file path controls relocated further down (just above World Settings) instead of
                  competing with identity/network for the top of the page. -->
             <StackPanel Spacing="10">
-              <Border Classes="statuscard accentServer" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" IsVisible="{Binding HasSimpleSettingsGap}">
-                <TextBlock Text="{services:TrText SimpleSettingsGapText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="12"/>
+              <Border Classes="statuscard accentServer" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" IsVisible="{Binding Configuration.HasSimpleSettingsGap}">
+                <TextBlock Text="{services:TrText Configuration.SimpleSettingsGapText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="12"/>
               </Border>
               <Border Classes="statuscard accentServer" BorderBrush="{DynamicResource AmberAccentBorderBrush}" BorderThickness="2" Background="{DynamicResource CardStrongBrush}" BoxShadow="{DynamicResource AmberAccentGlowShadowLow}" Padding="16">
                 <Grid ColumnDefinitions="150,*,150,*" ColumnSpacing="16" RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
                   <TextBlock Text="{services:Tr ui.server_identity}" Grid.ColumnSpan="4" FontWeight="Bold" Foreground="{DynamicResource AmberBrush}" Margin="0,0,0,4"/>
                   <TextBlock Grid.Row="1" Text="{services:Tr ui.server_name}" Classes="muted" VerticalAlignment="Center"/>
                   <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <TextBox Text="{Binding ServerNameSetting.DisplayValue, Mode=TwoWay}" PlaceholderText="{services:Tr ui.palworld_server_name}" Classes.dirty="{Binding ServerNameSetting.IsDirty}"/>
+                    <TextBox Text="{Binding Configuration.ServerNameSetting.DisplayValue, Mode=TwoWay}" PlaceholderText="{services:Tr ui.palworld_server_name}" Classes.dirty="{Binding Configuration.ServerNameSetting.IsDirty}"/>
                     <Button Grid.Column="1" Content="{services:Tr ui.generate}" Classes="info" Command="{Binding GenerateServerNameCommand}" ToolTip.Tip="{services:Tr ui.generates_a_random_server_browser_name_locally_s_c54884}" AutomationProperties.Name="{services:Tr ui.generate_a_random_server_name}" Padding="14,7" FontWeight="SemiBold"/>
                   </Grid>
                   <TextBlock Grid.Row="1" Grid.Column="2" Text="{services:Tr ui.description}" Classes="muted" VerticalAlignment="Center"/>
-                  <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding ServerDescriptionSetting.DisplayValue, Mode=TwoWay}" PlaceholderText="{services:Tr ui.server_browser_description}" Classes.dirty="{Binding ServerDescriptionSetting.IsDirty}"/>
+                  <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding Configuration.ServerDescriptionSetting.DisplayValue, Mode=TwoWay}" PlaceholderText="{services:Tr ui.server_browser_description}" Classes.dirty="{Binding Configuration.ServerDescriptionSetting.IsDirty}"/>
                   <TextBlock Grid.Row="2" Text="{services:Tr ui.admin_password}" Classes="muted" VerticalAlignment="Center"/>
-                  <TextBox AutomationProperties.Name="{services:Tr ui.admin_password}" Grid.Row="2" Grid.Column="1" Text="{Binding AdminPasswordSetting.DisplayValue, Mode=TwoWay}" PasswordChar="●" Classes.dirty="{Binding AdminPasswordSetting.IsDirty}"/>
+                  <TextBox AutomationProperties.Name="{services:Tr ui.admin_password}" Grid.Row="2" Grid.Column="1" Text="{Binding Configuration.AdminPasswordSetting.DisplayValue, Mode=TwoWay}" PasswordChar="●" Classes.dirty="{Binding Configuration.AdminPasswordSetting.IsDirty}"/>
                   <TextBlock Grid.Row="2" Grid.Column="2" Text="{services:Tr ui.server_password}" Classes="muted" VerticalAlignment="Center"/>
-                  <TextBox AutomationProperties.Name="{services:Tr ui.server_password}" Grid.Row="2" Grid.Column="3" Text="{Binding ServerPasswordSetting.DisplayValue, Mode=TwoWay}" PasswordChar="●" Classes.dirty="{Binding ServerPasswordSetting.IsDirty}"/>
+                  <TextBox AutomationProperties.Name="{services:Tr ui.server_password}" Grid.Row="2" Grid.Column="3" Text="{Binding Configuration.ServerPasswordSetting.DisplayValue, Mode=TwoWay}" PasswordChar="●" Classes.dirty="{Binding Configuration.ServerPasswordSetting.IsDirty}"/>
                 </Grid>
               </Border>
 
               <TextBlock Text="{services:Tr ui.network_access_and_limits}" FontWeight="Bold" Margin="4,4,0,0"/>
-              <ItemsControl ItemsSource="{Binding SimpleToggleSettings}">
+              <ItemsControl ItemsSource="{Binding Configuration.SimpleToggleSettings}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:PalworldSimpleToggleItem">
@@ -1094,7 +1094,7 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <ItemsControl ItemsSource="{Binding SimpleNetworkSettings}">
+              <ItemsControl ItemsSource="{Binding Configuration.SimpleNetworkSettings}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:PalworldSettingDto">
@@ -1113,34 +1113,34 @@
                    BuildRibbonGroupsForActivePage. Only Simple/Advanced/QoL preset/Save As Preset
                    stay here, since they were not part of that relocation. -->
               <Grid ColumnDefinitions="Auto,Auto,Auto,200,Auto,150,Auto,*" ColumnSpacing="8">
-                <Button Classes="plain" Content="{services:Tr ui.simple_settings}" Command="{Binding ShowSimpleConfigCommand}"/>
-                <Button Classes="plain" Grid.Column="1" Content="{services:Tr ui.advanced_settings}" Command="{Binding ShowAdvancedConfigCommand}"/>
+                <Button Classes="plain" Content="{services:Tr ui.simple_settings}" Command="{Binding Configuration.ShowSimpleConfigCommand}"/>
+                <Button Classes="plain" Grid.Column="1" Content="{services:Tr ui.advanced_settings}" Command="{Binding Configuration.ShowAdvancedConfigCommand}"/>
                 <TextBlock Grid.Column="2" Text="{services:Tr ui.qol_preset}" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Margin="12,0,0,0"/>
-                <ComboBox Grid.Column="3" ItemsSource="{Binding PalworldConfigPresets}" SelectedItem="{Binding SelectedConfigPreset, Mode=TwoWay}" ToolTip.Tip="{services:Tr ui.selecting_a_preset_applies_it_immediately}"/>
-                <TextBox Grid.Column="5" PlaceholderText="{services:Tr ui.new_preset_name}" Text="{Binding NewConfigPresetName, Mode=TwoWay}"/>
-                <Button Classes="apply" Grid.Column="6" Content="{services:Tr ui.save_as_preset}" Command="{Binding SaveCurrentAsPresetCommand}" ToolTip.Tip="{services:Tr ui.saves_every_currently_loaded_setting_value_as_a_e221d7}"/>
+                <ComboBox Grid.Column="3" ItemsSource="{Binding Configuration.PalworldConfigPresets}" SelectedItem="{Binding Configuration.SelectedConfigPreset, Mode=TwoWay}" ToolTip.Tip="{services:Tr ui.selecting_a_preset_applies_it_immediately}"/>
+                <TextBox Grid.Column="5" PlaceholderText="{services:Tr ui.new_preset_name}" Text="{Binding Configuration.NewConfigPresetName, Mode=TwoWay}"/>
+                <Button Classes="apply" Grid.Column="6" Content="{services:Tr ui.save_as_preset}" Command="{Binding Configuration.SaveCurrentAsPresetCommand}" ToolTip.Tip="{services:Tr ui.saves_every_currently_loaded_setting_value_as_a_e221d7}"/>
               </Grid>
 
               <Grid ColumnDefinitions="*,180" ColumnSpacing="8">
-                <TextBox PlaceholderText="{services:Tr ui.search_setting_name_category_or_description}" Text="{Binding ConfigSearchText, Mode=TwoWay}"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.qol_preset}" Grid.Column="1" ItemsSource="{Binding PalworldConfigCategories}" SelectedItem="{Binding SelectedConfigCategory, Mode=TwoWay}"/>
+                <TextBox PlaceholderText="{services:Tr ui.search_setting_name_category_or_description}" Text="{Binding Configuration.ConfigSearchText, Mode=TwoWay}"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.qol_preset}" Grid.Column="1" ItemsSource="{Binding Configuration.PalworldConfigCategories}" SelectedItem="{Binding Configuration.SelectedConfigCategory, Mode=TwoWay}"/>
               </Grid>
 
               <StackPanel Spacing="3">
-                <TextBlock Text="{services:TrText PalworldConfigPath}" FontFamily="Consolas, monospace" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                <TextBlock IsVisible="{Binding IsConfigAdvancedView}" Text="{services:Tr ui.advanced_settings_exposes_every_known_and_custom_a51ad8}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Configuration.PalworldConfigPath}" FontFamily="Consolas, monospace" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                <TextBlock IsVisible="{Binding Configuration.IsConfigAdvancedView}" Text="{services:Tr ui.advanced_settings_exposes_every_known_and_custom_a51ad8}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
               </StackPanel>
 
-              <StackPanel IsVisible="{Binding IsConfigSimpleView}" Spacing="10">
+              <StackPanel IsVisible="{Binding Configuration.IsConfigSimpleView}" Spacing="10">
                   <!-- v0.7.38.0: preset-loaded/unsaved-changes/validation notification strip,
                        relocated here from directly under the Simple/Advanced toggle row above,
                        right next to World Settings (renamed from Gameplay Rates), the section it's
                        actually reporting the state of. -->
                   <StackPanel Spacing="3">
-                    <TextBlock Text="{services:TrText PalworldConfigState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{services:TrText Configuration.PalworldConfigState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                      <TextBlock Text="{services:TrText PalworldConfigDirtyText}" Foreground="{DynamicResource AmberBrush}"/>
-                      <TextBlock Text="{services:TrText PalworldConfigValidationText}" Foreground="{DynamicResource GreenBrush}" TextWrapping="Wrap" MaxWidth="470"/>
+                      <TextBlock Text="{services:TrText Configuration.PalworldConfigDirtyText}" Foreground="{DynamicResource AmberBrush}"/>
+                      <TextBlock Text="{services:TrText Configuration.PalworldConfigValidationText}" Foreground="{DynamicResource GreenBrush}" TextWrapping="Wrap" MaxWidth="470"/>
                     </StackPanel>
                     <TextBlock Text="{services:Tr ui.simple_settings_shows_server_identity_connectivi_c2fcef}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
                   </StackPanel>
@@ -1151,7 +1151,7 @@
                   <TextBlock Text="{services:Tr ui.world_settings}" FontWeight="Bold" Margin="4,4,0,0"/>
 
                   <TextBlock Text="{services:Tr ui.world}" Classes="muted" FontWeight="SemiBold" Margin="4,2,0,0"/>
-                  <ItemsControl ItemsSource="{Binding SimpleWorldRateSettings}">
+                  <ItemsControl ItemsSource="{Binding Configuration.SimpleWorldRateSettings}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:PalworldSimpleSettingItem">
                         <Border Classes="statuscard accentServer" Classes.dirty="{Binding IsDirty}" Margin="0,0,0,7" Padding="10,8">
@@ -1168,7 +1168,7 @@
                   </ItemsControl>
 
                   <TextBlock Text="{services:Tr ui.player_and_pal}" Classes="muted" FontWeight="SemiBold" Margin="4,6,0,0"/>
-                  <ItemsControl ItemsSource="{Binding SimplePlayerPalRateSettings}">
+                  <ItemsControl ItemsSource="{Binding Configuration.SimplePlayerPalRateSettings}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:PalworldSimpleSettingItem">
                         <Border Classes="statuscard accentServer" Classes.dirty="{Binding IsDirty}" Margin="0,0,0,7" Padding="10,8">
@@ -1185,7 +1185,7 @@
                   </ItemsControl>
 
                   <TextBlock Text="{services:Tr ui.items_and_work}" Classes="muted" FontWeight="SemiBold" Margin="4,6,0,0"/>
-                  <ItemsControl ItemsSource="{Binding SimpleItemsWorkRateSettings}">
+                  <ItemsControl ItemsSource="{Binding Configuration.SimpleItemsWorkRateSettings}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:PalworldSimpleSettingItem">
                         <Border Classes="statuscard accentServer" Classes.dirty="{Binding IsDirty}" Margin="0,0,0,7" Padding="10,8">
@@ -1202,7 +1202,7 @@
                   </ItemsControl>
                 </StackPanel>
 
-                <Grid IsVisible="{Binding IsConfigAdvancedView}" RowDefinitions="Auto,*">
+                <Grid IsVisible="{Binding Configuration.IsConfigAdvancedView}" RowDefinitions="Auto,*">
                   <Grid Background="{DynamicResource Bg2Brush}" ColumnDefinitions="135,210,*,150,190,95" Height="40">
                     <TextBlock Text="{services:Tr ui.category}" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold"/>
                     <TextBlock Grid.Column="1" Text="{services:Tr ui.setting}" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold"/>
@@ -1211,7 +1211,7 @@
                     <TextBlock Grid.Column="4" Text="{services:Tr ui.active_value}" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold"/>
                     <TextBlock Grid.Column="5" Text="{services:Tr ui.state}" Margin="10,0" VerticalAlignment="Center" FontWeight="Bold"/>
                   </Grid>
-                  <ListBox AutomationProperties.Name="{services:Tr ui.a11y_palworld_settings}" Grid.Row="1" ItemsSource="{Binding FilteredPalworldSettings}" MaxHeight="560" ClipToBounds="True">
+                  <ListBox AutomationProperties.Name="{services:Tr ui.a11y_palworld_settings}" Grid.Row="1" ItemsSource="{Binding Configuration.FilteredPalworldSettings}" MaxHeight="560" ClipToBounds="True">
                     <ListBox.Styles>
                       <Style Selector="ListBoxItem"><Setter Property="HorizontalAlignment" Value="Stretch"/></Style>
                       <Style Selector="Border.differsFromDefault"><Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_F4C542}"/><Setter Property="BorderThickness" Value="0,0,0,2"/><Setter Property="Background" Value="{DynamicResource DecoBackground_14D4A017}"/></Style>
@@ -3074,30 +3074,30 @@
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <StackPanel><TextBlock Text="{services:Tr ui.review_validate_and_open_every_mysttiq_working_l_15d2bb}" Classes="muted" TextWrapping="Wrap"/></StackPanel>
               <!-- v0.7.27.0: "Refresh" moved to the ribbon (BuildRibbonGroupsForActivePage); "Validate All" stays here, not part of that relocation. -->
-              <WrapPanel Grid.Column="1"><Button Classes="verify" Content="{services:Tr ui.validate_all}" Command="{Binding ValidateWorkspaceCommand}"/></WrapPanel>
+              <WrapPanel Grid.Column="1"><Button Classes="verify" Content="{services:Tr ui.validate_all}" Command="{Binding Workspace.ValidateWorkspaceCommand}"/></WrapPanel>
             </Grid>
           </Border>
 
           <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
-            <Border Classes="statuscard accentServer"><StackPanel><TextBlock Text="{services:Tr ui.deployment_mode}" Classes="muted"/><TextBlock Text="{services:TrText WorkspaceDeploymentMode}" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource BlueBrush}"/><TextBlock Text="{services:Tr ui.local_paths_are_enabled_only_for_the_local_profi_cf4428}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
-            <Border Grid.Column="1" Classes="statuscard accentServer"><StackPanel><TextBlock Text="{services:Tr ui.workspace_health}" Classes="muted"/><TextBlock Text="{services:TrText WorkspaceHealthText}" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource AmberBrush}"/><TextBlock Text="{services:TrText WorkspaceState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
-            <Border Grid.Column="2" Classes="statuscard accentServer"><StackPanel><TextBlock Text="{services:Tr ui.server_discovery}" Classes="muted"/><TextBlock Text="{services:TrText WorkspaceDiscoveryText}" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource GreenBrush}"/><TextBlock Text="{services:Tr ui.environment_checks_come_from_the_managed_server}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+            <Border Classes="statuscard accentServer"><StackPanel><TextBlock Text="{services:Tr ui.deployment_mode}" Classes="muted"/><TextBlock Text="{services:TrText Workspace.WorkspaceDeploymentMode}" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource BlueBrush}"/><TextBlock Text="{services:Tr ui.local_paths_are_enabled_only_for_the_local_profi_cf4428}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+            <Border Grid.Column="1" Classes="statuscard accentServer"><StackPanel><TextBlock Text="{services:Tr ui.workspace_health}" Classes="muted"/><TextBlock Text="{services:TrText Workspace.WorkspaceHealthText}" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource AmberBrush}"/><TextBlock Text="{services:TrText Workspace.WorkspaceState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+            <Border Grid.Column="2" Classes="statuscard accentServer"><StackPanel><TextBlock Text="{services:Tr ui.server_discovery}" Classes="muted"/><TextBlock Text="{services:TrText Workspace.WorkspaceDiscoveryText}" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource GreenBrush}"/><TextBlock Text="{services:Tr ui.environment_checks_come_from_the_managed_server}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
           </Grid>
 
           <Border Classes="card accentServer">
             <StackPanel Spacing="10">
-              <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr ui.workspace_locations}" FontWeight="Bold" Foreground="{DynamicResource BlueBrush}"/><Button Grid.Column="1" Classes="apply" Content="{services:Tr ui.save_paths}" Command="{Binding SaveConfigurationCommand}"/></Grid>
+              <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr ui.workspace_locations}" FontWeight="Bold" Foreground="{DynamicResource BlueBrush}"/><Button Grid.Column="1" Classes="apply" Content="{services:Tr ui.save_paths}" Command="{Binding Configuration.SaveConfigurationCommand}"/></Grid>
               <Grid ColumnDefinitions="170,*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="7">
-                <TextBlock Text="{services:Tr ui.executable_root}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.executable_root}" Grid.Column="1" Text="{Binding WorkspaceExecutableRoot}" IsReadOnly="True"/><Button Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="executable" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
-                <TextBlock Grid.Row="1" Text="{services:Tr ui.workspace_root}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.workspace_root}" Grid.Row="1" Grid.Column="1" Text="{Binding WorkspaceRoot}" IsReadOnly="True"/><Button Grid.Row="1" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="workspace" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
-                <TextBlock Grid.Row="2" Text="{services:Tr ui.application_data}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.application_data}" Grid.Row="2" Grid.Column="1" Text="{Binding WorkspaceApplicationData}" IsReadOnly="True"/><Button Grid.Row="2" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="appdata" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
-                <TextBlock Grid.Row="3" Text="{services:Tr ui.palworld_server}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.palworld_server}" Grid.Row="3" Grid.Column="1" Text="{Binding ConfigServerRoot}"/><Button Grid.Row="3" Grid.Column="2" Content="{services:Tr ui.browse}" Classes="open" Tag="server" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceBrowse_Click"/><Button Grid.Row="3" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="server" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
-                <TextBlock Grid.Row="4" Text="{services:Tr ui.steamcmd}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.steamcmd}" Grid.Row="4" Grid.Column="1" Text="{Binding ConfigSteamCmdPath}"/><Button Grid.Row="4" Grid.Column="2" Content="{services:Tr ui.browse}" Classes="open" Tag="steamcmd" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceBrowse_Click"/><Button Grid.Row="4" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="steamcmd" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
-                <TextBlock Grid.Row="5" Text="{services:Tr ui.backups}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.backups}" Grid.Row="5" Grid.Column="1" Text="{Binding ConfigBackupRoot}"/><Button Grid.Row="5" Grid.Column="2" Content="{services:Tr ui.browse}" Classes="open" Tag="backup" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceBrowse_Click"/><Button Grid.Row="5" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="backup" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
-                <TextBlock Grid.Row="6" Text="{services:Tr ui.runtime}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.runtime}" Grid.Row="6" Grid.Column="1" Text="{Binding ConfigRuntimeRoot}"/><Button Grid.Row="6" Grid.Column="2" Content="{services:Tr ui.browse}" Classes="open" Tag="runtime" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceBrowse_Click"/><Button Grid.Row="6" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="runtime" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
-                <TextBlock Grid.Row="7" Text="{services:Tr ui.downloads}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.downloads}" Grid.Row="7" Grid.Column="1" Text="{Binding WorkspaceDownloadsRoot}" IsReadOnly="True"/><Button Grid.Row="7" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="downloads" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
-                <TextBlock Grid.Row="8" Text="{services:Tr ui.exports}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.exports}" Grid.Row="8" Grid.Column="1" Text="{Binding WorkspaceExportsRoot}" IsReadOnly="True"/><Button Grid.Row="8" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="exports" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
-                <TextBlock Grid.Row="9" Text="{services:Tr ui.logs}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.logs}" Grid.Row="9" Grid.Column="1" Text="{Binding WorkspaceLogsRoot}" IsReadOnly="True"/><Button Grid.Row="9" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="logs" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
+                <TextBlock Text="{services:Tr ui.executable_root}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.executable_root}" Grid.Column="1" Text="{Binding Workspace.WorkspaceExecutableRoot}" IsReadOnly="True"/><Button Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="executable" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
+                <TextBlock Grid.Row="1" Text="{services:Tr ui.workspace_root}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.workspace_root}" Grid.Row="1" Grid.Column="1" Text="{Binding Workspace.WorkspaceRoot}" IsReadOnly="True"/><Button Grid.Row="1" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="workspace" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
+                <TextBlock Grid.Row="2" Text="{services:Tr ui.application_data}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.application_data}" Grid.Row="2" Grid.Column="1" Text="{Binding Workspace.WorkspaceApplicationData}" IsReadOnly="True"/><Button Grid.Row="2" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="appdata" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
+                <TextBlock Grid.Row="3" Text="{services:Tr ui.palworld_server}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.palworld_server}" Grid.Row="3" Grid.Column="1" Text="{Binding Configuration.ConfigServerRoot}"/><Button Grid.Row="3" Grid.Column="2" Content="{services:Tr ui.browse}" Classes="open" Tag="server" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceBrowse_Click"/><Button Grid.Row="3" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="server" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
+                <TextBlock Grid.Row="4" Text="{services:Tr ui.steamcmd}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.steamcmd}" Grid.Row="4" Grid.Column="1" Text="{Binding Configuration.ConfigSteamCmdPath}"/><Button Grid.Row="4" Grid.Column="2" Content="{services:Tr ui.browse}" Classes="open" Tag="steamcmd" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceBrowse_Click"/><Button Grid.Row="4" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="steamcmd" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
+                <TextBlock Grid.Row="5" Text="{services:Tr ui.backups}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.backups}" Grid.Row="5" Grid.Column="1" Text="{Binding Configuration.ConfigBackupRoot}"/><Button Grid.Row="5" Grid.Column="2" Content="{services:Tr ui.browse}" Classes="open" Tag="backup" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceBrowse_Click"/><Button Grid.Row="5" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="backup" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
+                <TextBlock Grid.Row="6" Text="{services:Tr ui.runtime}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.runtime}" Grid.Row="6" Grid.Column="1" Text="{Binding Configuration.ConfigRuntimeRoot}"/><Button Grid.Row="6" Grid.Column="2" Content="{services:Tr ui.browse}" Classes="open" Tag="runtime" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceBrowse_Click"/><Button Grid.Row="6" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="runtime" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
+                <TextBlock Grid.Row="7" Text="{services:Tr ui.downloads}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.downloads}" Grid.Row="7" Grid.Column="1" Text="{Binding Workspace.WorkspaceDownloadsRoot}" IsReadOnly="True"/><Button Grid.Row="7" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="downloads" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
+                <TextBlock Grid.Row="8" Text="{services:Tr ui.exports}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.exports}" Grid.Row="8" Grid.Column="1" Text="{Binding Workspace.WorkspaceExportsRoot}" IsReadOnly="True"/><Button Grid.Row="8" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="exports" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
+                <TextBlock Grid.Row="9" Text="{services:Tr ui.logs}" Classes="muted" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.logs}" Grid.Row="9" Grid.Column="1" Text="{Binding Workspace.WorkspaceLogsRoot}" IsReadOnly="True"/><Button Grid.Row="9" Grid.Column="3" Content="{services:Tr ui.open}" Classes="open" Tag="logs" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/>
               </Grid>
               <TextBlock Text="{services:Tr ui.browse_open_are_local_profile_only_remote_paths_beddc2}" Classes="muted" TextWrapping="Wrap"/>
             </StackPanel>
@@ -3115,8 +3115,8 @@
                   <TextBlock Text="{services:Tr ui.launcher_intro}" Classes="muted" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                  <Button Classes="info" Content="{services:Tr ui.launcher_load_saved}" Command="{Binding LoadConfigurationCommand}"/>
-                  <Button Classes="apply" Content="{services:Tr ui.launcher_save_settings}" Command="{Binding SaveConfigurationCommand}"/>
+                  <Button Classes="info" Content="{services:Tr ui.launcher_load_saved}" Command="{Binding Configuration.LoadConfigurationCommand}"/>
+                  <Button Classes="apply" Content="{services:Tr ui.launcher_save_settings}" Command="{Binding Configuration.SaveConfigurationCommand}"/>
                 </StackPanel>
               </Grid>
 
@@ -3126,21 +3126,21 @@
                   <StackPanel Spacing="6">
                     <TextBlock Text="{services:Tr ui.launcher_preset_default}" FontSize="16" FontWeight="SemiBold"/>
                     <TextBlock Text="{services:Tr ui.launcher_preset_default_desc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                    <Button Classes="apply" Content="{services:Tr ui.launcher_apply_default}" Command="{Binding ApplyLauncherPresetCommand}" CommandParameter="Default" HorizontalAlignment="Left"/>
+                    <Button Classes="apply" Content="{services:Tr ui.launcher_apply_default}" Command="{Binding Configuration.ApplyLauncherPresetCommand}" CommandParameter="Default" HorizontalAlignment="Left"/>
                   </StackPanel>
                 </Border>
                 <Border Grid.Column="1" Classes="statuscard accentServer">
                   <StackPanel Spacing="6">
                     <TextBlock Text="{services:Tr ui.launcher_preset_no_mods}" FontSize="16" FontWeight="SemiBold"/>
                     <TextBlock Text="{services:Tr ui.launcher_preset_no_mods_desc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                    <Button Classes="apply" Content="{services:Tr ui.launcher_apply_no_mods}" Command="{Binding ApplyLauncherPresetCommand}" CommandParameter="NoMods" HorizontalAlignment="Left"/>
+                    <Button Classes="apply" Content="{services:Tr ui.launcher_apply_no_mods}" Command="{Binding Configuration.ApplyLauncherPresetCommand}" CommandParameter="NoMods" HorizontalAlignment="Left"/>
                   </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Classes="statuscard accentServer">
                   <StackPanel Spacing="6">
                     <TextBlock Text="{services:Tr ui.launcher_preset_show_window}" FontSize="16" FontWeight="SemiBold"/>
                     <TextBlock Text="{services:Tr ui.launcher_preset_show_window_desc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                    <Button Classes="apply" Content="{services:Tr ui.launcher_apply_show_window}" Command="{Binding ApplyLauncherPresetCommand}" CommandParameter="ShowWindow" HorizontalAlignment="Left"/>
+                    <Button Classes="apply" Content="{services:Tr ui.launcher_apply_show_window}" Command="{Binding Configuration.ApplyLauncherPresetCommand}" CommandParameter="ShowWindow" HorizontalAlignment="Left"/>
                   </StackPanel>
                 </Border>
                   <!-- v1.0.0.1 (2026-10-04): the start the owner found keeps players' characters, exactly. -->
@@ -3148,11 +3148,11 @@
                     <StackPanel Spacing="6">
                       <TextBlock Text="{services:Tr ui.launcher_preset_double_click}" FontSize="16" FontWeight="SemiBold"/>
                       <TextBlock Text="{services:Tr ui.launcher_preset_double_click_desc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                      <Button Classes="apply" Content="{services:Tr ui.launcher_apply_double_click}" Command="{Binding ApplyLauncherPresetCommand}" CommandParameter="DoubleClick" HorizontalAlignment="Left"/>
+                      <Button Classes="apply" Content="{services:Tr ui.launcher_apply_double_click}" Command="{Binding Configuration.ApplyLauncherPresetCommand}" CommandParameter="DoubleClick" HorizontalAlignment="Left"/>
                     </StackPanel>
                   </Border>
               </Grid>
-              <TextBlock Text="{services:TrText ConfigLauncherPresetStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Configuration.ConfigLauncherPresetStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
               <TextBlock Text="{services:Tr ui.launcher_preset_preserve_note}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
@@ -3162,15 +3162,15 @@
               <TextBlock Text="{services:Tr ui.launcher_executable_and_working_directory}" FontWeight="SemiBold"/>
               <Grid ColumnDefinitions="180,220,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
                 <TextBlock Text="{services:Tr ui.launcher_executable}" VerticalAlignment="Center"/>
-                <ComboBox Grid.Column="1" AutomationProperties.Name="{services:Tr ui.launcher_executable}" ItemsSource="{Binding ConfigLauncherExecutableOptions}" SelectedItem="{Binding ConfigLauncherExecutable, Mode=TwoWay}"/>
-                <TextBox Grid.Column="2" AutomationProperties.Name="{services:Tr ui.launcher_custom_executable_path}" Text="{Binding ConfigLauncherCustomExecutablePath, Mode=TwoWay}" PlaceholderText="{services:Tr ui.launcher_custom_executable_path}"/>
+                <ComboBox Grid.Column="1" AutomationProperties.Name="{services:Tr ui.launcher_executable}" ItemsSource="{Binding Configuration.ConfigLauncherExecutableOptions}" SelectedItem="{Binding Configuration.ConfigLauncherExecutable, Mode=TwoWay}"/>
+                <TextBox Grid.Column="2" AutomationProperties.Name="{services:Tr ui.launcher_custom_executable_path}" Text="{Binding Configuration.ConfigLauncherCustomExecutablePath, Mode=TwoWay}" PlaceholderText="{services:Tr ui.launcher_custom_executable_path}"/>
 
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.launcher_working_directory}" VerticalAlignment="Center"/>
-                <ComboBox Grid.Row="1" Grid.Column="1" AutomationProperties.Name="{services:Tr ui.launcher_working_directory}" ItemsSource="{Binding ConfigLauncherWorkingDirectoryOptions}" SelectedItem="{Binding ConfigLauncherWorkingDirectory, Mode=TwoWay}"/>
-                <TextBox Grid.Row="1" Grid.Column="2" AutomationProperties.Name="{services:Tr ui.launcher_custom_working_directory}" Text="{Binding ConfigLauncherCustomWorkingDirectory, Mode=TwoWay}" PlaceholderText="{services:Tr ui.launcher_custom_working_directory}"/>
+                <ComboBox Grid.Row="1" Grid.Column="1" AutomationProperties.Name="{services:Tr ui.launcher_working_directory}" ItemsSource="{Binding Configuration.ConfigLauncherWorkingDirectoryOptions}" SelectedItem="{Binding Configuration.ConfigLauncherWorkingDirectory, Mode=TwoWay}"/>
+                <TextBox Grid.Row="1" Grid.Column="2" AutomationProperties.Name="{services:Tr ui.launcher_custom_working_directory}" Text="{Binding Configuration.ConfigLauncherCustomWorkingDirectory, Mode=TwoWay}" PlaceholderText="{services:Tr ui.launcher_custom_working_directory}"/>
 
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.launcher_window_style}" VerticalAlignment="Center"/>
-                <ComboBox Grid.Row="2" Grid.Column="1" AutomationProperties.Name="{services:Tr ui.launcher_window_style}" ItemsSource="{Binding ConfigLauncherWindowStyleOptions}" SelectedItem="{Binding ConfigLauncherWindowStyle, Mode=TwoWay}"/>
+                <ComboBox Grid.Row="2" Grid.Column="1" AutomationProperties.Name="{services:Tr ui.launcher_window_style}" ItemsSource="{Binding Configuration.ConfigLauncherWindowStyleOptions}" SelectedItem="{Binding Configuration.ConfigLauncherWindowStyle, Mode=TwoWay}"/>
                 <TextBlock Grid.Row="2" Grid.Column="2" Text="{services:Tr ui.launcher_palserver_normal_launcher_note}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
 
                 <TextBlock Grid.Row="3" Text="{services:Tr ui.launcher_path_macros}" VerticalAlignment="Center"/>
@@ -3179,45 +3179,45 @@
 
               <TextBlock Text="{services:Tr ui.launcher_windows_process_creation}" FontWeight="SemiBold"/>
               <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="16">
-                <CheckBox Content="UseShellExecute" IsChecked="{Binding ConfigLauncherUseShellExecute, Mode=TwoWay}"/>
-                <CheckBox Grid.Column="1" Content="CreateNoWindow" IsChecked="{Binding ConfigLauncherCreateNoWindow, Mode=TwoWay}"/>
-                <CheckBox Grid.Column="2" Content="{services:Tr ui.launcher_hide_managed_windows}" IsChecked="{Binding ConfigLauncherHideManagedWindows, Mode=TwoWay}"/>
-                <CheckBox Grid.Row="1" Content="{services:Tr ui.launcher_redirect_stdout}" IsChecked="{Binding ConfigLauncherRedirectStandardOutput, Mode=TwoWay}"/>
-                <CheckBox Grid.Row="1" Grid.Column="1" Content="{services:Tr ui.launcher_redirect_stderr}" IsChecked="{Binding ConfigLauncherRedirectStandardError, Mode=TwoWay}"/>
-                <CheckBox Grid.Row="1" Grid.Column="2" Content="{services:Tr ui.launcher_copy_redirected_output}" IsChecked="{Binding ConfigLauncherCaptureRedirectedOutput, Mode=TwoWay}"/>
+                <CheckBox Content="UseShellExecute" IsChecked="{Binding Configuration.ConfigLauncherUseShellExecute, Mode=TwoWay}"/>
+                <CheckBox Grid.Column="1" Content="CreateNoWindow" IsChecked="{Binding Configuration.ConfigLauncherCreateNoWindow, Mode=TwoWay}"/>
+                <CheckBox Grid.Column="2" Content="{services:Tr ui.launcher_hide_managed_windows}" IsChecked="{Binding Configuration.ConfigLauncherHideManagedWindows, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Content="{services:Tr ui.launcher_redirect_stdout}" IsChecked="{Binding Configuration.ConfigLauncherRedirectStandardOutput, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Grid.Column="1" Content="{services:Tr ui.launcher_redirect_stderr}" IsChecked="{Binding Configuration.ConfigLauncherRedirectStandardError, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Grid.Column="2" Content="{services:Tr ui.launcher_copy_redirected_output}" IsChecked="{Binding Configuration.ConfigLauncherCaptureRedirectedOutput, Mode=TwoWay}"/>
               </Grid>
 
               <TextBlock Text="{services:Tr ui.launcher_command_line_switches}" FontWeight="SemiBold"/>
               <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="16">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <CheckBox Content="-port=" IsChecked="{Binding ConfigLauncherPortEnabled, Mode=TwoWay}" VerticalAlignment="Center"/>
-                  <NumericUpDown Width="100" AutomationProperties.Name="{services:Tr ui.port}" Value="{Binding ConfigLauncherPort, Mode=TwoWay}" Minimum="1" Maximum="65535"/>
+                  <CheckBox Content="-port=" IsChecked="{Binding Configuration.ConfigLauncherPortEnabled, Mode=TwoWay}" VerticalAlignment="Center"/>
+                  <NumericUpDown Width="100" AutomationProperties.Name="{services:Tr ui.port}" Value="{Binding Configuration.ConfigLauncherPort, Mode=TwoWay}" Minimum="1" Maximum="65535"/>
                 </StackPanel>
-                <CheckBox Grid.Column="1" Content="-log" IsChecked="{Binding ConfigLauncherLog, Mode=TwoWay}"/>
-                <CheckBox Grid.Column="2" Content="-logformat=text" IsChecked="{Binding ConfigLauncherLogFormatText, Mode=TwoWay}"/>
+                <CheckBox Grid.Column="1" Content="-log" IsChecked="{Binding Configuration.ConfigLauncherLog, Mode=TwoWay}"/>
+                <CheckBox Grid.Column="2" Content="-logformat=text" IsChecked="{Binding Configuration.ConfigLauncherLogFormatText, Mode=TwoWay}"/>
 
-                <CheckBox Grid.Row="1" Content="-stdout" IsChecked="{Binding ConfigLauncherStdout, Mode=TwoWay}"/>
-                <CheckBox Grid.Row="1" Grid.Column="1" Content="-FullStdOutLogOutput" IsChecked="{Binding ConfigLauncherFullStdOutLogOutput, Mode=TwoWay}"/>
-                <CheckBox Grid.Row="1" Grid.Column="2" Content="-unattended" IsChecked="{Binding ConfigLauncherUnattended, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Content="-stdout" IsChecked="{Binding Configuration.ConfigLauncherStdout, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Grid.Column="1" Content="-FullStdOutLogOutput" IsChecked="{Binding Configuration.ConfigLauncherFullStdOutLogOutput, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="1" Grid.Column="2" Content="-unattended" IsChecked="{Binding Configuration.ConfigLauncherUnattended, Mode=TwoWay}"/>
 
-                <CheckBox Grid.Row="2" Content="-useperfthreads" IsChecked="{Binding ConfigLauncherUsePerfThreads, Mode=TwoWay}"/>
-                <CheckBox Grid.Row="2" Grid.Column="1" Content="-NoAsyncLoadingThread" IsChecked="{Binding ConfigLauncherNoAsyncLoadingThread, Mode=TwoWay}"/>
-                <CheckBox Grid.Row="2" Grid.Column="2" Content="-UseMultithreadForDS" IsChecked="{Binding ConfigLauncherUseMultithreadForDs, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="2" Content="-useperfthreads" IsChecked="{Binding Configuration.ConfigLauncherUsePerfThreads, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="2" Grid.Column="1" Content="-NoAsyncLoadingThread" IsChecked="{Binding Configuration.ConfigLauncherNoAsyncLoadingThread, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="2" Grid.Column="2" Content="-UseMultithreadForDS" IsChecked="{Binding Configuration.ConfigLauncherUseMultithreadForDs, Mode=TwoWay}"/>
 
-                <CheckBox Grid.Row="3" Content="-abslog=" IsChecked="{Binding ConfigLauncherAbsLog, Mode=TwoWay}" VerticalAlignment="Center"/>
-                <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" AutomationProperties.Name="{services:Tr ui.launcher_log_path}" Text="{Binding ConfigLauncherAbsLogPath, Mode=TwoWay}" PlaceholderText="{services:Tr ui.launcher_log_path}"/>
+                <CheckBox Grid.Row="3" Content="-abslog=" IsChecked="{Binding Configuration.ConfigLauncherAbsLog, Mode=TwoWay}" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" AutomationProperties.Name="{services:Tr ui.launcher_log_path}" Text="{Binding Configuration.ConfigLauncherAbsLogPath, Mode=TwoWay}" PlaceholderText="{services:Tr ui.launcher_log_path}"/>
 
-                <CheckBox Grid.Row="4" Content="{services:Tr ui.launcher_no_mods}" IsChecked="{Binding ConfigLauncherNoMods, Mode=TwoWay}"/>
+                <CheckBox Grid.Row="4" Content="{services:Tr ui.launcher_no_mods}" IsChecked="{Binding Configuration.ConfigLauncherNoMods, Mode=TwoWay}"/>
                 <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Text="{services:Tr ui.launcher_no_mods_note}" Classes="muted" FontSize="11" VerticalAlignment="Center"/>
               </Grid>
 
               <TextBlock Text="{services:Tr ui.launcher_custom_arguments}" FontWeight="SemiBold"/>
-              <TextBox AutomationProperties.Name="{services:Tr ui.launcher_custom_arguments}" Text="{Binding ConfigLauncherCustomArguments, Mode=TwoWay}" AcceptsReturn="True" MinHeight="90" PlaceholderText="{services:Tr ui.launcher_custom_arguments_example}"/>
+              <TextBox AutomationProperties.Name="{services:Tr ui.launcher_custom_arguments}" Text="{Binding Configuration.ConfigLauncherCustomArguments, Mode=TwoWay}" AcceptsReturn="True" MinHeight="90" PlaceholderText="{services:Tr ui.launcher_custom_arguments_example}"/>
 
               <TextBlock Text="{services:Tr ui.launcher_effective_command}" FontWeight="SemiBold"/>
-              <TextBox AutomationProperties.Name="{services:Tr ui.launcher_effective_command}" Text="{Binding ConfigLauncherEffectiveCommand, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="62"/>
-              <TextBlock Text="{services:TrText ConfigLauncherProcessSummary}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText ConfigLauncherWarning}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
+              <TextBox AutomationProperties.Name="{services:Tr ui.launcher_effective_command}" Text="{Binding Configuration.ConfigLauncherEffectiveCommand, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="62"/>
+              <TextBlock Text="{services:TrText Configuration.ConfigLauncherProcessSummary}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Configuration.ConfigLauncherWarning}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
         </StackPanel>
@@ -3227,8 +3227,8 @@
           <Border Classes="card accentWorld">
             <StackPanel Spacing="12">
               <!-- v0.7.42.0: Validate Active World/Export Report moved to the ribbon. -->
-              <StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.world_validator}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText WorldValidationState}" Classes="muted" TextWrapping="Wrap"/></StackPanel>
-              <ItemsControl ItemsSource="{Binding WorldValidationFindings}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:WorldValidationFindingDto"><Border Classes="statuscard accentWorld" Margin="0,3"><Grid ColumnDefinitions="100,130,*" ColumnSpacing="10"><TextBlock Text="{services:TrText Severity}" Foreground="{DynamicResource AmberBrush}"/><TextBlock Grid.Column="1" Text="{services:TrText Category}"/><TextBlock Grid.Column="2" Text="{services:TrText Detail}" TextWrapping="Wrap" Classes="muted"/></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              <StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.world_validator}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Workspace.WorldValidationState}" Classes="muted" TextWrapping="Wrap"/></StackPanel>
+              <ItemsControl ItemsSource="{Binding Workspace.WorldValidationFindings}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:WorldValidationFindingDto"><Border Classes="statuscard accentWorld" Margin="0,3"><Grid ColumnDefinitions="100,130,*" ColumnSpacing="10"><TextBlock Text="{services:TrText Severity}" Foreground="{DynamicResource AmberBrush}"/><TextBlock Grid.Column="1" Text="{services:TrText Category}"/><TextBlock Grid.Column="2" Text="{services:TrText Detail}" TextWrapping="Wrap" Classes="muted"/></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
             </StackPanel>
           </Border>
           <Border Classes="card accentWorld">
@@ -3989,51 +3989,51 @@
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel>
                   <TextBlock Text="{services:Tr ui.managed_server_headless_configuration}" FontSize="18" FontWeight="SemiBold" />
-                  <TextBlock Text="{services:TrText ConfigState}" Foreground="{DynamicResource MutedBrush}" />
-                  <TextBlock Text="{services:TrText ConfigSecurityText}" Foreground="{DynamicResource MutedBrush}" FontSize="11" />
+                  <TextBlock Text="{services:TrText Configuration.ConfigState}" Foreground="{DynamicResource MutedBrush}" />
+                  <TextBlock Text="{services:TrText Configuration.ConfigSecurityText}" Foreground="{DynamicResource MutedBrush}" FontSize="11" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                  <Button Classes="info" Content="{services:Tr ui.load}" Command="{Binding LoadConfigurationCommand}"/>
-                  <Button Classes="apply" Content="{services:Tr ui.save}" Command="{Binding SaveConfigurationCommand}"/>
+                  <Button Classes="info" Content="{services:Tr ui.load}" Command="{Binding Configuration.LoadConfigurationCommand}"/>
+                  <Button Classes="apply" Content="{services:Tr ui.save}" Command="{Binding Configuration.SaveConfigurationCommand}"/>
                 </StackPanel>
               </Grid>
 
               <TextBlock Text="{services:Tr ui.management_api}" FontWeight="SemiBold" />
               <Grid ColumnDefinitions="180,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="12">
                 <TextBlock Text="{services:Tr ui.enabled_92c1cd}" VerticalAlignment="Center" />
-                <CheckBox AutomationProperties.Name="{services:Tr ui.enabled_92c1cd}" Grid.Column="1" IsChecked="{Binding ConfigApiEnabled}" />
+                <CheckBox AutomationProperties.Name="{services:Tr ui.enabled_92c1cd}" Grid.Column="1" IsChecked="{Binding Configuration.ConfigApiEnabled}" />
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.bind_address}" VerticalAlignment="Center" />
-                <TextBox AutomationProperties.Name="{services:Tr ui.bind_address}" Grid.Row="1" Grid.Column="1" Text="{Binding ConfigBindAddress}" />
+                <TextBox AutomationProperties.Name="{services:Tr ui.bind_address}" Grid.Row="1" Grid.Column="1" Text="{Binding Configuration.ConfigBindAddress}" />
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.port}" VerticalAlignment="Center" />
-                <NumericUpDown AutomationProperties.Name="{services:Tr ui.port}" Grid.Row="2" Grid.Column="1" Value="{Binding ConfigPort}" Minimum="1024" Maximum="65535" />
+                <NumericUpDown AutomationProperties.Name="{services:Tr ui.port}" Grid.Row="2" Grid.Column="1" Value="{Binding Configuration.ConfigPort}" Minimum="1024" Maximum="65535" />
               </Grid>
 
               <TextBlock Text="{services:Tr ui.lifecycle}" FontWeight="SemiBold" />
               <Grid ColumnDefinitions="180,*,180,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="12">
                 <TextBlock Text="{services:Tr ui.startup_timeout}" VerticalAlignment="Center" />
-                <NumericUpDown AutomationProperties.Name="{services:Tr ui.startup_timeout}" Grid.Column="1" Value="{Binding StartupTimeoutSeconds}" Minimum="1" Maximum="3600" />
+                <NumericUpDown AutomationProperties.Name="{services:Tr ui.startup_timeout}" Grid.Column="1" Value="{Binding Configuration.StartupTimeoutSeconds}" Minimum="1" Maximum="3600" />
                 <TextBlock Grid.Column="2" Text="{services:Tr ui.stop_timeout}" VerticalAlignment="Center" />
-                <NumericUpDown AutomationProperties.Name="{services:Tr ui.stop_timeout}" Grid.Column="3" Value="{Binding StopTimeoutSeconds}" Minimum="1" Maximum="3600" />
+                <NumericUpDown AutomationProperties.Name="{services:Tr ui.stop_timeout}" Grid.Column="3" Value="{Binding Configuration.StopTimeoutSeconds}" Minimum="1" Maximum="3600" />
 
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.service_poll}" VerticalAlignment="Center" />
-                <NumericUpDown AutomationProperties.Name="{services:Tr ui.service_poll}" Grid.Row="1" Grid.Column="1" Value="{Binding ServicePollSeconds}" Minimum="1" Maximum="300" />
+                <NumericUpDown AutomationProperties.Name="{services:Tr ui.service_poll}" Grid.Row="1" Grid.Column="1" Value="{Binding Configuration.ServicePollSeconds}" Minimum="1" Maximum="300" />
                 <TextBlock Grid.Row="1" Grid.Column="2" Text="{services:Tr ui.recovery_backoff}" VerticalAlignment="Center" />
-                <NumericUpDown AutomationProperties.Name="{services:Tr ui.recovery_backoff}" Grid.Row="1" Grid.Column="3" Value="{Binding RecoveryBackoffSeconds}" Minimum="1" Maximum="3600" />
+                <NumericUpDown AutomationProperties.Name="{services:Tr ui.recovery_backoff}" Grid.Row="1" Grid.Column="3" Value="{Binding Configuration.RecoveryBackoffSeconds}" Minimum="1" Maximum="3600" />
 
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.recovery_attempts}" VerticalAlignment="Center" />
-                <NumericUpDown AutomationProperties.Name="{services:Tr ui.recovery_attempts}" Grid.Row="2" Grid.Column="1" Value="{Binding MaximumRecoveryAttempts}" Minimum="1" Maximum="100" />
+                <NumericUpDown AutomationProperties.Name="{services:Tr ui.recovery_attempts}" Grid.Row="2" Grid.Column="1" Value="{Binding Configuration.MaximumRecoveryAttempts}" Minimum="1" Maximum="100" />
                 <TextBlock Grid.Row="2" Grid.Column="2" Text="{services:Tr ui.recovery_window}" VerticalAlignment="Center" />
-                <NumericUpDown AutomationProperties.Name="{services:Tr ui.recovery_window}" Grid.Row="2" Grid.Column="3" Value="{Binding RecoveryWindowSeconds}" Minimum="1" Maximum="86400" />
+                <NumericUpDown AutomationProperties.Name="{services:Tr ui.recovery_window}" Grid.Row="2" Grid.Column="3" Value="{Binding Configuration.RecoveryWindowSeconds}" Minimum="1" Maximum="86400" />
               </Grid>
 
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="{services:Tr ui.server_paths}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 <Button Classes="open" Grid.Column="1" Content="{services:Tr ui.manage_in_workspace}" Command="{Binding NavigateCommand}" CommandParameter="Workspace"/>
               </Grid>
-              <TextBlock Text="{Binding ConfigServerRoot, StringFormat='Server root: {0}'}" Classes="muted" TextWrapping="Wrap"/>
-              <TextBlock Text="{Binding ConfigSteamCmdPath, StringFormat='SteamCMD: {0}'}" Classes="muted" TextWrapping="Wrap"/>
-              <TextBlock Text="{Binding ConfigBackupRoot, StringFormat='Backup root: {0}'}" Classes="muted" TextWrapping="Wrap"/>
-              <TextBlock Text="{Binding ConfigRuntimeRoot, StringFormat='Runtime root: {0}'}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Configuration.ConfigServerRoot, StringFormat='Server root: {0}'}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Configuration.ConfigSteamCmdPath, StringFormat='SteamCMD: {0}'}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Configuration.ConfigBackupRoot, StringFormat='Backup root: {0}'}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Configuration.ConfigRuntimeRoot, StringFormat='Runtime root: {0}'}" Classes="muted" TextWrapping="Wrap"/>
               <TextBlock Text="{services:Tr ui.editable_on_the_workspace_page_which_is_the_one_29c1bc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
 
               <!-- v0.9.6.0: the firewall rule for the -port= above, beside where the port is set. -->
@@ -4308,7 +4308,7 @@
             </Grid>
             <StackPanel IsVisible="{Binding IsWorldSettingsChoicePreset}" Spacing="6" HorizontalAlignment="Center">
               <TextBlock Text="{services:Tr ui.starter_preset}" Classes="muted" FontSize="11" HorizontalAlignment="Center"/>
-              <ComboBox AutomationProperties.Name="{services:Tr ui.starter_preset}" ItemsSource="{Binding PalworldConfigPresets}" SelectedItem="{Binding SelectedConfigPreset}" MinWidth="240"/>
+              <ComboBox AutomationProperties.Name="{services:Tr ui.starter_preset}" ItemsSource="{Binding Configuration.PalworldConfigPresets}" SelectedItem="{Binding Configuration.SelectedConfigPreset}" MinWidth="240"/>
             </StackPanel>
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
               <Button Classes="plain" Content="{services:Tr ui.back}" Command="{Binding WizardBackCommand}"/>
@@ -4522,8 +4522,8 @@
                   <StackPanel Grid.Row="5" Grid.ColumnSpan="2" Spacing="4">
                     <TextBlock Text="{services:Tr ui.starter_preset_optional_applied_after_create_def_b56a5c}" Classes="muted" FontSize="11"/>
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                      <ComboBox AutomationProperties.Name="{services:Tr ui.starter_preset_optional_applied_after_create_def_b56a5c}" ItemsSource="{Binding PalworldConfigPresets}" SelectedItem="{Binding SelectedConfigPreset}"/>
-                      <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.apply_preset}" Command="{Binding ApplyStarterPresetCommand}"/>
+                      <ComboBox AutomationProperties.Name="{services:Tr ui.starter_preset_optional_applied_after_create_def_b56a5c}" ItemsSource="{Binding Configuration.PalworldConfigPresets}" SelectedItem="{Binding Configuration.SelectedConfigPreset}"/>
+                      <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.apply_preset}" Command="{Binding Configuration.ApplyStarterPresetCommand}"/>
                     </Grid>
                   </StackPanel>
                 </Grid>

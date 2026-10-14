@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1584,19 +1584,21 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     typeof(MainWindowViewModel).GetMethod("CheckLocalServiceVersion", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, [MainWindowViewModel.AppVersion.ToString(), local]);
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     Check(outdated is { IsEffectivelyVisible: false }, "With this app's own version the banner is gone");
-    var preset = vm.ApplyLauncherPresetCommand;
+    var preset = vm.Configuration.ApplyLauncherPresetCommand;
     var flags = new[] { "ConfigLauncherLog", "ConfigLauncherStdout", "ConfigLauncherFullStdOutLogOutput", "ConfigLauncherAbsLog" };
-    bool AnyFlag() => flags.Any(f => (bool)typeof(MainWindowViewModel).GetProperty(f)!.GetValue(vm)!);
+    bool AnyFlag() => flags.Any(f => (bool)typeof(ConfigurationViewModel).GetProperty(f)!.GetValue(vm.Configuration)!);
     var clean = new[] { "ShowWindow", "NoMods", "DoubleClick" }.All(p => { preset.Execute(p); Dispatcher.UIThread.RunJobs(); return !AnyFlag(); });
     // A profile with no saved launcher settings loads with those options off, so saving the page cannot write them in.
-    var loadLauncher = typeof(MainWindowViewModel).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic).FirstOrDefault(m => m.Name == "LoadLauncherConfiguration" && m.GetParameters().Length == 1);
-    if (loadLauncher is not null) { loadLauncher.Invoke(vm, [new List<string> { "-port=8211" }]); Dispatcher.UIThread.RunJobs(); clean &= !AnyFlag(); }
-    typeof(MainWindowViewModel).GetProperty("ConfigLauncherStdout")!.SetValue(vm, true);
+    var loadLauncher = typeof(ConfigurationViewModel).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic).FirstOrDefault(m => m.Name == "LoadLauncherConfiguration" && m.GetParameters().Length == 1);
+    // v1.0.8.4: the method moved with the Configuration page; a missing one fails the check instead of skipping it.
+    clean &= loadLauncher is not null;
+    if (loadLauncher is not null) { loadLauncher.Invoke(vm.Configuration, [new List<string> { "-port=8211" }]); Dispatcher.UIThread.RunJobs(); clean &= !AnyFlag(); }
+    typeof(ConfigurationViewModel).GetProperty("ConfigLauncherStdout")!.SetValue(vm.Configuration, true);
     Dispatcher.UIThread.RunJobs();
-    var warned = vm.ConfigLauncherWarning.Contains("wrong character") && vm.ConfigLauncherWarning.Contains("Like double-click");
+    var warned = vm.Configuration.ConfigLauncherWarning.Contains("wrong character") && vm.Configuration.ConfigLauncherWarning.Contains("Like double-click");
     preset.Execute("DoubleClick"); Dispatcher.UIThread.RunJobs();
-    Check(clean && warned && !vm.ConfigLauncherWarning.Contains("wrong character"),
-        $"No Launcher preset adds -log, -stdout, -FullStdOutLogOutput or -abslog; switching one on warns [{vm.ConfigLauncherWarning}]");
+    Check(clean && warned && !vm.Configuration.ConfigLauncherWarning.Contains("wrong character"),
+        $"No Launcher preset adds -log, -stdout, -FullStdOutLogOutput or -abslog; switching one on warns [{vm.Configuration.ConfigLauncherWarning}]");
 }
 // v1.0.6.0 (roadmap S-3): the Players page's Pal box card lists the box, Remove is red, Add an apply button beside the
 // species picker, and both are Admin controls.

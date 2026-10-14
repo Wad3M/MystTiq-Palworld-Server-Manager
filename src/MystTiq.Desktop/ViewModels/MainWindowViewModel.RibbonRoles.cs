@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
 using System.Windows.Input;
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
@@ -21,7 +21,7 @@ public sealed partial class MainWindowViewModel
         Need("Operator", StartCommand, StopCommand, RestartCommand, ForceStopServerCommand, CreateBackupCommand, RestartFromDiagnosticsCommand,
             BeginModSafeStartCommand, AnalyzeCrashesCommand, RunSaveToolsSelfTestCommand, VerifyAllBackupsCommand, NotificationSelfTestCommand,
             MarkAllNotificationsReadCommand, InstallMissingEnvironmentCommand);
-        Need("Admin", SavePalworldConfigurationCommand, EnableAllModsCommand, DisableAllModsCommand, RepairModsCommand,
+        Need("Admin", Configuration.SavePalworldConfigurationCommand, EnableAllModsCommand, DisableAllModsCommand, RepairModsCommand,
             ApplyUe4ssInstallCommand, PreviewUe4ssInstallCommand, RollbackUe4ssInstallCommand, RepairFirewallCommand);
         // v0.8.23.0: every other command the role table lists (MainWindowViewModel.CommandRoles.cs), so a Ribbon button
         // says which role it needs whichever command it runs.

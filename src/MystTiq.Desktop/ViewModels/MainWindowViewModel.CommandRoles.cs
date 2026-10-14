@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -29,7 +29,7 @@ public sealed partial class MainWindowViewModel
             Players.ToggleWhitelistCommand, UpdateAllCommand, UpdatePalworldServerCommand, VerifyAllBackupsCommand,
             VerifySelectedBackupCommand);
         Need("Admin", World.ApplyBaseRecoveryCommand, World.ApplyBaseTransferCommand, World.ApplyCharacterMigrationCommand,
-            World.ApplyGuildOwnershipCommand, World.ApplyPalEditCommand, ApplyStarterPresetCommand, ApplyUe4ssInstallCommand,
+            World.ApplyGuildOwnershipCommand, World.ApplyPalEditCommand, Configuration.ApplyStarterPresetCommand, ApplyUe4ssInstallCommand,
             World.ApplyWorldTransactionCommand, Players.BanSelectedPlayerCommand, Players.CancelTemporaryBanCommand,
             Map.CaptureTeleportPositionCommand, CreateAutomationRuleCommand, CreateDefaultServerSettingsCommand,
             Players.CreateTemporaryBanCommand, DeleteAutomationRuleCommand, DeleteSelectedModCommand, DisableAllModsCommand,
@@ -39,8 +39,8 @@ public sealed partial class MainWindowViewModel
             World.PreviewCharacterMigrationCommand, World.PreviewGuildOwnershipCommand, World.PreviewPalEditCommand,
             PreviewUe4ssInstallCommand, Players.PromoteSelectedPlayerCommand, RconSendCommand, RefreshDiscordBotConfigCommand,
             RepairFirewallCommand, RepairModsCommand, RepairSelectedModCommand, RollbackSelectedModCommand,
-            RollbackUe4ssInstallCommand, SaveAlertRulesCommand, SaveAntiCheatRulesCommand, SaveConfigurationCommand,
-            SaveDiscordBotConfigCommand, Host.SaveNetworkPolicyCommand, SavePalworldConfigurationCommand,
+            RollbackUe4ssInstallCommand, SaveAlertRulesCommand, SaveAntiCheatRulesCommand, Configuration.SaveConfigurationCommand,
+            SaveDiscordBotConfigCommand, Host.SaveNetworkPolicyCommand, Configuration.SavePalworldConfigurationCommand,
             Host.SaveResourcePolicyCommand, Players.SaveNameGuardCommand, Map.SaveTeleportCommand, Players.SaveWhitelistCommand, Map.SendPlayerToTeleportPointCommand,
             SendTestNotificationCommand, SetSelectedModDescriptionSourceCommand, Map.TeleportPlayerToMeCommand,
             Map.TeleportToPlayerCommand, ToggleAutomationRuleEnabledCommand, Players.UnbanSelectedPlayerCommand, UpdateComponentCommand,

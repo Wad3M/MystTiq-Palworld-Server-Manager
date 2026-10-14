@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -274,7 +274,7 @@ public sealed partial class MainWindow : Window
     {
         if (DataContext is not MainWindowViewModel vm) return;
 
-        var dialog = new Views.ConfirmSaveDiscardDialog(vm.PalworldConfigDirtyText);
+        var dialog = new Views.ConfirmSaveDiscardDialog(vm.Configuration.PalworldConfigDirtyText);
         var result = await dialog.ShowDialog<Views.ConfirmSaveDiscardResult>(this);
         switch (result)
         {
@@ -495,11 +495,11 @@ public sealed partial class MainWindow : Window
 
     private async void CopyActiveWorldId_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.ActiveWorldIdText) || vm.ActiveWorldIdText == "Not resolved")
+        if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.Workspace.ActiveWorldIdText) || vm.Workspace.ActiveWorldIdText == "Not resolved")
             return;
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard is not null)
-            await clipboard.SetTextAsync(vm.ActiveWorldIdText);
+            await clipboard.SetTextAsync(vm.Workspace.ActiveWorldIdText);
     }
 
     private async void CopyGuildId_Click(object? sender, RoutedEventArgs e)
@@ -608,7 +608,7 @@ public sealed partial class MainWindow : Window
             if (!StorageProvider.CanOpen) return;
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = Localizer.T("Select SteamCMD executable"), AllowMultiple = false });
             var selected = files.FirstOrDefault();
-            if (selected is not null) vm.ConfigSteamCmdPath = selected.Path.LocalPath;
+            if (selected is not null) vm.Configuration.ConfigSteamCmdPath = selected.Path.LocalPath;
             return;
         }
         if (!StorageProvider.CanPickFolder) return;
@@ -616,14 +616,14 @@ public sealed partial class MainWindow : Window
         var folder = folders.FirstOrDefault();
         if (folder is null) return;
         var value = folder.Path.LocalPath;
-        if (key == "server") vm.ConfigServerRoot = value;
-        else if (key == "backup") vm.ConfigBackupRoot = value;
-        else if (key == "runtime") vm.ConfigRuntimeRoot = value;
+        if (key == "server") vm.Configuration.ConfigServerRoot = value;
+        else if (key == "backup") vm.Configuration.ConfigBackupRoot = value;
+        else if (key == "runtime") vm.Configuration.ConfigRuntimeRoot = value;
     }
 
     private void WorkspaceOpen_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || sender is not Button { Tag: string key } || !vm.TryGetLocalWorkspacePath(key, out var path)) return;
+        if (DataContext is not MainWindowViewModel vm || sender is not Button { Tag: string key } || !vm.Workspace.TryGetLocalWorkspacePath(key, out var path)) return;
         var target = File.Exists(path) ? Path.GetDirectoryName(path) : path;
         if (string.IsNullOrWhiteSpace(target) || !Directory.Exists(target)) return;
         Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true });
@@ -658,7 +658,7 @@ public sealed partial class MainWindow : Window
     }
     private async void ImportPalworldConfiguration_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || !vm.PalworldConfigLoaded || !StorageProvider.CanOpen)
+        if (DataContext is not MainWindowViewModel vm || !vm.Configuration.PalworldConfigLoaded || !StorageProvider.CanOpen)
             return;
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -672,11 +672,11 @@ public sealed partial class MainWindow : Window
         {
             await using var stream = await file.OpenReadAsync();
             using var reader = new StreamReader(stream);
-            vm.ImportPalworldConfigurationJson(await reader.ReadToEndAsync());
+            vm.Configuration.ImportPalworldConfigurationJson(await reader.ReadToEndAsync());
         }
         catch (Exception ex)
         {
-            vm.ReportPalworldConfigurationFileError($"Import failed: {ex.Message}");
+            vm.Configuration.ReportPalworldConfigurationFileError($"Import failed: {ex.Message}");
         }
     }
 
@@ -762,7 +762,7 @@ public sealed partial class MainWindow : Window
 
     private async void ExportPalworldConfiguration_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || !vm.PalworldConfigLoaded || !StorageProvider.CanSave)
+        if (DataContext is not MainWindowViewModel vm || !vm.Configuration.PalworldConfigLoaded || !StorageProvider.CanSave)
             return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
@@ -777,12 +777,12 @@ public sealed partial class MainWindow : Window
             await using var stream = await file.OpenWriteAsync();
             stream.SetLength(0);
             using var writer = new StreamWriter(stream);
-            await writer.WriteAsync(vm.ExportPalworldConfigurationJson());
-            vm.ReportPalworldConfigurationFileSuccess($"Exported configuration to {file.Name}.");
+            await writer.WriteAsync(vm.Configuration.ExportPalworldConfigurationJson());
+            vm.Configuration.ReportPalworldConfigurationFileSuccess($"Exported configuration to {file.Name}.");
         }
         catch (Exception ex)
         {
-            vm.ReportPalworldConfigurationFileError($"Export failed: {ex.Message}");
+            vm.Configuration.ReportPalworldConfigurationFileError($"Export failed: {ex.Message}");
         }
     }
 

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.3: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.4: file reviewed for this release (2026-10-12). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,13 +21,13 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.8.3 · Accepted baseline: v1.0.0.0**
+**Current version: v1.0.8.4 · Accepted baseline: v1.0.0.0**
 
 MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.8.3
+## What's new in v1.0.8.4
 
-**The main window's code keeps getting tidier.** The Map and the world pages (and before them the Players page, the HOST page and the Dashboard's cards) now have their own pieces of code; nothing looks or works differently.
+**The main window's code keeps getting tidier.** The Configuration and Workspace pages (and before them the Map, the world pages, the Players page, the HOST page and the Dashboard's cards) now have their own pieces of code; nothing looks or works differently.
 
 **Also new (v1.0.8.0): Ctrl+C fixed for a self-run service.** Running `mysttiq-server api-run` in a terminal, Ctrl+C now stops MystTiq and leaves the game running (it used to stop both), and it works from Git Bash too. **A cleaner inside**: the main window's code begins to be split into one piece per area, starting with the Console page; nothing looks different.
 
@@ -69,7 +69,7 @@ MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Win
 
 **Also new since 1.0 (v1.0.0.1): launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
 
-[Release notes](release-notes/v1.0.8.3.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v1.0.8.4.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -136,8 +136,9 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v1.0.8.3 | Current | The Map and the world pages get their own code (the main window's split continues; nothing looks different) |
-| v1.0.8.2 | Previous | The Players page gets its own code (the main window's split continues; nothing looks different) |
+| v1.0.8.4 | Current | The Configuration and Workspace pages get their own code (the main window's split continues; nothing looks different) |
+| v1.0.8.3 | Previous | The Map and the world pages get their own code (the main window's split continues; nothing looks different) |
+| v1.0.8.2 | Earlier | The Players page gets its own code (the main window's split continues; nothing looks different) |
 | v1.0.8.1 | Earlier | The HOST page and the Dashboard get their own code (the main window's split continues; nothing looks different) |
 | v1.0.8.0 | Earlier | Ctrl+C on a self-run service no longer stops the game, and the main window's code begins to be split up (the Console page first) |
 | v1.0.7.5 | Earlier | An update stopped half way is no longer called installed, backups wait for a save file in use, and MystTiq is tested under load and over 24 hours |
