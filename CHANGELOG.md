@@ -1,4 +1,17 @@
-<!-- MystTiq v1.0.7.5: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.8.0: file reviewed for this release (2026-10-11). -->
+## v1.0.8.0 — A Cleaner Inside, and Ctrl+C Fixed
+
+- Fixed: with the default launch, PalServer shared the service's console, so a Ctrl+C on `mysttiq-server api-run` in a
+  terminal stopped the game too; it now starts in its own process group (found by the v1.0.7.5 long set).
+- Fixed: a service started by a parent that ignores Ctrl+C (Git Bash, some launchers) could not be stopped with Ctrl+C;
+  it now turns Ctrl+C back on at start-up.
+- Roadmap C-0, the ViewModel split begins: `SessionContext` and `PageViewModel`, the commands in their own file, and the
+  Console page moved into `ConsoleLogViewModel` (`MainWindowViewModel.cs`: 619,028 → 609,714 bytes). The role audit
+  reads every ViewModel file. Nothing the owner sees changes.
+- Tests: the v1.0.8.0 gate regenerated from v1.0.7.5 (the console contract follows the code) and a Ctrl+C check in the
+  long set.
+- Version advanced to 1.0.8.0.
+
 ## v1.0.7.5 — Under Load, and Over Time
 
 - Fixed (roadmap Q-10): a half-finished install or update was reported as installed whenever PalServer.exe existed.

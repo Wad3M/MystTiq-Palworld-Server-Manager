@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -79,12 +79,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _threadCountText = "—";
     private string _monitoringDetail = "Connect to a MystTiq service to begin monitoring.";
     private string _logFileText = "No log selected";
-    private string _consoleSeverityFilter = "All";
-    private string _consoleCategoryFilter = "All";
-    private string _consoleSearchText = string.Empty;
-    private bool _hideRoutineRest = true;
-    private bool _consolePaused;
-    private string _consoleViewState = "Live";
     private string _rconState = "Not checked";
     private string _rconDetail = "RCON is deprecated by Palworld; use it only when required by a legacy workflow.";
     private string _rconCommandText = "Info";
@@ -415,6 +409,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(IMystTiqApiClient api, IConnectionProfileStore profileStore, ILocalInstallationDiscoveryService localDiscovery, IMystTiqServiceDiscoveryService serviceDiscovery, ILocalManagementBootstrapper? localBootstrapper = null, LocalThemePreferencesStore? themeStore = null, CredentialStore? credentialStore = null, TabSessionStore? tabSessionStore = null, INexusModsClient? nexusClient = null, LocalDisplayPreferencesStore? displayPreferencesStore = null)
     {
         _api = api;
+        // v1.0.8.0 (roadmap C-0): the shared session the page ViewModels use, and the pages moved out of this file so far.
+        Session = new SessionContext(api, ActiveProfileOrNull, () => BearerToken, () => IsBusy, busy => IsBusy = busy, () => SelectedPage, RunUi);
+        Logs = new ConsoleLogViewModel(Session);
+        _pages = [Logs];
         _nexus = nexusClient ?? new NexusModsClient();
         _profileStore = profileStore;
         _localDiscovery = localDiscovery;
@@ -466,8 +464,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         CancelDiscoveryCommand = new RelayCommand(() => _discoveryCancellation?.Cancel());
         RefreshMonitoringCommand = new AsyncCommand(RefreshMonitoringAsync, () => !IsBusy);
         RefreshConsoleViewCommand = new AsyncCommand(RefreshMonitoringAsync, () => !IsBusy);
-        PauseConsoleCommand = new RelayCommand(ToggleConsolePause);
-        ClearConsoleViewCommand = new RelayCommand(ClearConsoleView);
         RconDoctorCommand = new AsyncCommand(RunRconDoctorAsync, () => !IsBusy && ManagementApiConnected);
         RconConnectCommand = new AsyncCommand(ConnectRconAsync, () => !IsBusy && ManagementApiConnected);
         RconDisconnectCommand = new RelayCommand(DisconnectRcon);
@@ -1321,12 +1317,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<DiscoveredMystTiqService> DiscoveredServices { get; } = [];
     public ObservableCollection<PlayerSnapshotDto> OnlinePlayers { get; } = [];
     public ObservableCollection<PlayerMapPointDto> PlayerMapPoints { get; } = [];
-    // v1.0.7.3 (roadmap Q-6): replaced in one update, not line by line.
-    public BulkObservableCollection<string> LogLines { get; } = [];
-    public BulkObservableCollection<string> FilteredLogLines { get; } = [];
     public ObservableCollection<string> RconOutputLines { get; } = [];
-    public IReadOnlyList<string> ConsoleSeverityOptions { get; } = ["All", "Errors", "Warnings", "Information"];
-    public IReadOnlyList<string> ConsoleCategoryOptions { get; } = ["All", "MystTiq", "PalServer", "REST", "Mods"];
     public IReadOnlyList<string> RconPresetOptions { get; } = ["Info", "ShowPlayers", "Save", "Broadcast Server maintenance message", "Shutdown 60 Server restarting"];
     public ObservableCollection<string> ActivityLines { get; } = [];
     public ObservableCollection<NotificationItemDto> Notifications { get; } = [];
@@ -2091,12 +2082,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string ThreadCountText { get => _threadCountText; private set => SetField(ref _threadCountText, value); }
     public string MonitoringDetail { get => _monitoringDetail; private set => SetField(ref _monitoringDetail, value); }
     public string LogFileText { get => _logFileText; private set => SetField(ref _logFileText, value); }
-    public string ConsoleSeverityFilter { get => _consoleSeverityFilter; set { if (SetField(ref _consoleSeverityFilter, value ?? "All")) ApplyConsoleFilter(); } }
-    public string ConsoleCategoryFilter { get => _consoleCategoryFilter; set { if (SetField(ref _consoleCategoryFilter, value ?? "All")) ApplyConsoleFilter(); } }
-    public string ConsoleSearchText { get => _consoleSearchText; set { if (SetField(ref _consoleSearchText, value ?? string.Empty)) ApplyConsoleFilter(); } }
-    public bool HideRoutineRest { get => _hideRoutineRest; set { if (SetField(ref _hideRoutineRest, value)) ApplyConsoleFilter(); } }
-    public bool ConsolePaused { get => _consolePaused; private set => SetField(ref _consolePaused, value); }
-    public string ConsoleViewState { get => _consoleViewState; private set => SetField(ref _consoleViewState, value); }
     public string RconState { get => _rconState; private set => SetField(ref _rconState, value); }
     public string RconDetail { get => _rconDetail; private set => SetField(ref _rconDetail, value); }
     public bool RconConnected { get => _rconConnected; private set => SetField(ref _rconConnected, value); }
@@ -2637,8 +2622,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // (the single setter every navigation already funnels through) rather than at each
             // call site, so no future navigation call site can forget it.
             if (ActiveTab is not null) ActiveTab.LastPage = value;
-            // v1.0.7.3 (roadmap Q-6): the Console's filtered view is rebuilt only while it is shown.
-            if (value == NavigationPage.Console) EnsureConsoleFilterCurrent();
+            // v1.0.8.0 (roadmap C-0): each page ViewModel is told when its page is shown (the Console then brings its
+            // filtered view up to date, v1.0.7.3).
+            foreach (var page in _pages) if (page.Page == value) page.OnShown();
 
             RaisePropertyChanged(nameof(PageTitle));
             RaisePropertyChanged(nameof(PageSubtitle));
@@ -2741,8 +2727,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand DiscoverServicesCommand { get; }
     public ICommand RefreshMonitoringCommand { get; }
     public ICommand RefreshConsoleViewCommand { get; }
-    public ICommand PauseConsoleCommand { get; }
-    public ICommand ClearConsoleViewCommand { get; }
     public ICommand RconDoctorCommand { get; }
     public ICommand RconConnectCommand { get; }
     public ICommand RconDisconnectCommand { get; }
@@ -4241,8 +4225,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             groups.Add(new("Console",
             [
                 new("↻", "Refresh", "Refresh console view", RefreshConsoleViewCommand, null, RibbonIconColor.Amber),
-                new("Ⅱ", "Pause", "Pause or resume console view", PauseConsoleCommand, null, RibbonIconColor.Blue),
-                new("✕", "Clear", "Clear console view", ClearConsoleViewCommand, null, RibbonIconColor.Red),
+                new("Ⅱ", "Pause", "Pause or resume console view", Logs.PauseCommand, null, RibbonIconColor.Blue),
+                new("✕", "Clear", "Clear console view", Logs.ClearCommand, null, RibbonIconColor.Red),
                 new("⇩", "Export", "Export console view", null, null, RibbonIconColor.Cyan, NativeDialogAction: "ExportConsole"),
             ]));
         }
@@ -5844,13 +5828,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private static double? TryParseCoordinate(string value) =>
         double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
 
-    // v1.0.7.3 (roadmap Q-6): the tail last applied, each line's first-seen time, and whether the Console's filtered view
-    // is behind (it is only rebuilt while the Console page is open).
-    private IReadOnlyList<string> _lastLogTail = [];
-    private readonly Dictionary<string, DateTimeOffset> _lineFirstSeen = new(StringComparer.Ordinal);
-    private bool _consoleFilterStale;
-    public const int LineFirstSeenLimit = 3000;
-    private static readonly System.Text.RegularExpressions.Regex ConsoleTimestamp = new(@"^\[\d{4}-\d{2}-\d{2}[ T]", System.Text.RegularExpressions.RegexOptions.Compiled);
+    // v1.0.8.0 (roadmap C-0): the session the page ViewModels share, and the pages moved out of this file (C-1 to C-9 add
+    // theirs). The Console page and its log lines live in ConsoleLogViewModel; the Dashboard's part stays here until C-1.
+    public SessionContext Session { get; }
+    public ConsoleLogViewModel Logs { get; }
+    private readonly IReadOnlyList<PageViewModel> _pages;
+
+    private ConnectionProfile? ActiveProfileOrNull()
+    {
+        try { return BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (InvalidOperationException) { return null; }
+    }
 
     private void ApplyLogs(LogTailSnapshotDto snapshot)
     {
@@ -5860,98 +5848,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (!snapshot.Available)
             MonitoringDetail = snapshot.Detail;
 
-        // v1.0.7.3 (roadmap Q-6): a poll with no new lines changes nothing (it used to rebuild about 1,000 list rows).
-        if (snapshot.Lines.SequenceEqual(_lastLogTail)) return;
-        _lastLogTail = snapshot.Lines.ToArray();
-
-        var stamped = snapshot.Lines.Select(line => EnsureConsoleTimestampFirst(line, snapshot.ObservedAt)).ToList();
-        LogLines.ReplaceAll(stamped);
-        if (!ConsolePaused)
-        {
-            if (IsConsolePage) ApplyConsoleFilter();
-            else _consoleFilterStale = true;
-        }
-
-        DashboardActivityLines.ReplaceAll(snapshot.Lines.Where(x => !string.IsNullOrWhiteSpace(x)).TakeLast(8)
-            .Select(line => EnsureConsoleTimestampFirst(line, snapshot.ObservedAt)));
+        // v1.0.7.3 (roadmap Q-6): a poll with no new lines changes nothing.
+        if (!Logs.Apply(snapshot)) return;
+        DashboardActivityLines.ReplaceAll(Logs.LogLines.Where(x => !string.IsNullOrWhiteSpace(x)).TakeLast(8));
         DashboardLastActivityText = DashboardActivityLines.Count > 0 ? DashboardActivityLines[^1] : "No recent console activity";
-        if (_lineFirstSeen.Count > LineFirstSeenLimit)
-        {
-            var keep = snapshot.Lines.ToHashSet(StringComparer.Ordinal);
-            foreach (var old in _lineFirstSeen.Keys.Where(k => !keep.Contains(k)).ToList()) _lineFirstSeen.Remove(old);
-        }
-    }
-
-    // v1.0.7.3 (roadmap Q-6): a line without its own timestamp is stamped with the time MystTiq first saw it, once. It used
-    // to get each poll's time, so the same line showed a new time on every refresh.
-    private string EnsureConsoleTimestampFirst(string line, DateTimeOffset observedAt)
-    {
-        if (string.IsNullOrWhiteSpace(line) || ConsoleTimestamp.IsMatch(line)) return line;
-        if (!_lineFirstSeen.TryGetValue(line, out var seen)) _lineFirstSeen[line] = seen = observedAt;
-        return $"[{seen.ToLocalTime():yyyy-MM-dd HH:mm:ss.fff}] {line}";
-    }
-
-    // The Console's filtered view, brought up to date when it is needed (the page opens, or it is exported).
-    public void EnsureConsoleFilterCurrent()
-    {
-        if (_consoleFilterStale && !ConsolePaused) ApplyConsoleFilter();
-    }
-
-    private void ApplyConsoleFilter()
-    {
-        if (ConsolePaused) return;
-        _consoleFilterStale = false;
-        var filtered = new List<string>();
-        // v0.7.46.0: LogLines stays in its original chronological (oldest-first) order --
-        // DashboardActivityLines still wants that -- but the Console page's own live view reads
-        // newest-first, matching the request to show the most recent activity at the top. Export
-        // Console reads from FilteredLogLines too, so an exported file matches what was on screen.
-        foreach (var line in LogLines.Reverse())
-        {
-            if (HideRoutineRest && IsRoutineRestLine(line)) continue;
-            if (!ConsoleSeverityMatches(line, ConsoleSeverityFilter)) continue;
-            if (!ConsoleCategoryMatches(line, ConsoleCategoryFilter)) continue;
-            if (!string.IsNullOrWhiteSpace(ConsoleSearchText) && !line.Contains(ConsoleSearchText, StringComparison.OrdinalIgnoreCase)) continue;
-            filtered.Add(line);
-        }
-        FilteredLogLines.ReplaceAll(filtered);
-        ConsoleViewState = $"Live · {FilteredLogLines.Count}/{LogLines.Count} lines";
-    }
-
-    private static bool IsRoutineRestLine(string line) =>
-        line.Contains("/api/v1/status/poll", StringComparison.OrdinalIgnoreCase) ||
-        line.Contains("/api/v1/metrics", StringComparison.OrdinalIgnoreCase) ||
-        line.Contains("/api/v1/players", StringComparison.OrdinalIgnoreCase);
-
-    private static bool ConsoleSeverityMatches(string line, string filter)
-    {
-        if (filter == "All") return true;
-        var error = line.Contains("ERROR", StringComparison.OrdinalIgnoreCase) || line.Contains("FATAL", StringComparison.OrdinalIgnoreCase) || line.Contains("EXCEPTION", StringComparison.OrdinalIgnoreCase);
-        var warning = line.Contains("WARN", StringComparison.OrdinalIgnoreCase);
-        return filter switch { "Errors" => error, "Warnings" => warning, "Information" => !error && !warning, _ => true };
-    }
-
-    private static bool ConsoleCategoryMatches(string line, string filter)
-    {
-        if (filter == "All") return true;
-        var category = line.Contains("[MYSTTIQ]", StringComparison.OrdinalIgnoreCase) ? "MystTiq"
-            : line.Contains("REST", StringComparison.OrdinalIgnoreCase) || line.Contains("/api/v1/", StringComparison.OrdinalIgnoreCase) ? "REST"
-            : line.Contains("PalDefender", StringComparison.OrdinalIgnoreCase) || line.Contains("AdminCommands", StringComparison.OrdinalIgnoreCase) || line.Contains("UE4SS", StringComparison.OrdinalIgnoreCase) ? "Mods"
-            : "PalServer";
-        return category.Equals(filter, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private void ToggleConsolePause()
-    {
-        ConsolePaused = !ConsolePaused;
-        if (ConsolePaused) ConsoleViewState = $"Paused · {FilteredLogLines.Count} visible lines";
-        else ApplyConsoleFilter();
-    }
-
-    private void ClearConsoleView()
-    {
-        FilteredLogLines.Clear();
-        ConsoleViewState = "View cleared · server log was not deleted";
     }
 
     private async Task RunRconDoctorAsync()
@@ -10701,101 +10601,4 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(PageArtwork));
         RaisePropertyChanged(nameof(SetupArtwork));
     }
-}
-
-// v0.8.23.0: a command the signed-in role may not use cannot run (see MainWindowViewModel.CommandRoles.cs).
-internal interface IRoleGatedCommand
-{
-    Func<bool>? RoleGate { get; set; }
-    // v0.9.4.0: the role the command needs and the signed-in role, so a control it is disabled on can say why (RoleHint).
-    string? RequiredRole { get; set; }
-    Func<string?>? SignedInRole { get; set; }
-    void RaiseCanExecuteChanged();
-}
-
-internal sealed class RelayCommand : ICommand, IRoleGatedCommand
-{
-    public Func<bool>? RoleGate { get; set; }
-    public string? RequiredRole { get; set; }
-    public Func<string?>? SignedInRole { get; set; }
-    private readonly Action _execute;
-    private readonly Func<bool>? _canExecute;
-
-    public RelayCommand(Action execute, Func<bool>? canExecute = null)
-    {
-        _execute = execute;
-        _canExecute = canExecute;
-    }
-
-    public bool CanExecute(object? parameter) => (RoleGate?.Invoke() ?? true) && (_canExecute?.Invoke() ?? true);
-    public void Execute(object? parameter) => _execute();
-    public event EventHandler? CanExecuteChanged;
-    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-}
-
-internal sealed class RelayCommand<T> : ICommand, IRoleGatedCommand
-{
-    public Func<bool>? RoleGate { get; set; }
-    public string? RequiredRole { get; set; }
-    public Func<string?>? SignedInRole { get; set; }
-    private readonly Action<T?> _execute;
-    private readonly Func<T?, bool>? _canExecute;
-
-    public RelayCommand(Action<T?> execute, Func<T?, bool>? canExecute = null)
-    {
-        _execute = execute;
-        _canExecute = canExecute;
-    }
-
-    public bool CanExecute(object? parameter) => (RoleGate?.Invoke() ?? true) && (_canExecute?.Invoke(parameter is T typed ? typed : default) ?? true);
-
-    public void Execute(object? parameter)
-    {
-        if (parameter is T typed)
-            _execute(typed);
-        else
-            _execute(default);
-    }
-
-    public event EventHandler? CanExecuteChanged;
-    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-}
-
-internal sealed class AsyncCommand : ICommand, IRoleGatedCommand
-{
-    public Func<bool>? RoleGate { get; set; }
-    public string? RequiredRole { get; set; }
-    public Func<string?>? SignedInRole { get; set; }
-    private readonly Func<Task> _execute;
-    private readonly Func<bool>? _canExecute;
-    private bool _running;
-
-    public AsyncCommand(Func<Task> execute, Func<bool>? canExecute = null)
-    {
-        _execute = execute;
-        _canExecute = canExecute;
-    }
-
-    public bool CanExecute(object? parameter) => !_running && (RoleGate?.Invoke() ?? true) && (_canExecute?.Invoke() ?? true);
-    public event EventHandler? CanExecuteChanged;
-
-    public async void Execute(object? parameter)
-    {
-        if (!CanExecute(parameter))
-            return;
-
-        _running = true;
-        RaiseCanExecuteChanged();
-        try
-        {
-            await _execute();
-        }
-        finally
-        {
-            _running = false;
-            RaiseCanExecuteChanged();
-        }
-    }
-
-    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }

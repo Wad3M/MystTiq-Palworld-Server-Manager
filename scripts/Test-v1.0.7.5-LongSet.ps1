@@ -1,4 +1,4 @@
-# MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
+# MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -195,6 +195,30 @@ try {
         if (-not $status.serverMayBeRunning -or @(Fake).Count -ne 1) { throw "the next service did not find the running server (mayBeRunning=$($status.serverMayBeRunning), $(@(Fake).Count) PalServer)" }
         Write-Host "    stopped in $($clock.ElapsedMilliseconds) ms (exit $exitCode); the next service found PalServer $fakeId; a second start: $($again.Status)"
         Call POST '/server/stop' | Out-Null
+    }
+
+    # v1.0.8.0: with the default launch (sharing the service's console), a Ctrl+C on that console stopped the game too.
+    Test-LongSet 'a Ctrl+C on the service''s console (mysttiq-server api-run in a terminal) stops MystTiq but not the game server, with the default launch' {
+        & (Join-Path $root 'scripts\Testing\Send-MystTiqConsoleStop.ps1') -ProcessId $script:svc.Id
+        if (-not $script:svc.WaitForExit(15000)) { throw 'the service did not stop' }
+        Fake | Stop-Process -Force -ErrorAction SilentlyContinue
+        $c = Get-Content $config -Raw | ConvertFrom-Json
+        foreach ($s in $c.Servers) { $s.LaunchArguments = @("-port=$GamePort") }
+        $c | ConvertTo-Json -Depth 20 | Set-Content $config
+        Start-LongSetService
+        $start = Call POST '/server/start'
+        if ($start.Status -ne 200 -or @(Fake).Count -ne 1) { throw "the stand-in server did not start: $($start.Status) $($start.Text)" }
+        $fakeId = @(Fake)[0].Id
+        & (Join-Path $root 'scripts\Testing\Send-MystTiqConsoleStop.ps1') -ProcessId $script:svc.Id -Signal CtrlC
+        if (-not $script:svc.WaitForExit(15000)) {
+            # A process started from a parent that ignores Ctrl+C inherits that (a bash-started pwsh does); then nothing
+            # here can show the difference, so say so instead of failing.
+            Write-Host '    [SKIP] this service ignores Ctrl+C (inherited from the process that started the long set); run it from PowerShell' -ForegroundColor Yellow
+            Stop-Process -Id $script:svc.Id -Force
+            return
+        }
+        if (-not (Get-Process -Id $fakeId -ErrorAction SilentlyContinue)) { throw 'the Ctrl+C stopped the game server too' }
+        Write-Host "    the service stopped on Ctrl+C (exit $($script:svc.ExitCode)); PalServer $fakeId kept running"
     }
 }
 finally {

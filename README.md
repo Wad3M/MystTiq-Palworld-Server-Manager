@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.5: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.8.0: file reviewed for this release (2026-10-11). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,15 +21,17 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.7.5 · Accepted baseline: v1.0.0.0**
+**Current version: v1.0.8.0 · Accepted baseline: v1.0.0.0**
 
 MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.7.5
+## What's new in v1.0.8.0
 
-**An update stopped half way is no longer called installed.** If SteamCMD or MystTiq stops during an update, the server shows as Incomplete and is not started until Update runs again; closing the desktop no longer stops an update half way. **Backups wait for a save file in use** and name it if it stays in use. **Tested under load and over time**: simultaneous operations, 10,000 console lines, rapid tab switching, and a 24-hour idle run on Windows and Linux.
+**Ctrl+C fixed for a self-run service.** Running `mysttiq-server api-run` in a terminal, Ctrl+C now stops MystTiq and leaves the game running (it used to stop both), and it works from Git Bash too. **A cleaner inside**: the main window's code begins to be split into one piece per area, starting with the Console page; nothing looks different.
 
-**Also new (v1.0.7.4): secrets encrypted on disk.** The SMTP password, Discord and webhook URLs and the Discord bot token are encrypted on Windows (owner-only files on Linux); Server Doctor offers to delete the one plain copy kept during the move. **Every archive checked**: MOD installs, snapshot and backup restores and MystTiq's own update are refused before anything is written if they are too big, have too many files, or would fill the disk. **Secrets out of logs**: failed sends name only the address, password-style start arguments are hidden, and only an Admin can read the channel settings.
+**Also new (v1.0.7.5): an update stopped half way is no longer called installed.** If SteamCMD or MystTiq stops during an update, the server shows as Incomplete and is not started until Update runs again; closing the desktop no longer stops an update half way. **Backups wait for a save file in use** and name it if it stays in use. **Tested under load and over time**: simultaneous operations, 10,000 console lines, rapid tab switching, and a 24-hour idle run on Windows and Linux.
+
+**And (v1.0.7.4): secrets encrypted on disk.** The SMTP password, Discord and webhook URLs and the Discord bot token are encrypted on Windows (owner-only files on Linux); Server Doctor offers to delete the one plain copy kept during the move. **Every archive checked**: MOD installs, snapshot and backup restores and MystTiq's own update are refused before anything is written if they are too big, have too many files, or would fill the disk. **Secrets out of logs**: failed sends name only the address, password-style start arguments are hidden, and only an Admin can read the channel settings.
 
 **And (v1.0.7.3): joining works again with the identity guard on.** A player still loading into the world was taken for one on the new-character screen and kicked; the guard now gives a loading player 90 seconds before it acts, and still kicks at once a player handed a different character. **A lighter console**: it only redraws when there are new lines, and a line's time no longer changes on every refresh.
 
@@ -65,7 +67,7 @@ MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Win
 
 **Also new since 1.0 (v1.0.0.1): launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
 
-[Release notes](release-notes/v1.0.7.5.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v1.0.8.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -132,8 +134,9 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v1.0.7.5 | Current | An update stopped half way is no longer called installed, backups wait for a save file in use, and MystTiq is tested under load and over 24 hours |
-| v1.0.7.4 | Previous | Saved passwords and webhook URLs are encrypted, every archive is checked before it is opened, and secrets stay out of logs |
+| v1.0.8.0 | Current | Ctrl+C on a self-run service no longer stops the game, and the main window's code begins to be split up (the Console page first) |
+| v1.0.7.5 | Previous | An update stopped half way is no longer called installed, backups wait for a save file in use, and MystTiq is tested under load and over 24 hours |
+| v1.0.7.4 | Earlier | Saved passwords and webhook URLs are encrypted, every archive is checked before it is opened, and secrets stay out of logs |
 | v1.0.7.3 | Earlier | Players are no longer kicked by the identity guard while their character loads; the console only redraws what changed |
 | v1.0.7.2 | Earlier | Server starts show their steps, backup scans show progress and can be cancelled, and the connection line says what is wrong |
 | v1.0.7.1 | Earlier | Backups, updates and MOD changes can no longer overlap a server start or a save edit; a burst of alerts is queued and repeats combined |

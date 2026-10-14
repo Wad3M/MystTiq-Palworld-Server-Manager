@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1796,15 +1796,15 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     applyLogs.Invoke(vm, [Tail(lines, t1)]);
     var changes = 0;
     void Count(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => changes++;
-    vm.LogLines.CollectionChanged += Count; vm.FilteredLogLines.CollectionChanged += Count;
+    vm.Logs.LogLines.CollectionChanged += Count; vm.Logs.FilteredLogLines.CollectionChanged += Count;
     applyLogs.Invoke(vm, [Tail(lines, t1.AddSeconds(5))]);
     var unchanged = changes;
-    var firstStamp = vm.LogLines.First(l => l.EndsWith("untimed line 1", StringComparison.Ordinal));
+    var firstStamp = vm.Logs.LogLines.First(l => l.EndsWith("untimed line 1", StringComparison.Ordinal));
     changes = 0;
     applyLogs.Invoke(vm, [Tail(lines.Skip(1).Append("untimed line 500"), t1.AddSeconds(10))]);
     var changed = changes;
-    var laterStamp = vm.LogLines.First(l => l.EndsWith("untimed line 1", StringComparison.Ordinal));
-    var newStamp = vm.LogLines.First(l => l.EndsWith("untimed line 500", StringComparison.Ordinal));
+    var laterStamp = vm.Logs.LogLines.First(l => l.EndsWith("untimed line 1", StringComparison.Ordinal));
+    var newStamp = vm.Logs.LogLines.First(l => l.EndsWith("untimed line 500", StringComparison.Ordinal));
     Check(unchanged == 0 && changed == 2, $"An unchanged poll touches nothing and a changed one is one update per list [unchanged {unchanged}, changed {changed}; was about 1,000 rows each poll]");
     Check(firstStamp == laterStamp && firstStamp.StartsWith($"[{t1.ToLocalTime():yyyy-MM-dd HH:mm:ss}", StringComparison.Ordinal) && newStamp.StartsWith($"[{t1.AddSeconds(10).ToLocalTime():yyyy-MM-dd HH:mm:ss}", StringComparison.Ordinal),
         $"A line without a timestamp keeps the time it was first seen; a new one gets its own [{firstStamp[..25]} / {newStamp[..25]}]");
@@ -1815,7 +1815,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         applyLogs.Invoke(vm, [Tail(Enumerable.Range(poll * 500, 500).Select(i => $"chatty line {i}"), t1.AddSeconds(20 + poll * 5))]);
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     clock.Stop();
-    Check(changes == 40 && vm.LogLines.Count == 500 && clock.ElapsedMilliseconds < 5000,
+    Check(changes == 40 && vm.Logs.LogLines.Count == 500 && clock.ElapsedMilliseconds < 5000,
         $"10,000 lines in 20 polls: 40 list updates, the list stays at 500, and it took {clock.ElapsedMilliseconds} ms");
 
     vm.NavigateCommand.Execute(nameof(NavigationPage.Dashboard));
@@ -1825,9 +1825,9 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var hiddenFilterChanges = changes - 1;
     vm.NavigateCommand.Execute(nameof(NavigationPage.Console));
     Dispatcher.UIThread.RunJobs();
-    Check(hiddenFilterChanges == 0 && vm.FilteredLogLines.Count == 1 && vm.FilteredLogLines[0].EndsWith("while the console is hidden", StringComparison.Ordinal),
+    Check(hiddenFilterChanges == 0 && vm.Logs.FilteredLogLines.Count == 1 && vm.Logs.FilteredLogLines[0].EndsWith("while the console is hidden", StringComparison.Ordinal),
         "While the Console page is hidden its filtered view waits, and opening the page brings it up to date");
-    vm.LogLines.CollectionChanged -= Count; vm.FilteredLogLines.CollectionChanged -= Count;
+    vm.Logs.LogLines.CollectionChanged -= Count; vm.Logs.FilteredLogLines.CollectionChanged -= Count;
 }
 // v1.0.7.5 (roadmap Q-10): rapid tab switching. Three connected tabs whose status replies arrive late and out of order
 // (0-40 ms each); 300 switches with the replies landing in between. Afterwards the shown players and console lines are the
@@ -1870,10 +1870,10 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     tabWindow.UpdateLayout();
     var lastPort = last.Profile!.BaseAddress.Port.ToString();
     var playersOk = tabVm.OnlinePlayers.Count == 1 && tabVm.OnlinePlayers[0].Name == $"Player on {lastPort}";
-    var linesOk = tabVm.LogLines.Count > 0 && tabVm.LogLines.All(l => l.Contains($"from {lastPort}", StringComparison.Ordinal));
+    var linesOk = tabVm.Logs.LogLines.Count > 0 && tabVm.Logs.LogLines.All(l => l.Contains($"from {lastPort}", StringComparison.Ordinal));
     Check(playersOk && linesOk && !tabVm.HasUnexpectedError && TabProxy.Calls > 0,
         $"After {switches} rapid tab switches with late, out-of-order replies ({TabProxy.Calls} status requests), the shown players and console lines are the active tab's own and no error was recorded " +
-        $"[players: {string.Join(", ", tabVm.OnlinePlayers.Select(p => p.Name))}; a line: {tabVm.LogLines.LastOrDefault()}; error: {tabVm.UnexpectedErrorText}]");
+        $"[players: {string.Join(", ", tabVm.OnlinePlayers.Select(p => p.Name))}; a line: {tabVm.Logs.LogLines.LastOrDefault()}; error: {tabVm.UnexpectedErrorText}]");
     tabWindow.Close();
     Dispatcher.UIThread.RunJobs();
 }

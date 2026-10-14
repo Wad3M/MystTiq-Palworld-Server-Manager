@@ -1,0 +1,64 @@
+// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
+using MystTiq.Desktop.Models;
+using MystTiq.Desktop.Services;
+
+namespace MystTiq.Desktop.ViewModels;
+
+/// <summary>
+/// v1.0.8.0 (roadmap C-0): what every page's ViewModel shares with the window: the API client, the active tab's connection
+/// and sign-in, the busy state, the page shown, the error-recording command runner and the text lookup. The window owns
+/// the state; a page reads it through here instead of reaching into MainWindowViewModel, so pages can move out of that
+/// file one at a time (C-1 to C-9) and be tested on their own.
+/// </summary>
+public sealed class SessionContext
+{
+    private readonly Func<ConnectionProfile?> _profile;
+    private readonly Func<string?> _bearerToken;
+    private readonly Func<bool> _isBusy;
+    private readonly Action<bool> _setBusy;
+    private readonly Func<NavigationPage> _page;
+    private readonly Action<Func<Task>, string> _runUi;
+
+    public SessionContext(IMystTiqApiClient api, Func<ConnectionProfile?> profile, Func<string?> bearerToken,
+        Func<bool> isBusy, Action<bool> setBusy, Func<NavigationPage> page, Action<Func<Task>, string> runUi)
+    {
+        Api = api;
+        _profile = profile;
+        _bearerToken = bearerToken;
+        _isBusy = isBusy;
+        _setBusy = setBusy;
+        _page = page;
+        _runUi = runUi;
+    }
+
+    public IMystTiqApiClient Api { get; }
+
+    /// <summary>The active tab's connection, or null when it has none (a wizard tab, an incomplete profile).</summary>
+    public ConnectionProfile? Profile => _profile();
+    public string? BearerToken => _bearerToken();
+    public bool IsBusy { get => _isBusy(); set => _setBusy(value); }
+    public NavigationPage Page => _page();
+
+    /// <summary>Runs a command's work on the UI thread; an error is recorded and shown, never lost (as the window's RunUi).</summary>
+    public void RunUi(Func<Task> work, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(work))] string name = "") => _runUi(work, name);
+
+    /// <summary>A view-model text in the chosen language.</summary>
+    public static string Tr(string? text) => Localizer.Instance.Translate(text);
+}
+
+/// <summary>v1.0.8.0 (roadmap C-0): a page's own ViewModel. The window creates it with the shared session and tells it when its page is shown.</summary>
+public abstract class PageViewModel : ViewModelBase
+{
+    protected PageViewModel(SessionContext session, NavigationPage page)
+    {
+        Session = session;
+        Page = page;
+    }
+
+    protected SessionContext Session { get; }
+    public NavigationPage Page { get; }
+    public bool IsShown => Session.Page == Page;
+
+    /// <summary>Called by the window each time this page is navigated to.</summary>
+    public virtual void OnShown() { }
+}

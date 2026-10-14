@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -181,7 +181,12 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
                 CreateNoWindow = launcher.CreateNoWindow,
                 WindowStyle = launcher.WindowStyle,
                 RedirectStandardOutput = launcher.RedirectStandardOutput,
-                RedirectStandardError = launcher.RedirectStandardError
+                RedirectStandardError = launcher.RedirectStandardError,
+                // v1.0.8.0: its own process group, so a Ctrl+C on the service's console (mysttiq-server api-run in a
+                // terminal) stops MystTiq but not the game: started without it, PalServer shared that console and was
+                // stopped with it (found by the v1.0.7.5 long set). MystTiq itself stops PalServer through REST/RCON,
+                // CloseMainWindow and then a kill, never a console signal. Linux already starts it in its own session.
+                CreateNewProcessGroup = !launcher.UseShellExecute
             };
             foreach (var argument in BuildLauncherArguments(serverArguments, launcher.ExplicitConfiguration))
                 startInfo.ArgumentList.Add(argument);

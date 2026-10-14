@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -250,6 +250,8 @@ var paths = ServerPathProfile.ForCurrentPlatform(runtimeConfiguration);
 var distribution = ServerDistributionPlatformService.ForCurrentPlatform(platform);
 
 var cancellation = new CancellationTokenSource();
+// v1.0.8.0: Ctrl+C works even when the parent process ignored it (see ConsoleCtrlC).
+ConsoleCtrlC.Restore();
 Console.CancelKeyPress += (_, eventArgs) =>
 {
     eventArgs.Cancel = true;

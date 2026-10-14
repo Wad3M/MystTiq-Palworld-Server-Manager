@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -694,8 +694,8 @@ public sealed partial class MainWindow : Window
         await using var stream = await file.OpenWriteAsync();
         stream.SetLength(0);
         using var writer = new StreamWriter(stream);
-        vm.EnsureConsoleFilterCurrent();
-        foreach (var line in vm.FilteredLogLines) await writer.WriteLineAsync(line);
+        vm.Logs.EnsureFilterCurrent();
+        foreach (var line in vm.Logs.FilteredLogLines) await writer.WriteLineAsync(line);
     }
 
     private void OpenSteamProfile_OnClick(object? sender, RoutedEventArgs e)

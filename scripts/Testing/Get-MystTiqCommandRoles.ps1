@@ -1,4 +1,4 @@
-# MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
+# MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
 [CmdletBinding()]
 param([string]$ProjectRoot = '.', [switch]$ShowUnresolved)
 # v0.8.23.0: which role each Desktop command needs, derived from the code rather than kept by hand. Read-only.
@@ -104,7 +104,9 @@ foreach ($m in [regex]::Matches($clientText, 'public (?:async )?[\w<>\[\]?, ]+ (
 if ($ShowUnresolved) { return $unresolved }
 
 # 3. ViewModel methods and commands.
-$vmText = (Get-ChildItem (Join-Path $root 'src\MystTiq.Desktop\ViewModels') -Filter 'MainWindowViewModel*.cs' | ForEach-Object { [IO.File]::ReadAllText($_.FullName) }) -join "`n"
+# v1.0.8.0 (roadmap C-0): every ViewModel file, so a page moved out of MainWindowViewModel (its own ViewModel, calling
+# Session.Api) is read too.
+$vmText = (Get-ChildItem (Join-Path $root 'src\MystTiq.Desktop\ViewModels') -Filter '*.cs' -Recurse | ForEach-Object { [IO.File]::ReadAllText($_.FullName) }) -join "`n"
 $methodBodies = @{}
 foreach ($m in [regex]::Matches($vmText, '(?m)^\s+(?:(?:private|public|internal|protected)\s+)(?:static\s+)?(?:async\s+)?[\w<>\[\]?,\. ]+?\s(\w+)\([^;{]*\)\s*(?:=>|\{)')) {
     $name = $m.Groups[1].Value
@@ -120,7 +122,7 @@ $notFollowedBelowAction = '^(Refresh|Reload|Load|Rebuild|Build|PerformNavigation
 function Get-Reach([string]$Text, [hashtable]$Seen, [int]$Depth = 0) {
     $calls = [System.Collections.Generic.HashSet[string]]::new()
     # A call, or a method group handed on (RunLifecycleAsync("Stopping…", _api.StopServerAsync)).
-    foreach ($c in [regex]::Matches($Text, '_api\.(\w+Async)\b')) { [void]$calls.Add($c.Groups[1].Value) }
+    foreach ($c in [regex]::Matches($Text, '\b(?:_api|Session\.Api)\.(\w+Async)\b')) { [void]$calls.Add($c.Groups[1].Value) }
     foreach ($c in [regex]::Matches($Text, '\b(\w+)\(')) {
         $name = $c.Groups[1].Value
         if ($Seen.ContainsKey($name) -or -not $methodBodies.ContainsKey($name)) { continue }

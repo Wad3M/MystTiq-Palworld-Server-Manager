@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.5: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.8.0: file reviewed for this release (2026-10-11). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -520,7 +520,7 @@
             <StackPanel Spacing="6">
               <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr dashboard.log}" FontSize="15" FontWeight="SemiBold"/><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.openConsole}" Command="{Binding NavigateCommand}" CommandParameter="Console"/></Grid>
               <TextBlock Text="{services:TrText LogFileText}" Classes="muted" FontSize="10"/>
-              <ListBox AutomationProperties.Name="{services:Tr dashboard.log}" ItemsSource="{Binding LogLines}" MaxHeight="140" Background="{DynamicResource DecoBackground_07110A}" BorderBrush="{DynamicResource DecoBorder_214C2A}" Foreground="{DynamicResource GreenBrush}" FontFamily="Consolas, monospace" FontSize="10">
+              <ListBox AutomationProperties.Name="{services:Tr dashboard.log}" ItemsSource="{Binding Logs.LogLines}" MaxHeight="140" Background="{DynamicResource DecoBackground_07110A}" BorderBrush="{DynamicResource DecoBorder_214C2A}" Foreground="{DynamicResource GreenBrush}" FontFamily="Consolas, monospace" FontSize="10">
                 <ListBox.Styles>
                   <Style Selector="ListBoxItem"><Setter Property="Padding" Value="2,1"/><Setter Property="BorderThickness" Value="0,0,0,1"/><Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_12241A}"/></Style>
                   <Style Selector="ListBoxItem:nth-child(2n)"><Setter Property="Background" Value="{DynamicResource DecoBackground_0B1712}"/></Style>
@@ -2014,7 +2014,7 @@
               <StackPanel Spacing="5">
                 <TextBlock Text="{services:Tr ui.filter_search_pause_and_export_the_combined_pals_5c9e27}" Foreground="{DynamicResource MutedBrush}"/>
               </StackPanel>
-              <TextBlock Grid.Column="1" Text="{services:TrText ConsoleViewState}" Foreground="{DynamicResource GreenBrush}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="1" Text="{services:TrText Logs.ViewState}" Foreground="{DynamicResource GreenBrush}" VerticalAlignment="Center"/>
             </Grid>
           </Border>
           <Border Classes="card accentSystem" IsVisible="{Binding IsActivityAuditPage}">
@@ -2125,12 +2125,12 @@
                 <TextBlock Text="{services:TrText LogFileText}" Foreground="{DynamicResource MutedBrush}"/>
               </StackPanel>
               <Grid Grid.Row="1" ColumnDefinitions="150,150,*,Auto" ColumnSpacing="8">
-                <ComboBox ItemsSource="{Binding ConsoleSeverityOptions}" SelectedItem="{Binding ConsoleSeverityFilter, Mode=TwoWay}" ToolTip.Tip="{services:Tr ui.filter_the_console_by_severity}"/>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding ConsoleCategoryOptions}" SelectedItem="{Binding ConsoleCategoryFilter, Mode=TwoWay}" ToolTip.Tip="{services:Tr ui.filter_the_console_by_source_category}"/>
-                <TextBox Grid.Column="2" PlaceholderText="{services:Tr ui.search_console}" Text="{Binding ConsoleSearchText, Mode=TwoWay}"/>
-                <CheckBox Grid.Column="3" Content="{services:Tr ui.hide_routine_rest}" IsChecked="{Binding HideRoutineRest, Mode=TwoWay}" VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding Logs.SeverityOptions}" SelectedItem="{Binding Logs.SeverityFilter, Mode=TwoWay}" ToolTip.Tip="{services:Tr ui.filter_the_console_by_severity}"/>
+                <ComboBox Grid.Column="1" ItemsSource="{Binding Logs.CategoryOptions}" SelectedItem="{Binding Logs.CategoryFilter, Mode=TwoWay}" ToolTip.Tip="{services:Tr ui.filter_the_console_by_source_category}"/>
+                <TextBox Grid.Column="2" PlaceholderText="{services:Tr ui.search_console}" Text="{Binding Logs.SearchText, Mode=TwoWay}"/>
+                <CheckBox Grid.Column="3" Content="{services:Tr ui.hide_routine_rest}" IsChecked="{Binding Logs.HideRoutineRest, Mode=TwoWay}" VerticalAlignment="Center"/>
               </Grid>
-              <ListBox AutomationProperties.Name="{services:Tr ui.console_log}" Grid.Row="2" ItemsSource="{Binding FilteredLogLines}" MaxHeight="390" Background="{DynamicResource DecoBackground_07110A}" BorderBrush="{DynamicResource DecoBorder_214C2A}" Foreground="{DynamicResource GreenBrush}"
+              <ListBox AutomationProperties.Name="{services:Tr ui.console_log}" Grid.Row="2" ItemsSource="{Binding Logs.FilteredLogLines}" MaxHeight="390" Background="{DynamicResource DecoBackground_07110A}" BorderBrush="{DynamicResource DecoBorder_214C2A}" Foreground="{DynamicResource GreenBrush}"
                        FontFamily="Consolas, monospace" FontSize="11" ClipToBounds="True">
                 <ListBox.Styles>
                   <Style Selector="ListBoxItem"><Setter Property="Padding" Value="2,1"/><Setter Property="BorderThickness" Value="0,0,0,1"/><Setter Property="BorderBrush" Value="{DynamicResource DecoBorder_12241A}"/></Style>
