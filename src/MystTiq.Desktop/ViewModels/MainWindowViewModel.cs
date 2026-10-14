@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -75,16 +75,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _rconCommandText = "Info";
     private string _selectedRconPreset = "Info";
     private bool _rconConnected;
-    private BackupItemDto? _selectedBackup;
-    private string _backupState = "Not loaded";
-    private string _backupTotalSizeText = "—";
-    private string _backupDetail = "Connect to load backup inventory.";
-    private string _backupRootPath = string.Empty;
-    private bool _backupRestoreConfirmed;
-    private int _backupRetentionKeepLatest = 10;
-    private int _backupRetentionMaxAgeDays = 30;
-    private string _backupRetentionToken = string.Empty;
-    private string _backupRetentionState = "Preview a policy before cleanup.";
 
     private string _doctorStatus = "Not run";
     private string _doctorSummary = "Connect to a MystTiq service, then run Doctor.";
@@ -219,9 +209,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private int _cloneWorldPortOffset = 100;
     private bool _cloneWorldConfirmed;
     private string _crashAnalyzerState = "Run analysis to inspect bounded recent server-log evidence.";
-    private string _saveToolsState = "Open Save Tools to inspect server-side dependencies and saves.";
-    private string _saveToolsPaths = "Not inspected";
-    private SaveFileDto? _selectedSaveFile;
     private bool _isWanDiagnosticsExpanded;
     private bool _isLocalDiagnosticsExpanded;
     private bool _isDiscordBotExpanded;
@@ -264,7 +251,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         World = new WorldViewModel(Session, Map, Players, RefreshOperationsAsync, () => Workspace!.ValidateActiveWorldAsync(), RefreshPalsAsync, RefreshPlayersPageAsync, RefreshWorldExplorerAsync, RefreshPlayerGuildExplorerAsync, OpenSelectedGuildLeaderAsync);
         Configuration = new ConfigurationViewModel(Session, state => Workspace!.WorkspaceState = state);
         Workspace = new WorkspaceViewModel(Session, Configuration, EnvironmentItems);
-        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace];
+        Backups = new BackupsViewModel(Session);
+        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace, Backups];
         // v1.0.8.4 (roadmap C-4): the Workspace page and the wizard follow the Configuration page.
         Configuration.ConfigurationLoaded += () => { Workspace.ValidateWorkspacePaths(); Workspace.RaiseWorkspaceSummaryProperties(); };
         Configuration.PropertyChanged += (_, e) =>
@@ -360,7 +348,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OpenSelectedBaseGuildCommand = new RelayCommand(OpenSelectedBaseGuild);
         OpenGuildBaseCommand = new RelayCommand<string>(OpenGuildBase);
         // v1.0.0.4: the save-folder access fix (MainWindowViewModel.SaveAccess.cs).
-        FixSaveFolderAccessCommand = new AsyncCommand(FixSaveFolderAccessAsync, () => !IsBusy);
         // v1.0.0.2: unique player names (MainWindowViewModel.NameGuard.cs).
         RefreshAntiCheatCommand = new AsyncCommand(RefreshAntiCheatAsync, () => !IsBusy);
         SaveAntiCheatRulesCommand = new AsyncCommand(SaveAntiCheatRulesAsync, () => !IsBusy);
@@ -372,28 +359,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         UpdateAllCommand = new AsyncCommand(UpdateAllAsync, () => !IsBusy && ManagementApiConnected);
         AnalyzeCrashesCommand = new AsyncCommand(AnalyzeCrashesAsync, () => !IsBusy && ManagementApiConnected);
         RefreshCrashHistoryCommand = new AsyncCommand(RefreshCrashHistoryAsync, () => !IsBusy);
-        RefreshSaveToolsCommand = new AsyncCommand(() => RefreshSaveToolsAsync(false), () => !IsBusy);
-        RunSaveToolsSelfTestCommand = new AsyncCommand(() => RefreshSaveToolsAsync(true), () => !IsBusy && ManagementApiConnected);
         RefreshPlayersCommand = new AsyncCommand(RefreshPlayersPageAsync, () => !IsBusy);
         SaveWorldNowCommand = new AsyncCommand(SaveWorldNowAsync, () => !IsBusy);
         // v0.7.112.0: real now (PalDefender over RCON, the Starter Players.Kits provider), no longer hardcoded off.
-        RefreshBackupsCommand = new AsyncCommand(RefreshBackupsAsync, () => !IsBusy);
-        CreateBackupCommand = new AsyncCommand(CreateBackupAsync, () => !IsBusy && ManagementApiConnected);
-        DeleteBackupCommand = new AsyncCommand(DeleteBackupAsync, () => !IsBusy && SelectedBackup is not null);
-        RestoreBackupCommand = new AsyncCommand(RestoreBackupAsync, () => !IsBusy && SelectedBackup is not null && BackupRestoreConfirmed);
-        VerifySelectedBackupCommand = new AsyncCommand(VerifySelectedBackupAsync, () => !IsBusy && SelectedBackup is not null);
-        VerifyAllBackupsCommand = new AsyncCommand(VerifyAllBackupsAsync, () => !IsBusy && ManagementApiConnected);
         // v1.0.7.2 (roadmap Q-12): works while Verify All keeps the window busy.
-        CancelBackupScanCommand = new RelayCommand(() => RunUi(() => CancelBackupScanAsync()));
-        PreviewBackupRetentionCommand = new AsyncCommand(PreviewBackupRetentionAsync, () => !IsBusy && ManagementApiConnected);
-        ApplyBackupRetentionCommand = new AsyncCommand(ApplyBackupRetentionAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(BackupRetentionToken));
-        OpenBackupRootCommand = new RelayCommand(OpenBackupRoot, () => !string.IsNullOrWhiteSpace(BackupRootPath));
         BootstrapLocalCommand = new AsyncCommand(BootstrapLocalAsync, () => !IsBusy && IsLocalProfile);
         GenerateServerNameCommand = new RelayCommand(GenerateServerName, () => Configuration.PalworldConfigLoaded && !IsBusy);
         GenerateSetupServerNameCommand = new RelayCommand(() => SetupServerName = GenerateRandomServerName());
         RunDoctorCommand = new AsyncCommand(RunDoctorAsync, () => !IsBusy);
         RecheckDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy) RunUi(() => RecheckDiagnosticAsync(f)); });
-        // v0.7.105.0: FixConfirmed gates this the same way BackupRestoreConfirmed gates RestoreBackupCommand --
+        // v0.7.105.0: FixConfirmed gates this the same way Backups.BackupRestoreConfirmed gates Backups.RestoreBackupCommand --
         // checked here too, not just via the button's IsEnabled, so the command itself can never fire unconfirmed.
         FixDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy && f is { CanFix: true, FixConfirmed: true }) RunUi(() => FixDiagnosticAsync(f)); });
         RunNetworkDiagnosticsCommand = new AsyncCommand(RunNetworkDiagnosticsAsync, () => !IsBusy);
@@ -826,7 +801,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // bug was first reported against.
             SelectedOnlinePlayer = null;
             Players.SelectedPlayerRecord = null;
-            SelectedBackup = null;
+            Backups.SelectedBackup = null;
             SelectedMod = null;
             World.SelectedExplorerPal = null;
             World.SelectedExplorerBase = null;
@@ -1117,14 +1092,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool HasSelectedCrashFinding => _selectedCrashFinding is not null;
     public ObservableCollection<string> CrashIsolationPlan { get; } = [];
     public ObservableCollection<CrashAnalysisSnapshotDto> CrashHistory { get; } = [];
-    public ObservableCollection<SaveToolsTestDto> SaveToolsTests { get; } = [];
-    public ObservableCollection<SaveFileDto> SaveFiles { get; } = [];
     public ObservableCollection<MetricHistoryPoint> MetricHistory { get; } = [];
     public ObservableCollection<HistoricalMetricPointDto> ResourceHistory { get; } = [];
     public IReadOnlyList<string> HistoryRanges { get; } = ["1 Hour", "6 Hours", "24 Hours", "7 Days", "30 Days"];
     public ObservableCollection<EnvironmentChecklistItemDto> EnvironmentItems { get; } = [];
-    public ObservableCollection<BackupItemDto> BackupItems { get; } = [];
-    public ObservableCollection<BackupRetentionItemDto> BackupRetentionItems { get; } = [];
     public ObservableCollection<OperationRecordDto> RecentOperations { get; } = [];
     public ObservableCollection<ModItemDto> ModItems { get; } = [];
     public IEnumerable<ModItemDto> ModsNeedingAttention => ModItems.Where(m => m.Health is not ("Healthy" or "Disabled" or "Active / Unverified"));
@@ -1365,7 +1336,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
     private void RaiseManagementApiConnectedDependents()
     {
-        (CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (Backups.CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -1508,7 +1479,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
     private void RaiseConnectionStateDependents()
     {
-        (CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (Backups.CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -1614,16 +1585,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool RconConnected { get => _rconConnected; private set => SetField(ref _rconConnected, value); }
     public string RconCommandText { get => _rconCommandText; set { if (SetField(ref _rconCommandText, value ?? string.Empty)) (RconSendCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string SelectedRconPreset { get => _selectedRconPreset; set { if (SetField(ref _selectedRconPreset, value ?? "Info")) RconCommandText = _selectedRconPreset; } }
-    public BackupItemDto? SelectedBackup { get => _selectedBackup; set { if (SetField(ref _selectedBackup, value)) { BackupRestoreConfirmed = false; RaiseBackupCommandStates(); } } }
-    public string BackupState { get => _backupState; private set => SetField(ref _backupState, value); }
-    public string BackupTotalSizeText { get => _backupTotalSizeText; private set => SetField(ref _backupTotalSizeText, value); }
-    public string BackupDetail { get => _backupDetail; private set => SetField(ref _backupDetail, value); }
-    public string BackupRootPath { get => _backupRootPath; private set { if (SetField(ref _backupRootPath, value)) (OpenBackupRootCommand as RelayCommand)?.RaiseCanExecuteChanged(); } }
-    public bool BackupRestoreConfirmed { get => _backupRestoreConfirmed; set { if (SetField(ref _backupRestoreConfirmed, value)) RaiseBackupCommandStates(); } }
-    public int BackupRetentionKeepLatest { get => _backupRetentionKeepLatest; set { if (SetField(ref _backupRetentionKeepLatest, Math.Clamp(value, 1, 1000))) InvalidateRetentionPreview(); } }
-    public int BackupRetentionMaxAgeDays { get => _backupRetentionMaxAgeDays; set { if (SetField(ref _backupRetentionMaxAgeDays, Math.Clamp(value, 1, 3650))) InvalidateRetentionPreview(); } }
-    public string BackupRetentionToken { get => _backupRetentionToken; private set { if (SetField(ref _backupRetentionToken, value)) (ApplyBackupRetentionCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
-    public string BackupRetentionState { get => _backupRetentionState; private set => SetField(ref _backupRetentionState, value); }
 
     public string DoctorStatus { get => _doctorStatus; private set => SetField(ref _doctorStatus, value); }
     public string DoctorSummary { get => _doctorSummary; private set => SetField(ref _doctorSummary, value); }
@@ -1697,7 +1658,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string Ue4ssReleaseCatalogStatusText { get => _ue4ssReleaseCatalogStatusText; private set => SetField(ref _ue4ssReleaseCatalogStatusText, value); }
 
     // v0.7.49.0: UE4SS Install/Rollback -- same Preview-then-Apply shape as backup retention cleanup
-    // (BackupRetentionToken above): selecting a release or changing it invalidates any outstanding
+    // (Backups.BackupRetentionToken above): selecting a release or changing it invalidates any outstanding
     // preview token, so Apply can never fire against a preview that no longer matches the selection.
     public Ue4ssReleaseDto? SelectedUe4ssRelease
     {
@@ -1892,14 +1853,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             (Players.SavePlayerNotesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (Players.AddPlayerWarningCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (World.OpenSelectedGuildLeaderCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RefreshBackupsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (DeleteBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RestoreBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (VerifySelectedBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (VerifyAllBackupsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (PreviewBackupRetentionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (ApplyBackupRetentionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Backups.RefreshBackupsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Backups.CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Backups.DeleteBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Backups.RestoreBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Backups.VerifySelectedBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Backups.VerifyAllBackupsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Backups.PreviewBackupRetentionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Backups.ApplyBackupRetentionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (DeleteSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RollbackSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (EnableAllModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -2091,45 +2052,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand UpdateAllCommand { get; }
     public ICommand AnalyzeCrashesCommand { get; }
     public ICommand RefreshCrashHistoryCommand { get; }
-    public ICommand RefreshSaveToolsCommand { get; }
-    public ICommand RunSaveToolsSelfTestCommand { get; }
     public ICommand RefreshPlayersCommand { get; }
     public ICommand SaveWorldNowCommand { get; }
-    public ICommand RefreshBackupsCommand { get; }
-    public ICommand CreateBackupCommand { get; }
-    public ICommand DeleteBackupCommand { get; }
-    public ICommand RestoreBackupCommand { get; }
-    public ICommand VerifySelectedBackupCommand { get; }
-    public ICommand VerifyAllBackupsCommand { get; }
-    public ICommand CancelBackupScanCommand { get; }
 
-    // v1.0.7.2 (roadmap Q-12): the backup scan's progress ("Verifying backups: 3 of 47"), whether it runs, and what it could not read.
-    private string _backupScanText = string.Empty;
-    private bool _isBackupScanRunning;
-    public string BackupScanText { get => _backupScanText; private set { if (SetField(ref _backupScanText, value)) RaisePropertyChanged(nameof(HasBackupScan)); } }
-    public bool HasBackupScan => BackupScanText.Length > 0;
-    public bool IsBackupScanRunning { get => _isBackupScanRunning; private set => SetField(ref _isBackupScanRunning, value); }
-    public ObservableCollection<BackupScanProblemDto> BackupScanProblems { get; } = [];
 
-    private void ApplyBackupScan(BackupScanProgressDto? scan)
-    {
-        BackupScanText = scan?.Text ?? string.Empty;
-        IsBackupScanRunning = scan?.Running == true;
-        BackupScanProblems.Clear();
-        foreach (var problem in scan?.Unreadable ?? []) BackupScanProblems.Add(problem);
-    }
 
-    private async Task CancelBackupScanAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { BackupDetail = ex.Message; return; }
-        await _api.CancelBackupScanAsync(profile, BearerToken);
-        BackupDetail = "Cancelling: the scan stops after the backup in hand.";
-    }
-    public ICommand PreviewBackupRetentionCommand { get; }
-    public ICommand ApplyBackupRetentionCommand { get; }
-    public ICommand OpenBackupRootCommand { get; }
     public ICommand GenerateServerNameCommand { get; }
     public ICommand GenerateSetupServerNameCommand { get; }
     public ICommand RunDoctorCommand { get; }
@@ -2215,9 +2142,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool IsAntiCheatExpanded { get => _isAntiCheatExpanded; private set => SetField(ref _isAntiCheatExpanded, value); }
 
     public string CrashAnalyzerState { get => _crashAnalyzerState; private set => SetField(ref _crashAnalyzerState, value); }
-    public string SaveToolsState { get => _saveToolsState; private set => SetField(ref _saveToolsState, value); }
-    public string SaveToolsPaths { get => _saveToolsPaths; private set => SetField(ref _saveToolsPaths, value); }
-    public SaveFileDto? SelectedSaveFile { get => _selectedSaveFile; set => SetField(ref _selectedSaveFile, value); }
 
 
 
@@ -2306,26 +2230,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string SetupAttentionCountText => $"{EnvironmentItems.Count(x => !x.IsReady)} need attention";
     public string SetupComponentCountText => $"{EnvironmentItems.Count} components checked";
 
-    public string BackupArchiveCountText => BackupItems.Count.ToString();
-    public string BackupVerifiedCountText => BackupItems.Count(x => x.VerificationText.Contains("Verified", StringComparison.OrdinalIgnoreCase)).ToString();
-    public string BackupPendingCountText => BackupItems.Count(x => !x.VerificationText.Contains("Verified", StringComparison.OrdinalIgnoreCase)).ToString();
 
-    // v0.7.30.0 bug fix: BackupItems used to be populated at three separate call sites, each with
-    // its own Clear()+foreach(Add) -- but only one of the three also raised change notifications for
-    // the three computed properties above, so the summary cards silently stayed at 0 no matter how
-    // many backups actually existed, even though the list itself (which observes BackupItems'
-    // CollectionChanged directly) rendered correctly. All three call sites now go through this one
-    // helper so the notification can't be forgotten a fourth time.
-    private void PopulateBackupItems(BackupInventoryDto inventory)
-    {
-        ApplySaveFolderAccess(inventory);
-        ApplyBackupScan(inventory.Scan);
-        BackupItems.Clear();
-        foreach (var item in inventory.Items) BackupItems.Add(item);
-        RaisePropertyChanged(nameof(BackupArchiveCountText));
-        RaisePropertyChanged(nameof(BackupVerifiedCountText));
-        RaisePropertyChanged(nameof(BackupPendingCountText));
-    }
 
 
     public string NetworkHealth { get => _networkHealth; private set => SetField(ref _networkHealth, value); }
@@ -2658,7 +2563,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 await Configuration.LoadConfigurationAsync();
                 break;
             case NavigationPage.Backups:
-                await RefreshBackupsAsync();
+                await Backups.RefreshBackupsAsync();
                 break;
             case NavigationPage.Console:
                 await RefreshMonitoringAsync();
@@ -2723,7 +2628,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 await RefreshCrashHistoryAsync();
                 break;
             case NavigationPage.SaveTools:
-                await RefreshSaveToolsAsync(false);
+                await Backups.RefreshSaveToolsAsync(false);
                 break;
         }
     }
@@ -3359,7 +3264,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ]),
             new("Quick Actions",
             [
-                new("⇩", "Backup", "Create backup", CreateBackupCommand, null, RibbonIconColor.Amber),
+                new("⇩", "Backup", "Create backup", Backups.CreateBackupCommand, null, RibbonIconColor.Amber),
                 new("▰", "Console", "Open Console", NavigateCommand, "Console", RibbonIconColor.Cyan),
                 new("✚", "Doctor", "Open Doctor", NavigateCommand, "Doctor", RibbonIconColor.Green),
             ]),
@@ -3408,10 +3313,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("Backups",
             [
-                new("⇩", "Create", "Create backup", CreateBackupCommand, null, RibbonIconColor.Amber, IsSuccessButton: true),
-                new("✓", "Verify All", "Verify all backups", VerifyAllBackupsCommand, null, RibbonIconColor.Green),
-                new("↻", "Refresh", "Refresh backups", RefreshBackupsCommand, null, RibbonIconColor.Blue),
-                new("📁", "Open Root", "Open backup root", OpenBackupRootCommand, null, RibbonIconColor.Cyan),
+                new("⇩", "Create", "Create backup", Backups.CreateBackupCommand, null, RibbonIconColor.Amber, IsSuccessButton: true),
+                new("✓", "Verify All", "Verify all backups", Backups.VerifyAllBackupsCommand, null, RibbonIconColor.Green),
+                new("↻", "Refresh", "Refresh backups", Backups.RefreshBackupsCommand, null, RibbonIconColor.Blue),
+                new("📁", "Open Root", "Open backup root", Backups.OpenBackupRootCommand, null, RibbonIconColor.Cyan),
             ]));
         }
         // v0.7.27.0: MOD Dashboard and MOD Library already shared one in-page toolbar via
@@ -3528,8 +3433,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("Save Tools",
             [
-                new("↻", "Refresh", "Refresh save tools", RefreshSaveToolsCommand, null, RibbonIconColor.Amber),
-                new("✓", "Self-Tests", "Run save tools self-tests", RunSaveToolsSelfTestCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("↻", "Refresh", "Refresh save tools", Backups.RefreshSaveToolsCommand, null, RibbonIconColor.Amber),
+                new("✓", "Self-Tests", "Run save tools self-tests", Backups.RunSaveToolsSelfTestCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
             ]));
         }
         else if (IsNotificationsPage)
@@ -4051,14 +3956,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         try
         {
             var backups = await _api.GetBackupsAsync(profile, BearerToken);
-            PopulateBackupItems(backups);
-            SelectedBackup = BackupItems.FirstOrDefault();
-            BackupState = $"{backups.Count} backup(s)";
-            BackupTotalSizeText = $"{backups.TotalSizeBytes / 1024d / 1024d:F2} MB";
+            Backups.PopulateBackupItems(backups);
+            Backups.SelectedBackup = Backups.BackupItems.FirstOrDefault();
+            Backups.BackupState = $"{backups.Count} backup(s)";
+            Backups.BackupTotalSizeText = $"{backups.TotalSizeBytes / 1024d / 1024d:F2} MB";
             Dashboard.BackupText = backups.Count == 0 ? "No backups" : $"{backups.Count} available";
             Dashboard.BackupStripText = backups.Count == 0 ? "Backup: none" : $"Backup: {backups.Count} available";
         }
-        catch (Exception ex) { BackupDetail = $"Dashboard backup load: {ex.Message}"; }
+        catch (Exception ex) { Backups.BackupDetail = $"Dashboard backup load: {ex.Message}"; }
 
         try
         {
@@ -4397,6 +4302,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public WorldViewModel World { get; }
     public ConfigurationViewModel Configuration { get; }
     public WorkspaceViewModel Workspace { get; }
+    public BackupsViewModel Backups { get; }
     private readonly IReadOnlyList<PageViewModel> _pages;
 
     // v1.0.8.2 (roadmap C-2): the Players page refresh is one part of the whole status refresh, so it stays here.
@@ -4580,7 +4486,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         var latestBackup = snapshot.BackupInventory.Items.OrderByDescending(x => x.CreatedAt).FirstOrDefault();
         Dashboard.BackupText = snapshot.BackupInventory.Count == 0 ? "No backups" : $"{snapshot.BackupInventory.Count} available";
         Dashboard.BackupStripText = snapshot.BackupInventory.Count == 0 ? "Backup: none" : $"Backup: {snapshot.BackupInventory.Count} available";
-        BackupTotalSizeText = $"{snapshot.BackupInventory.TotalSizeBytes / 1024d / 1024d:F2} MB";
+        Backups.BackupTotalSizeText = $"{snapshot.BackupInventory.TotalSizeBytes / 1024d / 1024d:F2} MB";
         Dashboard.PulseBackupText = latestBackup is null
             ? "Backup: none detected"
             : $"Backup: {FormatAge(DateTimeOffset.Now - latestBackup.CreatedAt.ToLocalTime())} ago{(latestBackup.Verified ? " · Verified" : string.Empty)}";
@@ -5501,27 +5407,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         CrashAnalyzerState = $"{report.Summary} Scanned {report.FilesScanned} file(s) and {report.LinesScanned} line(s).";
     }
 
-    private async Task RefreshSaveToolsAsync(bool selfTest)
-    {
-        if (SelectedProfile is null) return; IsBusy = true; SaveToolsState = selfTest ? "Running bounded server-side self-tests…" : "Inspecting Save Tools…";
-        try
-        {
-            var diagnostics = selfTest
-                ? await _api.RunSaveToolsSelfTestAsync(SelectedProfile, BearerToken)
-                : await _api.GetSaveToolsDiagnosticsAsync(SelectedProfile, BearerToken);
-            var inventory = await _api.GetSaveFilesAsync(SelectedProfile, BearerToken);
-            SaveToolsTests.Clear(); foreach (var test in diagnostics.Tests) SaveToolsTests.Add(test);
-            SaveFiles.Clear(); foreach (var file in inventory.Items) SaveFiles.Add(file);
-            SelectedSaveFile = SaveFiles.FirstOrDefault();
-            SaveToolsState = $"{(diagnostics.Ready ? "READY" : "INCOMPLETE")} · {diagnostics.Detail} {inventory.Detail}";
-            SaveToolsPaths = $"Python: {diagnostics.PythonPath ?? "Missing"}\nLegacy converter: {diagnostics.LegacyConverterPath ?? "Missing"}\nPlM converter: {diagnostics.PlmConverterPath ?? "Missing"}\nOodle: {diagnostics.OodlePath ?? "Missing"}\nActive Level.sav: {diagnostics.ActiveLevelSavePath ?? "Not found"}\nSignature: {diagnostics.ActiveLevelSignature}";
-        }
-        catch (Exception ex) { SaveToolsState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
     public string ExportCrashAnalysis() => JsonSerializer.Serialize(new { state = CrashAnalyzerState, findings = CrashFindings, isolationPlan = CrashIsolationPlan, history = CrashHistory }, new JsonSerializerOptions { WriteIndented = true });
-    public string ExportSaveToolsDiagnostics() => JsonSerializer.Serialize(new { state = SaveToolsState, paths = SaveToolsPaths, tests = SaveToolsTests, files = SaveFiles }, new JsonSerializerOptions { WriteIndented = true });
 
 
     public async Task<PlayerCopyPreviewDto?> PreviewCopyPlayerAsync(string sourcePlayerId, string destinationPlayerId)
@@ -5729,215 +5616,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { DoctorSummary = ex.Message; }
     }
 
-    private async Task RefreshBackupsAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { BackupDetail = ex.Message; return; }
 
-        IsBusy = true;
-        try
-        {
-            var selectedFileName = SelectedBackup?.FileName;
-            var inventory = await _api.GetBackupsAsync(profile, BearerToken);
-            PopulateBackupItems(inventory);
 
-            SelectedBackup = BackupItems.FirstOrDefault(x => x.FileName == selectedFileName) ?? BackupItems.FirstOrDefault();
-            BackupState = $"{inventory.Count} backup(s)";
-            BackupTotalSizeText = $"{inventory.TotalSizeBytes / 1024d / 1024d:F2} MB";
-            BackupRootPath = inventory.RootPath;
-            BackupDetail = inventory.Detail;
-        }
-        catch (Exception ex)
-        {
-            BackupState = "Unavailable";
-            BackupDetail = ex.Message;
-        }
-        finally { IsBusy = false; }
-    }
 
-    private async Task CreateBackupAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { BackupDetail = ex.Message; return; }
 
-        BusyReason = "Creating backup…";
-        IsBusy = true;
-        BackupState = "Creating…";
-        try
-        {
-            var result = await _api.CreateBackupAsync(profile, BearerToken);
-            BackupDetail = result.Message;
-            await RefreshBackupsCoreAsync(profile);
-        }
-        catch (Exception ex) { BackupDetail = ex.Message; }
-        finally { IsBusy = false; BusyReason = null; }
-    }
 
-    private async Task DeleteBackupAsync()
-    {
-        if (SelectedBackup is null) return;
 
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { BackupDetail = ex.Message; return; }
 
-        var fileName = SelectedBackup.FileName;
-        IsBusy = true;
-        try
-        {
-            var result = await _api.DeleteBackupAsync(profile, fileName, BearerToken);
-            BackupDetail = result.Message;
-            await RefreshBackupsCoreAsync(profile);
-        }
-        catch (Exception ex) { BackupDetail = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task RestoreBackupAsync()
-    {
-        if (SelectedBackup is null) return;
 
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { BackupDetail = ex.Message; return; }
 
-        var fileName = SelectedBackup.FileName;
-        BusyReason = "Restoring backup…";
-        IsBusy = true;
-        BackupState = "Restoring…";
-        try
-        {
-            var result = await _api.RestoreBackupAsync(profile, fileName, BearerToken);
-            BackupDetail = result.Message;
-            await RefreshBackupsCoreAsync(profile);
-        }
-        catch (Exception ex) { BackupDetail = ex.Message; }
-        finally { IsBusy = false; BusyReason = null; }
-    }
 
-    private async Task VerifySelectedBackupAsync()
-    {
-        if (SelectedBackup is null) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { BackupDetail = ex.Message; return; }
-        IsBusy = true;
-        try
-        {
-            var result = await _api.VerifyBackupAsync(profile, SelectedBackup.FileName, BearerToken);
-            BackupDetail = $"{result.Message} SHA-256: {result.Sha256 ?? "unavailable"}; entries: {result.EntryCount}.";
-            await RefreshBackupsCoreAsync(profile);
-        }
-        catch (Exception ex) { BackupDetail = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task VerifyAllBackupsAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { BackupDetail = ex.Message; return; }
-        IsBusy = true;
-        try
-        {
-            // v1.0.7.2 (roadmap Q-12): the progress is read every 1.5 s while Verify All runs.
-            var verify = _api.VerifyAllBackupsAsync(profile, BearerToken);
-            while (await Task.WhenAny(verify, Task.Delay(1500)) != verify)
-            {
-                try { ApplyBackupScan((await _api.GetBackupsAsync(profile, BearerToken)).Scan); }
-                catch (Exception) { /* progress is a convenience; the verify itself still reports */ }
-            }
-            var result = await verify;
-            BackupDetail = $"{result.Message} Passed: {result.Results.Count(x => x.Success)}; failed: {result.Results.Count(x => !x.Success)}.";
-            await RefreshBackupsCoreAsync(profile);
-        }
-        catch (Exception ex) { BackupDetail = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task PreviewBackupRetentionAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { BackupRetentionState = ex.Message; return; }
-        IsBusy = true;
-        try
-        {
-            var preview = await _api.PreviewBackupRetentionAsync(profile, BackupRetentionKeepLatest, BackupRetentionMaxAgeDays, BearerToken);
-            BackupRetentionItems.Clear();
-            foreach (var item in preview.Items) BackupRetentionItems.Add(item);
-            BackupRetentionToken = preview.Token;
-            BackupRetentionState = $"{preview.Message} Reclaim: {preview.ReclaimBytes / 1024d / 1024d:F2} MB. Preview expires {preview.ExpiresAt.ToLocalTime():HH:mm:ss}.";
-        }
-        catch (Exception ex) { InvalidateRetentionPreview(); BackupRetentionState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task ApplyBackupRetentionAsync()
-    {
-        if (string.IsNullOrWhiteSpace(BackupRetentionToken)) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { BackupRetentionState = ex.Message; return; }
-        var token = BackupRetentionToken;
-        IsBusy = true;
-        try
-        {
-            var result = await _api.ApplyBackupRetentionAsync(profile, token, BearerToken);
-            BackupRetentionState = $"{result.Message} Deleted: {result.DeletedCount}; reclaimed: {result.ReclaimedBytes / 1024d / 1024d:F2} MB.";
-            BackupRetentionToken = string.Empty;
-            BackupRetentionItems.Clear();
-            await RefreshBackupsCoreAsync(profile);
-        }
-        catch (Exception ex) { InvalidateRetentionPreview(); BackupRetentionState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private void InvalidateRetentionPreview()
-    {
-        BackupRetentionToken = string.Empty;
-        BackupRetentionItems.Clear();
-        BackupRetentionState = "Policy changed. Preview again before cleanup.";
-    }
-
-    private void OpenBackupRoot()
-    {
-        if (SelectedProfile?.Id != ConnectionProfile.LocalDefault.Id)
-        {
-            BackupDetail = $"Remote backup root: {BackupRootPath}. Use the server-side inventory; MystTiq will not open a path on the GUI computer.";
-            return;
-        }
-        try
-        {
-            var start = OperatingSystem.IsWindows()
-                ? new ProcessStartInfo("explorer.exe", BackupRootPath)
-                : new ProcessStartInfo("xdg-open", BackupRootPath);
-            start.UseShellExecute = true;
-            Process.Start(start);
-            BackupDetail = $"Opened local backup root: {BackupRootPath}";
-        }
-        catch (Exception ex) { BackupDetail = "Unable to open the local backup root: " + ex.Message; }
-    }
-
-    private void RaiseBackupCommandStates()
-    {
-        (DeleteBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (RestoreBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (VerifySelectedBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-    }
-
-    private async Task RefreshBackupsCoreAsync(ConnectionProfile profile)
-    {
-        var selectedFileName = SelectedBackup?.FileName;
-        var inventory = await _api.GetBackupsAsync(profile, BearerToken);
-        PopulateBackupItems(inventory);
-        SelectedBackup = BackupItems.FirstOrDefault(x => x.FileName == selectedFileName) ?? BackupItems.FirstOrDefault();
-        BackupState = $"{inventory.Count} backup(s)";
-        BackupTotalSizeText = $"{inventory.TotalSizeBytes / 1024d / 1024d:F2} MB";
-        BackupRootPath = inventory.RootPath;
-    }
 
 
 
@@ -6597,7 +6286,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
     // v0.7.49.0: UE4SS Install/Rollback -- same Preview-then-Apply shape as backup retention
-    // cleanup (PreviewBackupRetentionAsync/ApplyBackupRetentionAsync above): Preview resolves the
+    // cleanup (Backups.PreviewBackupRetentionAsync/Backups.ApplyBackupRetentionAsync above): Preview resolves the
     // selected release against the live catalog server-side (the client never sends a raw download
     // URL) and returns a short-lived token; Apply only proceeds against that exact token.
     private async Task PreviewUe4ssInstallAsync()

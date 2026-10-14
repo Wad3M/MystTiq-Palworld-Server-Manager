@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
 using System.Windows.Input;
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
@@ -18,8 +18,8 @@ public sealed partial class MainWindowViewModel
     {
         var roles = new Dictionary<ICommand, string>(ReferenceEqualityComparer.Instance);
         void Need(string role, params ICommand?[] commands) { foreach (var c in commands) if (c is not null) roles[c] = role; }
-        Need("Operator", StartCommand, StopCommand, RestartCommand, ForceStopServerCommand, CreateBackupCommand, RestartFromDiagnosticsCommand,
-            BeginModSafeStartCommand, AnalyzeCrashesCommand, RunSaveToolsSelfTestCommand, VerifyAllBackupsCommand, NotificationSelfTestCommand,
+        Need("Operator", StartCommand, StopCommand, RestartCommand, ForceStopServerCommand, Backups.CreateBackupCommand, RestartFromDiagnosticsCommand,
+            BeginModSafeStartCommand, AnalyzeCrashesCommand, Backups.RunSaveToolsSelfTestCommand, Backups.VerifyAllBackupsCommand, NotificationSelfTestCommand,
             MarkAllNotificationsReadCommand, InstallMissingEnvironmentCommand);
         Need("Admin", Configuration.SavePalworldConfigurationCommand, EnableAllModsCommand, DisableAllModsCommand, RepairModsCommand,
             ApplyUe4ssInstallCommand, PreviewUe4ssInstallCommand, RollbackUe4ssInstallCommand, RepairFirewallCommand);

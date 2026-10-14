@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -507,19 +507,19 @@ selectedPage.SetValue(vm, NavigationPage.Dashboard);
 Dispatcher.UIThread.RunJobs();
 var enDash = DashboardTexts();
 Check(new[] { "ACTIVE WORLD", "OVERALL HEALTH", "WORLD PULSE", "RESOURCE HISTORY", "LIVE SERVER / MANAGER LOG", "CURRENT OPERATION" }.All(enDash.Contains) &&
-      enDash.Contains($"Stored: {vm.BackupTotalSizeText}") && enDash.Contains($"{vm.OnlinePlayerCountText} online") && enDash.Contains($"{vm.Players.PlayerRecordCountText} known player(s)"),
+      enDash.Contains($"Stored: {vm.Backups.BackupTotalSizeText}") && enDash.Contains($"{vm.OnlinePlayerCountText} online") && enDash.Contains($"{vm.Players.PlayerRecordCountText} known player(s)"),
     "en: the Dashboard reads exactly as before, templates included");
 Localizer.Instance.SetLanguage("de");
 Render("language-de-dashboard-labels");
 var deDash = DashboardTexts();
 Check(new[] { "AKTIVE WELT", "GESAMTZUSTAND", "WELT-PULS", "RESSOURCENVERLAUF", "AKTUELLER VORGANG" }.All(deDash.Contains) &&
-      deDash.Contains($"Größe: {vm.BackupTotalSizeText}") && deDash.Contains($"{vm.Players.PlayerRecordCountText} bekannte(r) Spieler") && !deDash.Contains("ACTIVE WORLD"),
+      deDash.Contains($"Größe: {vm.Backups.BackupTotalSizeText}") && deDash.Contains($"{vm.Players.PlayerRecordCountText} bekannte(r) Spieler") && !deDash.Contains("ACTIVE WORLD"),
     "de: the Dashboard's labels and filled templates switch live");
 var openButtons = window.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible && b.Content as string == "ÖFFNEN").Count();
 Check(openButtons >= 5, $"de: the Dashboard's OPEN buttons read ÖFFNEN ({openButtons})");
 Localizer.Instance.SetLanguage("en");
 Dispatcher.UIThread.RunJobs();
-Check(DashboardTexts().Contains("ACTIVE WORLD") && DashboardTexts().Contains($"Stored: {vm.BackupTotalSizeText}"), "Back to English, the Dashboard's labels and templates follow");
+Check(DashboardTexts().Contains("ACTIVE WORLD") && DashboardTexts().Contains($"Stored: {vm.Backups.BackupTotalSizeText}"), "Back to English, the Dashboard's labels and templates follow");
 // At the minimum window size no Dashboard label may be split mid-word or cut off, in any language. Labels are found by
 // matching the visible text against that language's dashboard.* strings.
 window.Width = 950; window.Height = 650;
@@ -1207,7 +1207,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var fixScript = SaveFolderAccessFix.Script(@"C:\Game Servers\O'Neil\Pal\Saved", "S-1-5-21-1000");
     var accessCard = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "SaveFolderAccessCard");
     Check(fixScript == @"& icacls.exe 'C:\Game Servers\O''Neil\Pal\Saved' /grant '*S-1-5-21-1000:(OI)(CI)M' /T /C /Q; exit $LASTEXITCODE" &&
-          accessCard is not null && !vm.ShowSaveFolderAccessFix,
+          accessCard is not null && !vm.Backups.ShowSaveFolderAccessFix,
         $"Fix Save Folder Access grants this account Modify on Pal\\Saved (quoted), and its card is hidden while restores work [{fixScript}]");
 }
 // v1.0.0.5 (asked 2026-10-05: "the bases and guilds sections look too similar and have redundant data"): a base is a place
@@ -1354,8 +1354,8 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     vm.CoreServerComponents.Add(new ComponentVersionDto { Component = "SteamCMD", Status = "SelfUpdating" });
     vm.CoreServerComponents.Add(new ComponentVersionDto { Component = "Palworld server", Status = "UpdateAvailable" });
     vm.CoreServerComponents.Add(new ComponentVersionDto { Component = ".NET Runtime", Status = "UpToDate" });
-    vm.BackupItems.Add(new BackupItemDto { FileName = "Palworld_2026-10-05_12-00-00-000.zip", Verified = true });
-    vm.BackupItems.Add(new BackupItemDto { FileName = "Palworld_2026-10-05_11-00-00-000.zip", Verified = false });
+    vm.Backups.BackupItems.Add(new BackupItemDto { FileName = "Palworld_2026-10-05_12-00-00-000.zip", Verified = true });
+    vm.Backups.BackupItems.Add(new BackupItemDto { FileName = "Palworld_2026-10-05_11-00-00-000.zip", Verified = false });
     vm.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "a", Component = "Port", State = 0 });
     vm.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "b", Component = "Backups", State = 2 });
     var tagIssues = new List<string>();
@@ -1737,21 +1737,21 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Check(stageText is { IsEffectivelyVisible: true } && stageText.Text!.StartsWith("Waiting for the game port", StringComparison.Ordinal), "The Dashboard's server tile shows the step a start is at");
     typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.StartupStageText))!.SetValue(vm, string.Empty);
 
-    var apply = typeof(MainWindowViewModel).GetMethod("ApplyBackupScan", BindingFlags.Instance | BindingFlags.NonPublic)!;
-    apply.Invoke(vm, [new BackupScanProgressDto { Kind = "Verifying backups", Done = 3, Total = 47, Current = "Palworld_x.zip", StartedUtc = now,
+    var apply = typeof(BackupsViewModel).GetMethod("ApplyBackupScan", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    apply.Invoke(vm.Backups, [new BackupScanProgressDto { Kind = "Verifying backups", Done = 3, Total = 47, Current = "Palworld_x.zip", StartedUtc = now,
         Unreadable = [new BackupScanProblemDto { FileName = "Palworld_bad.zip", Reason = "not a zip" }] }]);
     vm.NavigateCommand.Execute(nameof(NavigationPage.Backups));
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var scanCard = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "BackupScanCard");
     var cancelScan = scanCard?.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.IsEffectivelyVisible);
     var problemLine = scanCard?.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text?.StartsWith("Could not read", StringComparison.Ordinal) == true);
-    Check(scanCard is { IsEffectivelyVisible: true } && vm.BackupScanText == "Verifying backups: 3 of 47" && cancelScan is not null && cancelScan.Classes.Contains("plain") &&
+    Check(scanCard is { IsEffectivelyVisible: true } && vm.Backups.BackupScanText == "Verifying backups: 3 of 47" && cancelScan is not null && cancelScan.Classes.Contains("plain") &&
           problemLine?.Text == "Could not read Palworld_bad.zip: not a zip",
-        $"The Backups page shows the scan's progress, Cancel while it runs, and the archive it could not read [{vm.BackupScanText}]");
-    apply.Invoke(vm, [new BackupScanProgressDto { Kind = "Verifying backups", Done = 11, Total = 47, StartedUtc = now, FinishedUtc = now, Cancelled = true }]);
+        $"The Backups page shows the scan's progress, Cancel while it runs, and the archive it could not read [{vm.Backups.BackupScanText}]");
+    apply.Invoke(vm.Backups, [new BackupScanProgressDto { Kind = "Verifying backups", Done = 11, Total = 47, StartedUtc = now, FinishedUtc = now, Cancelled = true }]);
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
-    Check(vm.BackupScanText == "Verifying backups: 11 of 47, cancelled" && scanCard?.GetVisualDescendants().OfType<Button>().All(b => !b.IsEffectivelyVisible) == true, "a cancelled scan says so and Cancel is gone");
-    apply.Invoke(vm, [null]);
+    Check(vm.Backups.BackupScanText == "Verifying backups: 11 of 47, cancelled" && scanCard?.GetVisualDescendants().OfType<Button>().All(b => !b.IsEffectivelyVisible) == true, "a cancelled scan says so and Cancel is gone");
+    apply.Invoke(vm.Backups, [null]);
 
     var busy = typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.IsBusy))!;
     var waitMethod = typeof(MainWindowViewModel).GetMethod("WaitUntilNotBusyAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;

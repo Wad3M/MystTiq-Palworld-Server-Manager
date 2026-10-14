@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -16,18 +16,18 @@ public sealed partial class MainWindowViewModel
         var roles = new Dictionary<ICommand, string>(ReferenceEqualityComparer.Instance);
         void Need(string role, params ICommand?[] commands) { foreach (var c in commands) if (c is not null) roles[c] = role; }
         Need("Operator", Players._loadGameIdsCommand, Players.AddPlayerWarningCommand, AnalyzeCrashesCommand,
-            ApplyBackupRetentionCommand, BackupAllCommand, BeginModSafeStartCommand, BeginStuckTestLoadCommand, CancelBackupScanCommand, CancelModSafeStartCommand,
-            CreateBackupCommand, DeleteBackupCommand, DismissNotificationCommand, DoctorAllCommand,
+            Backups.ApplyBackupRetentionCommand, BackupAllCommand, BeginModSafeStartCommand, BeginStuckTestLoadCommand, Backups.CancelBackupScanCommand, CancelModSafeStartCommand,
+            Backups.CreateBackupCommand, Backups.DeleteBackupCommand, DismissNotificationCommand, DoctorAllCommand,
             EnvironmentActionCommand, FixDiagnosticCommand, ForceStopServerCommand, InstallMissingEnvironmentCommand,
             InstallPalworldServerFromWizardCommand, MarkAllNotificationsReadCommand, NotificationSelfTestCommand,
-            PrepareForWorldImportCommand, PreviewBackupRetentionCommand, RecheckDiagnosticCommand,
-            RefreshAllInstancesCommand, RefreshSaveToolsCommand, Map.RefreshTeleportCommand, Players.RefreshTemporaryBansCommand,
+            PrepareForWorldImportCommand, Backups.PreviewBackupRetentionCommand, RecheckDiagnosticCommand,
+            RefreshAllInstancesCommand, Backups.RefreshSaveToolsCommand, Map.RefreshTeleportCommand, Players.RefreshTemporaryBansCommand,
             Players.RefreshWhitelistCommand, RepairUpnpMappingCommand, RestartCommand, RestartFromDiagnosticsCommand,
-            RestoreBackupCommand, RunAutomationRuleNowCommand, RunSaveToolsSelfTestCommand, Players.SavePlayerNotesCommand,
+            Backups.RestoreBackupCommand, RunAutomationRuleNowCommand, Backups.RunSaveToolsSelfTestCommand, Players.SavePlayerNotesCommand,
             SaveWorldNowCommand, StartCommand, StopCommand, TerminateSelectedInstanceCommand, Players.ToggleKitsCommand,
             ToggleNotificationPinCommand, ToggleNotificationReadCommand, Players.ToggleTemporaryBansCommand,
-            Players.ToggleWhitelistCommand, UpdateAllCommand, UpdatePalworldServerCommand, VerifyAllBackupsCommand,
-            VerifySelectedBackupCommand);
+            Players.ToggleWhitelistCommand, UpdateAllCommand, UpdatePalworldServerCommand, Backups.VerifyAllBackupsCommand,
+            Backups.VerifySelectedBackupCommand);
         Need("Admin", World.ApplyBaseRecoveryCommand, World.ApplyBaseTransferCommand, World.ApplyCharacterMigrationCommand,
             World.ApplyGuildOwnershipCommand, World.ApplyPalEditCommand, Configuration.ApplyStarterPresetCommand, ApplyUe4ssInstallCommand,
             World.ApplyWorldTransactionCommand, Players.BanSelectedPlayerCommand, Players.CancelTemporaryBanCommand,

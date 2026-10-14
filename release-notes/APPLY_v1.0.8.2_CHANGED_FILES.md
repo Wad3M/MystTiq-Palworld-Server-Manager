@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.4: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.5: file reviewed for this release (2026-10-12). -->
 # v1.0.8.2 Changed Files
 
 - `src/MystTiq.Desktop/ViewModels/PlayersViewModel.cs` (new): the Players page, from `MainWindowViewModel.cs` (the player

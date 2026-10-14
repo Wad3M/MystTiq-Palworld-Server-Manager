@@ -1,4 +1,13 @@
-<!-- MystTiq v1.0.8.4: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.5: file reviewed for this release (2026-10-12). -->
+## v1.0.8.5 — The Backups and Save Tools Pages, Tidied
+
+- Roadmap C-5: the Backups page (the list, create, delete, restore, verify with the scan's progress, retention), the
+  save-folder access card and the Save Tools page moved into `BackupsViewModel` (the SaveAccess partial file removed).
+  Backup All stays with the fleet actions. The `MainWindowViewModel` files total 474,431 bytes (were 493,942). Nothing
+  the owner sees changes.
+- Tests: the v1.0.8.5 gate regenerated from v1.0.8.4; the backup-scan harness check now calls the page it moved to.
+- Version advanced to 1.0.8.5.
+
 ## v1.0.8.4 — The Configuration and Workspace Pages, Tidied
 
 - Roadmap C-4: the Configuration page (the Palworld settings editor and presets, MystTiq's service settings and the

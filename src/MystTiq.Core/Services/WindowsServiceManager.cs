@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.4: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;

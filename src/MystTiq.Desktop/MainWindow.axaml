@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.4: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.5: file reviewed for this release (2026-10-12). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -426,7 +426,7 @@
                 <TextBlock Text="{services:Tr dashboard.backup}" Classes="muted"/>
                 <Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="8,3" Command="{Binding NavigateCommand}" CommandParameter="Backups"/>
                 <TextBlock Grid.Row="1" Text="{services:TrText Dashboard.BackupText}" FontSize="15" FontWeight="SemiBold"/>
-                <TextBlock Grid.Row="2" Text="{services:TrFormat dashboard.format.stored, Path=BackupTotalSizeText}" Classes="muted"/>
+                <TextBlock Grid.Row="2" Text="{services:TrFormat dashboard.format.stored, Path=Backups.BackupTotalSizeText}" Classes="muted"/>
               </Grid>
             </Border>
             <Border Grid.Column="3" Classes="card" Padding="8,6" Classes.glowGreen="{Binding IsHealthGlowGreen}" Classes.glowRed="{Binding IsHealthGlowRed}" Classes.glowAmber="{Binding IsHealthGlowAmber}" Classes.glowNeutral="{Binding IsHealthGlowNeutral}">
@@ -2165,10 +2165,10 @@
 
           <!-- v0.7.32.0: compact variant, same treatment as Server Setup's cards. -->
           <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
-            <Border Classes="statuscard accentBackups" Padding="8,5"><StackPanel Spacing="2"><TextBlock Text="{services:Tr ui.total_archives}" Classes="muted" FontSize="10"/><TextBlock Text="{services:TrText BackupArchiveCountText}" FontSize="16" FontWeight="Bold"/><TextBlock Text="{services:TrText BackupTotalSizeText}" Classes="muted" FontSize="9"/></StackPanel></Border>
-            <Border Grid.Column="1" Classes="statuscard accentBackups" Padding="8,5"><StackPanel Spacing="2"><TextBlock Text="{services:Tr ui.verified}" Classes="muted" FontSize="10"/><TextBlock Text="{services:TrText BackupVerifiedCountText}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource GreenBrush}"/><TextBlock Text="{services:Tr ui.deep_verification}" Classes="muted" FontSize="9"/></StackPanel></Border>
-            <Border Grid.Column="2" Classes="statuscard accentBackups" Padding="8,5"><StackPanel Spacing="2"><TextBlock Text="{services:Tr ui.pending_review}" Classes="muted" FontSize="10"/><TextBlock Text="{services:TrText BackupPendingCountText}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AmberBrush}"/><TextBlock Text="{services:Tr ui.not_yet_verified}" Classes="muted" FontSize="9"/></StackPanel></Border>
-            <Border Grid.Column="3" Classes="statuscard accentBackups" Padding="8,5"><StackPanel Spacing="2"><TextBlock Text="{services:Tr ui.retention}" Classes="muted" FontSize="10"/><TextBlock Text="{Binding BackupRetentionKeepLatest, StringFormat='Keep {0}'}" FontSize="16" FontWeight="Bold"/><TextBlock Text="{services:Tr ui.preview_required}" Classes="muted" FontSize="9"/></StackPanel></Border>
+            <Border Classes="statuscard accentBackups" Padding="8,5"><StackPanel Spacing="2"><TextBlock Text="{services:Tr ui.total_archives}" Classes="muted" FontSize="10"/><TextBlock Text="{services:TrText Backups.BackupArchiveCountText}" FontSize="16" FontWeight="Bold"/><TextBlock Text="{services:TrText Backups.BackupTotalSizeText}" Classes="muted" FontSize="9"/></StackPanel></Border>
+            <Border Grid.Column="1" Classes="statuscard accentBackups" Padding="8,5"><StackPanel Spacing="2"><TextBlock Text="{services:Tr ui.verified}" Classes="muted" FontSize="10"/><TextBlock Text="{services:TrText Backups.BackupVerifiedCountText}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource GreenBrush}"/><TextBlock Text="{services:Tr ui.deep_verification}" Classes="muted" FontSize="9"/></StackPanel></Border>
+            <Border Grid.Column="2" Classes="statuscard accentBackups" Padding="8,5"><StackPanel Spacing="2"><TextBlock Text="{services:Tr ui.pending_review}" Classes="muted" FontSize="10"/><TextBlock Text="{services:TrText Backups.BackupPendingCountText}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AmberBrush}"/><TextBlock Text="{services:Tr ui.not_yet_verified}" Classes="muted" FontSize="9"/></StackPanel></Border>
+            <Border Grid.Column="3" Classes="statuscard accentBackups" Padding="8,5"><StackPanel Spacing="2"><TextBlock Text="{services:Tr ui.retention}" Classes="muted" FontSize="10"/><TextBlock Text="{Binding Backups.BackupRetentionKeepLatest, StringFormat='Keep {0}'}" FontSize="16" FontWeight="Bold"/><TextBlock Text="{services:Tr ui.preview_required}" Classes="muted" FontSize="9"/></StackPanel></Border>
           </Grid>
 
           <!-- v0.7.37.0: two-column layout mirroring the v0.2.16.4 reference, the table (wider,
@@ -2179,13 +2179,13 @@
                now leads the table's columns instead of the filename, per direct request. -->
           <!-- v1.0.0.4: found live: the save folder belonged to administrators, so every restore failed. Shown for a server on
                this computer when restores cannot replace it; the fix runs through Windows' administrator prompt. -->
-          <Border x:Name="SaveFolderAccessCard" Classes="card accentBackups" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" IsVisible="{Binding ShowSaveFolderAccessFix}" Margin="0,0,0,12">
+          <Border x:Name="SaveFolderAccessCard" Classes="card accentBackups" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" IsVisible="{Binding Backups.ShowSaveFolderAccessFix}" Margin="0,0,0,12">
             <StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.save_folder_access_title}" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource AmberBrush}"/>
               <TextBlock Text="{services:Tr ui.save_folder_access_hint}" TextWrapping="Wrap"/>
-              <TextBlock Text="{Binding SavedFolderPathVerbatim}" FontFamily="Consolas, monospace" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-              <Button Classes="apply" Content="{services:Tr ui.fix_save_folder_access}" Command="{Binding FixSaveFolderAccessCommand}" IsEnabled="{Binding CanManageAdmin}" HorizontalAlignment="Left"/>
-              <TextBlock Text="{services:TrText SaveFolderAccessStatus}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Backups.SavedFolderPathVerbatim}" FontFamily="Consolas, monospace" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+              <Button Classes="apply" Content="{services:Tr ui.fix_save_folder_access}" Command="{Binding Backups.FixSaveFolderAccessCommand}" IsEnabled="{Binding CanManageAdmin}" HorizontalAlignment="Left"/>
+              <TextBlock Text="{services:TrText Backups.SaveFolderAccessStatus}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
           <Grid ColumnDefinitions="2.2*,*" ColumnSpacing="12">
@@ -2199,7 +2199,7 @@
                   <TextBlock Grid.Column="3" Text="{services:Tr ui.size}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" />
                   <TextBlock Grid.Column="4" Text="{services:Tr ui.status}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" />
                 </Grid>
-                <ListBox AutomationProperties.Name="{services:Tr ui.backups}" Grid.Row="1" ItemsSource="{Binding BackupItems}" SelectedItem="{Binding SelectedBackup}" MaxHeight="480">
+                <ListBox AutomationProperties.Name="{services:Tr ui.backups}" Grid.Row="1" ItemsSource="{Binding Backups.BackupItems}" SelectedItem="{Binding Backups.SelectedBackup}" MaxHeight="480">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:BackupItemDto">
                       <Grid ColumnDefinitions="*,2*,*,*,*" ColumnSpacing="12" Margin="0,5">
@@ -2220,11 +2220,11 @@
                 <StackPanel Spacing="10">
                   <TextBlock Text="{services:Tr ui.selected_backup}" FontSize="17" FontWeight="SemiBold" />
                   <StackPanel Orientation="Horizontal" Spacing="10">
-                    <Button Classes="verify" Content="{services:Tr ui.verify_selected}" Command="{Binding VerifySelectedBackupCommand}"/>
-                    <Button Classes="caution" Content="{services:Tr ui.restore_selected}" Command="{Binding RestoreBackupCommand}"/>
-                    <Button Classes="danger" Content="{services:Tr ui.delete_selected}" Command="{Binding DeleteBackupCommand}"/>
+                    <Button Classes="verify" Content="{services:Tr ui.verify_selected}" Command="{Binding Backups.VerifySelectedBackupCommand}"/>
+                    <Button Classes="caution" Content="{services:Tr ui.restore_selected}" Command="{Binding Backups.RestoreBackupCommand}"/>
+                    <Button Classes="danger" Content="{services:Tr ui.delete_selected}" Command="{Binding Backups.DeleteBackupCommand}"/>
                   </StackPanel>
-                  <CheckBox Content="{services:Tr ui.i_understand_restore_replaces_the_active_save}" IsChecked="{Binding BackupRestoreConfirmed}"/>
+                  <CheckBox Content="{services:Tr ui.i_understand_restore_replaces_the_active_save}" IsChecked="{Binding Backups.BackupRestoreConfirmed}"/>
                   <TextBlock Text="{services:Tr ui.restore_requires_palserver_to_be_stopped_mysttiq_8daf7a}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
                 </StackPanel>
               </Border>
@@ -2236,30 +2236,30 @@
                   <WrapPanel Orientation="Horizontal">
                     <TextBlock Text="{services:Tr ui.keep_latest}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <!-- v0.7.102.0: 140 wide with a whole-number format. At 90 the spin buttons left room for one digit, so a value of 10 read as "1". -->
-                    <NumericUpDown AutomationProperties.Name="{services:Tr ui.keep_latest}" Value="{Binding BackupRetentionKeepLatest}" Minimum="1" Maximum="1000" Width="140" FormatString="0" Margin="0,0,16,0"/>
+                    <NumericUpDown AutomationProperties.Name="{services:Tr ui.keep_latest}" Value="{Binding Backups.BackupRetentionKeepLatest}" Minimum="1" Maximum="1000" Width="140" FormatString="0" Margin="0,0,16,0"/>
                     <TextBlock Text="{services:Tr ui.maximum_age_days}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <NumericUpDown AutomationProperties.Name="{services:Tr ui.maximum_age_days}" Value="{Binding BackupRetentionMaxAgeDays}" Minimum="1" Maximum="3650" Width="150" FormatString="0" Margin="0,0,16,0"/>
-                    <Button Classes="info" Content="{services:Tr ui.preview_cleanup}" Command="{Binding PreviewBackupRetentionCommand}" Margin="0,0,8,0"/>
-                    <Button Classes="danger" Content="{services:Tr ui.apply_exact_preview}" Command="{Binding ApplyBackupRetentionCommand}"/>
+                    <NumericUpDown AutomationProperties.Name="{services:Tr ui.maximum_age_days}" Value="{Binding Backups.BackupRetentionMaxAgeDays}" Minimum="1" Maximum="3650" Width="150" FormatString="0" Margin="0,0,16,0"/>
+                    <Button Classes="info" Content="{services:Tr ui.preview_cleanup}" Command="{Binding Backups.PreviewBackupRetentionCommand}" Margin="0,0,8,0"/>
+                    <Button Classes="danger" Content="{services:Tr ui.apply_exact_preview}" Command="{Binding Backups.ApplyBackupRetentionCommand}"/>
                   </WrapPanel>
-                  <ItemsControl ItemsSource="{Binding BackupRetentionItems}">
+                  <ItemsControl ItemsSource="{Binding Backups.BackupRetentionItems}">
                     <ItemsControl.ItemTemplate><DataTemplate x:DataType="models:BackupRetentionItemDto"><TextBlock Text="{services:TrText DisplayText}" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <TextBlock Text="{services:TrText BackupRetentionState}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="{services:TrText Backups.BackupRetentionState}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
                 </StackPanel>
               </Border>
             </StackPanel>
           </Grid>
 
-          <TextBlock Text="{services:TrText BackupDetail}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
+          <TextBlock Text="{services:TrText Backups.BackupDetail}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
           <!-- v1.0.7.2 (roadmap Q-12): how far a backup scan is, Cancel while it runs, and the archives it could not read. -->
-          <Border x:Name="BackupScanCard" Classes="statuscard" Padding="10,6" IsVisible="{Binding HasBackupScan}">
+          <Border x:Name="BackupScanCard" Classes="statuscard" Padding="10,6" IsVisible="{Binding Backups.HasBackupScan}">
             <StackPanel Spacing="4">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                <TextBlock Text="{services:TrText BackupScanText}" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                <Button Grid.Column="1" Classes="plain" Content="{services:Tr ui.cancel}" Command="{Binding CancelBackupScanCommand}" IsVisible="{Binding IsBackupScanRunning}"/>
+                <TextBlock Text="{services:TrText Backups.BackupScanText}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Classes="plain" Content="{services:Tr ui.cancel}" Command="{Binding Backups.CancelBackupScanCommand}" IsVisible="{Binding Backups.IsBackupScanRunning}"/>
               </Grid>
-              <ItemsControl ItemsSource="{Binding BackupScanProblems}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:BackupScanProblemDto"><TextBlock Text="{services:TrText Text}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="11"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              <ItemsControl ItemsSource="{Binding Backups.BackupScanProblems}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:BackupScanProblemDto"><TextBlock Text="{services:TrText Text}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="11"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
             </StackPanel>
           </Border>
         </StackPanel>
@@ -3288,13 +3288,13 @@
         <StackPanel IsVisible="{Binding IsSaveToolsPage}" Spacing="12">
           <Border Classes="card accentTools"><StackPanel Spacing="10">
             <!-- v0.7.42.0: Refresh/Run Self-Tests moved to the ribbon. -->
-            <TextBlock Text="{services:TrText SaveToolsState}" TextWrapping="Wrap" Classes="muted"/>
-            <TextBlock Text="{services:TrText SaveToolsPaths}" TextWrapping="Wrap" FontFamily="Consolas"/>
+            <TextBlock Text="{services:TrText Backups.SaveToolsState}" TextWrapping="Wrap" Classes="muted"/>
+            <TextBlock Text="{services:TrText Backups.SaveToolsPaths}" TextWrapping="Wrap" FontFamily="Consolas"/>
             <TextBlock Text="{services:Tr ui.inspection_is_read_only_save_mutation_remains_be_30042e}" TextWrapping="Wrap"/>
           </StackPanel></Border>
           <Grid ColumnDefinitions="2*,3*" ColumnSpacing="12">
-            <Border Classes="card accentTools"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.self_test_results}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.self_test_results}" ItemsSource="{Binding SaveToolsTests}" MinHeight="180" MaxHeight="420"><ListBox.ItemTemplate><DataTemplate><StackPanel><TextBlock Text="{services:TrText Display}"/><TextBlock Text="{services:TrText Detail}" Classes="muted" TextWrapping="Wrap" MaxHeight="72"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
-            <Border Grid.Column="1" Classes="card accentTools"><Grid RowDefinitions="Auto,*" RowSpacing="8"><TextBlock Text="{services:Tr ui.server_side_save_inventory}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.server_side_save_inventory}" Grid.Row="1" ItemsSource="{Binding SaveFiles}" SelectedItem="{Binding SelectedSaveFile}" MinHeight="180" MaxHeight="420"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{services:TrText Display}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
+            <Border Classes="card accentTools"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.self_test_results}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.self_test_results}" ItemsSource="{Binding Backups.SaveToolsTests}" MinHeight="180" MaxHeight="420"><ListBox.ItemTemplate><DataTemplate><StackPanel><TextBlock Text="{services:TrText Display}"/><TextBlock Text="{services:TrText Detail}" Classes="muted" TextWrapping="Wrap" MaxHeight="72"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
+            <Border Grid.Column="1" Classes="card accentTools"><Grid RowDefinitions="Auto,*" RowSpacing="8"><TextBlock Text="{services:Tr ui.server_side_save_inventory}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.server_side_save_inventory}" Grid.Row="1" ItemsSource="{Binding Backups.SaveFiles}" SelectedItem="{Binding Backups.SelectedSaveFile}" MinHeight="180" MaxHeight="420"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{services:TrText Display}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
           </Grid>
         </StackPanel>
 
