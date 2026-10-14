@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1251,7 +1251,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Check(basesDistinct && guildsBody is { IsEffectivelyVisible: true } && basesBody is { IsEffectivelyVisible: false } && roster2 is { IsEffectivelyVisible: true },
         "Bases shows places (Show on map) and Guilds shows a roster; neither shows the old shared count cards or evidence block");
     // Seen live: Show on map passed the page as an enum to NavigateCommand, which takes the page's name, so nothing happened.
-    vm.SelectedExplorerBase = bases[0];
+    vm.World.SelectedExplorerBase = bases[0];
     vm.ShowSelectedBaseOnMapCommand.Execute(null);
     Dispatcher.UIThread.RunJobs();
     var onMap = vm.SelectedPage == NavigationPage.Map;
@@ -1259,7 +1259,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Dispatcher.UIThread.RunJobs();
     var onBases = vm.SelectedPage == NavigationPage.Bases;
     // Offline the explorer lists are empty, so Open base found no card to select; select the sample base again.
-    vm.SelectedExplorerBase = bases[0];
+    vm.World.SelectedExplorerBase = bases[0];
     vm.OpenSelectedBaseGuildCommand.Execute(null);
     Dispatcher.UIThread.RunJobs();
     Check(onMap && onBases && vm.SelectedPage == NavigationPage.Guilds, $"Show on map opens the Map, Open base opens Bases and Open guild opens Guilds [{onMap}, {onBases}, {vm.SelectedPage}]");

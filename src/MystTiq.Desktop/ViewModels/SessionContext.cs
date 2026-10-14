@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 
@@ -16,6 +16,9 @@ public sealed class SessionContext
     private readonly Func<ConnectionProfile?> _selectedProfile;
     private readonly Func<object?> _activeTab;
     private readonly Func<ConnectionProfile> _buildProfile;
+    private readonly Func<bool> _isConnected;
+    private readonly Func<string?> _busyReason;
+    private readonly Action<string?> _setBusyReason;
     private readonly Func<string?> _bearerToken;
     private readonly Func<bool> _isBusy;
     private readonly Action<bool> _setBusy;
@@ -23,9 +26,13 @@ public sealed class SessionContext
     private readonly Action<Func<Task>, string> _runUi;
 
     public SessionContext(IMystTiqApiClient api, Func<ConnectionProfile?> profile, Func<string?> bearerToken,
-        Func<bool> isBusy, Action<bool> setBusy, Func<NavigationPage> page, Action<Func<Task>, string> runUi, Func<ConnectionProfile?> selectedProfile, Func<object?> activeTab, Func<ConnectionProfile> buildProfile)
+        Func<bool> isBusy, Action<bool> setBusy, Func<NavigationPage> page, Action<Func<Task>, string> runUi, Func<ConnectionProfile?> selectedProfile, Func<object?> activeTab, Func<ConnectionProfile> buildProfile, Func<bool> isConnected,
+        Func<string?> busyReason, Action<string?> setBusyReason)
     {
+        _busyReason = busyReason;
+        _setBusyReason = setBusyReason;
         _buildProfile = buildProfile;
+        _isConnected = isConnected;
         _selectedProfile = selectedProfile;
         _activeTab = activeTab;
         Api = api;
@@ -47,6 +54,10 @@ public sealed class SessionContext
     public object? ActiveTab => _activeTab();
     /// <summary>The active tab's connection built from its fields; throws with the reason when they are incomplete.</summary>
     public ConnectionProfile BuildProfile() => _buildProfile();
+    /// <summary>Whether the active tab is connected to its MystTiq service.</summary>
+    public bool IsConnected => _isConnected();
+    /// <summary>What the busy state is for, shown in the status bar while it lasts.</summary>
+    public string? BusyReason { get => _busyReason(); set => _setBusyReason(value); }
     public string? BearerToken => _bearerToken();
     public bool IsBusy { get => _isBusy(); set => _setBusy(value); }
     public NavigationPage Page => _page();

@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
 namespace MystTiq.Core.Models;
 
 // v0.6.4.0: gained Unknown so this can serve as the canonical per-check severity for the unified

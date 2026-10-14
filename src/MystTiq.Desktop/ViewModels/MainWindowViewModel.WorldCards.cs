@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
 using System.Windows.Input;
 using Avalonia.Threading;
 using MystTiq.Desktop.Models;
@@ -15,7 +15,7 @@ public sealed partial class MainWindowViewModel
 
     public string BasesSummaryText { get => _basesSummaryText; private set => SetField(ref _basesSummaryText, value); }
     public string GuildsSummaryText { get => _guildsSummaryText; private set => SetField(ref _guildsSummaryText, value); }
-    public bool HasPlayerGuildWarnings => PlayerGuildWarnings.Count > 0;
+    public bool HasPlayerGuildWarnings => World.PlayerGuildWarnings.Count > 0;
 
     public ICommand ShowSelectedBaseOnMapCommand { get; }
     public ICommand OpenSelectedBaseGuildCommand { get; }
@@ -25,9 +25,9 @@ public sealed partial class MainWindowViewModel
     private void ApplyWorldCards(PlayerGuildSnapshotDto snapshot)
     {
         var bases = WorldExplorerCards.Bases(snapshot.Guilds, snapshot.BaseLocations, snapshot.PalLocations);
-        ExplorerBases.Clear();
-        foreach (var card in bases) ExplorerBases.Add(card);
-        foreach (var guild in ExplorerGuilds)
+        World.ExplorerBases.Clear();
+        foreach (var card in bases) World.ExplorerBases.Add(card);
+        foreach (var guild in World.ExplorerGuilds)
         {
             guild.Roster = WorldExplorerCards.Roster(guild, snapshot.Players);
             guild.BaseCards = bases.Where(b => string.Equals(b.GuildId, guild.GuildId, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -41,29 +41,29 @@ public sealed partial class MainWindowViewModel
 
     private void ShowSelectedBaseOnMap()
     {
-        var baseId = SelectedExplorerBase?.BaseId;
+        var baseId = World.SelectedExplorerBase?.BaseId;
         if (baseId is null) return;
-        ShowBasesOnMap = true;
-        if (!IsWorldMapExpanded) IsWorldMapExpanded = true;
+        Map.ShowBasesOnMap = true;
+        if (!Map.IsWorldMapExpanded) Map.IsWorldMapExpanded = true;
         Navigate(nameof(NavigationPage.Map));
         // After the page has switched and laid out its map.
-        Dispatcher.UIThread.Post(() => ZoomToBase(baseId), DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(() => World.ZoomToBase(baseId), DispatcherPriority.Background);
     }
 
     private void OpenSelectedBaseGuild()
     {
-        var guildId = SelectedExplorerBase?.GuildId;
+        var guildId = World.SelectedExplorerBase?.GuildId;
         if (guildId is null) return;
-        GuildSearchText = string.Empty;
-        SelectedExplorerGuild = ExplorerGuilds.FirstOrDefault(g => string.Equals(g.GuildId, guildId, StringComparison.OrdinalIgnoreCase));
+        World.GuildSearchText = string.Empty;
+        World.SelectedExplorerGuild = World.ExplorerGuilds.FirstOrDefault(g => string.Equals(g.GuildId, guildId, StringComparison.OrdinalIgnoreCase));
         Navigate(nameof(NavigationPage.Guilds));
     }
 
     private void OpenGuildBase(string? baseId)
     {
         if (string.IsNullOrWhiteSpace(baseId)) return;
-        BaseSearchText = string.Empty;
-        SelectedExplorerBase = ExplorerBases.FirstOrDefault(b => string.Equals(b.BaseId, baseId, StringComparison.OrdinalIgnoreCase));
+        World.BaseSearchText = string.Empty;
+        World.SelectedExplorerBase = World.ExplorerBases.FirstOrDefault(b => string.Equals(b.BaseId, baseId, StringComparison.OrdinalIgnoreCase));
         Navigate(nameof(NavigationPage.Bases));
     }
 }

@@ -1,4 +1,16 @@
-<!-- MystTiq v1.0.8.2: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.3: file reviewed for this release (2026-10-12). -->
+## v1.0.8.3 — The Map and World Pages, Tidied
+
+- Roadmap C-3: the Map page (background and presets, viewport, player, base and Pal markers, teleport points and the
+  teleport-to-player commands) moved into `MapViewModel`, and the world pages (Inspector and Pal editor, Bases, Guilds,
+  character migration, world transactions) into `WorldViewModel`. A tab switch calls `Map.ResetForNewServer()`. The
+  session gained `IsConnected` and `BusyReason`. The `MainWindowViewModel` files total 569,569 bytes (were 644,530).
+  Nothing the owner sees changes.
+- The role audit follows code-behind handlers through a page (`vm.World.X(...)`); without it the Bases page's handlers
+  lost their roles.
+- Tests: the v1.0.8.3 gate regenerated from v1.0.8.2 and the ArtworkHarness reading the pages.
+- Version advanced to 1.0.8.3.
+
 ## v1.0.8.2 — The Players Page, Tidied
 
 - Roadmap C-2: the Players page (directory, filters, notes and warnings, moderation, temporary bans, ban list,

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.2: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.3: file reviewed for this release (2026-10-12). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -767,8 +767,8 @@
         <StackPanel IsVisible="{Binding IsWorldExplorerPage}" Spacing="12">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel>
-              <TextBlock Text="{services:TrText WorldExplorerState}" Foreground="{DynamicResource VioletBrush}" />
-              <TextBlock Text="{services:TrText WorldExplorerDetail}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
+              <TextBlock Text="{services:TrText World.WorldExplorerState}" Foreground="{DynamicResource VioletBrush}" />
+              <TextBlock Text="{services:TrText World.WorldExplorerDetail}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
             </StackPanel>
             <!-- v0.7.42.0: Refresh World moved to the ribbon; Validator & Recovery stays as an
                  in-page cross-navigation link, not a page action. -->
@@ -799,7 +799,7 @@
             <StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.world_inspector_sections}" FontSize="17" FontWeight="SemiBold"/>
               <WrapPanel><TextBlock Text="{services:Tr ui.overview}" Margin="0,0,16,4"/><TextBlock Text="{services:Tr ui.players}" Margin="0,0,16,4"/><TextBlock Text="{services:Tr ui.guilds}" Margin="0,0,16,4"/><TextBlock Text="{services:Tr ui.bases}" Margin="0,0,16,4"/><TextBlock Text="{services:Tr ui.saves}" Margin="0,0,16,4"/><TextBlock Text="{services:Tr ui.statistics}" Margin="0,0,16,4"/><TextBlock Text="{services:Tr ui.files}" Margin="0,0,16,4"/><TextBlock Text="{services:Tr ui.world_explorer}" Margin="0,0,16,4"/><TextBlock Text="{services:Tr ui.world_health}" Margin="0,0,16,4"/><TextBlock Text="{services:Tr ui.integrity}" Margin="0,0,16,4"/></WrapPanel>
-              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10"><Border Classes="statuscard accentWorld"><StackPanel><TextBlock Text="{services:Tr ui.players}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText WorldInspectorPlayerCountText}" FontSize="20"/></StackPanel></Border><Border Grid.Column="1" Classes="statuscard accentWorld"><StackPanel><TextBlock Text="{services:Tr ui.guilds}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText WorldInspectorGuildCountText}" FontSize="20"/></StackPanel></Border><Border Grid.Column="2" Classes="statuscard accentWorld"><StackPanel><TextBlock Text="{services:Tr ui.base_references}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText WorldInspectorBaseCountText}" FontSize="20"/></StackPanel></Border></Grid>
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10"><Border Classes="statuscard accentWorld"><StackPanel><TextBlock Text="{services:Tr ui.players}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText World.WorldInspectorPlayerCountText}" FontSize="20"/></StackPanel></Border><Border Grid.Column="1" Classes="statuscard accentWorld"><StackPanel><TextBlock Text="{services:Tr ui.guilds}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText World.WorldInspectorGuildCountText}" FontSize="20"/></StackPanel></Border><Border Grid.Column="2" Classes="statuscard accentWorld"><StackPanel><TextBlock Text="{services:Tr ui.base_references}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText World.WorldInspectorBaseCountText}" FontSize="20"/></StackPanel></Border></Grid>
             </StackPanel>
           </Border>
 
@@ -872,17 +872,17 @@
           <StackPanel Spacing="2">
             <TextBlock Text="{services:TrText BasesSummaryText}" FontSize="16" FontWeight="SemiBold" IsVisible="{Binding IsBasesPage}"/>
             <TextBlock Text="{services:TrText GuildsSummaryText}" FontSize="16" FontWeight="SemiBold" IsVisible="{Binding IsGuildsPage}"/>
-            <TextBlock Text="{services:TrText PlayerGuildDetail}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
-            <TextBlock Text="{services:TrText PlayerGuildState}" Foreground="{DynamicResource VioletBrush}" FontSize="11"/>
+            <TextBlock Text="{services:TrText World.PlayerGuildDetail}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+            <TextBlock Text="{services:TrText World.PlayerGuildState}" Foreground="{DynamicResource VioletBrush}" FontSize="11"/>
           </StackPanel>
 
           <!-- GUILDS: people -->
           <StackPanel x:Name="GuildsPageBody" IsVisible="{Binding IsGuildsPage}" Spacing="14">
             <Border Classes="card accentWorld">
               <Grid ColumnDefinitions="2*,*,Auto,Auto" ColumnSpacing="10">
-                <TextBox PlaceholderText="{services:Tr ui.search_guild_id_leader_or_player_id}" Text="{Binding GuildSearchText}"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_guild_status_filter}" Grid.Column="1" ItemsSource="{Binding GuildStatusFilters}" SelectedItem="{Binding SelectedGuildStatusFilter}"/>
-                <TextBlock Grid.Column="2" Text="{services:TrText GuildVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/>
+                <TextBox PlaceholderText="{services:Tr ui.search_guild_id_leader_or_player_id}" Text="{Binding World.GuildSearchText}"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_guild_status_filter}" Grid.Column="1" ItemsSource="{Binding World.GuildStatusFilters}" SelectedItem="{Binding World.SelectedGuildStatusFilter}"/>
+                <TextBlock Grid.Column="2" Text="{services:TrText World.GuildVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/>
                 <Button Classes="info" Grid.Column="3" Content="{services:Tr ui.export_guilds_csv}" Click="ExportGuildsCsv_Click"/>
               </Grid>
             </Border>
@@ -890,7 +890,7 @@
               <Border Classes="card accentWorld">
                 <Grid RowDefinitions="Auto,*" RowSpacing="8">
                   <TextBlock Text="{services:Tr ui.guilds}" FontSize="18" FontWeight="SemiBold"/>
-                  <ListBox AutomationProperties.Name="{services:Tr ui.guilds}" Grid.Row="1" ItemsSource="{Binding FilteredExplorerGuilds}" SelectedItem="{Binding SelectedExplorerGuild}" MaxHeight="520" ToolTip.Tip="{services:Tr ui.right_click_for_guild_administration_actions}">
+                  <ListBox AutomationProperties.Name="{services:Tr ui.guilds}" Grid.Row="1" ItemsSource="{Binding World.FilteredExplorerGuilds}" SelectedItem="{Binding World.SelectedExplorerGuild}" MaxHeight="520" ToolTip.Tip="{services:Tr ui.right_click_for_guild_administration_actions}">
                       <ListBox.ContextMenu>
                         <ContextMenu>
                           <MenuItem Header="{services:Tr ui.transfer_leadership_to}" Click="TransferGuildLeadership_OnClick" IsEnabled="{Binding CanManageAdmin}"/>
@@ -921,16 +921,16 @@
                 <StackPanel Spacing="10">
                   <Grid ColumnDefinitions="*,Auto">
                     <StackPanel>
-                      <TextBlock Text="{Binding SelectedExplorerGuild.GuildNameVerbatim}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource VioletBrush}"/>
-                      <TextBlock Text="{Binding SelectedExplorerGuild.GuildId}" FontFamily="Consolas, monospace" FontSize="10" Foreground="{DynamicResource MutedBrush}"/>
+                      <TextBlock Text="{Binding World.SelectedExplorerGuild.GuildNameVerbatim}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource VioletBrush}"/>
+                      <TextBlock Text="{Binding World.SelectedExplorerGuild.GuildId}" FontFamily="Consolas, monospace" FontSize="10" Foreground="{DynamicResource MutedBrush}"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
                       <Button Classes="info" Content="{services:Tr ui.copy_guild_id}" Click="CopyGuildId_Click"/>
-                      <Button Classes="open" Content="{services:Tr ui.open_leader_player}" Command="{Binding OpenSelectedGuildLeaderCommand}"/>
+                      <Button Classes="open" Content="{services:Tr ui.open_leader_player}" Command="{Binding World.OpenSelectedGuildLeaderCommand}"/>
                     </StackPanel>
                   </Grid>
                   <TextBlock Text="{services:Tr ui.roster}" FontWeight="SemiBold"/>
-                  <ItemsControl x:Name="GuildRoster" ItemsSource="{Binding SelectedExplorerGuild.Roster}">
+                  <ItemsControl x:Name="GuildRoster" ItemsSource="{Binding World.SelectedExplorerGuild.Roster}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:GuildMemberRow">
                         <Grid ColumnDefinitions="24,*,90,2*" ColumnSpacing="8" Margin="0,3">
@@ -943,7 +943,7 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                   <TextBlock Text="{services:Tr ui.bases}" FontWeight="SemiBold"/>
-                  <ItemsControl ItemsSource="{Binding SelectedExplorerGuild.BaseCards}">
+                  <ItemsControl ItemsSource="{Binding World.SelectedExplorerGuild.BaseCards}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:BaseExplorerItemDto">
                         <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8" Margin="0,3">
@@ -960,17 +960,17 @@
                 </StackPanel>
               </Border>
             </Grid>
-            <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.guild_ownership_operations}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_guild_above_requires_pal_5e89f6}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="180,2*,Auto" ColumnSpacing="10"><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_guild_operation}" ItemsSource="{Binding GuildOperationTypes}" SelectedItem="{Binding GuildOperationType}"/><TextBox Grid.Column="1" PlaceholderText="{services:Tr ui.target_player_id_32_hex}" Text="{Binding GuildOperationPlayerId}"/><Button Classes="info" Grid.Column="2" Content="{services:Tr ui.preview}" Command="{Binding PreviewGuildOwnershipCommand}"/></Grid><TextBlock Text="{services:TrText GuildOperationStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding GuildOperationConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyGuildOwnershipCommand}"/></StackPanel></Border>
+            <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.guild_ownership_operations}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_guild_above_requires_pal_5e89f6}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="180,2*,Auto" ColumnSpacing="10"><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_guild_operation}" ItemsSource="{Binding World.GuildOperationTypes}" SelectedItem="{Binding World.GuildOperationType}"/><TextBox Grid.Column="1" PlaceholderText="{services:Tr ui.target_player_id_32_hex}" Text="{Binding World.GuildOperationPlayerId}"/><Button Classes="info" Grid.Column="2" Content="{services:Tr ui.preview}" Command="{Binding World.PreviewGuildOwnershipCommand}"/></Grid><TextBlock Text="{services:TrText World.GuildOperationStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding World.GuildOperationConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding World.ApplyGuildOwnershipCommand}"/></StackPanel></Border>
           </StackPanel>
 
           <!-- BASES: places -->
           <StackPanel x:Name="BasesPageBody" IsVisible="{Binding IsBasesPage}" Spacing="14">
-            <Border Classes="card accentWorld"><Grid ColumnDefinitions="2*,*,Auto,Auto" ColumnSpacing="10"><TextBox PlaceholderText="{services:Tr ui.search_base_id_guild_or_leader}" Text="{Binding BaseSearchText}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_base_status_filter}" Grid.Column="1" ItemsSource="{Binding BaseStatusFilters}" SelectedItem="{Binding SelectedBaseStatusFilter}"/><TextBlock Grid.Column="2" Text="{services:TrText BaseVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/><Button Classes="info" Grid.Column="3" Content="{services:Tr ui.export_bases_csv}" Click="ExportBasesCsv_Click"/></Grid></Border>
+            <Border Classes="card accentWorld"><Grid ColumnDefinitions="2*,*,Auto,Auto" ColumnSpacing="10"><TextBox PlaceholderText="{services:Tr ui.search_base_id_guild_or_leader}" Text="{Binding World.BaseSearchText}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_base_status_filter}" Grid.Column="1" ItemsSource="{Binding World.BaseStatusFilters}" SelectedItem="{Binding World.SelectedBaseStatusFilter}"/><TextBlock Grid.Column="2" Text="{services:TrText World.BaseVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/><Button Classes="info" Grid.Column="3" Content="{services:Tr ui.export_bases_csv}" Click="ExportBasesCsv_Click"/></Grid></Border>
             <Grid ColumnDefinitions="2*,3*" ColumnSpacing="14">
               <Border Classes="card accentWorld">
                 <Grid RowDefinitions="Auto,*" RowSpacing="8">
                   <TextBlock Text="{services:Tr ui.bases}" FontSize="18" FontWeight="SemiBold"/>
-                  <ListBox AutomationProperties.Name="{services:Tr ui.bases}" Grid.Row="1" ItemsSource="{Binding FilteredExplorerBases}" SelectedItem="{Binding SelectedExplorerBase}" MaxHeight="520" ToolTip.Tip="{services:Tr ui.right_click_for_base_administration_actions}">
+                  <ListBox AutomationProperties.Name="{services:Tr ui.bases}" Grid.Row="1" ItemsSource="{Binding World.FilteredExplorerBases}" SelectedItem="{Binding World.SelectedExplorerBase}" MaxHeight="520" ToolTip.Tip="{services:Tr ui.right_click_for_base_administration_actions}">
                     <ListBox.ContextMenu>
                       <ContextMenu>
                         <MenuItem Header="{services:Tr ui.copy_base_info}" Click="CopyBaseInfo_OnClick"/>
@@ -999,24 +999,24 @@
                 <StackPanel Spacing="10">
                   <Grid ColumnDefinitions="*,Auto">
                     <StackPanel>
-                      <TextBlock Text="{Binding SelectedExplorerBase.LocationVerbatim}" FontSize="22" FontWeight="SemiBold" FontFamily="Consolas, monospace" Foreground="{DynamicResource VioletBrush}"/>
-                      <TextBlock Text="{services:TrText SelectedExplorerBase.LocationText}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
+                      <TextBlock Text="{Binding World.SelectedExplorerBase.LocationVerbatim}" FontSize="22" FontWeight="SemiBold" FontFamily="Consolas, monospace" Foreground="{DynamicResource VioletBrush}"/>
+                      <TextBlock Text="{services:TrText World.SelectedExplorerBase.LocationText}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
                     </StackPanel>
-                    <Button x:Name="ShowBaseOnMapButton" Grid.Column="1" Classes="open" Content="{services:Tr ui.show_on_map}" Command="{Binding ShowSelectedBaseOnMapCommand}" IsEnabled="{Binding SelectedExplorerBase.HasLocation}" VerticalAlignment="Top"/>
+                    <Button x:Name="ShowBaseOnMapButton" Grid.Column="1" Classes="open" Content="{services:Tr ui.show_on_map}" Command="{Binding ShowSelectedBaseOnMapCommand}" IsEnabled="{Binding World.SelectedExplorerBase.HasLocation}" VerticalAlignment="Top"/>
                   </Grid>
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <StackPanel>
                       <TextBlock Text="{services:Tr ui.owned_by}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
-                      <TextBlock Text="{Binding SelectedExplorerBase.GuildNameVerbatim}" FontSize="16"/>
+                      <TextBlock Text="{Binding World.SelectedExplorerBase.GuildNameVerbatim}" FontSize="16"/>
                       <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="♛" Foreground="{DynamicResource AmberBrush}"/>
-                        <TextBlock Text="{Binding SelectedExplorerBase.LeaderNameVerbatim}"/>
+                        <TextBlock Text="{Binding World.SelectedExplorerBase.LeaderNameVerbatim}"/>
                       </StackPanel>
                     </StackPanel>
                     <Button Classes="open" Grid.Column="1" Content="{services:Tr ui.open_guild}" Command="{Binding OpenSelectedBaseGuildCommand}" VerticalAlignment="Top"/>
                   </Grid>
-                  <TextBlock Text="{services:TrText SelectedExplorerBase.WorkerCountText}" FontWeight="SemiBold"/>
-                  <ListBox x:Name="BaseWorkers" AutomationProperties.Name="{services:Tr ui.workers}" ItemsSource="{Binding SelectedExplorerBase.Workers}" MaxHeight="260">
+                  <TextBlock Text="{services:TrText World.SelectedExplorerBase.WorkerCountText}" FontWeight="SemiBold"/>
+                  <ListBox x:Name="BaseWorkers" AutomationProperties.Name="{services:Tr ui.workers}" ItemsSource="{Binding World.SelectedExplorerBase.Workers}" MaxHeight="260">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="models:PalLocationDto">
                         <Grid ColumnDefinitions="*,60,*" ColumnSpacing="8">
@@ -1028,20 +1028,20 @@
                     </ListBox.ItemTemplate>
                   </ListBox>
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <TextBlock Text="{Binding SelectedExplorerBase.BaseId}" FontFamily="Consolas, monospace" FontSize="10" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding World.SelectedExplorerBase.BaseId}" FontFamily="Consolas, monospace" FontSize="10" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                     <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.copy_base_id}" Click="CopyBaseId_Click"/>
                   </Grid>
                 </StackPanel>
               </Border>
             </Grid>
-            <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.base_ownership_transfer}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_base_above_moves_the_bas_c0d0ff}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="2*,Auto" ColumnSpacing="10"><TextBox PlaceholderText="{services:Tr ui.target_guild_id_32_hex}" Text="{Binding BaseTransferTargetGuildId}"/><Button Classes="info" Grid.Column="1" Content="{services:Tr ui.preview_transfer}" Command="{Binding PreviewBaseTransferCommand}"/></Grid><TextBlock Text="{services:TrText BaseTransferStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding BaseTransferConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyBaseTransferCommand}"/></StackPanel></Border>
-            <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.base_recovery}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_base_above_permanently_r_763a73}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Button Classes="info" Content="{services:Tr ui.preview_recovery}" HorizontalAlignment="Left" Command="{Binding PreviewBaseRecoveryCommand}"/><TextBlock Text="{services:TrText BaseRecoveryStatusText}" Foreground="{DynamicResource OrangeBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_73337a}" IsChecked="{Binding BaseRecoveryConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyBaseRecoveryCommand}"/></StackPanel></Border>
+            <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.base_ownership_transfer}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_base_above_moves_the_bas_c0d0ff}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Grid ColumnDefinitions="2*,Auto" ColumnSpacing="10"><TextBox PlaceholderText="{services:Tr ui.target_guild_id_32_hex}" Text="{Binding World.BaseTransferTargetGuildId}"/><Button Classes="info" Grid.Column="1" Content="{services:Tr ui.preview_transfer}" Command="{Binding World.PreviewBaseTransferCommand}"/></Grid><TextBlock Text="{services:TrText World.BaseTransferStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding World.BaseTransferConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding World.ApplyBaseTransferCommand}"/></StackPanel></Border>
+            <Border Classes="card accentWorld"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.base_recovery}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.applies_to_the_selected_base_above_permanently_r_763a73}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><Button Classes="info" Content="{services:Tr ui.preview_recovery}" HorizontalAlignment="Left" Command="{Binding World.PreviewBaseRecoveryCommand}"/><TextBlock Text="{services:TrText World.BaseRecoveryStatusText}" Foreground="{DynamicResource OrangeBrush}" TextWrapping="Wrap"/><CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_73337a}" IsChecked="{Binding World.BaseRecoveryConfirmed}"/><Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding World.ApplyBaseRecoveryCommand}"/></StackPanel></Border>
           </StackPanel>
 
           <Border Classes="card accentWorld" IsVisible="{Binding HasPlayerGuildWarnings}">
             <StackPanel Spacing="7">
               <TextBlock Text="{services:Tr ui.semantic_warnings_limitations}" FontSize="17" FontWeight="SemiBold"/>
-              <ItemsControl ItemsSource="{Binding PlayerGuildWarnings}">
+              <ItemsControl ItemsSource="{Binding World.PlayerGuildWarnings}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <TextBlock Text="{services:TrText}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,2"/>
@@ -1259,8 +1259,8 @@
                         PointerMoved="MapSurface_OnPointerMoved"
                         PointerReleased="MapSurface_OnPointerReleased"
                         PointerCaptureLost="MapSurface_OnPointerCaptureLost">
-                    <Image Source="{Binding MapBackgroundBitmap}" Stretch="UniformToFill" RenderTransformOrigin="0%,0%" RenderTransform="{Binding MapImageTransform}"/>
-                    <ItemsControl ItemsSource="{Binding BaseMapPoints}">
+                    <Image Source="{Binding Map.MapBackgroundBitmap}" Stretch="UniformToFill" RenderTransformOrigin="0%,0%" RenderTransform="{Binding Map.MapImageTransform}"/>
+                    <ItemsControl ItemsSource="{Binding Map.BaseMapPoints}">
                       <ItemsControl.ItemsPanel><ItemsPanelTemplate><Grid/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                       <!-- Markers are placed with a margin taken from their data. Canvas.Left and Canvas.Top on a template
                            root, or on the item container, did not position them: every marker sat in the top-left corner. -->
@@ -1270,7 +1270,7 @@
                                Button style (MinHeight 31, centred content) no longer shifts the dot off its point.
                                The name label is drawn in its own layer below. -->
                           <Button Classes="marker" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="{Binding MarkerMargin}"
-                                  Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).ZoomToBaseCommand}"
+                                  Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).World.ZoomToBaseCommand}"
                                   CommandParameter="{Binding BaseId}" ToolTip.Tip="{services:TrText Tooltip}">
                             <Rectangle Width="10" Height="10" Fill="{DynamicResource AmberBrush}" Stroke="{DynamicResource DecoBorder_0B141B}" StrokeThickness="1.5"/>
                           </Button>
@@ -1279,12 +1279,12 @@
                     </ItemsControl>
                     <!-- v0.8.11.0: owned Pals (base workers and party members) from the save, clustered at the current zoom;
                          the count is drawn inside the marker. Above bases (a cluster beside a base is a badge on its corner, see PalMapLayout) and under players. -->
-                    <ItemsControl ItemsSource="{Binding PalMapPoints}">
+                    <ItemsControl ItemsSource="{Binding Map.PalMapPoints}">
                       <ItemsControl.ItemsPanel><ItemsPanelTemplate><Grid/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="models:PalMapPointDto">
                           <Button Classes="palMarker marker" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="{Binding MarkerMargin}"
-                                  Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).ZoomToPalGroupCommand}"
+                                  Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Map.ZoomToPalGroupCommand}"
                                   CommandParameter="{Binding Key}" ToolTip.Tip="{services:TrText Tooltip}">
                             <Grid Width="14" Height="14">
                               <Ellipse Fill="{DynamicResource DecoBackground_9F7AEA}" Stroke="{DynamicResource DecoBorder_0B141B}" StrokeThickness="1.5"/>
@@ -1294,7 +1294,7 @@
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <ItemsControl ItemsSource="{Binding PlayerMapPoints}">
+                    <ItemsControl ItemsSource="{Binding Map.PlayerMapPoints}">
                       <ItemsControl.ItemsPanel><ItemsPanelTemplate><Grid/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                       <!-- Online players are solid green dots (live position). Offline players are hollow grey rings at the
                            last position the save recorded for them. -->
@@ -1302,7 +1302,7 @@
                         <DataTemplate x:DataType="models:PlayerMapPointDto">
                           <!-- v0.7.115.0: dot only, MinWidth/MinHeight 0 (see the base marker above); labels are their own layer. -->
                           <Button Classes="marker" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="{Binding MarkerMargin}"
-                                  Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).SelectMapPlayerCommand}"
+                                  Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Map.SelectMapPlayerCommand}"
                                   CommandParameter="{Binding PlayerId}" ToolTip.Tip="{services:TrText Tooltip}">
                             <Grid Width="10" Height="10">
                               <Ellipse Fill="{DynamicResource GreenBrush}" Stroke="{DynamicResource DecoBorder_0B141B}" StrokeThickness="1.5" IsVisible="{Binding IsOnline}"/>
@@ -1315,7 +1315,7 @@
                     <!-- v0.7.115.0 (deficiency report): name labels in their own layers, each at exactly the rectangle
                          MapLabelLayout placed it in, so what the harness checks for overlap is what is drawn. Not
                          clickable, so they never steal a click meant for a dot; NoWrap so the width stays one line. -->
-                    <ItemsControl ItemsSource="{Binding BaseMapPoints}" IsHitTestVisible="False">
+                    <ItemsControl ItemsSource="{Binding Map.BaseMapPoints}" IsHitTestVisible="False">
                       <ItemsControl.ItemsPanel><ItemsPanelTemplate><Grid/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="models:BaseMapPointDto">
@@ -1324,7 +1324,7 @@
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <ItemsControl ItemsSource="{Binding PlayerMapPoints}" IsHitTestVisible="False">
+                    <ItemsControl ItemsSource="{Binding Map.PlayerMapPoints}" IsHitTestVisible="False">
                       <ItemsControl.ItemsPanel><ItemsPanelTemplate><Grid/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="models:PlayerMapPointDto">
@@ -1347,36 +1347,36 @@
                   <TextBlock Text="{services:Tr ui.solid_green_dots_are_online_players_at_their_liv_44b657}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
                   <TextBlock Text="{services:Tr ui.scroll_to_zoom_drag_to_pan_click_a_marker_or_a_n_7d2c6a}" TextWrapping="Wrap"/>
                   <WrapPanel Orientation="Horizontal">
-                    <TextBlock Text="{services:TrText MapZoomText}" VerticalAlignment="Center" Margin="0,0,12,6"/>
-                    <Button Classes="caution" Content="{services:Tr ui.reset_view}" Command="{Binding ResetMapViewCommand}" IsEnabled="{Binding IsMapZoomed}" Margin="0,0,12,6" ToolTip.Tip="{services:Tr ui.zooms_back_out_to_the_whole_map}"/>
-                    <CheckBox Content="{services:Tr ui.show_offline_players_last_known_position}" IsChecked="{Binding ShowOfflinePlayersOnMap}" Margin="0,0,0,6" ToolTip.Tip="{services:Tr ui.draws_players_who_are_not_online_at_the_last_pos_6351ae}"/>
+                    <TextBlock Text="{services:TrText Map.MapZoomText}" VerticalAlignment="Center" Margin="0,0,12,6"/>
+                    <Button Classes="caution" Content="{services:Tr ui.reset_view}" Command="{Binding Map.ResetMapViewCommand}" IsEnabled="{Binding Map.IsMapZoomed}" Margin="0,0,12,6" ToolTip.Tip="{services:Tr ui.zooms_back_out_to_the_whole_map}"/>
+                    <CheckBox Content="{services:Tr ui.show_offline_players_last_known_position}" IsChecked="{Binding Map.ShowOfflinePlayersOnMap}" Margin="0,0,0,6" ToolTip.Tip="{services:Tr ui.draws_players_who_are_not_online_at_the_last_pos_6351ae}"/>
                   </WrapPanel>
                   <WrapPanel Orientation="Horizontal">
-                    <ItemsControl ItemsSource="{Binding MapPresets}">
+                    <ItemsControl ItemsSource="{Binding Map.MapPresets}">
                       <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="services:MapPreset">
                           <Button Classes="listItem" Content="{Binding DisplayName}" Margin="0,0,8,8"
-                                  Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).SetMapPresetCommand}"
+                                  Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Map.SetMapPresetCommand}"
                                   CommandParameter="{Binding}"/>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <Button Classes="open" Content="{services:Tr ui.browse_for_map_background}" Click="BrowseMapBackground_Click" Margin="0,0,8,8"/>
-                    <Button Classes="caution" Content="{services:Tr ui.clear_background}" Command="{Binding ClearMapBackgroundCommand}" Margin="0,0,8,8"/>
+                    <Button Classes="caution" Content="{services:Tr ui.clear_background}" Command="{Binding Map.ClearMapBackgroundCommand}" Margin="0,0,8,8"/>
                     <Button Classes="info" Content="{services:Tr ui.refresh}" Command="{Binding RefreshPlayersCommand}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.re_reads_online_players_and_base_locations}"/>
                   </WrapPanel>
-                  <CheckBox Content="{services:Tr ui.real_world_positions_and_bases_palpagos}" IsChecked="{Binding UseCalibratedWorldPositions}" IsVisible="{Binding IsPalpagosMapActive}" ToolTip.Tip="{services:Tr ui.places_players_and_guild_bases_on_the_palpagos_m_c7f0d4}"/>
-                  <TextBlock Text="{services:TrText MapBackgroundStatusText}" Foreground="{DynamicResource MutedBrush}"/>
-                  <TextBlock Text="{services:TrText MapPlayersStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-                  <TextBlock Text="{services:Tr ui.pick_the_palpagos_preset_above_to_see_real_playe_0b4218}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="{Binding !IsPalpagosMapActive}"/>
-                  <WrapPanel Orientation="Horizontal" IsVisible="{Binding IsBaseMarkersActive}">
-                    <CheckBox Content="{services:Tr ui.show_guild_bases}" IsChecked="{Binding ShowBasesOnMap}" Margin="0,0,10,6"/>
-                    <CheckBox Content="{services:Tr ui.show_pals_at_bases_and_in_parties}" IsChecked="{Binding ShowPalsOnMap}" Margin="0,0,10,6" ToolTip.Tip="{services:Tr ui.violet_circles_are_owned_pals_at_the_last_positi_6a5074}"/>
-                    <Button Classes="info" Content="{services:Tr ui.refresh_bases}" Command="{Binding RefreshMapBasesCommand}" Margin="0,0,10,6"/>
+                  <CheckBox Content="{services:Tr ui.real_world_positions_and_bases_palpagos}" IsChecked="{Binding Map.UseCalibratedWorldPositions}" IsVisible="{Binding Map.IsPalpagosMapActive}" ToolTip.Tip="{services:Tr ui.places_players_and_guild_bases_on_the_palpagos_m_c7f0d4}"/>
+                  <TextBlock Text="{services:TrText Map.MapBackgroundStatusText}" Foreground="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="{services:TrText Map.MapPlayersStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:Tr ui.pick_the_palpagos_preset_above_to_see_real_playe_0b4218}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="{Binding !Map.IsPalpagosMapActive}"/>
+                  <WrapPanel Orientation="Horizontal" IsVisible="{Binding Map.IsBaseMarkersActive}">
+                    <CheckBox Content="{services:Tr ui.show_guild_bases}" IsChecked="{Binding Map.ShowBasesOnMap}" Margin="0,0,10,6"/>
+                    <CheckBox Content="{services:Tr ui.show_pals_at_bases_and_in_parties}" IsChecked="{Binding Map.ShowPalsOnMap}" Margin="0,0,10,6" ToolTip.Tip="{services:Tr ui.violet_circles_are_owned_pals_at_the_last_positi_6a5074}"/>
+                    <Button Classes="info" Content="{services:Tr ui.refresh_bases}" Command="{Binding Map.RefreshMapBasesCommand}" Margin="0,0,10,6"/>
                   </WrapPanel>
-                  <TextBlock Text="{services:TrText MapBasesStatusText}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="{Binding IsBaseMarkersActive}"/>
-                  <TextBlock Text="{services:TrText MapPalsStatusText}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="{Binding IsBaseMarkersActive}"/>
+                  <TextBlock Text="{services:TrText Map.MapBasesStatusText}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="{Binding Map.IsBaseMarkersActive}"/>
+                  <TextBlock Text="{services:TrText Map.MapPalsStatusText}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="{Binding Map.IsBaseMarkersActive}"/>
                 </StackPanel>
               </Border>
               <Border Classes="card accentWorld">
@@ -1385,15 +1385,15 @@
                   <TextBlock Text="{services:Tr ui.online_offline_last_known_position_click_a_name_1be6cc}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
                   <TextBlock Text="{Binding Players.SelectedPlayerRecord.PlayerName, StringFormat='Selected: {0}', FallbackValue='No player selected. Click a dot or a name.'}" TextTrimming="CharacterEllipsis"/>
                   <WrapPanel Orientation="Horizontal">
-                    <Button Classes="apply" Content="{services:Tr ui.teleport_to_me}" Command="{Binding TeleportPlayerToMeCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.summons_the_selected_online_player_to_your_admin_67d902}"/>
-                    <Button Classes="apply" Content="{services:Tr ui.teleport_to_player}" Command="{Binding TeleportToPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.moves_your_admin_character_to_the_selected_onlin_c77733}"/>
+                    <Button Classes="apply" Content="{services:Tr ui.teleport_to_me}" Command="{Binding Map.TeleportPlayerToMeCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.summons_the_selected_online_player_to_your_admin_67d902}"/>
+                    <Button Classes="apply" Content="{services:Tr ui.teleport_to_player}" Command="{Binding Map.TeleportToPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.moves_your_admin_character_to_the_selected_onlin_c77733}"/>
                   </WrapPanel>
                   <TextBlock Text="{services:Tr ui.palworld_s_vanilla_rcon_has_no_teleport_to_coord_cda233}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
-                  <ItemsControl ItemsSource="{Binding PlayerMapPoints}">
+                  <ItemsControl ItemsSource="{Binding Map.PlayerMapPoints}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:PlayerMapPointDto">
                         <Button Classes="listItem" Margin="0,0,0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).SelectMapPlayerCommand}"
+                                Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Map.SelectMapPlayerCommand}"
                                 CommandParameter="{Binding PlayerId}">
                           <TextBlock Text="{services:TrText ListText}" TextTrimming="CharacterEllipsis"/>
                         </Button>
@@ -1411,30 +1411,30 @@
                   <TextBlock Text="{services:Tr ui.named_spots_players_can_teleport_to_from_anywher_4ef3f7}"
                              Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
                   <WrapPanel Orientation="Horizontal">
-                    <CheckBox Content="{services:Tr ui.let_players_use_the_chat_command}" IsChecked="{Binding TeleportEnabled}" Margin="0,0,14,6"/>
+                    <CheckBox Content="{services:Tr ui.let_players_use_the_chat_command}" IsChecked="{Binding Map.TeleportEnabled}" Margin="0,0,14,6"/>
                     <TextBlock Text="{services:Tr ui.command}" VerticalAlignment="Center" Margin="0,0,6,6"/>
-                    <TextBox Text="{Binding TeleportCommandPrefix}" Width="90" Margin="0,0,14,6" ToolTip.Tip="{services:Tr ui.starts_with_or_so_it_never_clashes_with_paldefen_cb6a1b}"/>
+                    <TextBox Text="{Binding Map.TeleportCommandPrefix}" Width="90" Margin="0,0,14,6" ToolTip.Tip="{services:Tr ui.starts_with_or_so_it_never_clashes_with_paldefen_cb6a1b}"/>
                     <TextBlock Text="{services:Tr ui.cooldown_s}" VerticalAlignment="Center" Margin="0,0,6,6"/>
-                    <NumericUpDown Value="{Binding TeleportCooldownSeconds}" Minimum="0" Maximum="3600" FormatString="0" Width="130" Margin="0,0,0,6" ToolTip.Tip="{services:Tr ui.how_long_a_player_waits_between_teleports}"/>
+                    <NumericUpDown Value="{Binding Map.TeleportCooldownSeconds}" Minimum="0" Maximum="3600" FormatString="0" Width="130" Margin="0,0,0,6" ToolTip.Tip="{services:Tr ui.how_long_a_player_waits_between_teleports}"/>
                   </WrapPanel>
-                  <TextBox Text="{Binding TeleportPointsText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" MaxHeight="200"
+                  <TextBox Text="{Binding Map.TeleportPointsText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" MaxHeight="200"
                            PlaceholderText="{services:Tr ui.one_per_line_name_then_x_y_optional_height_spawn_c9162e}"/>
                   <TextBlock Text="{services:Tr ui.coordinates_are_paldefender_s_own_what_its_getpo_038d13}"
                              Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
                   <WrapPanel Orientation="Horizontal">
-                    <Button Classes="apply" Content="{services:Tr ui.save_points}" Command="{Binding SaveTeleportCommand}" Margin="0,0,8,8"/>
-                    <Button Classes="apply" Content="{services:Tr ui.capture_selected_player_s_position}" Command="{Binding CaptureTeleportPositionCommand}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.asks_paldefender_where_the_selected_online_playe_6a7616}"/>
-                    <Button Classes="info" Content="{services:Tr ui.refresh}" Command="{Binding RefreshTeleportCommand}" Margin="0,0,8,8"/>
+                    <Button Classes="apply" Content="{services:Tr ui.save_points}" Command="{Binding Map.SaveTeleportCommand}" Margin="0,0,8,8"/>
+                    <Button Classes="apply" Content="{services:Tr ui.capture_selected_player_s_position}" Command="{Binding Map.CaptureTeleportPositionCommand}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.asks_paldefender_where_the_selected_online_playe_6a7616}"/>
+                    <Button Classes="info" Content="{services:Tr ui.refresh}" Command="{Binding Map.RefreshTeleportCommand}" Margin="0,0,8,8"/>
                   </WrapPanel>
                   <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                     <TextBlock Text="{services:Tr ui.send_selected_player_to}" VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Text="{Binding TeleportSendPointName}" PlaceholderText="{services:Tr ui.point_name}"/>
-                    <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.send}" Command="{Binding SendPlayerToTeleportPointCommand}" ToolTip.Tip="{services:Tr ui.teleports_the_selected_online_player_to_a_saved_b0d643}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Map.TeleportSendPointName}" PlaceholderText="{services:Tr ui.point_name}"/>
+                    <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.send}" Command="{Binding Map.SendPlayerToTeleportPointCommand}" ToolTip.Tip="{services:Tr ui.teleports_the_selected_online_player_to_a_saved_b0d643}"/>
                   </Grid>
-                  <TextBlock Text="{services:TrText TeleportStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-                  <TextBlock Text="{services:TrText TeleportProviderText}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
-                  <TextBlock Text="{services:TrText TeleportChatSourceText}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
-                  <ItemsControl ItemsSource="{Binding TeleportRecentUses}">
+                  <TextBlock Text="{services:TrText Map.TeleportStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Map.TeleportProviderText}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Map.TeleportChatSourceText}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
+                  <ItemsControl ItemsSource="{Binding Map.TeleportRecentUses}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:TeleportUseDto">
                         <TextBlock Text="{services:TrText ListText}" FontSize="12" TextTrimming="CharacterEllipsis"/>
@@ -1444,15 +1444,15 @@
                 </StackPanel>
               </Border>
               <!-- v0.8.11.0: one row per Pals marker, so a cluster can be found and zoomed without hunting on the map. -->
-              <Border Classes="card accentWorld" IsVisible="{Binding IsBaseMarkersActive}">
+              <Border Classes="card accentWorld" IsVisible="{Binding Map.IsBaseMarkersActive}">
                 <StackPanel Spacing="8">
                   <TextBlock Text="{services:Tr ui.pals_on_the_map}" FontSize="17" FontWeight="SemiBold"/>
                   <TextBlock Text="{services:Tr ui.violet_owned_pals_at_the_last_position_the_save_0bccfb}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
-                  <ItemsControl ItemsSource="{Binding PalMapPoints}">
+                  <ItemsControl ItemsSource="{Binding Map.PalMapPoints}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:PalMapPointDto">
                         <Button Classes="listItem" Margin="0,0,0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).ZoomToPalGroupCommand}"
+                                Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Map.ZoomToPalGroupCommand}"
                                 CommandParameter="{Binding Key}" ToolTip.Tip="{services:TrText Tooltip}">
                           <TextBlock Text="{services:TrText ListText}" Foreground="{DynamicResource DecoForeground_9F7AEA}" TextTrimming="CharacterEllipsis"/>
                         </Button>
@@ -1465,11 +1465,11 @@
                 <StackPanel Spacing="8">
                   <TextBlock Text="{services:Tr ui.guild_bases}" FontSize="17" FontWeight="SemiBold"/>
                   <TextBlock Text="{services:Tr ui.in_game_map_coordinates_as_the_game_s_own_map_sh_0b705a}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
-                  <ItemsControl ItemsSource="{Binding BaseMapPoints}">
+                  <ItemsControl ItemsSource="{Binding Map.BaseMapPoints}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:BaseMapPointDto">
                         <Button Classes="listItem" Margin="0,0,0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).ZoomToBaseCommand}"
+                                Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).World.ZoomToBaseCommand}"
                                 CommandParameter="{Binding BaseId}">
                           <TextBlock Text="{services:TrText ListText}" Foreground="{DynamicResource AmberBrush}" TextTrimming="CharacterEllipsis"/>
                         </Button>
@@ -1613,8 +1613,8 @@
                    stub had no real backend capability to ever point at. -->
               <WrapPanel Orientation="Horizontal">
                 <Button Classes="apply" Content="{services:Tr ui.unban}" Command="{Binding Players.UnbanSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.removes_the_selected_player_s_steam_userid_from_a211e9}"/>
-                <Button Classes="apply" Content="{services:Tr ui.teleport_to_me}" Command="{Binding TeleportPlayerToMeCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.summons_the_selected_online_player_to_your_admin_2f6256}"/>
-                <Button Classes="apply" Content="{services:Tr ui.teleport_to_player}" Command="{Binding TeleportToPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.moves_your_admin_character_to_the_selected_onlin_91d9e9}"/>
+                <Button Classes="apply" Content="{services:Tr ui.teleport_to_me}" Command="{Binding Map.TeleportPlayerToMeCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.summons_the_selected_online_player_to_your_admin_2f6256}"/>
+                <Button Classes="apply" Content="{services:Tr ui.teleport_to_player}" Command="{Binding Map.TeleportToPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.moves_your_admin_character_to_the_selected_onlin_91d9e9}"/>
               </WrapPanel>
               <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="8">
                 <TextBlock VerticalAlignment="Center" Text="{services:Tr ui.temp_ban}" Classes="muted"/>
@@ -1944,19 +1944,19 @@
                Guilds page in v0.7.1.0, since editing an individual Pal has no conceptual tie to
                guild ownership and belongs alongside the rest of this page's player-focused tools.
                Collapsed by default since v0.7.5.0 (no-scroll pass 1). -->
-          <Button Classes="sectionToggle" Command="{Binding TogglePalEditorCommand}">
+          <Button Classes="sectionToggle" Command="{Binding World.TogglePalEditorCommand}">
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Text="▸" IsVisible="{Binding !IsPalEditorExpanded}" FontWeight="Bold"/>
-              <TextBlock Text="▾" IsVisible="{Binding IsPalEditorExpanded}" FontWeight="Bold"/>
+              <TextBlock Text="▸" IsVisible="{Binding !World.IsPalEditorExpanded}" FontWeight="Bold"/>
+              <TextBlock Text="▾" IsVisible="{Binding World.IsPalEditorExpanded}" FontWeight="Bold"/>
               <TextBlock Text="{services:Tr ui.pal_editor}" FontSize="17" FontWeight="SemiBold"/>
             </StackPanel>
           </Button>
-          <Grid ColumnDefinitions="3*,2*" ColumnSpacing="14" IsVisible="{Binding IsPalEditorExpanded}">
+          <Grid ColumnDefinitions="3*,2*" ColumnSpacing="14" IsVisible="{Binding World.IsPalEditorExpanded}">
             <Border Classes="card accentWorld">
               <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
                 <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr ui.pal_editor}" FontSize="18" FontWeight="SemiBold"/><Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh_pals}" Command="{Binding RefreshPalsCommand}"/></Grid>
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.individual_pal_stat_identity_editing_decoded_fro_c219fa}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                <ListBox AutomationProperties.Name="{services:Tr ui.pal_editor}" Grid.Row="2" ItemsSource="{Binding ExplorerPals}" SelectedItem="{Binding SelectedExplorerPal}" MaxHeight="420">
+                <ListBox AutomationProperties.Name="{services:Tr ui.pal_editor}" Grid.Row="2" ItemsSource="{Binding World.ExplorerPals}" SelectedItem="{Binding World.SelectedExplorerPal}" MaxHeight="420">
                   <ListBox.ItemTemplate><DataTemplate x:DataType="models:PalInstanceDto"><Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="10" Margin="0,6"><StackPanel><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText OwnerDisplay}" FontSize="11" Foreground="{DynamicResource MutedBrush}"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding Level, StringFormat='Lv. {0}'}" VerticalAlignment="Center"/><Border Grid.Column="2" Classes="tag info" IsVisible="{Binding IsRarePal}"><TextBlock Text="{services:Tr ui.lucky}"/></Border></Grid></DataTemplate></ListBox.ItemTemplate>
                 </ListBox>
               </Grid>
@@ -1964,19 +1964,19 @@
             <Border Classes="card accentWorld"><StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.edit_selected_pal}" FontSize="17" FontWeight="SemiBold"/>
               <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6">
-                <TextBlock Text="{services:Tr ui.nickname}" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.nickname}" Grid.Column="1" Text="{Binding PalEditNickName}"/>
-                <TextBlock Grid.Row="1" Text="{services:Tr ui.level}" VerticalAlignment="Center"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.level}" Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="255" Value="{Binding PalEditLevel}"/>
-                <TextBlock Grid.Row="2" Text="{services:Tr ui.rank}" VerticalAlignment="Center"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.rank}" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="5" Value="{Binding PalEditRank}"/>
-                <TextBlock Grid.Row="3" Text="{services:Tr ui.talent_hp}" VerticalAlignment="Center"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.talent_hp}" Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding PalEditTalentHp}"/>
-                <TextBlock Grid.Row="4" Text="{services:Tr ui.talent_shot}" VerticalAlignment="Center"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.talent_shot}" Grid.Row="4" Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding PalEditTalentShot}"/>
-                <TextBlock Grid.Row="5" Text="{services:Tr ui.talent_def}" VerticalAlignment="Center"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.talent_def}" Grid.Row="5" Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding PalEditTalentDefense}"/>
-                <TextBlock Grid.Row="6" Text="{services:Tr ui.gender}" VerticalAlignment="Center"/><ComboBox AutomationProperties.Name="{services:Tr ui.gender}" Grid.Row="6" Grid.Column="1" ItemsSource="{Binding PalGenderOptions}" SelectedItem="{Binding PalEditGender}"/>
+                <TextBlock Text="{services:Tr ui.nickname}" VerticalAlignment="Center"/><TextBox AutomationProperties.Name="{services:Tr ui.nickname}" Grid.Column="1" Text="{Binding World.PalEditNickName}"/>
+                <TextBlock Grid.Row="1" Text="{services:Tr ui.level}" VerticalAlignment="Center"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.level}" Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="255" Value="{Binding World.PalEditLevel}"/>
+                <TextBlock Grid.Row="2" Text="{services:Tr ui.rank}" VerticalAlignment="Center"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.rank}" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="5" Value="{Binding World.PalEditRank}"/>
+                <TextBlock Grid.Row="3" Text="{services:Tr ui.talent_hp}" VerticalAlignment="Center"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.talent_hp}" Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding World.PalEditTalentHp}"/>
+                <TextBlock Grid.Row="4" Text="{services:Tr ui.talent_shot}" VerticalAlignment="Center"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.talent_shot}" Grid.Row="4" Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding World.PalEditTalentShot}"/>
+                <TextBlock Grid.Row="5" Text="{services:Tr ui.talent_def}" VerticalAlignment="Center"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.talent_def}" Grid.Row="5" Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding World.PalEditTalentDefense}"/>
+                <TextBlock Grid.Row="6" Text="{services:Tr ui.gender}" VerticalAlignment="Center"/><ComboBox AutomationProperties.Name="{services:Tr ui.gender}" Grid.Row="6" Grid.Column="1" ItemsSource="{Binding PalGenderOptions}" SelectedItem="{Binding World.PalEditGender}"/>
               </Grid>
-              <CheckBox Content="{services:Tr ui.lucky_israrepal}" IsChecked="{Binding PalEditIsRarePal}"/>
-              <Button Classes="info" Content="{services:Tr ui.preview}" Command="{Binding PreviewPalEditCommand}"/>
-              <TextBlock Text="{services:TrText PalEditStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-              <CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding PalEditConfirmed}"/>
-              <Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyPalEditCommand}"/>
+              <CheckBox Content="{services:Tr ui.lucky_israrepal}" IsChecked="{Binding World.PalEditIsRarePal}"/>
+              <Button Classes="info" Content="{services:Tr ui.preview}" Command="{Binding World.PreviewPalEditCommand}"/>
+              <TextBlock Text="{services:TrText World.PalEditStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+              <CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding World.PalEditConfirmed}"/>
+              <Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding World.ApplyPalEditCommand}"/>
             </StackPanel></Border>
           </Grid>
 
@@ -1987,22 +1987,22 @@
               <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                 <StackPanel Spacing="4">
                   <TextBlock Text="{services:Tr ui.source_player}" Classes="muted"/>
-                  <ComboBox AutomationProperties.Name="{services:Tr ui.source_player}" ItemsSource="{Binding Players.PlayerRecords}" SelectedItem="{Binding MigrationSourcePlayer}" HorizontalAlignment="Stretch">
+                  <ComboBox AutomationProperties.Name="{services:Tr ui.source_player}" ItemsSource="{Binding Players.PlayerRecords}" SelectedItem="{Binding World.MigrationSourcePlayer}" HorizontalAlignment="Stretch">
                     <ComboBox.ItemTemplate><DataTemplate x:DataType="models:PlayerExplorerItemDto"><TextBlock Text="{Binding PlayerName}"/></DataTemplate></ComboBox.ItemTemplate>
                   </ComboBox>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="4">
                   <TextBlock Text="{services:Tr ui.destination_player}" Classes="muted"/>
-                  <ComboBox AutomationProperties.Name="{services:Tr ui.destination_player}" ItemsSource="{Binding Players.PlayerRecords}" SelectedItem="{Binding MigrationDestinationPlayer}" HorizontalAlignment="Stretch">
+                  <ComboBox AutomationProperties.Name="{services:Tr ui.destination_player}" ItemsSource="{Binding Players.PlayerRecords}" SelectedItem="{Binding World.MigrationDestinationPlayer}" HorizontalAlignment="Stretch">
                     <ComboBox.ItemTemplate><DataTemplate x:DataType="models:PlayerExplorerItemDto"><TextBlock Text="{Binding PlayerName}"/></DataTemplate></ComboBox.ItemTemplate>
                   </ComboBox>
                 </StackPanel>
               </Grid>
-              <Button Classes="info" Content="{services:Tr ui.preview_migration}" Command="{Binding PreviewCharacterMigrationCommand}"/>
-              <TextBlock Text="{services:TrText MigrationState}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding MigrationPreview.CanApply}">
-                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_source_character_afterwards}" ItemsSource="{Binding CharacterDispositionOptions}" SelectedItem="{Binding MigrationDisposition}"/>
-                <Button Grid.Column="1" Content="{services:Tr ui.apply_migration}" Command="{Binding ApplyCharacterMigrationCommand}" Classes="danger"/>
+              <Button Classes="info" Content="{services:Tr ui.preview_migration}" Command="{Binding World.PreviewCharacterMigrationCommand}"/>
+              <TextBlock Text="{services:TrText World.MigrationState}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding World.MigrationPreview.CanApply}">
+                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_source_character_afterwards}" ItemsSource="{Binding CharacterDispositionOptions}" SelectedItem="{Binding World.MigrationDisposition}"/>
+                <Button Grid.Column="1" Content="{services:Tr ui.apply_migration}" Command="{Binding World.ApplyCharacterMigrationCommand}" Classes="danger"/>
               </Grid>
             </StackPanel>
           </Border>
@@ -3235,15 +3235,15 @@
             <StackPanel Spacing="12">
               <TextBlock Text="{services:Tr ui.repair_center_recovery}" FontSize="20" FontWeight="SemiBold"/>
               <TextBlock Text="{services:Tr ui.import_archive_workflow_analyze_accept_options_r_f2373d}" Classes="muted" TextWrapping="Wrap"/>
-              <Grid ColumnDefinitions="190,Auto,*" ColumnSpacing="10"><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_import_mode}" ItemsSource="{Binding WorldTransactionModes}" SelectedItem="{Binding WorldTransactionMode}"/><Button Classes="verify" Grid.Column="1" Content="{services:Tr ui.analyze_zip_archive}" Click="AnalyzeWorldArchive_Click" IsEnabled="{Binding CanManageAdmin}"/><TextBlock Grid.Column="2" Text="{services:TrText WorldTransactionState}" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center"/></Grid>
-              <Border Classes="statuscard accentWorld"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.transaction_plan}" FontWeight="SemiBold"/><ItemsControl ItemsSource="{Binding WorldTransactionPlanSteps}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding StringFormat='• {0}'}" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
-              <CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding WorldTransactionConfirmed}"/>
-              <Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyWorldTransactionCommand}"/>
+              <Grid ColumnDefinitions="190,Auto,*" ColumnSpacing="10"><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_import_mode}" ItemsSource="{Binding World.WorldTransactionModes}" SelectedItem="{Binding World.WorldTransactionMode}"/><Button Classes="verify" Grid.Column="1" Content="{services:Tr ui.analyze_zip_archive}" Click="AnalyzeWorldArchive_Click" IsEnabled="{Binding CanManageAdmin}"/><TextBlock Grid.Column="2" Text="{services:TrText World.WorldTransactionState}" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center"/></Grid>
+              <Border Classes="statuscard accentWorld"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.transaction_plan}" FontWeight="SemiBold"/><ItemsControl ItemsSource="{Binding World.WorldTransactionPlanSteps}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding StringFormat='• {0}'}" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+              <CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_active_palw_4fd78f}" IsChecked="{Binding World.WorldTransactionConfirmed}"/>
+              <Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding World.ApplyWorldTransactionCommand}"/>
             </StackPanel>
           </Border>
           <Border Classes="card accentWorld">
             <StackPanel Spacing="10"><TextBlock Text="{services:Tr ui.transaction_center_durable_journal}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:Tr ui.every_accepted_mutation_records_preview_acceptan_5df00d}" Classes="muted" TextWrapping="Wrap"/>
-              <ItemsControl ItemsSource="{Binding WorldTransactionHistory}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:WorldTransactionJournalDto"><Border Classes="statuscard accentWorld" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{services:TrText Summary}" FontWeight="SemiBold"/><TextBlock Text="{Binding TransactionId}" FontFamily="Consolas, monospace" FontSize="10"/><TextBlock Text="{Binding SafetyBackup, StringFormat='Safety backup: {0}'}" Classes="muted"/></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              <ItemsControl ItemsSource="{Binding World.WorldTransactionHistory}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:WorldTransactionJournalDto"><Border Classes="statuscard accentWorld" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{services:TrText Summary}" FontWeight="SemiBold"/><TextBlock Text="{Binding TransactionId}" FontFamily="Consolas, monospace" FontSize="10"/><TextBlock Text="{Binding SafetyBackup, StringFormat='Safety backup: {0}'}" Classes="muted"/></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
             </StackPanel>
           </Border>
           <Border Classes="card accentWorld">
@@ -4364,13 +4364,13 @@
                     <Button Classes="apply" Content="{services:Tr ui.prepare_for_import}" Command="{Binding PrepareForWorldImportCommand}" HorizontalAlignment="Left" IsVisible="{Binding !NewServerImportReady}"/>
                     <StackPanel IsVisible="{Binding NewServerImportReady}" Spacing="8">
                       <Grid ColumnDefinitions="190,Auto,*" ColumnSpacing="10">
-                        <ComboBox AutomationProperties.Name="{services:Tr ui.import_your_world}" ItemsSource="{Binding WorldTransactionModes}" SelectedItem="{Binding WorldTransactionMode}"/>
+                        <ComboBox AutomationProperties.Name="{services:Tr ui.import_your_world}" ItemsSource="{Binding World.WorldTransactionModes}" SelectedItem="{Binding World.WorldTransactionMode}"/>
                         <Button Classes="verify" Grid.Column="1" Content="{services:Tr ui.analyze_zip_archive}" Click="AnalyzeWorldArchive_Click" IsEnabled="{Binding CanManageAdmin}"/>
-                        <TextBlock Grid.Column="2" Text="{services:TrText WorldTransactionState}" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{services:TrText World.WorldTransactionState}" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center"/>
                       </Grid>
-                      <Border Classes="statuscard accentWorld"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.transaction_plan}" FontWeight="SemiBold"/><ItemsControl ItemsSource="{Binding WorldTransactionPlanSteps}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding StringFormat='• {0}'}" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
-                      <CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_server_is_s_fe3a69}" IsChecked="{Binding WorldTransactionConfirmed}"/>
-                      <Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding ApplyWorldTransactionCommand}"/>
+                      <Border Classes="statuscard accentWorld"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.transaction_plan}" FontWeight="SemiBold"/><ItemsControl ItemsSource="{Binding World.WorldTransactionPlanSteps}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding StringFormat='• {0}'}" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+                      <CheckBox Content="{services:Tr ui.i_reviewed_this_plan_and_confirm_the_server_is_s_fe3a69}" IsChecked="{Binding World.WorldTransactionConfirmed}"/>
+                      <Button Classes="danger" Content="{services:Tr ui.apply_with_fresh_safety_backup}" HorizontalAlignment="Left" Command="{Binding World.ApplyWorldTransactionCommand}"/>
                     </StackPanel>
                   </StackPanel>
                 </Border>

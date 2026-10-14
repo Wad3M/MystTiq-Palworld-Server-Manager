@@ -1,4 +1,4 @@
-# MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
+# MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
 [CmdletBinding()]
 param([string]$ProjectRoot = '.', [switch]$ShowUnresolved)
 # v0.8.23.0: which role each Desktop command needs, derived from the code rather than kept by hand. Read-only.
@@ -165,7 +165,8 @@ foreach ($m in [regex]::Matches($codeBehind, '(?m)^\s+(?:(?:private|public|inter
     $cbBodies[$m.Groups[1].Value] = if ($codeBehind[$a] -eq '{') { Get-Block $codeBehind $a } else { $codeBehind.Substring($a, $codeBehind.IndexOf(';', $a) - $a) }
 }
 function Get-VmCalls([string]$Text, [hashtable]$Seen) {
-    $found = @([regex]::Matches($Text, '\bvm\.(\w+)\(') | ForEach-Object { "$($_.Groups[1].Value)()" })
+    # v1.0.8.3 (roadmap C-3): also through a page ViewModel (vm.World.PreviewTransferBaseAsync(...)).
+    $found = @([regex]::Matches($Text, '\bvm\.(?:[A-Z]\w*\.)?(\w+)\(') | ForEach-Object { "$($_.Groups[1].Value)()" })
     foreach ($c in [regex]::Matches($Text, '\b(\w+)\(')) {
         $n = $c.Groups[1].Value
         if ($Seen.ContainsKey($n) -or -not $cbBodies.ContainsKey($n)) { continue }

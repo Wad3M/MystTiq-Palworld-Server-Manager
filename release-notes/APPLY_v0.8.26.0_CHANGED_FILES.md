@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.2: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.3: file reviewed for this release (2026-10-12). -->
 # v0.8.26.0 Changed Files
 
 - `Directory.Build.props`, `src/MystTiq.Desktop/app.manifest` (new; the Desktop's own manifest, which now carries the

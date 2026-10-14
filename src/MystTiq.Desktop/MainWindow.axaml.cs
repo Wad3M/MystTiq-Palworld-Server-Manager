@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -339,10 +339,10 @@ public sealed partial class MainWindow : Window
     // the in-page cards use, just via a populated dropdown picker instead of a hand-typed ID.
     private async void TransferBase_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || vm.SelectedExplorerBase is null) return;
-        var baseItem = vm.SelectedExplorerBase;
+        if (DataContext is not MainWindowViewModel vm || vm.World.SelectedExplorerBase is null) return;
+        var baseItem = vm.World.SelectedExplorerBase;
 
-        var options = vm.FilteredExplorerGuilds
+        var options = vm.World.FilteredExplorerGuilds
             .Where(g => g.GuildId != baseItem.GuildId)
             .Select(g => new Views.SelectGuildOption(g.GuildId, g.GuildName))
             .ToList();
@@ -352,7 +352,7 @@ public sealed partial class MainWindow : Window
         var targetGuildId = await picker.ShowDialog<string?>(this);
         if (string.IsNullOrWhiteSpace(targetGuildId)) return;
 
-        var preview = await vm.PreviewTransferBaseAsync(baseItem.BaseId, targetGuildId);
+        var preview = await vm.World.PreviewTransferBaseAsync(baseItem.BaseId, targetGuildId);
         if (preview is not { CanApply: true }) return;
 
         var dialog = new Views.ConfirmOperationDialog(
@@ -360,7 +360,7 @@ public sealed partial class MainWindow : Window
             preview.Findings, "Transfer", danger: false);
         if (await dialog.ShowDialog<bool>(this) != true) return;
 
-        await vm.ApplyTransferBaseAsync(preview.PreviewToken);
+        await vm.World.ApplyTransferBaseAsync(preview.PreviewToken);
     }
 
     // v1.0.4.0 (roadmap S-1, S-2): one stack removed from, or added to, the selected player's saved inventory, after a preview.
@@ -433,10 +433,10 @@ public sealed partial class MainWindow : Window
 
     private async void WipeBase_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || vm.SelectedExplorerBase is null) return;
-        var baseItem = vm.SelectedExplorerBase;
+        if (DataContext is not MainWindowViewModel vm || vm.World.SelectedExplorerBase is null) return;
+        var baseItem = vm.World.SelectedExplorerBase;
 
-        var preview = await vm.PreviewWipeBaseAsync(baseItem.BaseId);
+        var preview = await vm.World.PreviewWipeBaseAsync(baseItem.BaseId);
         if (preview is not { CanApply: true }) return;
 
         var dialog = new Views.ConfirmOperationDialog(
@@ -444,13 +444,13 @@ public sealed partial class MainWindow : Window
             preview.Findings, "Wipe Permanently", danger: true);
         if (await dialog.ShowDialog<bool>(this) != true) return;
 
-        await vm.ApplyWipeBaseAsync(preview.PreviewToken);
+        await vm.World.ApplyWipeBaseAsync(preview.PreviewToken);
     }
 
     private async void CopyBaseInfo_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || vm.SelectedExplorerBase is null) return;
-        var b = vm.SelectedExplorerBase;
+        if (DataContext is not MainWindowViewModel vm || vm.World.SelectedExplorerBase is null) return;
+        var b = vm.World.SelectedExplorerBase;
         var text = $"Base ID: {b.BaseId}\nGuild: {b.GuildName} ({b.GuildId})\nLeader: {b.LeaderName} ({b.LeaderPlayerId})\nHealth: {b.OwnerHealth}\nEvidence: {b.Evidence}";
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard is not null) await clipboard.SetTextAsync(text);
@@ -470,8 +470,8 @@ public sealed partial class MainWindow : Window
 
     private async Task RunGuildOperationAsync(string operationApiName, string promptFormat, string confirmLabel, bool danger)
     {
-        if (DataContext is not MainWindowViewModel vm || vm.SelectedExplorerGuild is null) return;
-        var guild = vm.SelectedExplorerGuild;
+        if (DataContext is not MainWindowViewModel vm || vm.World.SelectedExplorerGuild is null) return;
+        var guild = vm.World.SelectedExplorerGuild;
 
         var options = vm.Players.FilteredPlayerRecords
             .Select(p => new Views.SelectPlayerOption(p.PlayerId, p.PlayerName))
@@ -482,7 +482,7 @@ public sealed partial class MainWindow : Window
         var playerId = await picker.ShowDialog<string?>(this);
         if (string.IsNullOrWhiteSpace(playerId)) return;
 
-        var preview = await vm.PreviewGuildOperationForRowAsync(operationApiName, guild.GuildId, playerId);
+        var preview = await vm.World.PreviewGuildOperationForRowAsync(operationApiName, guild.GuildId, playerId);
         if (preview is not { CanApply: true }) return;
 
         var dialog = new Views.ConfirmOperationDialog(
@@ -490,7 +490,7 @@ public sealed partial class MainWindow : Window
             preview.Findings, confirmLabel, danger);
         if (await dialog.ShowDialog<bool>(this) != true) return;
 
-        await vm.ApplyGuildOperationForRowAsync(preview.PreviewToken);
+        await vm.World.ApplyGuildOperationForRowAsync(preview.PreviewToken);
     }
 
     private async void CopyActiveWorldId_Click(object? sender, RoutedEventArgs e)
@@ -504,14 +504,14 @@ public sealed partial class MainWindow : Window
 
     private async void CopyGuildId_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel { SelectedExplorerGuild: { } guild }) return;
+        if (DataContext is not MainWindowViewModel { World.SelectedExplorerGuild: { } guild }) return;
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard is not null) await clipboard.SetTextAsync(guild.GuildId);
     }
 
     private async void CopyBaseId_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel { SelectedExplorerBase: { } item }) return;
+        if (DataContext is not MainWindowViewModel { World.SelectedExplorerBase: { } item }) return;
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard is not null) await clipboard.SetTextAsync(item.BaseId);
     }
@@ -738,10 +738,10 @@ public sealed partial class MainWindow : Window
     }
 
     private async void ExportGuildsCsv_Click(object? sender, RoutedEventArgs e) =>
-        await ExportExplorerCsvAsync("Guilds", "Export MystTiq guild directory", vm => vm.ExportVisibleGuildsCsv());
+        await ExportExplorerCsvAsync("Guilds", "Export MystTiq guild directory", vm => vm.World.ExportVisibleGuildsCsv());
 
     private async void ExportBasesCsv_Click(object? sender, RoutedEventArgs e) =>
-        await ExportExplorerCsvAsync("Bases", "Export MystTiq base evidence", vm => vm.ExportVisibleBasesCsv());
+        await ExportExplorerCsvAsync("Bases", "Export MystTiq base evidence", vm => vm.World.ExportVisibleBasesCsv());
 
     private async Task ExportExplorerCsvAsync(string suffix, string title, Func<MainWindowViewModel, string> content)
     {
@@ -860,7 +860,7 @@ public sealed partial class MainWindow : Window
     {
         if (DataContext is not MainWindowViewModel vm || sender is not Visual surface) return;
         var position = e.GetPosition(surface);
-        vm.ZoomMapAt(position.X, position.Y, e.Delta.Y);
+        vm.Map.ZoomMapAt(position.X, position.Y, e.Delta.Y);
         e.Handled = true; // the page must not scroll while the wheel is zooming the map
     }
 
@@ -877,7 +877,7 @@ public sealed partial class MainWindow : Window
     {
         if (!_mapDragging || DataContext is not MainWindowViewModel vm || sender is not Visual surface) return;
         var position = e.GetPosition(surface);
-        vm.PanMapBy(position.X - _mapDragLast.X, position.Y - _mapDragLast.Y);
+        vm.Map.PanMapBy(position.X - _mapDragLast.X, position.Y - _mapDragLast.Y);
         _mapDragLast = position;
     }
 
@@ -899,7 +899,7 @@ public sealed partial class MainWindow : Window
             FileTypeFilter = [new FilePickerFileType("Image") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp"] }]
         });
         var file = files.FirstOrDefault(); if (file is null) return;
-        vm.SetMapBackgroundImagePath(file.Path.LocalPath);
+        vm.Map.SetMapBackgroundImagePath(file.Path.LocalPath);
     }
 
     private async void ExportActivity_Click(object? sender, RoutedEventArgs e) =>

@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.3: file reviewed for this release (2026-10-12).
 using MystTiq.Core.Models;
 namespace MystTiq.Core.Services;
 public sealed class NetworkDiagnosticsService
