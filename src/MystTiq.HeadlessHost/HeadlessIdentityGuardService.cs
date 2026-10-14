@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using System.Diagnostics;
 using System.Text.Json;
 using MystTiq.Core.Providers;
@@ -35,6 +35,8 @@ public sealed class HeadlessIdentityGuardService
     private readonly Func<bool> autoMove;
     private readonly Func<string, string> kickReason;
     private readonly HashSet<string> makingCharacter = new(StringComparer.OrdinalIgnoreCase);
+    // v1.1.1.0: when each account was last told, on the new-character screen, what to do (kept while they rejoin).
+    private readonly Dictionary<string, DateTimeOffset> toldWhatToDo = new(StringComparer.OrdinalIgnoreCase);
 
     // v1.1.0.2 (roadmap F-2): the expected ID comes from the player ID ledger (learned from the game's own assignments;
     // the pre-1.0 Steam formula only when nothing is learned). The launch arguments the alert used to name were disproven
@@ -109,6 +111,24 @@ public sealed class HeadlessIdentityGuardService
                 // move then replaces it with their real one (checked and kicked as soon as it exists).
                 if (autoMove())
                 {
+                    // v1.1.1.0: a player left on the new-character screen did not know what to do. The first time (again
+                    // after NewCharacterNoticeInterval) they are disconnected with the steps; on their next join they are
+                    // let through to make the character the move replaces.
+                    bool tell;
+                    lock (gate)
+                    {
+                        tell = !toldWhatToDo.TryGetValue(userId, out var toldAt) || now - toldAt >= IdentityGuard.NewCharacterNoticeInterval;
+                        if (tell) toldWhatToDo[userId] = now;
+                    }
+                    if (tell && snapshot.Enabled && snapshot.KickMismatched)
+                    {
+                        var told = await playerModeration.ExecuteAsync("kick", userId, IdentityGuard.NewCharacterNotice, cancellationToken);
+                        activity.Record(told.Success ? "Information" : "Warning", "Players", "Identity guard",
+                            $"{(string.IsNullOrWhiteSpace(player.Name) ? userId : player.Name)} ({userId}) was on the new-character screen while their character is under {verdict.Expected[..8]}. " +
+                            (told.Success ? "They were disconnected with the steps: join again, make a character with any name, and MystTiq moves theirs onto it." : $"Telling them failed: {told.Message}."));
+                        lock (gate) noCharacterSince.Remove(userId);
+                        continue;
+                    }
                     bool first;
                     lock (gate) first = makingCharacter.Add(userId);
                     if (first) activity.Record("Information", "Players", "Identity guard",
@@ -129,7 +149,7 @@ public sealed class HeadlessIdentityGuardService
             }
 
             var name = string.IsNullOrWhiteSpace(player.Name) ? userId : player.Name;
-            var message = $"{name} ({userId}) was not given their character: the server assigned {verdict.AssignedDisplay}, but their Steam ID's character is {verdict.Expected[..8]}.{kickNote} Their character is safe. "
+            var message = $"{name} ({userId}) was not given their character: the server assigned {verdict.AssignedDisplay}, but their account's character is {verdict.Expected[..8]}.{kickNote} Their character is safe. "
                 + IdentityGuard.MoveAdvice(autoMove());
             activity.Record("Warning", "Players", "Identity guard", message);
             notifications.Create("Critical", "Player not given their character", message, pinned: true);
@@ -196,20 +216,8 @@ public sealed record IdentityVerdict(string Assigned, string Expected)
 /// <summary>v1.0.0.1: the identity guard's rule, pure so the logic harness covers it.</summary>
 public static class IdentityGuard
 {
-    // v1.0.6.1: the start options present in every wrong-character start (2026-10-04, 2026-10-06), never in a good one.
-    public static readonly string[] SuspectArguments = ["-log", "-stdout", "-FullStdOutLogOutput"];
-
-    public static bool HasSuspectArguments(IEnumerable<string> arguments) =>
-        arguments.Any(a => SuspectArguments.Any(s => a.Equals(s, StringComparison.OrdinalIgnoreCase)) || a.StartsWith("-abslog=", StringComparison.OrdinalIgnoreCase));
-
-    // What the alert advises, from the arguments the server was started with (MystTiq's own @mysttiq: options left out).
-    public static string LaunchAdvice(IReadOnlyList<string> arguments)
-    {
-        var shown = SecretRedaction.Arguments(arguments.Where(a => !a.StartsWith("@mysttiq:", StringComparison.OrdinalIgnoreCase))).ToList();
-        return HasSuspectArguments(shown)
-            ? $"This server starts PalServer with {string.Join(" ", shown)}. Players were given the wrong character every time it started with -log, -stdout or -FullStdOutLogOutput, and kept theirs when it started like a double-click: choose Like double-click on Server > Launcher, save, restart the server, then have them join again."
-            : "Restart the server and have them join again. If it happens again, compare the launch on Server > Launcher with a manual start.";
-    }
+    // v1.1.1.0: the v1.0.6.1 advice naming the start options and the launcher preset to pick is gone; roadmap F-2 showed the
+    // game itself gives accounts new player IDs, whatever the start options.
 
     /// <summary>
     /// v1.1.0.2 (roadmap F-2): what the alert advises. The game gives accounts new player IDs since its 1.0 update
@@ -224,6 +232,16 @@ public static class IdentityGuard
     /// player's character appears within seconds; making a new character on the new-character screen takes longer.
     /// </summary>
     public static TimeSpan LoadingGrace { get; set; } = TimeSpan.FromSeconds(90);
+
+    /// <summary>
+    /// v1.1.1.0: what a player on the new-character screen is told (the disconnect message) when their character exists
+    /// under the ID they had before and automatic moves are on.
+    /// </summary>
+    public const string NewCharacterNotice =
+        "MystTiq: your character is safe. The game gave your account a new player ID. Join again and make a character with any name; MystTiq then moves your own character onto it and asks you to join once more.";
+
+    /// <summary>v1.1.1.0: how often a player is told <see cref="NewCharacterNotice"/>; in between they are let through.</summary>
+    public static TimeSpan NewCharacterNoticeInterval { get; set; } = TimeSpan.FromMinutes(30);
 
     /// <summary>True once a player first seen with no character at <paramref name="since"/> has had the loading grace.</summary>
     public static bool NoCharacterIsDue(DateTimeOffset since, DateTimeOffset now) => now - since >= LoadingGrace;

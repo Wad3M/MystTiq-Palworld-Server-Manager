@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -17,7 +17,7 @@ public static class ArtworkCatalog
         NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Console or NavigationPage.Workspace or NavigationPage.Launcher => "server",
         NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds or NavigationPage.Map => "world",
         NavigationPage.Backups => "backups",
-        NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.Ue4ss => "mods",
+        NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.ModSources or NavigationPage.Ue4ss => "mods",
         NavigationPage.UpdateCenter or NavigationPage.Doctor or NavigationPage.CrashAnalyzer or NavigationPage.SaveTools or NavigationPage.DiagnosticsCenter => "tools",
         NavigationPage.Settings or NavigationPage.Notifications or NavigationPage.ActivityAudit or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter or NavigationPage.Fleet => "system",
         // v0.8.17.0: the HOST tab shows the System art until it has its own.

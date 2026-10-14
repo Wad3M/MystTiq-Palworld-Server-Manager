@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -294,6 +294,10 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 lifecycle, modManagement, serverConfig, activity, operations, profileId,
                 TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds),
                 TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds));
+            // v1.1.1.0: the player checks also run without a desktop (see HeadlessPlayerWatchService).
+            var playerWatch = new HeadlessPlayerWatchService(monitoring.GetPlayersAsync,
+                (players, token) => RunPlayerChecksAsync(players, playerRegistry, whitelist, playerIds, identityGuard, nameGuard, kits, temporaryBans, token),
+                activity);
 
             profiles[profileId] = new ServerProfileHost
             {
@@ -350,6 +354,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             IdentityGuard = identityGuard,
             NameGuard = nameGuard,
                 PlayerIds = playerIds,
+                PlayerWatch = playerWatch,
                 Kits = kits,
                 GameIds = gameIds,
                 Teleport = teleport,
@@ -701,6 +706,12 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var result = await p.PlayerIds.RunPendingAsync(string.IsNullOrWhiteSpace(request.UserId) ? null : request.UserId.Trim(), token);
             return result.Success ? Results.Ok(result) : Results.BadRequest(result);
         }).RequireRole(MystTiqRole.Admin, p.Id);
+        // v1.1.1.0: link an account to its character by hand (see HeadlessPlayerIdService.Link).
+        routes.MapPost("/players/ids/link", (PlayerIdLinkRequest request) =>
+        {
+            var result = p.PlayerIds.Link(request.UserId, request.PlayerId);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
         routes.MapGet("/players/name-guard", () => Results.Ok(new { config = p.NameGuard.GetConfig(), events = p.NameGuard.RecentEvents() }))
             .RequireRole(MystTiqRole.Viewer, p.Id);
         routes.MapPut("/players/name-guard", (NameGuardConfig updated) => Results.Ok(p.NameGuard.SaveConfig(updated)))
@@ -741,23 +752,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var players = await playersTask;
             var metrics = await metricsTask;
             p.HistoricalMetrics.Record(metrics, players, backupInventory, world, status);
-            p.PlayerRegistry.Observe(players, DateTimeOffset.UtcNow);
-            // v0.7.10.0: whitelist enforcement runs from the same poll cadence the player registry
-            // above already uses -- see HeadlessWhitelistService's own comment for why.
-            await p.Whitelist.EnforceAsync(players, token);
-            // v1.1.0.2 (roadmap F-2): the join check runs first, so a player the game gave a new ID is queued for the move
-            // before the guard turns them away; queued moves run once nobody is online.
-            p.PlayerIds.Observe(players);
-            // v1.0.0.1: a Steam player not given their own character is caught on the same poll, before they make a new one.
-            await p.IdentityGuard.EnforceAsync(players, token);
-            p.PlayerIds.RunPendingWhenIdle(players);
-            // v1.0.0.2: a player using a name another account owns is turned away on the same poll.
-            await p.NameGuard.EnforceAsync(players, token);
-            // v0.7.94.0: starter-kit auto-gift, same poll-driven cadence (the registry's Observe above
-            // has already stamped a brand-new player's first-seen time by now).
-            await p.Kits.EnforceAsync(players, token);
-            // v0.7.15.0: temporary-ban expiry sweep, same poll-driven cadence.
-            await p.TemporaryBans.EnforceAsync(token);
+            // v1.1.1.0: the player checks (RunPlayerChecksAsync); with no desktop polling, the service runs them itself.
+            await p.PlayerWatch.RunFromPollAsync(players, token);
 
             return Results.Ok(new
             {
@@ -1643,6 +1639,33 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             Results.Ok(await p.Lifecycle.TerminateUnmanagedInstanceAsync(processId, token))).RequireRole(MystTiqRole.Operator, p.Id);
     }
 
+    /// <summary>
+    /// The player checks, run on a desktop's /status/poll or, with no desktop polling, by the service itself every 15 s
+    /// (v1.1.1.0, HeadlessPlayerWatchService). The order matters and is unchanged from the poll.
+    /// </summary>
+    private static async Task RunPlayerChecksAsync(HeadlessPlayersSnapshot players, HeadlessPlayerRegistryService registry,
+        HeadlessWhitelistService whitelist, HeadlessPlayerIdService playerIds, HeadlessIdentityGuardService identityGuard,
+        HeadlessNameGuardService nameGuard, HeadlessKitService kits, HeadlessTemporaryBanService temporaryBans, CancellationToken token)
+    {
+        registry.Observe(players, DateTimeOffset.UtcNow);
+        // v0.7.10.0: whitelist enforcement runs from the same cadence the player registry above already uses -- see
+        // HeadlessWhitelistService's own comment for why.
+        await whitelist.EnforceAsync(players, token);
+        // v1.1.0.2 (roadmap F-2): the join check runs first, so a player the game gave a new ID is queued for the move
+        // before the guard turns them away; queued moves run once nobody is online.
+        playerIds.Observe(players);
+        // v1.0.0.1: a player not given their own character is caught on the same pass, before they make a new one.
+        await identityGuard.EnforceAsync(players, token);
+        playerIds.RunPendingWhenIdle(players);
+        // v1.0.0.2: a player using a name another account owns is turned away on the same pass.
+        await nameGuard.EnforceAsync(players, token);
+        // v0.7.94.0: starter-kit auto-gift (the registry's Observe above has already stamped a brand-new player's
+        // first-seen time by now).
+        await kits.EnforceAsync(players, token);
+        // v0.7.15.0: temporary-ban expiry sweep.
+        await temporaryBans.EnforceAsync(token);
+    }
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await app.StartAsync(cancellationToken);
@@ -1653,6 +1676,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             await p.Automation.StartAsync(cancellationToken);
             if (!externallySupervised.Contains(p.Id)) await p.CrashRecovery.StartAsync(cancellationToken);
             await p.Teleport.StartAsync(cancellationToken);
+            await p.PlayerWatch.StartAsync(cancellationToken);
         }
     }
 
@@ -1662,6 +1686,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
     {
         foreach (var p in profiles.Values)
         {
+            await p.PlayerWatch.StopAsync(cancellationToken);
             await p.Teleport.StopAsync(cancellationToken);
             await p.CrashRecovery.StopAsync(cancellationToken);
             await p.Automation.StopAsync(cancellationToken);

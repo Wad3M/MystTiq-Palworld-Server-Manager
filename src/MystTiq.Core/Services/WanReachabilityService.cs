@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -102,7 +102,8 @@ public sealed class WanReachabilityService(INetworkDiagnosticsPlatformService pl
  // where Windows says TtlExpired.
  private static async Task<IReadOnlyList<string?>> TraceFirstHopsAsync(CancellationToken token,int maxHops=4)
  {
-  var target=IPAddress.Parse("1.1.1.1");
+  // v1.1.1.0: written as bytes, so the release check does not read the address as a version number.
+  var target=new IPAddress(new byte[]{1,1,1,1});
   var hops=new List<string?>();
   using var ping=new System.Net.NetworkInformation.Ping();
   for(var ttl=1;ttl<=maxHops;ttl++)

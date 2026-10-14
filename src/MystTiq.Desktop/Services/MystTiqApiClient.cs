@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -370,6 +370,8 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/players/ids/settings", new { autoMove }, cancellationToken); return await ReadOperationAsync<PlayerIdLedgerDto>(response, cancellationToken); }
     public async Task<PlayerIdMoveResultDto> MovePlayerIdAsync(ConnectionProfile profile, string userId, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsJsonAsync("/api/v1/players/ids/move", new { userId }, cancellationToken); return await ReadOperationAsync<PlayerIdMoveResultDto>(response, cancellationToken); }
+    public async Task<PlayerIdMoveResultDto> LinkPlayerIdAsync(ConnectionProfile profile, string userId, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsJsonAsync("/api/v1/players/ids/link", new { userId, playerId }, cancellationToken); return await ReadOperationAsync<PlayerIdMoveResultDto>(response, cancellationToken); }
     public async Task<NameGuardConfigDto> SaveNameGuardAsync(ConnectionProfile profile, NameGuardConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/players/name-guard", request, cancellationToken); return await ReadOperationAsync<NameGuardConfigDto>(response, cancellationToken); }
 

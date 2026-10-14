@@ -1,4 +1,20 @@
-<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
+## v1.1.1.0 — MOD Sources, Player Checks Without the Desktop, Linux and Docker Downloads
+
+- Roadmap F-4 (asked 2026-10-14): MOD Sources, a page under MODs with the Steam Workshop card, the MOD browser and the
+  Nexus Mods catalog; MOD Library keeps the ZIP install, load order and installed MODs; Nexus links open MOD Sources.
+- F-5: the player checks (join check, identity guard, moves, player list, whitelist, names, kits, temporary bans) run in
+  the service every 15 s when no desktop polls (`HeadlessPlayerWatchService`).
+- F-6: a player on the new-character screen whose character exists is disconnected once with the steps (automatic moves on).
+- F-7: Xbox and other non-Steam accounts: the character found from the player list.
+- F-8: link an account to its character by hand (`POST /players/ids/link`, Players > Player IDs).
+- F-9: the Dashboard's note on joining from the server's PC. F-10: SSH keep-alive in the Linux checks. F-11:
+  `scripts/New-MystTiqCheckpoint.ps1`. F-12: the Like double-click preset and the start-option advice removed.
+- F-13 (asked 2026-10-14): the release workflow attaches the Linux download and the Docker image
+  (`scripts/Build-DockerImage.ps1`).
+- F-14: switching to a tab with the same theme no longer re-applies it (3.7 s to under 0.1 s per switch).
+- Version advanced to 1.1.1.0.
+
 ## v1.1.0.3 — Player IDs: Clean-up After a Move
 
 - Roadmap F-3 (asked 2026-10-13): a character move removes the old character file once the move is in place instead of

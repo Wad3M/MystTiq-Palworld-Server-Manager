@@ -1,7 +1,7 @@
-<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
 # Product roadmap
 
-Updated 2026-10-13. **Current version: v1.1.0.3. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the backlog is built; what stays open is the live evidence under "Carried").**
+Updated 2026-10-14. **Current version: v1.1.1.0. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the backlog is built; what stays open is the live evidence under "Carried").**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -32,6 +32,7 @@ This is the active plan. Completed work and the per-version detail behind every 
 | D-10 | A saved list that cannot be read (Q-1), 2026-10-08 | **Keep a copy of the bad file and load the last good copy.** If there is no good copy, refuse changes to that list and alert the owner, with the alert linking to the repair function. |
 | D-11 | The backlog (2026-10-12) | **Build B-4, B-3 and B-2** ("fix the bugs, and complete the roadmap"): Discord control commands, MOD load order with profile export and import, and level-gap scans. B-5 (full web admin) stays not planned. Afterwards: a documentation pass, a release, and that release as the new accepted baseline (T-2). |
 | D-12 | The accepted baseline (2026-10-12) | **v1.1.0.0** becomes the accepted baseline in place of v1.0.0.0, after a pass over the documentation and a release ("do a passthrough on the documentation to update it and package up a new release and set the latest version as the baseline"). |
+| D-13 | Linux and Docker downloads (2026-10-14) | **Publish them with every release** ("our package should include a linux build and a docker build"), ahead of Linux desktop acceptance (E-4). |
 
 ## v1.0.2.0 — Unattended reliability
 
@@ -201,6 +202,17 @@ Each fix reproduces the fault first, then follows the release pipeline; a fix th
 | F-1 | v1.1.0.1 | "Something went wrong (background task)" after the desktop started (reported 2026-10-13). Every crash record on the owner's PC (four, v1.0.7.0 to v1.1.0.0) is the start-up port check's abandoned connect: it waited 750 ms, Windows refuses a closed loopback port after about 2 s, and the disposed connect faulted unobserved. Recorded (v1.1.0.1, 2026-10-13): the check cancels its connect at the limit and awaits it; an ArtworkHarness check on a closed and a listening port counts unobserved socket errors after a collection (none); the v1.1.0.0 method, run the same way in a standalone program, left 3 from 3 closed-port checks. The owner's next starts are the live check. | Built |
 | F-2 | v1.1.0.2 | Players sent to a new character (reported 2026-10-12/13). The game itself gives Steam accounts new player IDs since its 1.0 update (67D8D355 → E290DA9A, A3835C7B → 1467C601), whatever the start; the owner asked for a join-time check and an automatic move with a backup and cleanup. Recorded (v1.1.0.2, 2026-10-13): every Steam join checked against the learned ID (else the pre-1.0 formula) and listed on the Player IDs card; a new ID queues a move run once nobody is online (safety backup, verification, archive, ID learned, level history cleared, server restarted); the guard follows the learned ID. LogicHarness on a made-up world, on the join check with the guard, and on a copy of the real world with the real converter (Wade moved, 216 references, level 15). The owner joined as Wade after the same move done by hand. The next player the game moves is the live check. | Built |
 | F-3 | v1.1.0.3 | Clean-up after a character move (asked 2026-10-13: "it should cleanup the old files so as to not cause possible issues"): no old character files kept beside the world, the player list tidied. Recorded (v1.1.0.3, 2026-10-13): the old file is removed after a verified move (the safety backup holds it); v1.1.0.2's archived files removed at start when a backup holds them; the player list without "None" records, a move merging the old ID's record, stale records folded into the current ID. The world file needed nothing (the empty characters' containers were never kept). LogicHarness scenario and the real-world move updated. | Built |
+| F-4 | v1.1.1.0 | MOD Sources (asked 2026-10-14: "move the MOD Browser, Nexus Mods Catalog, and whatnot to its own item under MODs called MOD Sources"). Recorded (v1.1.1.0, 2026-10-14): a page under MODs with the Steam Workshop card, the MOD browser and the Nexus Mods catalog; MOD Library keeps the ZIP install, load order and installed MODs; Nexus links open MOD Sources. ArtworkHarness checks both pages. | Built |
+| F-5 | v1.1.1.0 | The player checks ran only while a desktop polled. Recorded (v1.1.1.0, 2026-10-14): the service runs them every 15 s when no desktop has polled for 30 s; one lock with the poll. LogicHarness scenario. | Built |
+| F-6 | v1.1.1.0 | A player on the new-character screen did not know what to do. Recorded (v1.1.1.0, 2026-10-14): with automatic moves on, disconnected once with the steps, again after 30 minutes; let through in between. | Built |
+| F-7 | v1.1.1.0 | Only Steam accounts were covered. Recorded (v1.1.1.0, 2026-10-14): an account's character also found from the player list (Xbox gdk_ accounts, accounts seen before an ID was learned). | Built |
+| F-8 | v1.1.1.0 | No way to say which character is an account's. Recorded (v1.1.1.0, 2026-10-14): a link by hand (Admin), queueing the usual move when the account's current ID has a character. | Built |
+| F-9 | v1.1.1.0 | Joins through 127.0.0.1 dropped (2026-10-13; cause not found). Recorded (v1.1.1.0, 2026-10-14): the Dashboard tells a player on the server's PC to join with a local address. | Built |
+| F-10 | v1.1.1.0 | A Linux check hung two hours on a dead SSH session (2026-10-13). Recorded (v1.1.1.0, 2026-10-14): SSH keep-alive on the Linux checks' calls. | Built |
+| F-11 | v1.1.1.0 | The checkpoint script lived outside the project. Recorded (v1.1.1.0, 2026-10-14): `scripts/New-MystTiqCheckpoint.ps1`. | Built |
+| F-12 | v1.1.1.0 | The Like double-click preset and start-option advice outlived their reason (F-2). Recorded (v1.1.1.0, 2026-10-14): removed. | Built |
+| F-13 | v1.1.1.0 | Linux and Docker in the package (asked 2026-10-14: "our package should include a linux build and a docker build"). Recorded (v1.1.1.0, 2026-10-14): the release workflow attaches the Linux download and the headless Docker image (`scripts/Build-DockerImage.ps1`, built on a Linux runner). Linux desktop acceptance (E-4) stays open. | Built |
+| F-14 | v1.1.1.0 | Tab switching froze about 2 s per open window (found 2026-10-14 by the harness's tab-switch check, 20 minutes long; v1.1.0.3 the same). Recorded (v1.1.1.0, 2026-10-14): the theme was re-applied on every switch (99.8% of the time); an unchanged theme is now left alone: 3,658 ms to 14 ms per switch. ArtworkHarness check. | Built |
 
 ## Backlog (not scheduled)
 
@@ -217,4 +229,4 @@ Each fix reproduces the fault first, then follows the release pipeline; a fix th
 
 ## Current publication work
 
-v1.1.0.0 is the accepted baseline (D-12). Signed release and the Linux package remain tied to the items above (E-14 and E-4). Keep public-release coordination separate from implementation status.
+v1.1.0.0 is the accepted baseline (D-12). Linux and Docker downloads are published with every release from v1.1.1.0 (D-13); signed releases and Linux desktop acceptance remain tied to the items above (E-14 and E-4). Keep public-release coordination separate from implementation status.

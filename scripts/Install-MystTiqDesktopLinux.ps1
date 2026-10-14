@@ -1,4 +1,4 @@
-# MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 [CmdletBinding()]
 param(
     [string]$HostName = '192.168.1.122',
@@ -21,7 +21,7 @@ if (-not (Test-Path $Package -PathType Leaf)) { throw "Linux package not found: 
 if (-not (Test-Path $IdentityFile -PathType Leaf)) { throw "SSH identity file not found: $IdentityFile" }
 $icon = Join-Path $root 'src\MystTiq.Desktop\Assets\PalworldServerManager.png'
 $packageVersion = if ((Split-Path $Package -Leaf) -match '_v(\d+(?:\.\d+){3})_') { $Matches[1] } else { $version }
-$ssh = @('-i', $IdentityFile, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10')
+$ssh = @('-i', $IdentityFile, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=4')
 $target = "$UserName@$HostName"
 
 Write-Host "==> Copying MystTiq v$packageVersion to $target" -ForegroundColor Cyan

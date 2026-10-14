@@ -1,4 +1,4 @@
-# MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -20,7 +20,7 @@ $work = Join-Path $root ("artifacts\linux-session\v0.8.26.0-" + [guid]::NewGuid(
 New-Item $work -ItemType Directory -Force | Out-Null
 function New-Password { -join ((1..20) | ForEach-Object { 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'[(Get-Random -Maximum 56)] }) }
 $account = [pscustomobject]@{ Role = 'Admin'; Number = 2; Username = 'ls-admin'; Password = (New-Password) }
-$sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10')
+$sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=4')
 $remote = "$LinuxUser@$LinuxHost"
 $dir = '/tmp/mysttiq-v0826-session'
 $harnessProject = Join-Path $root 'scripts\Testing\MystTiq.RemoteSignInHarness'

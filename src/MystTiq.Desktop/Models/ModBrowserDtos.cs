@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 namespace MystTiq.Desktop.Models;
 
 // v1.0.5.0 (roadmap M-1): one MOD as a repository (or a folder on this PC) lists it, and one of its files. Names,

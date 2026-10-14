@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -15,7 +15,7 @@ namespace MystTiq.HeadlessHost;
 /// that the correct ID is calculated", and when a player is not given their character "the system should automatically
 /// migrate to the new user, backing up and cleaning up the list".
 /// <list type="bullet">
-/// <item><b>Join check.</b> Every Steam player's join is checked once per session: the player ID the game assigned against
+/// <item><b>Join check.</b> (v1.1.1.0: every account, Steam or not.) Every Steam player's join is checked once per session: the player ID the game assigned against
 /// the ID their character lives under (learned from earlier joins, else the pre-1.0 Steam formula when that character
 /// exists). Each check is recorded (correct, first seen, given a new ID by the game, moved).</item>
 /// <item><b>Learned IDs.</b> The ID each account's character lives under is kept per account, so the identity guard
@@ -76,13 +76,64 @@ public sealed class HeadlessPlayerIdService
         return Snapshot();
     }
 
-    /// <summary>The ID this account's character lives under: learned, else the pre-1.0 Steam formula; null if unknown.</summary>
-    public string? ExpectedFor(string userId)
+    /// <summary>
+    /// The ID this account's character lives under: learned, else the pre-1.0 Steam formula, else (v1.1.1.0) the player
+    /// list; null if unknown.
+    /// </summary>
+    public string? ExpectedFor(string userId) => KnownCharacterFor(userId) ?? SteamPlayerUid.FromUserId(userId);
+
+    // The ID of the character this account already has: learned from an earlier join, else the pre-1.0 Steam formula when
+    // that character exists, else (v1.1.1.0) the player list. The list covers accounts with no formula (Xbox and other
+    // non-Steam gdk_ accounts) and accounts seen before MystTiq learned their ID; with several, the earliest-seen
+    // character is the account's own (a later one is what the game's new ID made).
+    private string? KnownCharacterFor(string userId)
     {
         string? learned;
         lock (gate) ledger.Known.TryGetValue(userId, out learned);
         if (learned is not null && CharacterExists(learned)) return learned;
-        return SteamPlayerUid.FromUserId(userId);
+        var formula = SteamPlayerUid.FromUserId(userId);
+        if (formula is not null && CharacterExists(formula)) return formula;
+        return registry?.Snapshot()
+            .Where(r => r.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(r => r.FirstSeenUtc)
+            .Select(r => NormalizeId(r.PlayerId))
+            .FirstOrDefault(id => id is not null && CharacterExists(id));
+    }
+
+    /// <summary>
+    /// v1.1.1.0: links an account to the character that is theirs, for when MystTiq cannot tell (an account whose ID the
+    /// game changed before MystTiq saw it). When the account was last given another ID that has a character, that ID's
+    /// character is replaced by this one with the usual move (queued; run when nobody is online, or with Restart server
+    /// and move character); otherwise the next join is checked against it.
+    /// </summary>
+    public PlayerIdMoveResult Link(string userId, string playerId)
+    {
+        userId = (userId ?? string.Empty).Trim();
+        var id = NormalizeId(playerId);
+        if (userId.Length == 0) return PlayerIdMoveResult.Failure("Enter the account's user ID (for example steam_7656… or gdk_…).");
+        if (id is null) return PlayerIdMoveResult.Failure("Enter the character's player ID: 32 letters and digits (0-9, A-F).");
+        if (!CharacterExists(id)) return PlayerIdMoveResult.Failure($"No world has a character file for {id[..8]}.");
+        string message;
+        lock (gate)
+        {
+            var last = ledger.Checks.LastOrDefault(c => c.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase));
+            var name = last?.Name ?? userId;
+            var current = last?.Assigned;
+            ledger.Known[userId] = id;
+            ledger.Pending.RemoveAll(p => p.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase));
+            if (current is not null && !current.Equals(id, StringComparison.OrdinalIgnoreCase) && CharacterExists(current))
+            {
+                ledger.Pending.Add(new PlayerIdMoveRequest(userId, name, id, current, DateTimeOffset.UtcNow));
+                message = $"{name} ({userId}) is linked to {id[..8]}. The game last gave them {current[..8]}, so that character is replaced by this one " +
+                    (ledger.AutoMove ? "when nobody is online (a safety backup is taken first)." : "with Restart server and move character (a safety backup is taken first).");
+            }
+            else
+                message = $"{name} ({userId}) is linked to {id[..8]}. Their next join is checked against it.";
+            checkedThisSession.Remove(userId);
+            Persist();
+        }
+        activity.Record("Information", "Players", "Player IDs", message);
+        return new PlayerIdMoveResult(true, message);
     }
 
     /// <summary>Kick text for a player whose character is waiting to be moved.</summary>
@@ -109,10 +160,7 @@ public sealed class HeadlessPlayerIdService
             if (assigned is null) continue;  // still loading or on the new-character screen: checked once a character exists
             lock (gate) if (!checkedThisSession.Add(userId)) continue;
 
-            string? learned;
-            lock (gate) ledger.Known.TryGetValue(userId, out learned);
-            var formula = SteamPlayerUid.FromUserId(userId);
-            var known = learned is not null && CharacterExists(learned) ? learned : formula is not null && CharacterExists(formula) ? formula : null;
+            var known = KnownCharacterFor(userId);
             var check = PlayerIdJudge.Judge(userId, assigned, known);
             var name = string.IsNullOrWhiteSpace(player.Name) ? userId : player.Name;
             var entry = new PlayerIdCheck(DateTimeOffset.UtcNow, name, userId, assigned, known ?? assigned, check);
@@ -453,3 +501,4 @@ public sealed record PlayerIdMoveResult(bool Success, string Message)
 }
 public sealed record PlayerIdSettingsRequest(bool AutoMove);
 public sealed record PlayerIdMoveCommand(string UserId);
+public sealed record PlayerIdLinkRequest(string UserId, string PlayerId);

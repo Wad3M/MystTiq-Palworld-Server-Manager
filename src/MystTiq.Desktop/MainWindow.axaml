@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -294,6 +294,7 @@
               <StackPanel IsVisible="{Binding IsV5ModsCategory}" Spacing="3">
                 <ToggleButton Classes="nav" IsChecked="{Binding IsModDashboardPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModDashboard"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_dashboard}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModDashboard}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsChecked="{Binding IsModLibraryPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModLibrary"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_library}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModLibrary}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsChecked="{Binding IsModSourcesPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModSources"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_dashboard}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModSources}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsChecked="{Binding IsUe4ssPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Ue4ss"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt ue4ss}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Ue4ss}"/></Grid></Border></ToggleButton>
               </StackPanel>
               <StackPanel IsVisible="{Binding IsV5ToolsCategory}" Spacing="3">
@@ -543,6 +544,7 @@
           <!-- v1.0.0.1 (requested 2026-09-30): the addresses players use. Local ones for the same network, the public one for the
                internet; selectable so they can be copied. -->
           <Border x:Name="DashboardAddresses" Classes="card accentHome" Padding="8">
+            <StackPanel Spacing="4">
             <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="10">
               <TextBlock Text="{services:Tr dashboard.localAddresses}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
               <SelectableTextBlock Grid.Column="1" Text="{Binding Dashboard.LocalAddressesVerbatim}" FontFamily="Consolas, monospace" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"/>
@@ -552,6 +554,10 @@
                 <TextBlock Text="{services:TrText Dashboard.PublicAddressNote}" Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
               </StackPanel>
             </Grid>
+            <!-- v1.1.1.0 (seen 2026-10-13: joins from the server's own PC through 127.0.0.1 dropped): a player on this PC joins
+                 with a local address. -->
+            <TextBlock x:Name="SamePcJoinHint" Text="{services:Tr dashboard.samePcJoinHint}" Classes="muted" FontSize="10" TextWrapping="Wrap"/>
+            </StackPanel>
           </Border>
         </StackPanel>
 
@@ -1896,6 +1902,16 @@
                   <CheckBox Content="{services:Tr ui.player_ids_auto_move}" IsChecked="{Binding Players.PlayerIdAutoMove}"/>
                   <Button Classes="apply" Content="{services:Tr ui.save_player_id_settings}" Command="{Binding Players.SavePlayerIdsCommand}"/>
                 </StackPanel>
+                <!-- v1.1.1.0: link an account to its character by hand (an account whose ID the game changed before MystTiq saw it). -->
+                <StackPanel x:Name="PlayerIdLinkForm" Spacing="6">
+                  <TextBlock Text="{services:Tr ui.link_account_to_character}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{services:Tr ui.link_account_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                  <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8">
+                    <TextBox AutomationProperties.Name="{services:Tr ui.account_user_id}" Text="{Binding Players.LinkUserId, Mode=TwoWay}" PlaceholderText="{services:Tr ui.account_user_id_placeholder}"/>
+                    <TextBox Grid.Column="1" AutomationProperties.Name="{services:Tr ui.character_player_id}" Text="{Binding Players.LinkPlayerId, Mode=TwoWay}" PlaceholderText="{services:Tr ui.character_player_id_placeholder}" FontFamily="Consolas, monospace"/>
+                    <Button Grid.Column="2" Classes="apply" Content="{services:Tr ui.link_account}" Command="{Binding Players.LinkPlayerIdCommand}"/>
+                  </Grid>
+                </StackPanel>
                 <StackPanel Spacing="6" IsVisible="{Binding Players.HasPlayerIdMoves}">
                   <TextBlock Text="{services:Tr ui.player_ids_waiting}" FontWeight="SemiBold"/>
                   <ListBox AutomationProperties.Name="{services:Tr ui.player_ids_waiting}" ItemsSource="{Binding Players.PlayerIdMoves}" SelectedItem="{Binding Players.SelectedPlayerIdMove}" MaxHeight="160">
@@ -2510,7 +2526,9 @@
                the same Grid row and naturally stretches to their combined height (direct request:
                "the available steam mods would still be on the right but the height of those 2
                combined"). -->
-          <Grid ColumnDefinitions="*,1.4*" ColumnSpacing="12" IsVisible="{Binding IsModLibraryPage}">
+          <!-- v1.1.1.0: the Steam Workshop card moved to MOD Sources; the page summary and Install Validated ZIP now sit side by
+               side. -->
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsVisible="{Binding IsModLibraryPage}">
             <StackPanel Spacing="12">
               <Border Classes="card accentMods">
                 <StackPanel Spacing="6">
@@ -2519,6 +2537,8 @@
                   <TextBlock Text="{services:TrText Mods.ModSummary}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
                 </StackPanel>
               </Border>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="12">
               <Border Classes="card accentMods">
               <StackPanel Spacing="10">
                 <TextBlock Text="{services:Tr ui.install_validated_zip}" FontSize="18" FontWeight="SemiBold"/>
@@ -2548,35 +2568,45 @@
               </Border>
             </StackPanel>
 
-            <Border Grid.Column="1" Classes="card accentMods">
-              <StackPanel Spacing="10">
-                <TextBlock Text="{services:Tr ui.available_local_steam_workshop_mods}" FontSize="18" FontWeight="SemiBold"/>
-                <TextBlock Text="{services:Tr ui.scans_locally_installed_steam_workshop_content_f_78b72f}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
-                <WrapPanel>
-                  <Button Classes="info" Content="{services:Tr ui.refresh_9cbbfc}" Command="{Binding Mods.ScanWorkshopModsCommand}" Margin="0,0,6,6"/>
-                  <Button Classes="apply" Content="{services:Tr ui.import_selected}" Command="{Binding Mods.ImportSelectedWorkshopModCommand}" Margin="0,0,6,6"/>
-                </WrapPanel>
-                <TextBlock Text="{services:TrText Mods.WorkshopScanState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-                <ListBox AutomationProperties.Name="{services:Tr ui.available_local_steam_workshop_mods}" ItemsSource="{Binding Mods.WorkshopItems}" SelectedItem="{Binding Mods.SelectedWorkshopItem}" MaxHeight="320">
-                  <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="models:WorkshopItemDto">
-                      <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8" Margin="0,6">
-                        <StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding WorkshopId}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontFamily="Consolas, monospace"/></StackPanel>
-                        <TextBlock Grid.Column="1" Text="{services:TrText SuggestedPackage}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap"/>
-                        <Border Classes="tag" Grid.Column="2" services:StatusTag.Status="{Binding StatusText}"><TextBlock Text="{services:TrText StatusText}"/></Border>
-                      </Grid>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
-              </StackPanel>
-            </Border>
           </Grid>
+
+          <!-- v1.1.1.0 (owner 2026-10-14: "move the MOD Browser, Nexus Mods Catalog, and whatnot to its own item under MODs called
+               MOD Sources"): where MODs come from. Each card installs through the same validated ZIP install as MOD Library. -->
+          <Border x:Name="ModSourcesIntro" Classes="card accentMods" IsVisible="{Binding IsModSourcesPage}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="{services:Tr ui.mod_sources_intro}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Mods.ModSummary}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+
+        <Border x:Name="WorkshopSourceCard" Classes="card accentMods" IsVisible="{Binding IsModSourcesPage}">
+            <StackPanel Spacing="10">
+              <TextBlock Text="{services:Tr ui.available_local_steam_workshop_mods}" FontSize="18" FontWeight="SemiBold"/>
+              <TextBlock Text="{services:Tr ui.scans_locally_installed_steam_workshop_content_f_78b72f}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+              <WrapPanel>
+                <Button Classes="info" Content="{services:Tr ui.refresh_9cbbfc}" Command="{Binding Mods.ScanWorkshopModsCommand}" Margin="0,0,6,6"/>
+                <Button Classes="apply" Content="{services:Tr ui.import_selected}" Command="{Binding Mods.ImportSelectedWorkshopModCommand}" Margin="0,0,6,6"/>
+              </WrapPanel>
+              <TextBlock Text="{services:TrText Mods.WorkshopScanState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+              <ListBox AutomationProperties.Name="{services:Tr ui.available_local_steam_workshop_mods}" ItemsSource="{Binding Mods.WorkshopItems}" SelectedItem="{Binding Mods.SelectedWorkshopItem}" MaxHeight="320">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="models:WorkshopItemDto">
+                    <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8" Margin="0,6">
+                      <StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding WorkshopId}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontFamily="Consolas, monospace"/></StackPanel>
+                      <TextBlock Grid.Column="1" Text="{services:TrText SuggestedPackage}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap"/>
+                      <Border Classes="tag" Grid.Column="2" services:StatusTag.Status="{Binding StatusText}"><TextBlock Text="{services:TrText StatusText}"/></Border>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </Border>
 
           <!-- v1.0.5.0 (roadmap M-1; owner decision 2026-10-06): the MOD browser. One search across a chosen source (the
                Downloads folder and other folders, Thunderstore, CurseForge, GitHub releases of repositories the owner adds,
                Nexus Mods); Install Selected File fetches only from that source's hosts, shows what the archive holds, asks,
                and installs through the validated ZIP install. -->
-          <Border x:Name="ModBrowserCard" Classes="card accentMods" IsVisible="{Binding IsModLibraryPage}">
+          <Border x:Name="ModBrowserCard" Classes="card accentMods" IsVisible="{Binding IsModSourcesPage}">
             <Expander IsExpanded="True">
               <Expander.Header><TextBlock Text="{services:Tr ui.mod_browser}" FontSize="17" FontWeight="SemiBold"/></Expander.Header>
               <StackPanel Spacing="10" Margin="0,8,0,0">
@@ -2672,7 +2702,7 @@
                per category and has no search, and only Premium accounts get direct download links, so
                the card offers lists, lookup by id or page URL, Open on Nexus, and an nxm link paste for
                free accounts. Every download still goes through the validated ZIP install. -->
-          <Border Classes="card accentMods" IsVisible="{Binding IsModLibraryPage}">
+          <Border Classes="card accentMods" IsVisible="{Binding IsModSourcesPage}">
             <Expander Header="{services:Tr ui.nexus_mods_catalog}" FontSize="17" FontWeight="SemiBold" IsExpanded="False">
               <StackPanel Spacing="10" Margin="0,8,0,0">
                 <TextBlock Text="{services:Tr ui.browse_palworld_mods_on_nexus_mods_and_install_a_851339}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
@@ -3234,7 +3264,8 @@
               </Grid>
 
               <TextBlock Text="{services:Tr ui.launcher_troubleshooting_presets}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}"/>
-              <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+              <!-- v1.1.1.0: three presets; Like double-click (v1.0.0.1) was removed once the game was shown to change player IDs. -->
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                 <Border Classes="statuscard accentServer">
                   <StackPanel Spacing="6">
                     <TextBlock Text="{services:Tr ui.launcher_preset_default}" FontSize="16" FontWeight="SemiBold"/>
@@ -3256,14 +3287,6 @@
                     <Button Classes="apply" Content="{services:Tr ui.launcher_apply_show_window}" Command="{Binding Configuration.ApplyLauncherPresetCommand}" CommandParameter="ShowWindow" HorizontalAlignment="Left"/>
                   </StackPanel>
                 </Border>
-                  <!-- v1.0.0.1 (2026-10-04): the start the owner found keeps players' characters, exactly. -->
-                  <Border Grid.Column="3" Classes="statuscard accentServer">
-                    <StackPanel Spacing="6">
-                      <TextBlock Text="{services:Tr ui.launcher_preset_double_click}" FontSize="16" FontWeight="SemiBold"/>
-                      <TextBlock Text="{services:Tr ui.launcher_preset_double_click_desc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                      <Button Classes="apply" Content="{services:Tr ui.launcher_apply_double_click}" Command="{Binding Configuration.ApplyLauncherPresetCommand}" CommandParameter="DoubleClick" HorizontalAlignment="Left"/>
-                    </StackPanel>
-                  </Border>
               </Grid>
               <TextBlock Text="{services:TrText Configuration.ConfigLauncherPresetStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
               <TextBlock Text="{services:Tr ui.launcher_preset_preserve_note}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>

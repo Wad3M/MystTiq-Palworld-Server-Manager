@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
@@ -44,7 +44,7 @@ public static class ButtonIntents
         (R(@"^(verify|rescan|recheck|validate|validator|scan|↻ scan|test|check|diagnose|analyze|⚕|doctor|run reachability|run doctor|refresh capture|find the)"), Verify),
         (R(@"^(reset|restore|restart|repair|release|pause|mute|lift|leave running|clear background|enable / disable|toggle|pin / unpin)"), Caution),
         (R(@"^(refresh|↻|preview|load|export|copy id|copy |fetch|discover|auto-detect|latest|trending|🎲|set source|search)"), Info),
-        (R(@"^(save|apply|create|\+ create|add|install|📦|reserve|send|➤|give|import|use it|connect|● connect|sign in|allow|enable|new|download|bootstrap|capture|teleport|fix|clone|prepare|resume|unmute|unban|update|backup|run now)"), Apply),
+        (R(@"^(save|apply|create|\+ create|add|install|📦|reserve|send|➤|give|import|use it|connect|● connect|sign in|allow|enable|new|download|bootstrap|capture|teleport|fix|clone|prepare|resume|unmute|unban|update|backup|run now|link)"), Apply),
         (R(@"^(cancel|← back|back|next|continue|dismiss|advanced settings|simple settings|sign out)"), Plain),
     ];
 

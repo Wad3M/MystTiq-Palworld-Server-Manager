@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -1387,7 +1387,7 @@ public sealed class ModsViewModel : PageViewModel
         NexusModsLinks.TryParseNxm(links[^1], out var link, out _);
         SelectedModSource = ModSourceOptions.FirstOrDefault(o => o.Id == "nexus");
         ModBrowserStatus = $"A Mod Manager Download link arrived from Nexus (MOD {link?.ModId}, file {link?.FileId}). Press Install from link in the Nexus Mods card to check and install it.";
-        Navigate(nameof(NavigationPage.ModLibrary));
+        Navigate(nameof(NavigationPage.ModSources));
     }
 
     private async Task SearchModBrowserAsync()

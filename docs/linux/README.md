@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
 # MystTiq on Linux
 
 MystTiq's Linux support is **headless-first**: managing the server never depends on a desktop being present. The headless
@@ -16,6 +16,9 @@ For every command see **[COMMAND_REFERENCE.md](COMMAND_REFERENCE.md)**; for the 
 | A per-user systemd unit | No root access, or a shared machine | The same unit text without `User=`, installed under `~/.config/systemd/user` and wanted by `default.target`. Tested live without sudo (v1.0.6.0). |
 | `mysttiq-server service-run` | A terminal or another supervisor | The service in the foreground, with crash recovery. Ctrl+C stops MystTiq and leaves the game running (v1.0.8.0). |
 | The Docker image | Containers | `deploy/docker/Dockerfile`: a non-root `mysttiq` user, everything under one `/data` volume, a health check on `/healthz`. It installs and runs the Palworld server inside the container. Use a Docker volume for `/data`. |
+
+The Docker image is also a release download from v1.1.1.0 (`MystTiqPalworldServer_vX_Docker-linux-x64.tar.gz`): `docker load -i` the
+file, then `docker run -d -p 8213:8213 -p 8211:8211/udp -v mysttiq-data:/data mysttiq-headless:<version>`.
 
 The Linux download (`MystTiqPalworldServer_vX_Linux-x64.zip`) holds the desktop and the service; after extracting,
 `chmod +x MystTiq.Desktop headless/mysttiq-server`. `Build.ps1 DeployDesktopLinux` (`scripts/Install-MystTiqDesktopLinux.ps1`)
@@ -36,8 +39,8 @@ decide what each person can do.
   desktop window, clipboard and tray under XFCE, processor-core pinning and priority, console capture, and the 24-hour idle
   run (v1.0.7.5).
 - **Still open** (tracked on the [roadmap](../roadmap/PRODUCT_ROADMAP.md) as E-4): the desktop's file pickers, display
-  scaling, and desktop environments other than XFCE. The release workflow publishes the Windows download only until those
-  are done.
+  scaling, and desktop environments other than XFCE. Since v1.1.1.0 the Linux download and the Docker image are published
+  with every release anyway (the owner's decision D-13).
 - Chinese, Japanese and Korean text in the desktop needs a suitable system font such as Noto Sans CJK.
 
 The original v0.3 Linux development plan (detection, path profile, SteamCMD policy, the first systemd unit) is kept in

@@ -1,4 +1,4 @@
-﻿# MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+﻿# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 #requires -Version 7.0
 [CmdletBinding()]
 param(
@@ -52,12 +52,16 @@ function Initialize-Authentication {
         $script:SshArgs = @(
             "-i", $identity,
             "-o", "BatchMode=yes",
+            "-o", "ServerAliveInterval=15",
+            "-o", "ServerAliveCountMax=4",
             "-o", "PreferredAuthentications=publickey",
             "-o", "PasswordAuthentication=no"
         )
         $script:ScpArgs = @(
             "-i", $identity,
             "-o", "BatchMode=yes",
+            "-o", "ServerAliveInterval=15",
+            "-o", "ServerAliveCountMax=4",
             "-o", "PreferredAuthentications=publickey",
             "-o", "PasswordAuthentication=no"
         )

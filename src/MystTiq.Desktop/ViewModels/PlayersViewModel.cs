@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -54,6 +54,7 @@ public sealed class PlayersViewModel : PageViewModel
         RefreshPlayerIdsCommand = new AsyncCommand(RefreshPlayerIdsAsync, () => !Session.IsBusy);
         SavePlayerIdsCommand = new AsyncCommand(SavePlayerIdsAsync, () => !Session.IsBusy);
         MoveCharacterCommand = new AsyncCommand(MoveCharacterAsync, () => !Session.IsBusy && SelectedPlayerIdMove is not null);
+        LinkPlayerIdCommand = new AsyncCommand(LinkPlayerIdAsync, () => !Session.IsBusy);
         LoadPlayerMetadataCommand = new AsyncCommand(LoadSelectedPlayerMetadataAsync, () => !Session.IsBusy && SelectedPlayerRecord is not null);
         SavePlayerNotesCommand = new AsyncCommand(SaveSelectedPlayerNotesAsync, () => !Session.IsBusy && SelectedPlayerRecord is not null);
         AddPlayerWarningCommand = new AsyncCommand(AddSelectedPlayerWarningAsync, () => !Session.IsBusy && SelectedPlayerRecord is not null && !string.IsNullOrWhiteSpace(NewPlayerWarning));
@@ -1157,6 +1158,33 @@ public sealed class PlayersViewModel : PageViewModel
     public ICommand RefreshPlayerIdsCommand { get; }
     public ICommand SavePlayerIdsCommand { get; }
     public ICommand MoveCharacterCommand { get; }
+
+    // v1.1.1.0: link an account to its character by hand, for an account whose ID the game changed before MystTiq saw it.
+    private string _linkUserId = string.Empty;
+    private string _linkPlayerId = string.Empty;
+    public string LinkUserId { get => _linkUserId; set => SetField(ref _linkUserId, value ?? string.Empty); }
+    public string LinkPlayerId { get => _linkPlayerId; set => SetField(ref _linkPlayerId, value ?? string.Empty); }
+    public ICommand LinkPlayerIdCommand { get; }
+
+    private async Task LinkPlayerIdAsync()
+    {
+        if (Session.SelectedProfile is null) return;
+        if (string.IsNullOrWhiteSpace(LinkUserId) || string.IsNullOrWhiteSpace(LinkPlayerId))
+        {
+            PlayerIdsState = "Enter the account's user ID and the character's player ID.";
+            return;
+        }
+        Session.IsBusy = true;
+        try
+        {
+            var result = await Session.Api.LinkPlayerIdAsync(Session.SelectedProfile, LinkUserId.Trim(), LinkPlayerId.Trim(), Session.BearerToken);
+            ShowPlayerIds(await Session.Api.GetPlayerIdsAsync(Session.SelectedProfile, Session.BearerToken));
+            PlayerIdsState = result.Message;
+            if (result.Success) { LinkUserId = string.Empty; LinkPlayerId = string.Empty; }
+        }
+        catch (Exception ex) { PlayerIdsState = ex.Message; }
+        finally { Session.IsBusy = false; }
+    }
 
     private void TogglePlayerIds()
     {

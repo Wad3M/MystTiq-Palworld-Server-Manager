@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -579,7 +579,7 @@ foreach (var light in new[] { false, true })
     vm.IsLightMode = light;
     foreach (var page in new[] { NavigationPage.Doctor, NavigationPage.DiagnosticsCenter, NavigationPage.Notifications, NavigationPage.Players,
                                  NavigationPage.Map, NavigationPage.WorldTransactions, NavigationPage.SaveTools, NavigationPage.Configuration,
-                                 NavigationPage.Console, NavigationPage.Backups, NavigationPage.ModDashboard, NavigationPage.ModLibrary, NavigationPage.Ue4ss })
+                                 NavigationPage.Console, NavigationPage.Backups, NavigationPage.ModDashboard, NavigationPage.ModLibrary, NavigationPage.ModSources, NavigationPage.Ue4ss })
     {
         selectedPage.SetValue(vm, page);
         Render($"ribbon-images-{page}-{(light ? "light" : "dark")}");
@@ -1598,7 +1598,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var preset = vm.Configuration.ApplyLauncherPresetCommand;
     var flags = new[] { "ConfigLauncherLog", "ConfigLauncherStdout", "ConfigLauncherFullStdOutLogOutput", "ConfigLauncherAbsLog" };
     bool AnyFlag() => flags.Any(f => (bool)typeof(ConfigurationViewModel).GetProperty(f)!.GetValue(vm.Configuration)!);
-    var clean = new[] { "ShowWindow", "NoMods", "DoubleClick" }.All(p => { preset.Execute(p); Dispatcher.UIThread.RunJobs(); return !AnyFlag(); });
+    var clean = new[] { "ShowWindow", "NoMods", "Default" }.All(p => { preset.Execute(p); Dispatcher.UIThread.RunJobs(); return !AnyFlag(); });
     // A profile with no saved launcher settings loads with those options off, so saving the page cannot write them in.
     var loadLauncher = typeof(ConfigurationViewModel).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic).FirstOrDefault(m => m.Name == "LoadLauncherConfiguration" && m.GetParameters().Length == 1);
     // v1.0.8.4: the method moved with the Configuration page; a missing one fails the check instead of skipping it.
@@ -1608,9 +1608,11 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Dispatcher.UIThread.RunJobs();
     // v1.1.0.2 (roadmap F-2): the note calls these diagnosis options; they were disproven as the cause of wrong characters.
     var warned = vm.Configuration.ConfigLauncherWarning.Contains("for diagnosing problems") && !vm.Configuration.ConfigLauncherWarning.Contains("wrong character");
-    preset.Execute("DoubleClick"); Dispatcher.UIThread.RunJobs();
-    Check(clean && warned && !vm.Configuration.ConfigLauncherWarning.Contains("for diagnosing problems"),
-        $"No Launcher preset adds -log, -stdout, -FullStdOutLogOutput or -abslog; switching one on warns [{vm.Configuration.ConfigLauncherWarning}]");
+    preset.Execute("Default"); Dispatcher.UIThread.RunJobs();
+    // v1.1.1.0: the Like double-click preset is gone from the Launcher page.
+    var doubleClickGone = !window.GetVisualDescendants().OfType<Button>().Any(b => "DoubleClick".Equals(b.CommandParameter as string));
+    Check(clean && warned && doubleClickGone && !vm.Configuration.ConfigLauncherWarning.Contains("for diagnosing problems"),
+        $"No Launcher preset adds -log, -stdout, -FullStdOutLogOutput or -abslog; switching one on warns; no Like double-click preset [{vm.Configuration.ConfigLauncherWarning}]");
 }
 // v1.0.6.0 (roadmap S-3): the Players page's Pal box card lists the box, Remove is red, Add an apply button beside the
 // species picker, and both are Admin controls.
@@ -1869,6 +1871,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     }
     var rng = new Random(75);
     var switches = 0;
+    var switchClock = Stopwatch.StartNew();
     for (var i = 0; i < 300; i++)
     {
         tabVm.ActiveTab = switchTabs[rng.Next(switchTabs.Count)];
@@ -1876,6 +1879,20 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         if (rng.Next(3) == 0) Thread.Sleep(rng.Next(0, 15));
         Dispatcher.UIThread.RunJobs();
     }
+    switchClock.Stop();
+    // v1.1.1.0: a tab switch re-applied the (unchanged) theme, rewriting every theme resource in every open window: about
+    // 2 s per window per switch (this check took about 20 minutes). The same theme is now left alone; another one applies.
+    var themeResources = Application.Current!.Resources;
+    var cardBorder = themeResources["CardBorderBrush"];
+    ThemeApplier.Apply(switchTabs[0].Profile!.AccentTheme, switchTabs[0].Profile!.ThemeVariant);
+    var sameKept = ReferenceEquals(cardBorder, themeResources["CardBorderBrush"]);
+    var otherLight = Application.Current.RequestedThemeVariant != Avalonia.Styling.ThemeVariant.Light;
+    ThemeApplier.Apply(switchTabs[0].Profile!.AccentTheme, otherLight ? "Light" : "Dark");
+    var otherApplied = !ReferenceEquals(cardBorder, themeResources["CardBorderBrush"]) &&
+        Application.Current.RequestedThemeVariant == (otherLight ? Avalonia.Styling.ThemeVariant.Light : Avalonia.Styling.ThemeVariant.Dark);
+    ThemeApplier.Apply(switchTabs[0].Profile!.AccentTheme, switchTabs[0].Profile!.ThemeVariant);
+    Check(sameKept && otherApplied && switchClock.Elapsed < TimeSpan.FromMinutes(3),
+        $"A tab switch to a server with the same theme leaves the theme alone (another theme still applies): 300 switches in {switchClock.Elapsed.TotalSeconds:F0} s");
     var last = switchTabs[2];
     if (ReferenceEquals(tabVm.ActiveTab, last)) tabVm.ActiveTab = switchTabs[0];
     tabVm.ActiveTab = last;
@@ -1988,7 +2005,8 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     File.WriteAllText(Path.Combine(folder, "other.7z"), "7z");
     var vmFolders = (System.Collections.ObjectModel.ObservableCollection<string>)typeof(ModsViewModel).GetProperty("ModBrowserFolders")!.GetValue(vm.Mods)!;
     var savedFolders = vmFolders.ToList(); vmFolders.Clear(); vmFolders.Add(folder);
-    selectedPage.SetValue(vm, NavigationPage.ModLibrary);
+    // v1.1.1.0: the MOD browser is on MOD Sources.
+    selectedPage.SetValue(vm, NavigationPage.ModSources);
     vm.Mods.SelectedModSource = vm.Mods.ModSourceOptions.First(o => o.Id == "folders");
     Wait((Task)typeof(ModsViewModel).GetMethod("SearchModBrowserAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm.Mods, null)!);
     var listed = vm.Mods.ModBrowserResults.Select(l => l.Name).ToList();
@@ -2015,7 +2033,20 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var githubShown = Shown("ModBrowserGitHubSetup") && !Shown("ModBrowserFoldersSetup") && vm.Mods.ModBrowserResults.Count == 0;
     Check(browserCard is { IsVisible: true } && foldersShown && githubShown && vm.Mods.ModSourceOptions.Count == 5,
-        $"The MOD Library page has the MOD browser; each source shows its own setup (folders, GitHub repositories) [{vm.Mods.ModSourceOptions.Count} sources]");
+        $"The MOD Sources page has the MOD browser; each source shows its own setup (folders, GitHub repositories) [{vm.Mods.ModSourceOptions.Count} sources]");
+
+    // v1.1.1.0 (owner 2026-10-14: "move the MOD Browser, Nexus Mods Catalog, and whatnot to its own item under MODs called MOD
+    // Sources"): MOD Sources holds Steam Workshop, the MOD browser and the Nexus Mods catalog; MOD Library keeps what is installed.
+    bool Visible(string name) => window.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.Name == name)?.IsEffectivelyVisible == true;
+    bool TextShown(string english) => window.GetVisualDescendants().OfType<TextBlock>().Any(b => b.IsEffectivelyVisible && b.Text == english);
+    var onSources = Visible("ModBrowserCard") && Visible("WorkshopSourceCard") && Visible("ModSourcesIntro") && TextShown("Nexus Mods Catalog") &&
+                    !Visible("ZipInstallDropZone") && !Visible("ModLoadOrderCard") && vm.IsModsGroupSelected && vm.IsModSourcesPage;
+    selectedPage.SetValue(vm, NavigationPage.ModLibrary);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var onLibrary = !Visible("ModBrowserCard") && !Visible("WorkshopSourceCard") && !TextShown("Nexus Mods Catalog") && Visible("ZipInstallDropZone") && Visible("ModLoadOrderCard");
+    var navButton = window.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>().FirstOrDefault(b => "ModSources".Equals(b.CommandParameter as string));
+    Check(onSources && onLibrary && navButton is not null && Localizer.Instance["nav.ModSources"] == "MOD Sources" && ArtworkCatalog.Category(NavigationPage.ModSources) == "mods",
+        $"MOD Sources (under MODs) has Steam Workshop, the MOD browser and the Nexus Mods catalog; MOD Library keeps the ZIP install, load order and installed MODs [sources {onSources}, library {onLibrary}, nav {navButton is not null}]");
     vmFolders.Clear(); foreach (var f in savedFolders) vmFolders.Add(f);
     Directory.Delete(folder, true);
 
@@ -2033,8 +2064,8 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     selectedPage.SetValue(vm, NavigationPage.Dashboard);
     vm.Mods.ReceiveNxmLinks();
     Dispatcher.UIThread.RunJobs();
-    Check(vm.Mods.NexusNxmLinkText == link && vm.Mods.SelectedModSource?.Id == "nexus" && vm.Mods.ModBrowserStatus.Contains("MOD 3329, file 12345") && vm.SelectedPage == NavigationPage.ModLibrary,
-        $"A link from Nexus fills in the Nexus card and opens the MOD Library; it waits for Install from link [{vm.Mods.ModBrowserStatus}]");
+    Check(vm.Mods.NexusNxmLinkText == link && vm.Mods.SelectedModSource?.Id == "nexus" && vm.Mods.ModBrowserStatus.Contains("MOD 3329, file 12345") && vm.SelectedPage == NavigationPage.ModSources,
+        $"A link from Nexus fills in the Nexus card and opens MOD Sources; it waits for Install from link [{vm.Mods.ModBrowserStatus}]");
     Directory.Delete(inbox, true);
 
     Localizer.Instance.SetLanguage("de");
