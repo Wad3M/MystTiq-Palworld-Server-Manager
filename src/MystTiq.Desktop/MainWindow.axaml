@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.7: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.8: file reviewed for this release (2026-10-12). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -474,7 +474,7 @@
               <TextBlock Grid.Column="4" Text="{services:TrText Dashboard.ModsStripText}" VerticalAlignment="Center"/>
               <TextBlock Grid.Column="5" Text="{services:TrText Dashboard.BackupStripText}" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="7">
-                <Button Classes="verify" Content="{services:Tr dashboard.scan}" Padding="10,3" Command="{Binding RunDoctorCommand}" ToolTip.Tip="{services:Tr dashboard.scan.tip}"/>
+                <Button Classes="verify" Content="{services:Tr dashboard.scan}" Padding="10,3" Command="{Binding Diagnostics.RunDoctorCommand}" ToolTip.Tip="{services:Tr dashboard.scan.tip}"/>
                 <Button Classes="apply" Content="{services:Tr dashboard.save}" Padding="10,3" Command="{Binding SaveWorldNowCommand}" IsEnabled="{Binding CanOperate}" ToolTip.Tip="{services:Tr dashboard.save.tip}"/>
                 <Button Classes="danger" Content="{services:Tr dashboard.cleanup}" Padding="10,3" IsEnabled="False" ToolTip.Tip="{services:Tr dashboard.cleanup.tip}"/>
               </StackPanel>
@@ -673,14 +673,14 @@
                used. Some rows cannot report a real "latest version" (no reliable unattended source
                exists; see HeadlessComponentUpdateService); those show "Unavailable"/"Check
                manually" honestly rather than a fabricated comparison. -->
-          <Border Classes="card accentTools" IsVisible="{Binding HasComponentVersions}">
+          <Border Classes="card accentTools" IsVisible="{Binding Diagnostics.HasComponentVersions}">
             <StackPanel Spacing="10">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="{services:Tr ui.core_server}" Classes="muted" FontWeight="Bold"/>
-                <TextBlock Grid.Column="1" Text="{Binding ComponentVersionsCheckedAtText, StringFormat='Checked {0}'}" Classes="muted" FontSize="11"/>
+                <TextBlock Grid.Column="1" Text="{Binding Diagnostics.ComponentVersionsCheckedAtText, StringFormat='Checked {0}'}" Classes="muted" FontSize="11"/>
               </Grid>
-              <TextBlock x:Name="ComponentUpdateMessageText" Text="{services:TrText ComponentUpdateMessage}" IsVisible="{Binding HasComponentUpdateMessage}" TextWrapping="Wrap" FontWeight="SemiBold"/>
-              <ItemsControl ItemsSource="{Binding CoreServerComponents}">
+              <TextBlock x:Name="ComponentUpdateMessageText" Text="{services:TrText Diagnostics.ComponentUpdateMessage}" IsVisible="{Binding Diagnostics.HasComponentUpdateMessage}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+              <ItemsControl ItemsSource="{Binding Diagnostics.CoreServerComponents}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:ComponentVersionDto">
                     <Border Classes="statuscard accentTools" Margin="0,3">
@@ -696,7 +696,7 @@
                         <!-- v1.0.1.0: Update on every row (ComponentVersionDto.UpdateMethod); greyed out only where there is
                              nothing it could do (SteamCMD updates itself), with the reason beside it. -->
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                          <Button Classes="apply" Content="{services:Tr ui.update}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).UpdateComponentCommand}" CommandParameter="{Binding}" ToolTip.Tip="{services:TrText UpdateHint}" ToolTip.ShowOnDisabled="True" Padding="8,3" FontSize="11"/>
+                          <Button Classes="apply" Content="{services:Tr ui.update}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Diagnostics.UpdateComponentCommand}" CommandParameter="{Binding}" ToolTip.Tip="{services:TrText UpdateHint}" ToolTip.ShowOnDisabled="True" Padding="8,3" FontSize="11"/>
                           <Button Classes="open" Content="{services:Tr ui.open}" Click="OpenComponentSourceUrl_Click" IsVisible="{Binding ShowsOpen}" ToolTip.Tip="{services:Tr ui.open_the_official_page_to_check_this_manually}" Padding="8,3" FontSize="11"/>
                           <TextBlock Text="{services:TrText UpdateHint}" IsVisible="{Binding !CanUpdate}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap"/>
                         </StackPanel>
@@ -707,7 +707,7 @@
               </ItemsControl>
 
               <TextBlock Text="{services:Tr ui.save_and_runtime_dependencies}" Classes="muted" FontWeight="Bold" Margin="0,8,0,0"/>
-              <ItemsControl ItemsSource="{Binding SaveRuntimeDependencyComponents}">
+              <ItemsControl ItemsSource="{Binding Diagnostics.SaveRuntimeDependencyComponents}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:ComponentVersionDto">
                     <Border Classes="statuscard accentTools" Margin="0,3">
@@ -723,7 +723,7 @@
                         <!-- v1.0.1.0: Update on every row (ComponentVersionDto.UpdateMethod); greyed out only where there is
                              nothing it could do (SteamCMD updates itself), with the reason beside it. -->
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                          <Button Classes="apply" Content="{services:Tr ui.update}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).UpdateComponentCommand}" CommandParameter="{Binding}" ToolTip.Tip="{services:TrText UpdateHint}" ToolTip.ShowOnDisabled="True" Padding="8,3" FontSize="11"/>
+                          <Button Classes="apply" Content="{services:Tr ui.update}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Diagnostics.UpdateComponentCommand}" CommandParameter="{Binding}" ToolTip.Tip="{services:TrText UpdateHint}" ToolTip.ShowOnDisabled="True" Padding="8,3" FontSize="11"/>
                           <Button Classes="open" Content="{services:Tr ui.open}" Click="OpenComponentSourceUrl_Click" IsVisible="{Binding ShowsOpen}" ToolTip.Tip="{services:Tr ui.open_the_official_page_to_check_this_manually}" Padding="8,3" FontSize="11"/>
                           <TextBlock Text="{services:TrText UpdateHint}" IsVisible="{Binding !CanUpdate}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap"/>
                         </StackPanel>
@@ -734,7 +734,7 @@
               </ItemsControl>
             </StackPanel>
           </Border>
-          <TextBlock Text="{services:Tr ui.use_refresh_in_the_ribbon_to_check_every_compone_78bb96}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !HasComponentVersions}"/>
+          <TextBlock Text="{services:Tr ui.use_refresh_in_the_ribbon_to_check_every_compone_78bb96}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !Diagnostics.HasComponentVersions}"/>
 
           <Border Classes="card accentTools">
             <StackPanel Spacing="12">
@@ -2078,14 +2078,14 @@
               <StackPanel Spacing="5">
                 <TextBlock Text="{services:Tr ui.startup_console_capture}" FontSize="18" FontWeight="SemiBold"/>
                 <TextBlock Text="{services:Tr ui.startup_console_capture_desc}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                <TextBlock Text="{services:TrText ConsoleCaptureState}" Foreground="{DynamicResource BlueBrush}" TextWrapping="Wrap"/>
-                <TextBlock Text="{services:TrText ConsoleCaptureDetail}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Diagnostics.ConsoleCaptureState}" Foreground="{DynamicResource BlueBrush}" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Diagnostics.ConsoleCaptureDetail}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
                 <TextBlock Text="{services:Tr ui.startup_capture_restart_note}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap"/>
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center" MinWidth="150">
-                <Button Classes="verify" Content="{services:Tr ui.refresh_capture_status}" Command="{Binding RefreshConsoleCaptureCommand}"/>
-                <Button Classes="apply" Content="{services:Tr ui.enable_startup_capture}" Command="{Binding InstallConsoleCaptureCommand}" IsEnabled="{Binding CanInstallConsoleCapture}"/>
-                <Button Classes="danger" Content="{services:Tr ui.remove_startup_capture}" Command="{Binding UninstallConsoleCaptureCommand}" IsEnabled="{Binding CanRemoveConsoleCapture}"/>
+                <Button Classes="verify" Content="{services:Tr ui.refresh_capture_status}" Command="{Binding Diagnostics.RefreshConsoleCaptureCommand}"/>
+                <Button Classes="apply" Content="{services:Tr ui.enable_startup_capture}" Command="{Binding Diagnostics.InstallConsoleCaptureCommand}" IsEnabled="{Binding Diagnostics.CanInstallConsoleCapture}"/>
+                <Button Classes="danger" Content="{services:Tr ui.remove_startup_capture}" Command="{Binding Diagnostics.UninstallConsoleCaptureCommand}" IsEnabled="{Binding Diagnostics.CanRemoveConsoleCapture}"/>
               </StackPanel>
             </Grid>
           </Border>
@@ -2851,24 +2851,24 @@
             <StackPanel><TextBlock Text="{services:Tr ui.runtime_and_network_health_are_evaluated_indepen_25b100}" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
           </Grid>
           <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
-            <Border Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.runtime}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText NetworkRuntime}" FontSize="20" FontWeight="SemiBold"/></StackPanel></Border>
-            <Border Grid.Column="1" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.network}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText NetworkHealth}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource VioletBrush}"/></StackPanel></Border>
-            <Border Grid.Column="2" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.game_port}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding NetworkPort}" FontSize="20" FontWeight="SemiBold"/></StackPanel></Border>
-            <Border Grid.Column="3" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.lan_endpoint}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText NetworkLanEndpoint}" FontSize="16" FontWeight="SemiBold"/></StackPanel></Border>
+            <Border Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.runtime}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Diagnostics.NetworkRuntime}" FontSize="20" FontWeight="SemiBold"/></StackPanel></Border>
+            <Border Grid.Column="1" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.network}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Diagnostics.NetworkHealth}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource VioletBrush}"/></StackPanel></Border>
+            <Border Grid.Column="2" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.game_port}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding Diagnostics.NetworkPort}" FontSize="20" FontWeight="SemiBold"/></StackPanel></Border>
+            <Border Grid.Column="3" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.lan_endpoint}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Diagnostics.NetworkLanEndpoint}" FontSize="16" FontWeight="SemiBold"/></StackPanel></Border>
           </Grid>
           <!-- v0.9.6.0: the firewall rule for the port this server binds; allowing it removes the rule for an old port. -->
-          <Border Classes="card accentTools" IsVisible="{Binding HasFirewallStatus}">
+          <Border Classes="card accentTools" IsVisible="{Binding Diagnostics.HasFirewallStatus}">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <StackPanel Spacing="4">
                 <TextBlock Text="{services:Tr ui.windows_firewall}" Foreground="{DynamicResource MutedBrush}"/>
-                <TextBlock Text="{services:TrText FirewallStatusText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                <TextBlock Text="{services:Tr ui.firewall_linux_commands}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding HasFirewallCommands}"/>
-                <TextBox AutomationProperties.Name="{services:Tr ui.firewall_linux_commands}" Text="{Binding FirewallCommandsText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas, monospace" FontSize="11" IsVisible="{Binding HasFirewallCommands}"/>
+                <TextBlock Text="{services:TrText Diagnostics.FirewallStatusText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:Tr ui.firewall_linux_commands}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding Diagnostics.HasFirewallCommands}"/>
+                <TextBox AutomationProperties.Name="{services:Tr ui.firewall_linux_commands}" Text="{Binding Diagnostics.FirewallCommandsText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas, monospace" FontSize="11" IsVisible="{Binding Diagnostics.HasFirewallCommands}"/>
               </StackPanel>
-              <Button Grid.Column="1" Classes="apply" VerticalAlignment="Center" Content="{services:Tr ui.allow_through_firewall}" AutomationProperties.Name="{services:Tr ui.allow_through_firewall}" Command="{Binding RepairFirewallCommand}" IsVisible="{Binding FirewallNeedsAction}"/>
+              <Button Grid.Column="1" Classes="apply" VerticalAlignment="Center" Content="{services:Tr ui.allow_through_firewall}" AutomationProperties.Name="{services:Tr ui.allow_through_firewall}" Command="{Binding Diagnostics.RepairFirewallCommand}" IsVisible="{Binding Diagnostics.FirewallNeedsAction}"/>
             </Grid>
-          </Border>          <Border Classes="card accentTools"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.binding}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText NetworkBinding}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding NetworkRecommendation, StringFormat='Recommended action: {0}'}" TextWrapping="Wrap"/></StackPanel></Border>
-          <ItemsControl ItemsSource="{Binding NetworkDiagnosticChecks}">
+          </Border>          <Border Classes="card accentTools"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.binding}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Diagnostics.NetworkBinding}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding Diagnostics.NetworkRecommendation, StringFormat='Recommended action: {0}'}" TextWrapping="Wrap"/></StackPanel></Border>
+          <ItemsControl ItemsSource="{Binding Diagnostics.NetworkDiagnosticChecks}">
             <ItemsControl.ItemTemplate><DataTemplate x:DataType="models:NetworkDiagnosticCheckDto">
               <Border Classes="card accentTools" Margin="0,0,0,8"><Grid ColumnDefinitions="180,100,*,220" ColumnSpacing="12">
                 <TextBlock Text="{services:TrText Test}" FontWeight="SemiBold"/><Border Classes="tag" Grid.Column="1" HorizontalAlignment="Left" services:StatusTag.Status="{Binding StateText}"><TextBlock Text="{services:TrText StateText}"/></Border>
@@ -2876,29 +2876,29 @@
               </Grid></Border>
             </DataTemplate></ItemsControl.ItemTemplate>
           </ItemsControl>
-          <Border Classes="card accentTools"><StackPanel Spacing="8"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr ui.support_diagnostic_report}" FontSize="17" FontWeight="SemiBold"/><WrapPanel Grid.Column="1"><Button Classes="info" Content="{services:Tr ui.copy_report}" Click="CopyNetworkDiagnosticReport_Click" Margin="0,0,8,0"/><Button Classes="info" Content="{services:Tr ui.export_report}" Click="ExportNetworkDiagnosticReport_Click" Margin="0,0,8,0"/><Button Classes="apply" Content="{services:Tr ui.create_support_package}" Click="CreateSupportPackage_Click" Margin="0,0,8,0"/><Button Classes="open" Content="{services:Tr ui.open_local_diagnostics}" Tag="runtime" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/></WrapPanel></Grid><TextBlock Text="{services:Tr ui.support_output_excludes_passwords_bearer_tokens_13a61f}" Foreground="{DynamicResource MutedBrush}"/><TextBox AutomationProperties.Name="{services:Tr ui.support_diagnostic_report}" Text="{Binding NetworkReportText}" AcceptsReturn="True" IsReadOnly="True" MinHeight="180" FontFamily="Consolas, monospace" FontSize="11"/></StackPanel></Border>
+          <Border Classes="card accentTools"><StackPanel Spacing="8"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr ui.support_diagnostic_report}" FontSize="17" FontWeight="SemiBold"/><WrapPanel Grid.Column="1"><Button Classes="info" Content="{services:Tr ui.copy_report}" Click="CopyNetworkDiagnosticReport_Click" Margin="0,0,8,0"/><Button Classes="info" Content="{services:Tr ui.export_report}" Click="ExportNetworkDiagnosticReport_Click" Margin="0,0,8,0"/><Button Classes="apply" Content="{services:Tr ui.create_support_package}" Click="CreateSupportPackage_Click" Margin="0,0,8,0"/><Button Classes="open" Content="{services:Tr ui.open_local_diagnostics}" Tag="runtime" IsEnabled="{Binding IsLocalProfile}" Click="WorkspaceOpen_Click"/></WrapPanel></Grid><TextBlock Text="{services:Tr ui.support_output_excludes_passwords_bearer_tokens_13a61f}" Foreground="{DynamicResource MutedBrush}"/><TextBox AutomationProperties.Name="{services:Tr ui.support_diagnostic_report}" Text="{Binding Diagnostics.NetworkReportText}" AcceptsReturn="True" IsReadOnly="True" MinHeight="180" FontFamily="Consolas, monospace" FontSize="11"/></StackPanel></Border>
 
           <!-- WAN / EXTERNAL REACHABILITY (v0.6.11.0). Collapsed by default since v0.7.5.0
                (no-scroll pass 1) — a secondary deep-dive tool, not the primary diagnostic view. -->
           <Border Classes="card accentTools">
             <StackPanel Spacing="10">
               <Grid ColumnDefinitions="*,Auto">
-                <Button Classes="sectionToggle" Command="{Binding ToggleWanDiagnosticsCommand}" VerticalAlignment="Top">
-                  <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="▸" IsVisible="{Binding !IsWanDiagnosticsExpanded}" FontWeight="Bold"/><TextBlock Text="▾" IsVisible="{Binding IsWanDiagnosticsExpanded}" FontWeight="Bold"/><TextBlock Text="{services:Tr ui.wan_external_reachability}" FontSize="17" FontWeight="SemiBold"/></StackPanel>
+                <Button Classes="sectionToggle" Command="{Binding Diagnostics.ToggleWanDiagnosticsCommand}" VerticalAlignment="Top">
+                  <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="▸" IsVisible="{Binding !Diagnostics.IsWanDiagnosticsExpanded}" FontWeight="Bold"/><TextBlock Text="▾" IsVisible="{Binding Diagnostics.IsWanDiagnosticsExpanded}" FontWeight="Bold"/><TextBlock Text="{services:Tr ui.wan_external_reachability}" FontSize="17" FontWeight="SemiBold"/></StackPanel>
                 </Button>
-                <WrapPanel Grid.Column="1" IsVisible="{Binding IsWanDiagnosticsExpanded}">
-                  <Button Classes="verify" Content="{services:Tr ui.run_reachability_check}" Command="{Binding RunWanReachabilityCommand}" Margin="0,0,8,0"/>
-                  <Button Classes="apply" Content="{services:Tr ui.add_upnp_port_mapping}" Command="{Binding RepairUpnpMappingCommand}" ToolTip.Tip="{services:Tr ui.adds_a_port_forward_mapping_on_your_router_via_u_0e17a0}" Margin="0,0,8,0"/>
+                <WrapPanel Grid.Column="1" IsVisible="{Binding Diagnostics.IsWanDiagnosticsExpanded}">
+                  <Button Classes="verify" Content="{services:Tr ui.run_reachability_check}" Command="{Binding Diagnostics.RunWanReachabilityCommand}" Margin="0,0,8,0"/>
+                  <Button Classes="apply" Content="{services:Tr ui.add_upnp_port_mapping}" Command="{Binding Diagnostics.RepairUpnpMappingCommand}" ToolTip.Tip="{services:Tr ui.adds_a_port_forward_mapping_on_your_router_via_u_0e17a0}" Margin="0,0,8,0"/>
                 </WrapPanel>
               </Grid>
-              <StackPanel Spacing="10" IsVisible="{Binding IsWanDiagnosticsExpanded}">
+              <StackPanel Spacing="10" IsVisible="{Binding Diagnostics.IsWanDiagnosticsExpanded}">
               <TextBlock Text="{services:Tr ui.public_ip_the_router_s_upnp_port_mapping_and_a_s_7ebbb9}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
               <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
-                <Border Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.public_ip_port}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding WanPublicIpPort}" FontSize="16" FontWeight="SemiBold"/></StackPanel></Border>
-                <Border Grid.Column="1" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.router_upnp_mapping}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText WanUpnpState}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource VioletBrush}"/></StackPanel></Border>
-                <Border Grid.Column="2" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.router}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText WanRouterDescription}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/></StackPanel></Border>
+                <Border Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.public_ip_port}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{Binding Diagnostics.WanPublicIpPort}" FontSize="16" FontWeight="SemiBold"/></StackPanel></Border>
+                <Border Grid.Column="1" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.router_upnp_mapping}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Diagnostics.WanUpnpState}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource VioletBrush}"/></StackPanel></Border>
+                <Border Grid.Column="2" Classes="card accentTools"><StackPanel><TextBlock Text="{services:Tr ui.router}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Diagnostics.WanRouterDescription}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/></StackPanel></Border>
               </Grid>
-              <ItemsControl ItemsSource="{Binding WanReachabilityChecks}">
+              <ItemsControl ItemsSource="{Binding Diagnostics.WanReachabilityChecks}">
                 <ItemsControl.ItemTemplate><DataTemplate x:DataType="models:WanReachabilityCheckDto">
                   <Border Classes="card accentTools" Margin="0,0,0,8"><Grid ColumnDefinitions="180,100,*,220" ColumnSpacing="12">
                     <TextBlock Text="{services:TrText Test}" FontWeight="SemiBold"/><Border Classes="tag" Grid.Column="1" HorizontalAlignment="Left" services:StatusTag.Status="{Binding StateText}"><TextBlock Text="{services:TrText StateText}"/></Border>
@@ -2907,7 +2907,7 @@
                 </DataTemplate></ItemsControl.ItemTemplate>
               </ItemsControl>
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="{services:TrText WanStatus}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Diagnostics.WanStatus}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
                 <WrapPanel Grid.Column="1">
                   <Button Classes="info" Content="{services:Tr ui.copy_ip_port}" Click="CopyWanPublicIpPort_Click" Margin="0,0,8,0"/>
                   <Button Classes="open" Content="{services:Tr ui.open_port_checker}" Command="{Binding OpenExternalPortCheckerCommand}" ToolTip.Tip="{services:Tr ui.opens_a_well_known_external_port_checker_website_66782a}"/>
@@ -2922,15 +2922,15 @@
           <Border Classes="card accentTools">
             <StackPanel Spacing="10">
               <Grid ColumnDefinitions="*,Auto">
-                <Button Classes="sectionToggle" Command="{Binding ToggleLocalDiagnosticsCommand}" VerticalAlignment="Top">
-                  <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="▸" IsVisible="{Binding !IsLocalDiagnosticsExpanded}" FontWeight="Bold"/><TextBlock Text="▾" IsVisible="{Binding IsLocalDiagnosticsExpanded}" FontWeight="Bold"/><TextBlock Text="{services:Tr ui.local_machine_diagnostics}" FontSize="17" FontWeight="SemiBold"/></StackPanel>
+                <Button Classes="sectionToggle" Command="{Binding Diagnostics.ToggleLocalDiagnosticsCommand}" VerticalAlignment="Top">
+                  <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="▸" IsVisible="{Binding !Diagnostics.IsLocalDiagnosticsExpanded}" FontWeight="Bold"/><TextBlock Text="▾" IsVisible="{Binding Diagnostics.IsLocalDiagnosticsExpanded}" FontWeight="Bold"/><TextBlock Text="{services:Tr ui.local_machine_diagnostics}" FontSize="17" FontWeight="SemiBold"/></StackPanel>
                 </Button>
-                <Button Grid.Column="1" Classes="verify" Content="{services:Tr ui.diagnose_connection}" Command="{Binding DiagnoseConnectionCommand}" VerticalAlignment="Top" IsVisible="{Binding IsLocalDiagnosticsExpanded}"/>
+                <Button Grid.Column="1" Classes="verify" Content="{services:Tr ui.diagnose_connection}" Command="{Binding DiagnoseConnectionCommand}" VerticalAlignment="Top" IsVisible="{Binding Diagnostics.IsLocalDiagnosticsExpanded}"/>
               </Grid>
-              <StackPanel Spacing="10" IsVisible="{Binding IsLocalDiagnosticsExpanded}">
+              <StackPanel Spacing="10" IsVisible="{Binding Diagnostics.IsLocalDiagnosticsExpanded}">
               <TextBlock Text="{services:Tr ui.diagnoses_the_selected_connection_profile_from_t_354026}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText LocalDiagnosticsState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-              <ItemsControl ItemsSource="{Binding LocalConnectionFindings}">
+              <TextBlock Text="{services:TrText Diagnostics.LocalDiagnosticsState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+              <ItemsControl ItemsSource="{Binding Diagnostics.LocalConnectionFindings}">
                 <ItemsControl.ItemTemplate><DataTemplate x:DataType="models:DiagnosticFindingDto">
                   <Border Classes="statuscard accentTools" Margin="0,0,0,6"><Grid ColumnDefinitions="120,140,*" ColumnSpacing="12">
                     <Border Classes="tag" HorizontalAlignment="Left" services:StatusTag.Status="{Binding StateText}"><TextBlock Text="{services:TrText StateText}"/></Border><TextBlock Grid.Column="1" Text="{services:TrText Component}"/><TextBlock Grid.Column="2" Text="{services:TrText Evidence}" TextWrapping="Wrap"/>
@@ -2938,7 +2938,7 @@
                 </DataTemplate></ItemsControl.ItemTemplate>
               </ItemsControl>
               <TextBlock Text="{services:Tr ui.this_machine}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
-              <ItemsControl ItemsSource="{Binding LocalMachineFindings}">
+              <ItemsControl ItemsSource="{Binding Diagnostics.LocalMachineFindings}">
                 <ItemsControl.ItemTemplate><DataTemplate x:DataType="models:DiagnosticFindingDto">
                   <Border Classes="statuscard accentTools" Margin="0,0,0,6"><Grid ColumnDefinitions="120,140,*" ColumnSpacing="12">
                     <Border Classes="tag" HorizontalAlignment="Left" services:StatusTag.Status="{Binding StateText}"><TextBlock Text="{services:TrText StateText}"/></Border><TextBlock Grid.Column="1" Text="{services:TrText Component}"/><TextBlock Grid.Column="2" Text="{services:TrText Evidence}" TextWrapping="Wrap"/>
@@ -2956,10 +2956,10 @@
               <!-- v0.7.27.0: Run Doctor/Refresh and Export Diagnostic Report moved to the ribbon
                    (BuildRibbonGroupsForActivePage). -->
               <StackPanel Spacing="10">
-                <TextBlock Text="{services:TrText DoctorStatus}" FontSize="24" FontWeight="Bold" />
-                <TextBlock Text="{services:TrText DoctorSummary}" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding DoctorCheckedAt, StringFormat='Last checked: {0}'}" Foreground="{DynamicResource MutedBrush}" />
-                <TextBlock Text="{services:TrText DoctorExportPath}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
+                <TextBlock Text="{services:TrText Diagnostics.DoctorStatus}" FontSize="24" FontWeight="Bold" />
+                <TextBlock Text="{services:TrText Diagnostics.DoctorSummary}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Diagnostics.DoctorCheckedAt, StringFormat='Last checked: {0}'}" Foreground="{DynamicResource MutedBrush}" />
+                <TextBlock Text="{services:TrText Diagnostics.DoctorExportPath}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
               </StackPanel>
               <!-- v0.7.28.0: managed process list, sourced from ServerStatusDto.Processes; that
                    data already flowed end-to-end from the headless host's FindManagedServerProcesses
@@ -3025,7 +3025,7 @@
           </Border>
           <TextBlock Text="{services:Tr ui.no_palworld_instances_detected_on_this_machine_y_cd624a}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !HasAllInstances}"/>
 
-          <TextBlock Text="{services:TrText DiagnosticsReportDetail}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+          <TextBlock Text="{services:TrText Diagnostics.DiagnosticsReportDetail}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
           <!-- v0.7.79.0: denser than v0.7.32.0's own compact pass. Direct live feedback ("these
                items listed should be compacted and make use of the spacing a bit more. Perhaps
                Pass can be highlighted in green or red"). State is now a colored badge (green
@@ -3035,7 +3035,7 @@
                Recommendation is hidden entirely when it's identical to Evidence (common for a
                passing check, e.g. both saying "Steam installation detected."), real redundant
                text this feedback was also about, not just visual density. -->
-          <ItemsControl ItemsSource="{Binding DiagnosticFindings}">
+          <ItemsControl ItemsSource="{Binding Diagnostics.DiagnosticFindings}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:DiagnosticFindingDto">
                 <Border Classes="card accentTools" Padding="8,5" Margin="0,0,0,4">
@@ -3056,8 +3056,8 @@
                          exactly what the fix does is the tooltip instead. -->
                     <StackPanel Grid.Column="3" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Right">
                       <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
-                        <Button Classes="verify" Content="{services:Tr ui.recheck}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).RecheckDiagnosticCommand}" CommandParameter="{Binding}"/>
-                        <Button Content="{services:TrText FixButtonText}" Classes="apply" IsVisible="{Binding CanFix}" IsEnabled="{Binding FixConfirmed}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).FixDiagnosticCommand}" CommandParameter="{Binding}"/>
+                        <Button Classes="verify" Content="{services:Tr ui.recheck}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Diagnostics.RecheckDiagnosticCommand}" CommandParameter="{Binding}"/>
+                        <Button Content="{services:TrText FixButtonText}" Classes="apply" IsVisible="{Binding CanFix}" IsEnabled="{Binding FixConfirmed}" Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Diagnostics.FixDiagnosticCommand}" CommandParameter="{Binding}"/>
                       </StackPanel>
                       <CheckBox Content="{services:Tr ui.confirmed}" ToolTip.Tip="{services:TrText FixConfirmText}" IsChecked="{Binding FixConfirmed}" IsVisible="{Binding CanFix}" FontSize="10" HorizontalAlignment="Right"/>
                     </StackPanel>
@@ -3259,16 +3259,16 @@
         <StackPanel IsVisible="{Binding IsCrashAnalyzerPage}" Spacing="12">
           <Border Classes="card accentTools"><StackPanel Spacing="10">
             <!-- v0.7.42.0: Refresh History/Run Analysis moved to the ribbon. -->
-            <TextBlock Text="{services:TrText CrashAnalyzerState}" TextWrapping="Wrap" Classes="muted"/>
+            <TextBlock Text="{services:TrText Diagnostics.CrashAnalyzerState}" TextWrapping="Wrap" Classes="muted"/>
             <TextBlock Text="{services:Tr ui.each_finding_matches_a_known_failure_pattern_and_0dac47}" TextWrapping="Wrap"/>
           </StackPanel></Border>
           <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-            <Border Classes="card accentTools"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.findings}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.findings}" ItemsSource="{Binding CrashFindings}" SelectedItem="{Binding SelectedCrashFinding, Mode=TwoWay}" MinHeight="160"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{services:TrText Display}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
-            <Border Grid.Column="1" Classes="card accentTools"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.safe_isolation_plan}" FontWeight="SemiBold"/><ItemsControl ItemsSource="{Binding CrashIsolationPlan}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding StringFormat='•  {0}'}" Margin="0,3" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+            <Border Classes="card accentTools"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.findings}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.findings}" ItemsSource="{Binding Diagnostics.CrashFindings}" SelectedItem="{Binding Diagnostics.SelectedCrashFinding, Mode=TwoWay}" MinHeight="160"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{services:TrText Display}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
+            <Border Grid.Column="1" Classes="card accentTools"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.safe_isolation_plan}" FontWeight="SemiBold"/><ItemsControl ItemsSource="{Binding Diagnostics.CrashIsolationPlan}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding StringFormat='•  {0}'}" Margin="0,3" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
           </Grid>
           <!-- v0.7.97.0: cause, fixes and evidence for the finding picked in the list above. -->
-          <Border Classes="card accentTools" IsVisible="{Binding HasSelectedCrashFinding}">
-            <StackPanel Spacing="8" DataContext="{Binding SelectedCrashFinding}" x:DataType="models:CrashFindingDto">
+          <Border Classes="card accentTools" IsVisible="{Binding Diagnostics.HasSelectedCrashFinding}">
+            <StackPanel Spacing="8" DataContext="{Binding Diagnostics.SelectedCrashFinding}" x:DataType="models:CrashFindingDto">
               <TextBlock Text="{services:TrText Title}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
               <TextBlock Text="{services:TrText StatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
               <TextBlock Text="{services:TrText SeenText}" Classes="muted" TextWrapping="Wrap"/>
@@ -3281,7 +3281,7 @@
               <TextBox AutomationProperties.Name="{services:Tr ui.evidence_most_recent_matching_lines}" Text="{Binding EvidenceText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="200" FontFamily="Consolas, monospace" FontSize="12"/>
             </StackPanel>
           </Border>
-          <Border Classes="card accentTools"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.persisted_analysis_history}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.persisted_analysis_history}" ItemsSource="{Binding CrashHistory}" MaxHeight="220"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{services:TrText Display}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
+          <Border Classes="card accentTools"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.persisted_analysis_history}" FontWeight="SemiBold"/><ListBox AutomationProperties.Name="{services:Tr ui.persisted_analysis_history}" ItemsSource="{Binding Diagnostics.CrashHistory}" MaxHeight="220"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{services:TrText Display}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
         </StackPanel>
 
         <!-- PALWORLD SAVE TOOLS -->
@@ -3495,32 +3495,32 @@
           <Border Classes="card accentSystem" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="10">
               <Grid ColumnDefinitions="*,Auto">
-                <Button Classes="sectionToggle" Command="{Binding ToggleAntiCheatCommand}" VerticalAlignment="Top">
-                  <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="▸" IsVisible="{Binding !IsAntiCheatExpanded}" FontWeight="Bold"/><TextBlock Text="▾" IsVisible="{Binding IsAntiCheatExpanded}" FontWeight="Bold"/><TextBlock Text="{services:Tr ui.anti_cheat_and_save_integrity_scanning}" FontSize="17" FontWeight="SemiBold"/></StackPanel>
+                <Button Classes="sectionToggle" Command="{Binding Diagnostics.ToggleAntiCheatCommand}" VerticalAlignment="Top">
+                  <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="▸" IsVisible="{Binding !Diagnostics.IsAntiCheatExpanded}" FontWeight="Bold"/><TextBlock Text="▾" IsVisible="{Binding Diagnostics.IsAntiCheatExpanded}" FontWeight="Bold"/><TextBlock Text="{services:Tr ui.anti_cheat_and_save_integrity_scanning}" FontSize="17" FontWeight="SemiBold"/></StackPanel>
                 </Button>
-                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding RefreshAntiCheatCommand}" VerticalAlignment="Top" IsVisible="{Binding IsAntiCheatExpanded}"/>
+                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding Diagnostics.RefreshAntiCheatCommand}" VerticalAlignment="Top" IsVisible="{Binding Diagnostics.IsAntiCheatExpanded}"/>
               </Grid>
-              <StackPanel Spacing="10" IsVisible="{Binding IsAntiCheatExpanded}">
-              <TextBlock Text="{services:TrText AntiCheatState}" Classes="muted" TextWrapping="Wrap"/>
+              <StackPanel Spacing="10" IsVisible="{Binding Diagnostics.IsAntiCheatExpanded}">
+              <TextBlock Text="{services:TrText Diagnostics.AntiCheatState}" Classes="muted" TextWrapping="Wrap"/>
               <TextBlock Text="{services:Tr ui.every_rule_defaults_to_flag_notify_log_only_swit_66192b}" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
               <Grid ColumnDefinitions="220,120,140" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
                 <TextBlock Text="{services:Tr ui.invalid_steam_id_on_join}" VerticalAlignment="Center" Classes="muted"/>
-                <CheckBox AutomationProperties.Name="{services:Tr ui.invalid_steam_id_on_join}" Grid.Column="1" IsChecked="{Binding AntiCheatRules.InvalidSteamId.Enabled}"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.invalid_steam_id_on_join}" Grid.Column="2" ItemsSource="{Binding AntiCheatResponses}" SelectedItem="{Binding AntiCheatRules.InvalidSteamId.Response}"/>
+                <CheckBox AutomationProperties.Name="{services:Tr ui.invalid_steam_id_on_join}" Grid.Column="1" IsChecked="{Binding Diagnostics.AntiCheatRules.InvalidSteamId.Enabled}"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.invalid_steam_id_on_join}" Grid.Column="2" ItemsSource="{Binding Diagnostics.AntiCheatResponses}" SelectedItem="{Binding Diagnostics.AntiCheatRules.InvalidSteamId.Response}"/>
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.impossible_level_max_allowed}" VerticalAlignment="Center" Classes="muted"/>
-                <CheckBox AutomationProperties.Name="{services:Tr ui.impossible_level_max_allowed}" Grid.Row="1" Grid.Column="1" IsChecked="{Binding AntiCheatRules.ImpossibleLevel.Enabled}"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.impossible_level_max_allowed}" Grid.Row="1" Grid.Column="2" ItemsSource="{Binding AntiCheatResponses}" SelectedItem="{Binding AntiCheatRules.ImpossibleLevel.Response}"/>
+                <CheckBox AutomationProperties.Name="{services:Tr ui.impossible_level_max_allowed}" Grid.Row="1" Grid.Column="1" IsChecked="{Binding Diagnostics.AntiCheatRules.ImpossibleLevel.Enabled}"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.impossible_level_max_allowed}" Grid.Row="1" Grid.Column="2" ItemsSource="{Binding Diagnostics.AntiCheatResponses}" SelectedItem="{Binding Diagnostics.AntiCheatRules.ImpossibleLevel.Response}"/>
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.pal_stat_anomaly_periodic_scan}" VerticalAlignment="Center" Classes="muted"/>
-                <CheckBox AutomationProperties.Name="{services:Tr ui.pal_stat_anomaly_periodic_scan}" Grid.Row="2" Grid.Column="1" IsChecked="{Binding AntiCheatRules.PalStatAnomaly.Enabled}"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.pal_stat_anomaly_periodic_scan}" Grid.Row="2" Grid.Column="2" ItemsSource="{Binding AntiCheatResponses}" SelectedItem="{Binding AntiCheatRules.PalStatAnomaly.Response}"/>
+                <CheckBox AutomationProperties.Name="{services:Tr ui.pal_stat_anomaly_periodic_scan}" Grid.Row="2" Grid.Column="1" IsChecked="{Binding Diagnostics.AntiCheatRules.PalStatAnomaly.Enabled}"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.pal_stat_anomaly_periodic_scan}" Grid.Row="2" Grid.Column="2" ItemsSource="{Binding Diagnostics.AntiCheatResponses}" SelectedItem="{Binding Diagnostics.AntiCheatRules.PalStatAnomaly.Response}"/>
               </Grid>
               <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock Text="{services:Tr ui.max_allowed_level}" VerticalAlignment="Center" Classes="muted"/>
-                <NumericUpDown AutomationProperties.Name="{services:Tr ui.max_allowed_level}" Value="{Binding AntiCheatRules.ImpossibleLevel.MaxAllowedLevel}" Minimum="1" Maximum="9999" Width="140"/>
+                <NumericUpDown AutomationProperties.Name="{services:Tr ui.max_allowed_level}" Value="{Binding Diagnostics.AntiCheatRules.ImpossibleLevel.MaxAllowedLevel}" Minimum="1" Maximum="9999" Width="140"/>
               </StackPanel>
-              <Button Classes="apply" Content="{services:Tr ui.save_anti_cheat_rules}" HorizontalAlignment="Left" Command="{Binding SaveAntiCheatRulesCommand}"/>
+              <Button Classes="apply" Content="{services:Tr ui.save_anti_cheat_rules}" HorizontalAlignment="Left" Command="{Binding Diagnostics.SaveAntiCheatRulesCommand}"/>
               <TextBlock Text="{services:Tr ui.recent_findings}" FontWeight="SemiBold"/>
-              <ListBox AutomationProperties.Name="{services:Tr ui.recent_findings}" ItemsSource="{Binding AntiCheatFindings}" MaxHeight="220">
+              <ListBox AutomationProperties.Name="{services:Tr ui.recent_findings}" ItemsSource="{Binding Diagnostics.AntiCheatFindings}" MaxHeight="220">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="models:AntiCheatFindingDto">
                     <Border Classes="statuscard accentSystem" Margin="0,3"><StackPanel Spacing="2">
@@ -4037,13 +4037,13 @@
               <TextBlock Text="{services:Tr ui.editable_on_the_workspace_page_which_is_the_one_29c1bc}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
 
               <!-- v0.9.6.0: the firewall rule for the -port= above, beside where the port is set. -->
-              <Border Classes="statuscard accentSystem" IsVisible="{Binding HasFirewallStatus}">
+              <Border Classes="statuscard accentSystem" IsVisible="{Binding Diagnostics.HasFirewallStatus}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                   <StackPanel Spacing="4">
-                    <TextBlock Text="{services:TrText FirewallStatusText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{services:TrText Diagnostics.FirewallStatusText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
                     <TextBlock Text="{services:Tr ui.firewall_settings_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                   </StackPanel>
-                  <Button Classes="apply" Grid.Column="1" VerticalAlignment="Center" Content="{services:Tr ui.allow_through_firewall}" AutomationProperties.Name="{services:Tr ui.allow_through_firewall}" Command="{Binding RepairFirewallCommand}" IsVisible="{Binding FirewallNeedsAction}"/>
+                  <Button Classes="apply" Grid.Column="1" VerticalAlignment="Center" Content="{services:Tr ui.allow_through_firewall}" AutomationProperties.Name="{services:Tr ui.allow_through_firewall}" Command="{Binding Diagnostics.RepairFirewallCommand}" IsVisible="{Binding Diagnostics.FirewallNeedsAction}"/>
                 </Grid>
               </Border>
 
@@ -4564,10 +4564,10 @@
                 <TextBlock Text="{services:Tr ui.customize_world_settings_any_time_from_server_co_1fa64e}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding IsWorldSettingsChoiceCustomize}"/>
                 <TextBlock Text="{services:Tr ui.save_this_profile_to_add_it_to_your_server_list}" Classes="muted" TextWrapping="Wrap"/>
                 <!-- v0.9.6.0: the new server's game port through the firewall, before players try to join. -->
-                <Border Classes="statuscard accentSystem" IsVisible="{Binding HasFirewallStatus}">
+                <Border Classes="statuscard accentSystem" IsVisible="{Binding Diagnostics.HasFirewallStatus}">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <TextBlock Text="{services:TrText FirewallStatusText}" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.allow_through_firewall}" AutomationProperties.Name="{services:Tr ui.allow_through_firewall}" Command="{Binding RepairFirewallCommand}" IsVisible="{Binding FirewallNeedsAction}"/>
+                    <TextBlock Text="{services:TrText Diagnostics.FirewallStatusText}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.allow_through_firewall}" AutomationProperties.Name="{services:Tr ui.allow_through_firewall}" Command="{Binding Diagnostics.RepairFirewallCommand}" IsVisible="{Binding Diagnostics.FirewallNeedsAction}"/>
                   </Grid>
                 </Border>
               </StackPanel>

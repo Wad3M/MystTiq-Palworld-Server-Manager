@@ -1,31 +1,31 @@
-<!-- MystTiq v1.0.8.7: file reviewed for this release (2026-10-12). -->
-# MystTiq v1.0.8.7 Checkpoint: Notifications, Alerts, Automation and Activity, Tidied
+<!-- MystTiq v1.0.8.8: file reviewed for this release (2026-10-12). -->
+# MystTiq v1.0.8.8 Checkpoint: The Update Center, Doctor and Diagnostics, Tidied
 
 ## What changed
 
-The eighth step of the split (C-7) moves **Notifications**, the **Alert Center**, **Automation** and **Activity**, with
-delivery and the Discord bot, into their own file. Nothing looks or works differently. The main window's code files are
-down from 404,700 to 375,111 bytes.
+The ninth step of the split (C-8) moves the **Update Center**, **Server Doctor**, the **Crash Analyzer** and the
+**Diagnostics Center** (network, internet reachability, firewall, UPnP, this computer's checks, anti-cheat and console
+capture) into their own file. Nothing looks or works differently. The main window's code files are down from 375,111
+to 339,118 bytes.
 
-One slip was caught on the way: the tool that moves the code renamed a word inside a piece of text, so the
-Notifications ribbon group was briefly titled "Alerts.Notifications". The tests caught it, it is fixed, the tool no
-longer touches text, and a check of all the code found no other case.
+A few pieces stay with the main window and are handed to the new page: updating the server files and pip (they belong
+to the HOST page's install), the list of every Palworld running on this computer, and opening the UE4SS page.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.0.8.7-Logic.ps1 -RunBuild -RunLong`: 387 / 387 passed, 1 skipped (the v1.0.2.0
-  system-unit test: no passwordless sudo on the VM). Every earlier check is carried, the frozen v1.0.8.6 gate passes,
+- **Full gate** `scripts\Test-v1.0.8.8-Logic.ps1 -RunBuild -RunLong`: 389 / 389 passed, 1 skipped (the v1.0.2.0
+  system-unit test: no passwordless sudo on the VM). Every earlier check is carried, the frozen v1.0.8.7 gate passes,
   the long set passes, and the Linux VM checks ran and passed.
-- **Static gate:** 323 / 323. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-- **The split** (ArtworkHarness, 835 checks in 12 languages, every page rendered as before): the notification, delivery
-  and Alert Center checks pass against the new ViewModel, and every page's Ribbon text is identical to before (the
-  check that caught the "Alerts.Notifications" title).
-- **The role table still matches the code**, with the Alerts commands read from their new file.
+- **Static gate:** 325 / 325. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **The split** (ArtworkHarness, 835 checks in 12 languages, every page rendered as before): the Update Center's rows
+  (Update on every row, UE4SS's opening the UE4SS page), Server Doctor's focused finding and the Diagnostics checks pass
+  against the new ViewModel.
+- **The role table still matches the code**, with the Diagnostics commands read from their new file.
 - **LogicHarness:** 190 scenarios.
 
 ## For you
 
 1. **Nothing to test.** This release only moves code.
 2. **The 24-hour runs** (v1.0.7.5) finish around 03:00 UTC on 2026-10-13; I'll collect them then.
-3. **Roadmap:** C-7 is `Built`. Next is v1.0.8.8: the Update Center, Doctor, Crash Analyzer and Diagnostics (C-8).
-4. **Push:** v1.0.7.0 to v1.0.8.7 are ready to push and tag when you say so.
+3. **Roadmap:** C-8 is `Built`. Next is v1.0.8.9, the last step: Settings, Security, Fleet and the browser view (C-9).
+4. **Push:** v1.0.7.0 to v1.0.8.8 are ready to push and tag when you say so.

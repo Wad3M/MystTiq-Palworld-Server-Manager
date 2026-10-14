@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -15,14 +15,14 @@ public sealed partial class MainWindowViewModel
     {
         var roles = new Dictionary<ICommand, string>(ReferenceEqualityComparer.Instance);
         void Need(string role, params ICommand?[] commands) { foreach (var c in commands) if (c is not null) roles[c] = role; }
-        Need("Operator", Players._loadGameIdsCommand, Players.AddPlayerWarningCommand, AnalyzeCrashesCommand,
+        Need("Operator", Players._loadGameIdsCommand, Players.AddPlayerWarningCommand, Diagnostics.AnalyzeCrashesCommand,
             Backups.ApplyBackupRetentionCommand, BackupAllCommand, Mods.BeginModSafeStartCommand, BeginStuckTestLoadCommand, Backups.CancelBackupScanCommand, Mods.CancelModSafeStartCommand,
             Backups.CreateBackupCommand, Backups.DeleteBackupCommand, Alerts.DismissNotificationCommand, DoctorAllCommand,
-            EnvironmentActionCommand, FixDiagnosticCommand, ForceStopServerCommand, InstallMissingEnvironmentCommand,
+            EnvironmentActionCommand, Diagnostics.FixDiagnosticCommand, ForceStopServerCommand, InstallMissingEnvironmentCommand,
             InstallPalworldServerFromWizardCommand, Alerts.MarkAllNotificationsReadCommand, Alerts.NotificationSelfTestCommand,
-            PrepareForWorldImportCommand, Backups.PreviewBackupRetentionCommand, RecheckDiagnosticCommand,
+            PrepareForWorldImportCommand, Backups.PreviewBackupRetentionCommand, Diagnostics.RecheckDiagnosticCommand,
             RefreshAllInstancesCommand, Backups.RefreshSaveToolsCommand, Map.RefreshTeleportCommand, Players.RefreshTemporaryBansCommand,
-            Players.RefreshWhitelistCommand, RepairUpnpMappingCommand, RestartCommand, RestartFromDiagnosticsCommand,
+            Players.RefreshWhitelistCommand, Diagnostics.RepairUpnpMappingCommand, RestartCommand, Diagnostics.RestartFromDiagnosticsCommand,
             Backups.RestoreBackupCommand, Alerts.RunAutomationRuleNowCommand, Backups.RunSaveToolsSelfTestCommand, Players.SavePlayerNotesCommand,
             SaveWorldNowCommand, StartCommand, StopCommand, TerminateSelectedInstanceCommand, Players.ToggleKitsCommand,
             Alerts.ToggleNotificationPinCommand, Alerts.ToggleNotificationReadCommand, Players.ToggleTemporaryBansCommand,
@@ -38,12 +38,12 @@ public sealed partial class MainWindowViewModel
             Players.KickSelectedPlayerCommand, Alerts.MuteAlertsCommand, Alerts.PauseDeliveryCommand, World.PreviewBaseRecoveryCommand, World.PreviewBaseTransferCommand,
             World.PreviewCharacterMigrationCommand, World.PreviewGuildOwnershipCommand, World.PreviewPalEditCommand,
             Mods.PreviewUe4ssInstallCommand, Players.PromoteSelectedPlayerCommand, RconSendCommand, Alerts.RefreshDiscordBotConfigCommand,
-            RepairFirewallCommand, Mods.RepairModsCommand, Mods.RepairSelectedModCommand, Mods.RollbackSelectedModCommand,
-            Mods.RollbackUe4ssInstallCommand, Alerts.SaveAlertRulesCommand, SaveAntiCheatRulesCommand, Configuration.SaveConfigurationCommand,
+            Diagnostics.RepairFirewallCommand, Mods.RepairModsCommand, Mods.RepairSelectedModCommand, Mods.RollbackSelectedModCommand,
+            Mods.RollbackUe4ssInstallCommand, Alerts.SaveAlertRulesCommand, Diagnostics.SaveAntiCheatRulesCommand, Configuration.SaveConfigurationCommand,
             Alerts.SaveDiscordBotConfigCommand, Host.SaveNetworkPolicyCommand, Configuration.SavePalworldConfigurationCommand,
             Host.SaveResourcePolicyCommand, Players.SaveNameGuardCommand, Map.SaveTeleportCommand, Players.SaveWhitelistCommand, Map.SendPlayerToTeleportPointCommand,
             Alerts.SendTestNotificationCommand, Mods.SetSelectedModDescriptionSourceCommand, Map.TeleportPlayerToMeCommand,
-            Map.TeleportToPlayerCommand, Alerts.ToggleAutomationRuleEnabledCommand, Players.UnbanSelectedPlayerCommand, UpdateComponentCommand,
+            Map.TeleportToPlayerCommand, Alerts.ToggleAutomationRuleEnabledCommand, Players.UnbanSelectedPlayerCommand, Diagnostics.UpdateComponentCommand,
             Mods.UpdateSelectedModCommand, Players.WhisperSelectedPlayerCommand);
         Need("Owner", CloneIntoNewServerCommand, CloneWorldCommand, ContinueFromInstallDirectoryCommand,
             CreatePrincipalCommand, CreateUserCommand, DeleteUserCommand, ResetUserPasswordCommand,

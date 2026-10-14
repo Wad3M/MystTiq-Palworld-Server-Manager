@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
 namespace MystTiq.Desktop.Services;
 
 // v0.8.14.0: what the signed-in role may do, in one place. Pure, so the logic harness can compile this file directly.

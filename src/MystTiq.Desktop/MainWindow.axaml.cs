@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -524,20 +524,20 @@ public sealed partial class MainWindow : Window
 
     private async void CopyNetworkDiagnosticReport_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.NetworkReportText))
+        if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.Diagnostics.NetworkReportText))
             return;
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard is not null)
-            await clipboard.SetTextAsync(vm.NetworkReportText);
+            await clipboard.SetTextAsync(vm.Diagnostics.NetworkReportText);
     }
 
     private async void CopyWanPublicIpPort_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.WanPublicIpPort) || vm.WanPublicIpPort == "Not checked")
+        if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.Diagnostics.WanPublicIpPort) || vm.Diagnostics.WanPublicIpPort == "Not checked")
             return;
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard is not null)
-            await clipboard.SetTextAsync(vm.WanPublicIpPort);
+            await clipboard.SetTextAsync(vm.Diagnostics.WanPublicIpPort);
     }
 
     private async void ExportNetworkDiagnosticReport_Click(object? sender, RoutedEventArgs e)
@@ -554,7 +554,7 @@ public sealed partial class MainWindow : Window
         await using var stream = await file.OpenWriteAsync();
         stream.SetLength(0);
         using var writer = new StreamWriter(stream);
-        await writer.WriteAsync(vm.NetworkReportText);
+        await writer.WriteAsync(vm.Diagnostics.NetworkReportText);
     }
 
     private async void CreateSupportPackage_Click(object? sender, RoutedEventArgs e)

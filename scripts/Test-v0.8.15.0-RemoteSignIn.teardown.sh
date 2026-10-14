@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
+# MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
 # v0.8.15.0: stops the isolated instance setup.sh started and deletes its folder (token, certificate, accounts included).
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 [[ -f "$ROOT/run/pid" ]] && kill "$(cat "$ROOT/run/pid")" 2>/dev/null

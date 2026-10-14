@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1351,13 +1351,13 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     vm.EnvironmentItems.Add(new EnvironmentChecklistItemDto { Component = "SteamCMD", Status = "READY", Action = "VERIFY" });
     vm.EnvironmentItems.Add(new EnvironmentChecklistItemDto { Component = "UE4SS", Status = "OPTIONAL", Action = "MANAGE" });
     vm.EnvironmentItems.Add(new EnvironmentChecklistItemDto { Component = "Palworld server", Status = "MISSING", Action = "INSTALL" });
-    vm.CoreServerComponents.Add(new ComponentVersionDto { Component = "SteamCMD", Status = "SelfUpdating" });
-    vm.CoreServerComponents.Add(new ComponentVersionDto { Component = "Palworld server", Status = "UpdateAvailable" });
-    vm.CoreServerComponents.Add(new ComponentVersionDto { Component = ".NET Runtime", Status = "UpToDate" });
+    vm.Diagnostics.CoreServerComponents.Add(new ComponentVersionDto { Component = "SteamCMD", Status = "SelfUpdating" });
+    vm.Diagnostics.CoreServerComponents.Add(new ComponentVersionDto { Component = "Palworld server", Status = "UpdateAvailable" });
+    vm.Diagnostics.CoreServerComponents.Add(new ComponentVersionDto { Component = ".NET Runtime", Status = "UpToDate" });
     vm.Backups.BackupItems.Add(new BackupItemDto { FileName = "Palworld_2026-10-05_12-00-00-000.zip", Verified = true });
     vm.Backups.BackupItems.Add(new BackupItemDto { FileName = "Palworld_2026-10-05_11-00-00-000.zip", Verified = false });
-    vm.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "a", Component = "Port", State = 0 });
-    vm.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "b", Component = "Backups", State = 2 });
+    vm.Diagnostics.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "a", Component = "Port", State = 0 });
+    vm.Diagnostics.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "b", Component = "Backups", State = 2 });
     var tagIssues = new List<string>();
     var tagsSeen = 0;
     foreach (var page in new[] { NavigationPage.ServerSetup, NavigationPage.UpdateCenter, NavigationPage.Doctor, NavigationPage.DiagnosticsCenter, NavigationPage.Backups, NavigationPage.Security, NavigationPage.ModDashboard })
@@ -1420,14 +1420,14 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         Row("Save & Runtime Dependencies", "Visual C++ Runtime", "NotApplicable", "N/A"),
         Row("Save & Runtime Dependencies", "Microsoft C++ Build Tools", "Unknown", "Windows Registry"),
     };
-    vm.CoreServerComponents.Clear(); vm.SaveRuntimeDependencyComponents.Clear();
-    foreach (var r in core) vm.CoreServerComponents.Add(r);
-    foreach (var r in deps) vm.SaveRuntimeDependencyComponents.Add(r);
-    typeof(MystTiq.Desktop.ViewModels.ViewModelBase).GetMethod("RaisePropertyChanged", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, [nameof(vm.HasComponentVersions)]);
+    vm.Diagnostics.CoreServerComponents.Clear(); vm.Diagnostics.SaveRuntimeDependencyComponents.Clear();
+    foreach (var r in core) vm.Diagnostics.CoreServerComponents.Add(r);
+    foreach (var r in deps) vm.Diagnostics.SaveRuntimeDependencyComponents.Add(r);
+    typeof(MystTiq.Desktop.ViewModels.ViewModelBase).GetMethod("RaisePropertyChanged", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm.Diagnostics, [nameof(vm.Diagnostics.HasComponentVersions)]);
     selectedPage.SetValue(vm, NavigationPage.UpdateCenter);
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var updateButtons = window.GetVisualDescendants().OfType<Button>()
-        .Where(b => b.IsEffectivelyVisible && ReferenceEquals(b.Command, vm.UpdateComponentCommand)).ToList();
+        .Where(b => b.IsEffectivelyVisible && ReferenceEquals(b.Command, vm.Diagnostics.UpdateComponentCommand)).ToList();
     var rows = updateButtons.Select(b => (Row: (ComponentVersionDto)b.DataContext!, Enabled: b.IsEffectivelyEnabled)).ToList();
     var greyed = rows.Where(r => !r.Enabled).Select(r => r.Row.Component).OrderBy(c => c).ToList();
     Check(rows.Count == core.Length + deps.Length && rows.Select(r => r.Row).Distinct().Count() == rows.Count &&
@@ -1447,7 +1447,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
           Row("Core Server", "SteamCMD", "NotInstalled").UpdateMethod == ComponentUpdateMethod.ServerFiles,
         "Each row's Update: SteamCMD for the server (and a missing SteamCMD), the UE4SS install, PalDefender, pip, Save Tools, the official page, and MystTiq's download when newer");
     // UE4SS's Update opens the UE4SS page (where the install is previewed and applied).
-    var ue4ssUpdate = vm.UpdateComponentAsync(core.Single(r => r.Component == "UE4SS Runtime"));
+    var ue4ssUpdate = vm.Diagnostics.UpdateComponentAsync(core.Single(r => r.Component == "UE4SS Runtime"));
     for (var i = 0; i < 100 && !ue4ssUpdate.IsCompleted; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(20); }
     Dispatcher.UIThread.RunJobs();
     Check(vm.SelectedPage == NavigationPage.Ue4ss, $"UE4SS's Update opens the UE4SS page [{vm.SelectedPage}]");
@@ -1658,14 +1658,14 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     vm.OpenNotificationLinkCommand.Execute(alert);
     Dispatcher.UIThread.RunJobs();
     Check(vm.SelectedPage == NavigationPage.Doctor, "Open Repair opens Server Doctor");
-    vm.DiagnosticFindings.Clear();
-    vm.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "saved-file-security-users", Category = "Saved data", Component = "User accounts", State = 2, Evidence = "The saved user accounts could not be read.", Recommendation = "Fix starts the user accounts empty.", ActionKind = "repair-saved-file", ActionSupported = true, IsFocused = true });
+    vm.Diagnostics.DiagnosticFindings.Clear();
+    vm.Diagnostics.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "saved-file-security-users", Category = "Saved data", Component = "User accounts", State = 2, Evidence = "The saved user accounts could not be read.", Recommendation = "Fix starts the user accounts empty.", ActionKind = "repair-saved-file", ActionSupported = true, IsFocused = true });
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var focusedTag = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("tag") && b.Classes.Contains("info") && b.IsEffectivelyVisible && b.DataContext is DiagnosticFindingDto { IsFocused: true });
     var fix = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.IsEffectivelyVisible && b.DataContext is DiagnosticFindingDto && b.Classes.Contains("apply"));
-    Check(focusedTag is not null && fix is not null && vm.DiagnosticFindings[0].FixButtonText == "Start This List Empty" && vm.DiagnosticFindings[0].FixConfirmText.Contains("unreadable file is kept"),
+    Check(focusedTag is not null && fix is not null && vm.Diagnostics.DiagnosticFindings[0].FixButtonText == "Start This List Empty" && vm.Diagnostics.DiagnosticFindings[0].FixConfirmText.Contains("unreadable file is kept"),
         "On Server Doctor the finding from the alert is marked, and its fix says it starts the list empty, keeping the unreadable file");
-    vm.DiagnosticFindings.Clear(); vm.Alerts.Notifications.Clear(); vm.Alerts.FilteredNotifications.Clear();
+    vm.Diagnostics.DiagnosticFindings.Clear(); vm.Alerts.Notifications.Clear(); vm.Alerts.FilteredNotifications.Clear();
 }
 // v1.0.7.0 (roadmap Q-1): a change the service refuses because a saved list cannot be read comes back as HTTP 409 with
 // the reason; every call shows that reason instead of "409 (Conflict)", and other 409 answers are left to the caller.

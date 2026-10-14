@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 
@@ -17,6 +17,7 @@ public sealed class SessionContext
     private readonly Func<object?> _activeTab;
     private readonly Func<ConnectionProfile> _buildProfile;
     private readonly Func<bool> _isConnected;
+    private readonly Func<bool> _serverIsRunning;
     private readonly Func<string?> _busyReason;
     private readonly Action<string?> _setBusyReason;
     private readonly Func<string?> _bearerToken;
@@ -27,8 +28,9 @@ public sealed class SessionContext
 
     public SessionContext(IMystTiqApiClient api, Func<ConnectionProfile?> profile, Func<string?> bearerToken,
         Func<bool> isBusy, Action<bool> setBusy, Func<NavigationPage> page, Action<Func<Task>, string> runUi, Func<ConnectionProfile?> selectedProfile, Func<object?> activeTab, Func<ConnectionProfile> buildProfile, Func<bool> isConnected,
-        Func<string?> busyReason, Action<string?> setBusyReason)
+        Func<string?> busyReason, Action<string?> setBusyReason, Func<bool> serverIsRunning)
     {
+        _serverIsRunning = serverIsRunning;
         _busyReason = busyReason;
         _setBusyReason = setBusyReason;
         _buildProfile = buildProfile;
@@ -58,6 +60,8 @@ public sealed class SessionContext
     public ConnectionProfile BuildProfile() => _buildProfile();
     /// <summary>Whether the active tab is connected to its MystTiq service.</summary>
     public bool IsConnected => _isConnected();
+    /// <summary>Whether the active tab's Palworld server is running (v1.0.8.8).</summary>
+    public bool ServerIsRunning => _serverIsRunning();
     /// <summary>What the busy state is for, shown in the status bar while it lasts.</summary>
     public string? BusyReason { get => _busyReason(); set => _setBusyReason(value); }
     public string? BearerToken => _bearerToken();

@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -23,7 +23,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly ILocalInstallationDiscoveryService _localDiscovery;
     private readonly IMystTiqServiceDiscoveryService _serviceDiscovery;
     private readonly ILocalManagementBootstrapper _localBootstrapper;
-    private readonly LocalDiagnosticsService _localDiagnostics = new();
     // v0.8.16.0: density (every tab); the theme mode stays per tab, in ConnectionProfile.ThemeVariant.
     private readonly LocalDisplayPreferencesStore _displayPreferences;
     private string? _busyReason;
@@ -76,15 +75,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _selectedRconPreset = "Info";
     private bool _rconConnected;
 
-    private string _doctorStatus = "Not run";
-    private string _doctorSummary = "Connect to a MystTiq service, then run Doctor.";
-    private string _doctorCheckedAt = "Never";
-    private string _doctorExportPath = string.Empty;
-    private DiagnosticsReportDto? _latestDiagnosticsReport;
-    private string _diagnosticsReportDetail = string.Empty;
     private string _distributionState = "Not checked";
     private string _distributionDetail = "Connect to inspect Palworld server installation.";
-    private string _componentVersionsCheckedAtText = string.Empty;
     private string _steamCmdState = "Unknown";
     private string _serverInstallState = "Unknown";
     private string _distributionPlatform = "—";
@@ -96,22 +88,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private PlayerSnapshotDto? _selectedOnlinePlayer;
     private ServerInstanceDto? _selectedInstance;
     private string _instanceTerminationResultText = string.Empty;
-    private string _networkHealth = "Not run";
-    private string _localDiagnosticsState = "Diagnose a connection profile to see staged DNS/TCP/TLS/HTTP results.";
-    private string _networkRuntime = "Unknown";
-    private string _networkPort = "—";
-    private string _networkBinding = "—";
-    private string _networkLanEndpoint = "—";
-    private string _networkRecommendation = "Run Diagnostics";
-    private string _firewallStatusText = string.Empty;
-    private bool _firewallAllowed;
-    private bool _firewallNeedsAction;
-    private string _firewallCommandsText = string.Empty;
-    private string _networkReportText = "";
-    private string _wanPublicIpPort = "Not checked";
-    private string _wanUpnpState = "Not checked";
-    private string _wanRouterDescription = "—";
-    private string _wanStatus = "Run Reachability Check";
     private string _localServiceStatus = "Unknown";
     private string _localPalServerStatus = "Unknown";
     private string _localApiStatus = "Unknown";
@@ -142,8 +118,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _newPrincipalName = string.Empty;
     private string _newPrincipalRole = "Operator";
     private string? _lastCreatedPrincipalToken;
-    private string _antiCheatState = "Open Alert Center to load anti-cheat rules.";
-    private AntiCheatRuleSetDto _antiCheatRules = new();
     private string _fleetState = "Open Fleet to list configured server profiles.";
     private double _serverSetupTableMaxHeight = 405;
     private string _cloneNewProfileId = string.Empty;
@@ -153,10 +127,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string? _cloneWorldNewProfileId;
     private int _cloneWorldPortOffset = 100;
     private bool _cloneWorldConfirmed;
-    private string _crashAnalyzerState = "Run analysis to inspect bounded recent server-log evidence.";
-    private bool _isWanDiagnosticsExpanded;
-    private bool _isLocalDiagnosticsExpanded;
-    private bool _isAntiCheatExpanded;
     private string _environmentHealthText = "Checking…";
     private string _setupOperationState = "IDLE";
     private string _setupOperationTitle = "No operation currently running";
@@ -186,7 +156,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _api = api;
         // v1.0.8.0 (roadmap C-0): the shared session the page ViewModels use, and the pages moved out of this file so far.
         Session = new SessionContext(api, ActiveProfileOrNull, () => BearerToken, () => IsBusy, busy => IsBusy = busy, () => SelectedPage, RunUi, () => SelectedProfile, () => ActiveTab, () => BuildProfileFromEditor(SelectedProfile?.Id), () => ManagementApiConnected,
-            () => BusyReason, reason => BusyReason = reason);
+            () => BusyReason, reason => BusyReason = reason, () => ServerIsRunning);
         // v1.0.8.6: the window's services first: a page may be handed one.
         _nexus = nexusClient ?? new NexusModsClient();
         _profileStore = profileStore;
@@ -205,7 +175,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         Backups = new BackupsViewModel(Session);
         Mods = new ModsViewModel(Session, _nexus, _credentialStore, Navigate);
         Alerts = new AlertsViewModel(Session, Navigate);
-        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace, Backups, Mods, Alerts];
+        Diagnostics = new DiagnosticsViewModel(Session, Navigate, Mods, UpdatePalworldServerAsync, UpdatePipAsync, RefreshAllInstancesAsync, () => DistributionDetail);
+        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace, Backups, Mods, Alerts, Diagnostics];
         // v1.0.8.6 (roadmap C-6): the Dashboard's stuck-start panel shows Safe Start while it runs and its result afterwards.
         Mods.SafeStartStatusChanged += () =>
         {
@@ -252,8 +223,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 : $"{(int)elapsed.TotalSeconds}s";
         };
 
-        foreach (var finding in _localDiagnostics.GetLocalMachineFindings())
-            LocalMachineFindings.Add(finding);
+        foreach (var finding in Diagnostics._localDiagnostics.GetLocalMachineFindings())
+            Diagnostics.LocalMachineFindings.Add(finding);
 
         foreach (var profile in _profileStore.Load())
             Profiles.Add(profile);
@@ -281,16 +252,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OpenGuildBaseCommand = new RelayCommand<string>(OpenGuildBase);
         // v1.0.0.4: the save-folder access fix (MainWindowViewModel.SaveAccess.cs).
         // v1.0.0.2: unique player names (MainWindowViewModel.NameGuard.cs).
-        RefreshAntiCheatCommand = new AsyncCommand(RefreshAntiCheatAsync, () => !IsBusy);
-        SaveAntiCheatRulesCommand = new AsyncCommand(SaveAntiCheatRulesAsync, () => !IsBusy);
         RefreshFleetCommand = new AsyncCommand(RefreshFleetAsync, () => !IsBusy);
         CloneWorldCommand = new AsyncCommand(CloneWorldAsync, () => !IsBusy && ManagementApiConnected && !string.IsNullOrWhiteSpace(CloneNewProfileId) && CloneWorldConfirmed);
         RestartAfterCloneCommand = new AsyncCommand(RestartAfterCloneAsync, () => !IsBusy && CloneWorldNeedsRestart);
         BackupAllCommand = new AsyncCommand(BackupAllAsync, () => !IsBusy && ManagementApiConnected);
         DoctorAllCommand = new AsyncCommand(DoctorAllAsync, () => !IsBusy && ManagementApiConnected);
         UpdateAllCommand = new AsyncCommand(UpdateAllAsync, () => !IsBusy && ManagementApiConnected);
-        AnalyzeCrashesCommand = new AsyncCommand(AnalyzeCrashesAsync, () => !IsBusy && ManagementApiConnected);
-        RefreshCrashHistoryCommand = new AsyncCommand(RefreshCrashHistoryAsync, () => !IsBusy);
         RefreshPlayersCommand = new AsyncCommand(RefreshPlayersPageAsync, () => !IsBusy);
         SaveWorldNowCommand = new AsyncCommand(SaveWorldNowAsync, () => !IsBusy);
         // v0.7.112.0: real now (PalDefender over RCON, the Starter Players.Kits provider), no longer hardcoded off.
@@ -298,18 +265,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         BootstrapLocalCommand = new AsyncCommand(BootstrapLocalAsync, () => !IsBusy && IsLocalProfile);
         GenerateServerNameCommand = new RelayCommand(GenerateServerName, () => Configuration.PalworldConfigLoaded && !IsBusy);
         GenerateSetupServerNameCommand = new RelayCommand(() => SetupServerName = GenerateRandomServerName());
-        RunDoctorCommand = new AsyncCommand(RunDoctorAsync, () => !IsBusy);
-        RecheckDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy) RunUi(() => RecheckDiagnosticAsync(f)); });
         // v0.7.105.0: FixConfirmed gates this the same way Backups.BackupRestoreConfirmed gates Backups.RestoreBackupCommand --
         // checked here too, not just via the button's IsEnabled, so the command itself can never fire unconfirmed.
-        FixDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy && f is { CanFix: true, FixConfirmed: true }) RunUi(() => FixDiagnosticAsync(f)); });
-        RunNetworkDiagnosticsCommand = new AsyncCommand(RunNetworkDiagnosticsAsync, () => !IsBusy);
         DiagnoseConnectionCommand = new AsyncCommand(DiagnoseConnectionAsync, () => !IsBusy && SelectedProfile is not null);
-        RepairFirewallCommand = new AsyncCommand(RepairFirewallAsync, () => !IsBusy);
-        RunWanReachabilityCommand = new AsyncCommand(RunWanReachabilityAsync, () => !IsBusy);
-        RepairUpnpMappingCommand = new AsyncCommand(RepairUpnpMappingAsync, () => !IsBusy);
         OpenExternalPortCheckerCommand = new RelayCommand(OpenExternalPortChecker);
-        RestartFromDiagnosticsCommand = new AsyncCommand(RestartFromDiagnosticsAsync, () => !IsBusy && ManagementApiConnected && ServerIsRunning);
         RefreshEnvironmentCommand = new AsyncCommand(RefreshEnvironmentAsync, () => !IsBusy);
         VerifyEnvironmentCommand = new AsyncCommand(VerifyEnvironmentAsync, () => !IsBusy);
         CreateDefaultServerSettingsCommand = new AsyncCommand(CreateDefaultServerSettingsAsync, () => !IsBusy && SetupCreateConfirmed);
@@ -320,7 +279,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         InstallPalworldServerFromWizardCommand = new AsyncCommand(InstallPalworldServerFromWizardAsync, () => !IsBusy);
         InstallPalworldServerWithExtrasCommand = new AsyncCommand(InstallPalworldServerWithExtrasAsync, () => !IsBusy);
         // v1.0.1.0: Update on every Update Center row (MainWindowViewModel.ComponentUpdates.cs); pip's own command folded in.
-        UpdateComponentCommand = new RelayCommand<ComponentVersionDto>(UpdateComponent, component => component?.CanUpdate == true);
         // v1.0.4.0 (roadmap S-1, S-2): the selected player's inventory (MainWindowViewModel.Inventory.cs).
         RefreshWorldExplorerCommand = new AsyncCommand(RefreshWorldExplorerAsync, () => !IsBusy);
         RefreshOperationsCommand = new AsyncCommand(RefreshOperationsAsync, () => !IsBusy && ManagementApiConnected);
@@ -332,7 +290,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         Configuration.RebuildConfigPresetList();
         // v1.0.0.1: the stuck-start protocol's test load, and clearing a finished test from the Dashboard.
         BeginStuckTestLoadCommand = new AsyncCommand(() => Mods.BeginModSafeStartAsync(testLoad: true), () => !IsBusy && Mods.ModSafeStartStatus is not { IsRunning: true });
-        ExportDoctorCommand = new RelayCommand(ExportDoctorReport, () => DoctorChecks.Count > 0);
         StartCommand = new AsyncCommand(StartServerAsync, () => !IsBusy && (ManagementApiConnected || LocalPalServerStatus == "Found") && !ServerIsRunning);
         StopCommand = new AsyncCommand(StopServerAsync, () => !IsBusy && ManagementApiConnected && ServerIsRunning);
         RestartCommand = new AsyncCommand(RestartServerAsync, () => !IsBusy && ManagementApiConnected && ServerIsRunning);
@@ -371,9 +328,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ForgetSavedTokenCommand = new RelayCommand(ForgetSavedToken, () => SelectedProfile is not null);
         NavigateCommand = new RelayCommand<string>(Navigate);
         OpenNotificationLinkCommand = new RelayCommand<NotificationItemDto>(OpenNotificationLink);
-        ToggleWanDiagnosticsCommand = new RelayCommand(() => IsWanDiagnosticsExpanded = !IsWanDiagnosticsExpanded);
-        ToggleLocalDiagnosticsCommand = new RelayCommand(() => IsLocalDiagnosticsExpanded = !IsLocalDiagnosticsExpanded);
-        ToggleAntiCheatCommand = new RelayCommand(() => IsAntiCheatExpanded = !IsAntiCheatExpanded);
         // No generic async command primitive exists in this codebase for a per-row action bound via
         // CommandParameter -- following the same RunUi(...) pattern (v1.0.7.0: was a fire-and-forget post)
         // already used by Players.ToggleWhitelistCommand/Players.ToggleBanListCommand above rather than adding one.
@@ -397,7 +351,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
     public string ProductName => "MystTiq";
-    public string Version => $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(4)}";
+    public string Version => AppVersionText;
+    internal static string AppVersionText => $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(4)}";
     public string PlatformText => OperatingSystem.IsWindows() ? "Windows" : OperatingSystem.IsLinux() ? "Linux" : "Desktop";
     public string ProfileStorageText => $"Profiles: {_profileStore.StoragePath}";
     public string SecretPolicyText => "Bearer token is process-memory-only and is never written to the profile file.";
@@ -724,11 +679,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             Players.ClearGameIdCatalog();
             // v0.7.97.0: crash findings, their plan and history are per-server too, so another
             // server's causes and fixes must never sit under this tab's name until its own arrive.
-            CrashFindings.Clear();
-            CrashIsolationPlan.Clear();
-            CrashHistory.Clear();
-            SelectedCrashFinding = null;
-            CrashAnalyzerState = string.Empty;
+            Diagnostics.CrashFindings.Clear();
+            Diagnostics.CrashIsolationPlan.Clear();
+            Diagnostics.CrashHistory.Clear();
+            Diagnostics.SelectedCrashFinding = null;
+            Diagnostics.CrashAnalyzerState = string.Empty;
             // v0.7.74.0: reported live -- switching tabs previously left whatever page the PREVIOUS
             // tab was on displayed for the newly active one too, rather than returning to wherever
             // this tab itself was last left. Restoring before RaiseActiveTabPropertiesChanged/the
@@ -738,7 +693,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             RecomputeTabLayout();
             _ = RefreshActiveTabDataAsync();
             if (SelectedPage is NavigationPage.Players or NavigationPage.Map) _ = RefreshPlayersPageAsync();
-            if (SelectedPage == NavigationPage.CrashAnalyzer) _ = RefreshCrashHistoryAsync();
+            if (SelectedPage == NavigationPage.CrashAnalyzer) _ = Diagnostics.RefreshCrashHistoryAsync();
         }
     }
 
@@ -980,28 +935,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<ServerProfileSummaryDto> FleetServers { get; } = [];
     public ObservableCollection<FleetActionResultDto> FleetActionResults { get; } = [];
     public IReadOnlyList<string> MystTiqRoles { get; } = ["Viewer", "Operator", "Admin", "Owner"];
-    public ObservableCollection<CrashFindingDto> CrashFindings { get; } = [];
-    // v0.7.97.0: the finding whose cause, fixes and evidence are shown beside the list.
-    private CrashFindingDto? _selectedCrashFinding;
-    public CrashFindingDto? SelectedCrashFinding
-    {
-        get => _selectedCrashFinding;
-        set { if (SetField(ref _selectedCrashFinding, value)) RaisePropertyChanged(nameof(HasSelectedCrashFinding)); }
-    }
-    public bool HasSelectedCrashFinding => _selectedCrashFinding is not null;
-    public ObservableCollection<string> CrashIsolationPlan { get; } = [];
-    public ObservableCollection<CrashAnalysisSnapshotDto> CrashHistory { get; } = [];
     public ObservableCollection<MetricHistoryPoint> MetricHistory { get; } = [];
     public ObservableCollection<HistoricalMetricPointDto> ResourceHistory { get; } = [];
     public IReadOnlyList<string> HistoryRanges { get; } = ["1 Hour", "6 Hours", "24 Hours", "7 Days", "30 Days"];
     public ObservableCollection<EnvironmentChecklistItemDto> EnvironmentItems { get; } = [];
     public ObservableCollection<OperationRecordDto> RecentOperations { get; } = [];
-    public ObservableCollection<DoctorCheckDto> DoctorChecks { get; } = [];
-    public ObservableCollection<DiagnosticFindingDto> DiagnosticFindings { get; } = [];
-    public ObservableCollection<NetworkDiagnosticCheckDto> NetworkDiagnosticChecks { get; } = [];
-    public ObservableCollection<WanReachabilityCheckDto> WanReachabilityChecks { get; } = [];
-    public ObservableCollection<DiagnosticFindingDto> LocalConnectionFindings { get; } = [];
-    public ObservableCollection<DiagnosticFindingDto> LocalMachineFindings { get; } = [];
 
     public PlayerSnapshotDto? SelectedOnlinePlayer
     {
@@ -1235,7 +1173,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (Diagnostics.RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (RefreshAllInstancesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (TerminateSelectedInstanceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -1263,7 +1201,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (Diagnostics.RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
     }
     public string LifecycleStatusText { get => _lifecycleStatusText; private set => SetField(ref _lifecycleStatusText, value); }
@@ -1288,10 +1226,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
 
 
-    public string AntiCheatState { get => _antiCheatState; private set => SetField(ref _antiCheatState, value); }
-    public AntiCheatRuleSetDto AntiCheatRules { get => _antiCheatRules; set => SetField(ref _antiCheatRules, value ?? new()); }
-    public ObservableCollection<AntiCheatFindingDto> AntiCheatFindings { get; } = [];
-    public IReadOnlyList<string> AntiCheatResponses { get; } = ["Flag", "Kick", "Ban"];
     public string FleetState { get => _fleetState; private set => SetField(ref _fleetState, value); }
     public string CloneNewProfileId { get => _cloneNewProfileId; set { if (SetField(ref _cloneNewProfileId, value ?? string.Empty)) (CloneWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string CloneNewProfileName { get => _cloneNewProfileName; set => SetField(ref _cloneNewProfileName, value ?? string.Empty); }
@@ -1337,7 +1271,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (Diagnostics.RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         RaisePropertyChanged(nameof(IsServerGlowGreen));
         RaisePropertyChanged(nameof(IsServerGlowRed));
@@ -1440,21 +1374,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string RconCommandText { get => _rconCommandText; set { if (SetField(ref _rconCommandText, value ?? string.Empty)) (RconSendCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string SelectedRconPreset { get => _selectedRconPreset; set { if (SetField(ref _selectedRconPreset, value ?? "Info")) RconCommandText = _selectedRconPreset; } }
 
-    public string DoctorStatus { get => _doctorStatus; private set => SetField(ref _doctorStatus, value); }
-    public string DoctorSummary { get => _doctorSummary; private set => SetField(ref _doctorSummary, value); }
-    public string DoctorCheckedAt { get => _doctorCheckedAt; private set => SetField(ref _doctorCheckedAt, value); }
-    public string DoctorExportPath { get => _doctorExportPath; private set => SetField(ref _doctorExportPath, value); }
-    public DiagnosticsReportDto? LatestDiagnosticsReport { get => _latestDiagnosticsReport; private set => SetField(ref _latestDiagnosticsReport, value); }
-    public string DiagnosticsReportDetail { get => _diagnosticsReportDetail; private set => SetField(ref _diagnosticsReportDetail, value); }
     public string DistributionState { get => _distributionState; private set => SetField(ref _distributionState, value); }
     public string DistributionDetail { get => _distributionDetail; private set => SetField(ref _distributionDetail, value); }
 
-    // v0.7.45.0: Update Center Overhaul -- split by Group to match the two labeled sections
-    // (Core Server / Save & Runtime Dependencies) the v0.2.16.4 reference used.
-    public ObservableCollection<ComponentVersionDto> CoreServerComponents { get; } = [];
-    public ObservableCollection<ComponentVersionDto> SaveRuntimeDependencyComponents { get; } = [];
-    public bool HasComponentVersions => CoreServerComponents.Count > 0 || SaveRuntimeDependencyComponents.Count > 0;
-    public string ComponentVersionsCheckedAtText { get => _componentVersionsCheckedAtText; private set => SetField(ref _componentVersionsCheckedAtText, value); }
     public string SteamCmdState { get => _steamCmdState; private set => SetField(ref _steamCmdState, value); }
     public string ServerInstallState { get => _serverInstallState; private set => SetField(ref _serverInstallState, value); }
     public string DistributionPlatform { get => _distributionPlatform; private set => SetField(ref _distributionPlatform, value); }
@@ -1599,7 +1521,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Diagnostics.RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             // v0.8.14.0: the Fleet Actions buttons gate on !IsBusy too but were never re-queried, so they stayed disabled.
             (BackupAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -1735,15 +1657,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand RefreshSecurityCommand { get; }
     public ICommand CreatePrincipalCommand { get; }
     public ICommand RevokePrincipalCommand { get; }
-    public ICommand RefreshAntiCheatCommand { get; }
-    public ICommand SaveAntiCheatRulesCommand { get; }
     public ICommand RefreshFleetCommand { get; }
     public ICommand CloneWorldCommand { get; }
     public ICommand BackupAllCommand { get; }
     public ICommand DoctorAllCommand { get; }
     public ICommand UpdateAllCommand { get; }
-    public ICommand AnalyzeCrashesCommand { get; }
-    public ICommand RefreshCrashHistoryCommand { get; }
     public ICommand RefreshPlayersCommand { get; }
     public ICommand SaveWorldNowCommand { get; }
 
@@ -1751,9 +1669,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     public ICommand GenerateServerNameCommand { get; }
     public ICommand GenerateSetupServerNameCommand { get; }
-    public ICommand RunDoctorCommand { get; }
-    public ICommand RecheckDiagnosticCommand { get; }
-    public ICommand FixDiagnosticCommand { get; }
     public ICommand RefreshEnvironmentCommand { get; }
     public ICommand VerifyEnvironmentCommand { get; }
     public ICommand CreateDefaultServerSettingsCommand { get; }
@@ -1768,7 +1683,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand RefreshPlayerGuildExplorerCommand { get; }
     public ICommand RefreshPalsCommand { get; }
     public ICommand BeginStuckTestLoadCommand { get; }
-    public ICommand ExportDoctorCommand { get; }
     public ICommand StartCommand { get; }
     public ICommand StopCommand { get; }
     public ICommand RestartCommand { get; }
@@ -1791,25 +1705,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand ForgetSavedTokenCommand { get; }
     public ICommand NavigateCommand { get; }
     public ICommand OpenNotificationLinkCommand { get; }
-    private string? _focusFindingId;
 
     // v1.0.7.0 (roadmap Q-1, owner decision D-10): a saved list MystTiq could not read is alerted with a link to its
     // repair; the button opens Server Doctor with that finding first.
     private void OpenNotificationLink(NotificationItemDto? notification)
     {
         if (notification is not { HasLink: true, Link: { } link }) return;
-        _focusFindingId = link[NotificationItemDto.DiagnosticsLinkPrefix.Length..];
+        Diagnostics.FocusFinding(link[NotificationItemDto.DiagnosticsLinkPrefix.Length..]);
         Navigate(nameof(NavigationPage.Doctor));
     }
-    public ICommand ToggleWanDiagnosticsCommand { get; }
-    public ICommand ToggleLocalDiagnosticsCommand { get; }
-    public ICommand ToggleAntiCheatCommand { get; }
 
-    public bool IsWanDiagnosticsExpanded { get => _isWanDiagnosticsExpanded; private set => SetField(ref _isWanDiagnosticsExpanded, value); }
-    public bool IsLocalDiagnosticsExpanded { get => _isLocalDiagnosticsExpanded; private set => SetField(ref _isLocalDiagnosticsExpanded, value); }
-    public bool IsAntiCheatExpanded { get => _isAntiCheatExpanded; private set => SetField(ref _isAntiCheatExpanded, value); }
 
-    public string CrashAnalyzerState { get => _crashAnalyzerState; private set => SetField(ref _crashAnalyzerState, value); }
 
 
 
@@ -1901,34 +1807,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
 
 
-    public string NetworkHealth { get => _networkHealth; private set => SetField(ref _networkHealth, value); }
-    public string LocalDiagnosticsState { get => _localDiagnosticsState; private set => SetField(ref _localDiagnosticsState, value); }
-    public string NetworkRuntime { get => _networkRuntime; private set => SetField(ref _networkRuntime, value); }
-    public string NetworkPort { get => _networkPort; private set => SetField(ref _networkPort, value); }
-    public string NetworkBinding { get => _networkBinding; private set => SetField(ref _networkBinding, value); }
-    public string NetworkLanEndpoint { get => _networkLanEndpoint; private set => SetField(ref _networkLanEndpoint, value); }
-    public string NetworkRecommendation { get => _networkRecommendation; private set => SetField(ref _networkRecommendation, value); }
 
-    // v0.9.6.0: whether this server's game port is allowed through the firewall (shown on Diagnostics and in Settings).
-    public string FirewallStatusText { get => _firewallStatusText; private set { if (SetField(ref _firewallStatusText, value)) RaisePropertyChanged(nameof(HasFirewallStatus)); } }
-    public bool HasFirewallStatus => !string.IsNullOrWhiteSpace(FirewallStatusText);
-    public bool FirewallAllowed { get => _firewallAllowed; private set => SetField(ref _firewallAllowed, value); }
-    public bool FirewallNeedsAction { get => _firewallNeedsAction; private set => SetField(ref _firewallNeedsAction, value); }
-    // Linux: the commands that open the port (MystTiq does not change a Linux firewall).
-    public string FirewallCommandsText { get => _firewallCommandsText; private set { if (SetField(ref _firewallCommandsText, value)) RaisePropertyChanged(nameof(HasFirewallCommands)); } }
-    public bool HasFirewallCommands => !string.IsNullOrWhiteSpace(FirewallCommandsText);
-    public string NetworkReportText { get => _networkReportText; private set => SetField(ref _networkReportText, value); }
-    public string WanPublicIpPort { get => _wanPublicIpPort; private set => SetField(ref _wanPublicIpPort, value); }
-    public string WanUpnpState { get => _wanUpnpState; private set => SetField(ref _wanUpnpState, value); }
-    public string WanRouterDescription { get => _wanRouterDescription; private set => SetField(ref _wanRouterDescription, value); }
-    public string WanStatus { get => _wanStatus; private set => SetField(ref _wanStatus, value); }
-    public ICommand RunNetworkDiagnosticsCommand { get; }
     public ICommand DiagnoseConnectionCommand { get; }
-    public ICommand RepairFirewallCommand { get; }
-    public ICommand RunWanReachabilityCommand { get; }
-    public ICommand RepairUpnpMappingCommand { get; }
     public ICommand OpenExternalPortCheckerCommand { get; }
-    public ICommand RestartFromDiagnosticsCommand { get; }
     public ICommand BootstrapLocalCommand { get; }
 
 
@@ -1944,7 +1825,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             $"Profile: {ProfileName}", $"Endpoint: {endpoint}", $"Connection: {ConnectionState}",
             $"Authentication supplied: {(!string.IsNullOrWhiteSpace(BearerToken) ? "yes (redacted)" : "no")}",
             $"TLS pin supplied: {(!string.IsNullOrWhiteSpace(CertificateSha256) ? "yes (redacted)" : "no")}", "",
-            NetworkReportText, "", "Workspace", $"State: {Workspace.WorkspaceState}",
+            Diagnostics.NetworkReportText, "", "Workspace", $"State: {Workspace.WorkspaceState}",
             $"Server root: {Configuration.ConfigServerRoot}", $"SteamCMD: {Configuration.ConfigSteamCmdPath}", $"Backup root: {Configuration.ConfigBackupRoot}", $"Runtime root: {Configuration.ConfigRuntimeRoot}"
         });
     }
@@ -1968,34 +1849,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
-    private async Task RunNetworkDiagnosticsAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var report = await _api.GetNetworkDiagnosticsAsync(SelectedProfile, BearerToken);
-            NetworkHealth = report.NetworkHealthText;
-            NetworkRuntime = report.RuntimeHealth;
-            NetworkPort = $"UDP {report.EffectiveGamePort}";
-            NetworkBinding = report.BindingDisplay ?? "Not listening";
-            NetworkLanEndpoint = report.LanEndpoint ?? "—";
-            NetworkRecommendation = string.IsNullOrWhiteSpace(report.RecommendedAction) ? "No action required." : report.RecommendedAction;
-            NetworkDiagnosticChecks.Clear();
-            foreach (var check in report.Checks) NetworkDiagnosticChecks.Add(check);
-            NetworkReportText = string.Join(Environment.NewLine, new[] {
-                "MystTiq Palworld Server Diagnostics", $"Timestamp: {report.CheckedAt:O}",
-                $"Runtime: {report.RuntimeHealth}", $"Network: {report.NetworkHealthText}",
-                $"Configured game port: UDP {report.EffectiveGamePort}", $"PID: {report.PalServerProcessId?.ToString() ?? "—"}",
-                $"Process: {report.PalServerProcessName ?? "—"}", $"Binding: {report.BindingDisplay ?? "—"}",
-                $"LAN endpoint: {report.LanEndpoint ?? "—"}", "",
-                string.Join(Environment.NewLine, report.Checks.Select(c => $"{c.Test}: {c.StateText} — {c.Details}"))
-            });
-        }
-        catch (Exception ex) { NetworkHealth = "ERROR"; NetworkRecommendation = ex.Message; }
-        finally { IsBusy = false; }
-        await RefreshFirewallStatusAsync();
-    }
 
     // v0.6.4.0 local-PC diagnostics: runs entirely client-side against SelectedProfile, unlike
     // every other diagnostic command on this page which asks the server about itself. This is what
@@ -2005,129 +1858,26 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         if (SelectedProfile is null) return;
         IsBusy = true;
-        LocalDiagnosticsState = "Diagnosing…";
+        Diagnostics.LocalDiagnosticsState = "Diagnosing…";
         try
         {
-            var findings = await _localDiagnostics.DiagnoseConnectionAsync(SelectedProfile, CancellationToken.None);
-            LocalConnectionFindings.Clear();
-            foreach (var finding in findings) LocalConnectionFindings.Add(finding);
+            var findings = await Diagnostics._localDiagnostics.DiagnoseConnectionAsync(SelectedProfile, CancellationToken.None);
+            Diagnostics.LocalConnectionFindings.Clear();
+            foreach (var finding in findings) Diagnostics.LocalConnectionFindings.Add(finding);
             var failed = findings.FirstOrDefault(f => f.State == (int)MystTiq.Core.Models.DiagnosticState.Fail);
-            LocalDiagnosticsState = failed is not null
+            Diagnostics.LocalDiagnosticsState = failed is not null
                 ? $"Failed at {failed.Component}: {failed.Evidence}"
                 : "All stages passed.";
         }
-        catch (Exception ex) { LocalDiagnosticsState = ex.Message; }
+        catch (Exception ex) { Diagnostics.LocalDiagnosticsState = ex.Message; }
         finally { IsBusy = false; }
     }
 
-    private async Task RestartFromDiagnosticsAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var result = await _api.RestartFromNetworkDiagnosticsAsync(SelectedProfile, BearerToken);
-            NetworkRecommendation = result.Success
-                ? "Controlled restart completed; network diagnostics were re-run automatically."
-                : result.Restart.Message ?? "Controlled restart did not complete successfully.";
-            await RunNetworkDiagnosticsAsync();
-        }
-        catch (Exception ex) { NetworkRecommendation = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    // v0.9.6.0: allows this server's game port (the one it binds) and removes its rules for a port it no longer uses.
-    // When Windows refuses the service (not an administrator) and the server is on this computer, the same change runs
-    // through Windows' administrator prompt instead.
-    private async Task RepairFirewallAsync()
-    {
-        if (FirewallProfile() is not { } profile) return;
-        IsBusy = true;
-        try
-        {
-            var result = await _api.RepairNetworkFirewallAsync(profile, BearerToken);
-            var message = result.Message;
-            if (!result.Success && result.NeedsElevation && !string.IsNullOrWhiteSpace(result.Script))
-            {
-                if (ElevatedFirewall.CanRun(profile))
-                {
-                    FirewallStatusText = "Waiting for Windows to allow administrator rights…";
-                    message = (await ElevatedFirewall.RunAsync(result.Script)).Message;
-                }
-                else message += " Run MystTiq's service as an administrator on the server's computer, or add the rule there yourself.";
-            }
 
-            NetworkRecommendation = message;
-            await RefreshFirewallStatusAsync();
-        }
-        catch (Exception ex) { NetworkRecommendation = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    // The wizard has no saved profile yet; it talks to the server through the one its editor builds.
-    private ConnectionProfile? FirewallProfile()
-    {
-        if (SelectedProfile is not null) return SelectedProfile;
-        if (!IsCreatingNewProfile) return null;
-        try { return BuildProfileFromEditor(null); }
-        catch { return null; }
-    }
 
-    private async Task RefreshFirewallStatusAsync()
-    {
-        if (FirewallProfile() is not { } profile) return;
-        try
-        {
-            var status = await _api.GetNetworkFirewallAsync(profile, BearerToken);
-            FirewallAllowed = status.Allowed && status.StaleRules.Count == 0;
-            FirewallNeedsAction = status.Supported && status.Error is null && !status.Blocked && (!status.Allowed || status.StaleRules.Count > 0);
-            FirewallCommandsText = status.Commands is { Count: > 0 } commands ? string.Join(Environment.NewLine, commands) : string.Empty;
-            FirewallStatusText = status.Summary;
-        }
-        catch (Exception ex)
-        {
-            FirewallAllowed = false;
-            FirewallNeedsAction = false;
-            FirewallStatusText = $"The firewall could not be read: {ex.Message}";
-        }
-    }
 
-    // v0.6.11.0: the genuine gap left after local firewall inspection (above) and v0.6.4.0's Local
-    // Machine Diagnostics -- neither tests whether the internet, or even the router, can actually
-    // reach the configured game port. Public IP + UPnP mapping are real, automated checks; true
-    // unsolicited-inbound UDP confirmation needs infrastructure we don't own, so that piece is a
-    // manual hand-off (Copy IP:Port / Open Port Checker) rather than a faked pass/fail.
-    private async Task RunWanReachabilityAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var report = await _api.GetWanReachabilityAsync(SelectedProfile, BearerToken);
-            WanPublicIpPort = report.PublicIpPortText;
-            WanUpnpState = report.UpnpStateText;
-            WanRouterDescription = (report.RouterDescription ?? "—") + (string.IsNullOrWhiteSpace(report.RouterWanIPv4) ? string.Empty : $" · internet address {report.RouterWanIPv4}");
-            WanReachabilityChecks.Clear();
-            foreach (var check in report.Checks) WanReachabilityChecks.Add(check);
-            WanStatus = "Checked " + report.CheckedAt.ToLocalTime().ToString("t");
-        }
-        catch (Exception ex) { WanStatus = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task RepairUpnpMappingAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var result = await _api.RepairUpnpMappingAsync(SelectedProfile, BearerToken);
-            WanStatus = result.Message;
-            await RunWanReachabilityAsync();
-        }
-        catch (Exception ex) { WanStatus = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
     private void OpenExternalPortChecker()
     {
@@ -2136,7 +1886,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             var start = new ProcessStartInfo("https://canyouseeme.org/") { UseShellExecute = true };
             Process.Start(start);
         }
-        catch (Exception ex) { WanStatus = "Unable to open the port checker: " + ex.Message; }
+        catch (Exception ex) { Diagnostics.WanStatus = "Unable to open the port checker: " + ex.Message; }
     }
 
     // v0.7.87.0: direct live feedback -- leaving Configuration with unsaved changes previously just
@@ -2254,7 +2004,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             case NavigationPage.AlertCenter:
                 await Alerts.RefreshAlertCenterAsync();
                 await Alerts.RefreshDiscordBotConfigAsync();
-                await RefreshAntiCheatAsync();
+                await Diagnostics.RefreshAntiCheatAsync();
                 break;
             case NavigationPage.Fleet:
                 await RefreshFleetAsync();
@@ -2283,17 +2033,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 await Mods.RefreshModsAsync();
                 break;
             case NavigationPage.Doctor:
-                await RunDoctorAsync();
+                await Diagnostics.RunDoctorAsync();
                 break;
             case NavigationPage.DiagnosticsCenter:
-                await RunNetworkDiagnosticsAsync();
+                await Diagnostics.RunNetworkDiagnosticsAsync();
                 break;
             case NavigationPage.Settings:
                 // v0.9.6.0: the firewall state for the port the launch arguments name.
-                if (SelectedProfile is not null) await RefreshFirewallStatusAsync();
+                if (SelectedProfile is not null) await Diagnostics.RefreshFirewallStatusAsync();
                 break;
             case NavigationPage.CrashAnalyzer:
-                await RefreshCrashHistoryAsync();
+                await Diagnostics.RefreshCrashHistoryAsync();
                 break;
             case NavigationPage.SaveTools:
                 await Backups.RefreshSaveToolsAsync(false);
@@ -2425,7 +2175,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             _ => NewServerWizardStep
         };
         // v0.9.6.0: the last step offers to allow the new server's game port through the firewall.
-        if (IsWizardStepConfirm && IsNewServerSetupFlow) _ = RefreshFirewallStatusAsync();
+        if (IsWizardStepConfirm && IsNewServerSetupFlow) _ = Diagnostics.RefreshFirewallStatusAsync();
     }
     private void GoBackWizardStep()
     {
@@ -3031,8 +2781,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("Doctor",
             [
-                new("⚕", "Run Doctor", "Run doctor and refresh", RunDoctorCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
-                new("⇩", "Export Report", "Export diagnostic report", ExportDoctorCommand, null, RibbonIconColor.Cyan),
+                new("⚕", "Run Doctor", "Run doctor and refresh", Diagnostics.RunDoctorCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("⇩", "Export Report", "Export diagnostic report", Diagnostics.ExportDoctorCommand, null, RibbonIconColor.Cyan),
                 // v0.7.28.0: reuses the same ForceStopServerCommand as the "Danger" group below --
                 // functionally identical (force-terminate the managed process tree), just reachable
                 // here too since this is the page showing exactly which processes it would kill.
@@ -3092,9 +2842,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("Diagnostics",
             [
-                new("⚡", "Run Diagnostics", "Run network diagnostics", RunNetworkDiagnosticsCommand, null, RibbonIconColor.Amber, IsSuccessButton: true),
-                new("🛡", "Repair Firewall", "Add or repair firewall rule", RepairFirewallCommand, null, RibbonIconColor.Blue),
-                new("⟳", "Restart Server", "Restart server", RestartFromDiagnosticsCommand, null, RibbonIconColor.Red, IsDangerButton: true),
+                new("⚡", "Run Diagnostics", "Run network diagnostics", Diagnostics.RunNetworkDiagnosticsCommand, null, RibbonIconColor.Amber, IsSuccessButton: true),
+                new("🛡", "Repair Firewall", "Add or repair firewall rule", Diagnostics.RepairFirewallCommand, null, RibbonIconColor.Blue),
+                new("⟳", "Restart Server", "Restart server", Diagnostics.RestartFromDiagnosticsCommand, null, RibbonIconColor.Red, IsDangerButton: true),
             ]));
         }
         else if (IsSaveToolsPage)
@@ -3154,8 +2904,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("Crash Analyzer",
             [
-                new("↻", "Refresh History", "Refresh crash history", RefreshCrashHistoryCommand, null, RibbonIconColor.Amber),
-                new("🔍", "Run Analysis", "Analyze crashes", AnalyzeCrashesCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("↻", "Refresh History", "Refresh crash history", Diagnostics.RefreshCrashHistoryCommand, null, RibbonIconColor.Amber),
+                new("🔍", "Run Analysis", "Analyze crashes", Diagnostics.AnalyzeCrashesCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
             ]));
         }
         else if (IsUpdateCenterPage)
@@ -3663,19 +3413,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // found something wrong, so a Fail/Warning finding is always reflected here too. Not
             // fetched on the fast silent poll tick (only this full-refresh path) since Doctor's own
             // checks (journalctl, disk space) are too heavy to run every poll interval.
-            LatestDiagnosticsReport = await _api.GetDiagnosticsReportAsync(profile, BearerToken);
-            if (LatestDiagnosticsReport.Failures > 0)
+            Diagnostics.LatestDiagnosticsReport = await _api.GetDiagnosticsReportAsync(profile, BearerToken);
+            if (Diagnostics.LatestDiagnosticsReport.Failures > 0)
             {
                 DashboardHealthText = "ATTENTION";
-                Dashboard.HealthDetail = $"{LatestDiagnosticsReport.Failures} Doctor finding(s) need attention. Open Doctor.";
+                Dashboard.HealthDetail = $"{Diagnostics.LatestDiagnosticsReport.Failures} Doctor finding(s) need attention. Open Doctor.";
             }
-            else if (LatestDiagnosticsReport.Warnings > 0 && DashboardHealthText == "READY")
+            else if (Diagnostics.LatestDiagnosticsReport.Warnings > 0 && DashboardHealthText == "READY")
             {
                 DashboardHealthText = "DEGRADED";
-                Dashboard.HealthDetail = $"{LatestDiagnosticsReport.Warnings} Doctor finding(s) are warnings. Open Doctor.";
+                Dashboard.HealthDetail = $"{Diagnostics.LatestDiagnosticsReport.Warnings} Doctor finding(s) are warnings. Open Doctor.";
             }
         }
-        catch (Exception ex) { DiagnosticsReportDetail = $"Dashboard diagnostics load: {ex.Message}"; }
+        catch (Exception ex) { Diagnostics.DiagnosticsReportDetail = $"Dashboard diagnostics load: {ex.Message}"; }
 
         try
         {
@@ -3908,7 +3658,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ApplyLogs(await logsTask);
             ApplyMetrics(await metricsTask);
             if (IsConsolePage)
-                await RefreshConsoleCaptureStatusCoreAsync(profile);
+                await Diagnostics.RefreshConsoleCaptureStatusCoreAsync(profile);
         }
         catch (Exception ex)
         {
@@ -3973,6 +3723,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public BackupsViewModel Backups { get; }
     public ModsViewModel Mods { get; }
     public AlertsViewModel Alerts { get; }
+    public DiagnosticsViewModel Diagnostics { get; }
     private readonly IReadOnlyList<PageViewModel> _pages;
 
     // v1.0.8.2 (roadmap C-2): the Players page refresh is one part of the whole status refresh, so it stays here.
@@ -4545,34 +4296,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
 
 
-    private async Task RefreshAntiCheatAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            AntiCheatRules = await _api.GetAntiCheatRulesAsync(SelectedProfile, BearerToken);
-            var findings = await _api.GetAntiCheatFindingsAsync(SelectedProfile, BearerToken);
-            AntiCheatFindings.Clear();
-            foreach (var finding in findings) AntiCheatFindings.Add(finding);
-            AntiCheatState = $"Anti-cheat rules loaded. {findings.Count} recent finding(s).";
-        }
-        catch (Exception ex) { AntiCheatState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task SaveAntiCheatRulesAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            AntiCheatRules = await _api.SaveAntiCheatRulesAsync(SelectedProfile, AntiCheatRules, BearerToken);
-            AntiCheatState = "Anti-cheat rules saved.";
-        }
-        catch (Exception ex) { AntiCheatState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
     private async Task RefreshFleetAsync()
     {
@@ -4736,40 +4460,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private Task DoctorAllAsync() => RunFleetActionAsync("Doctor All", (profile, token) => _api.DoctorAllAsync(profile, token));
     private Task UpdateAllAsync() => RunFleetActionAsync("Update All", (profile, token) => _api.UpdateAllAsync(profile, token));
 
-    private async Task AnalyzeCrashesAsync()
-    {
-        if (SelectedProfile is null) return; IsBusy = true; CrashAnalyzerState = "Analyzing bounded recent-log evidence…";
-        try { ApplyCrashAnalysis(await _api.AnalyzeCrashesAsync(SelectedProfile, BearerToken)); await LoadCrashHistoryCoreAsync(); }
-        catch (Exception ex) { CrashAnalyzerState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task RefreshCrashHistoryAsync()
-    {
-        if (SelectedProfile is null) return; IsBusy = true;
-        try { await LoadCrashHistoryCoreAsync(); }
-        catch (Exception ex) { CrashAnalyzerState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task LoadCrashHistoryCoreAsync()
-    {
-        var history = await _api.GetCrashHistoryAsync(SelectedProfile!, BearerToken);
-        CrashHistory.Clear(); foreach (var row in history) CrashHistory.Add(row);
-        if (history.FirstOrDefault() is { } latest) ApplyCrashAnalysis(latest);
-        else CrashAnalyzerState = "No persisted crash analyses yet. Run Analysis to create the first evidence report.";
-    }
-
-    private void ApplyCrashAnalysis(CrashAnalysisSnapshotDto report)
-    {
-        CrashFindings.Clear(); foreach (var finding in report.Findings) CrashFindings.Add(finding);
-        SelectedCrashFinding = CrashFindings.FirstOrDefault();
-        CrashIsolationPlan.Clear(); foreach (var step in report.IsolationPlan) CrashIsolationPlan.Add(step);
-        CrashAnalyzerState = $"{report.Summary} Scanned {report.FilesScanned} file(s) and {report.LinesScanned} line(s).";
-    }
 
 
-    public string ExportCrashAnalysis() => JsonSerializer.Serialize(new { state = CrashAnalyzerState, findings = CrashFindings, isolationPlan = CrashIsolationPlan, history = CrashHistory }, new JsonSerializerOptions { WriteIndented = true });
+
+
+
 
 
     public async Task<PlayerCopyPreviewDto?> PreviewCopyPlayerAsync(string sourcePlayerId, string destinationPlayerId)
@@ -4833,51 +4528,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
 
-    private async Task RunDoctorAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { DoctorSummary = ex.Message; return; }
-        IsBusy = true; DoctorStatus = "Running…";
-        try
-        {
-            var report = await _api.RunDoctorAsync(profile, BearerToken);
-            DoctorChecks.Clear();
-            foreach (var check in report.Checks) DoctorChecks.Add(check);
-            DoctorCheckedAt = report.CheckedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
-            (ExportDoctorCommand as RelayCommand)?.RaiseCanExecuteChanged();
-
-            // v0.6.4.0: the unified report supersedes the raw /doctor-only status/summary text
-            // (DoctorChecks above stays populated too, for the existing export format) -- this is
-            // what makes the Doctor page and the Dashboard badge agree, since both now read from
-            // the same HeadlessDiagnosticsService output.
-            LatestDiagnosticsReport = await _api.GetDiagnosticsReportAsync(profile, BearerToken);
-            DiagnosticFindings.Clear();
-            // v1.0.7.0 (Q-1): a finding opened from a notification is listed first and marked, once.
-            var focus = _focusFindingId;
-            _focusFindingId = null;
-            foreach (var finding in LatestDiagnosticsReport.Findings
-                         .OrderByDescending(f => focus is not null && f.Id.Equals(focus, StringComparison.OrdinalIgnoreCase)))
-            {
-                finding.IsFocused = focus is not null && finding.Id.Equals(focus, StringComparison.OrdinalIgnoreCase);
-                DiagnosticFindings.Add(finding);
-            }
-            DoctorStatus = LatestDiagnosticsReport.OverallHealthText;
-            // v0.7.30.0 bug fix: was just the raw pass/warn/fail counts, which left "UNKNOWN" (the
-            // legitimate result when 17/17 pass but the server simply isn't running -- see
-            // OverallHealthText) completely unexplained. The backend already computes exactly this
-            // explanation (OverallHealthDetail, e.g. "Server is not running; no health issues
-            // detected."); it was just never read on the Desktop side.
-            DoctorSummary = $"{LatestDiagnosticsReport.Passed} passed · {LatestDiagnosticsReport.Warnings} warning(s) · {LatestDiagnosticsReport.Failures} failure(s)"
-                + (string.IsNullOrWhiteSpace(LatestDiagnosticsReport.OverallHealthDetail) ? "" : $" — {LatestDiagnosticsReport.OverallHealthDetail}");
-        }
-        catch (Exception ex) { DoctorStatus = "Unavailable"; DoctorSummary = ex.Message; }
-        finally { IsBusy = false; }
-        // v0.7.44.0: Run Doctor is the natural moment to also refresh the machine-wide instance
-        // list -- same page, same "what's actually running" concern. Best-effort: a failure here
-        // must not blank out the diagnostics report that already succeeded above.
-        await RefreshAllInstancesAsync();
-    }
 
     // v0.7.44.0: Palworld Instance Detection & Termination Tool. Lists every Palworld process on
     // the machine (not just this profile's own managed one) via the new /server/instances route,
@@ -4924,58 +4574,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
-    private async Task RecheckDiagnosticAsync(DiagnosticFindingDto? finding)
-    {
-        if (finding is null) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { DiagnosticsReportDetail = ex.Message; return; }
 
-        IsBusy = true;
-        try
-        {
-            var updated = await _api.RecheckDiagnosticFindingAsync(profile, finding.Id, BearerToken);
-            if (updated is null) { DiagnosticsReportDetail = $"{finding.Component}: finding no longer exists."; return; }
-            var index = DiagnosticFindings.ToList().FindIndex(f => f.Id == updated.Id);
-            if (index >= 0) DiagnosticFindings[index] = updated;
-            DiagnosticsReportDetail = $"{updated.Component}: {updated.StateText}.";
-        }
-        catch (Exception ex) { DiagnosticsReportDetail = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task FixDiagnosticAsync(DiagnosticFindingDto? finding)
-    {
-        if (finding is null || !finding.CanFix || !finding.FixConfirmed) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { DiagnosticsReportDetail = ex.Message; return; }
-
-        IsBusy = true;
-        try
-        {
-            var result = await _api.FixDiagnosticFindingAsync(profile, finding.Id, BearerToken);
-            DiagnosticsReportDetail = result.Message;
-            if (result.Success) await RecheckDiagnosticAsync(finding);
-        }
-        catch (Exception ex) { DiagnosticsReportDetail = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private void ExportDoctorReport()
-    {
-        if (DoctorChecks.Count == 0) return;
-        try
-        {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "MystTiqReports");
-            Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, $"MystTiq-Doctor-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
-            var lines = new List<string> { $"MystTiq {Version} Production Doctor", $"Status: {DoctorStatus}", $"Checked: {DoctorCheckedAt}", DoctorSummary, "" };
-            foreach (var c in DoctorChecks) { lines.Add($"[{c.State}] {c.Component}"); lines.Add($"Evidence: {c.Evidence}"); lines.Add($"Recommendation: {c.Recommendation}"); lines.Add(""); }
-            File.WriteAllLines(path, lines); DoctorExportPath = path; DoctorSummary = $"Diagnostic report exported: {path}";
-        }
-        catch (Exception ex) { DoctorSummary = ex.Message; }
-    }
 
 
 
@@ -5245,7 +4845,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // v0.7.45.0: same page, same "is everything up to date" concern -- Refresh now also
         // pulls the full component-by-component version table. Best-effort: a failure here must
         // not blank out the distribution status that already succeeded above.
-        await RefreshComponentVersionsAsync();
+        await Diagnostics.RefreshComponentVersionsAsync();
     }
 
     // v0.7.82.0: the Update Center's first real, actionable in-place update -- direct request ("the
@@ -5272,31 +4872,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             DistributionDetail = ex.Message;
         }
         finally { IsBusy = false; }
-        await RefreshComponentVersionsAsync();
+        await Diagnostics.RefreshComponentVersionsAsync();
     }
 
-    private async Task RefreshComponentVersionsAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch { return; }
-        try
-        {
-            var snapshot = await _api.GetComponentVersionsAsync(profile, BearerToken);
-            CoreServerComponents.Clear();
-            SaveRuntimeDependencyComponents.Clear();
-            foreach (var component in snapshot.Components)
-            {
-                if (string.Equals(component.Group, "Core Server", StringComparison.OrdinalIgnoreCase))
-                    CoreServerComponents.Add(component);
-                else
-                    SaveRuntimeDependencyComponents.Add(component);
-            }
-            RaisePropertyChanged(nameof(HasComponentVersions));
-            ComponentVersionsCheckedAtText = FormatTime(snapshot.ObservedAt);
-        }
-        catch { /* best-effort -- the existing DistributionState/Detail already surface connection problems */ }
-    }
 
     private async Task PreviewDistributionPlanAsync()
     {
@@ -5912,7 +5490,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     internal static string FormatTime(DateTimeOffset value) =>
         value == default ? "Unknown" : value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
-    private static string FormatTime(DateTimeOffset? value) =>
+    internal static string FormatTime(DateTimeOffset? value) =>
         value.HasValue ? FormatTime(value.Value) : "Unknown";
 
     private static string FormatAge(TimeSpan value)

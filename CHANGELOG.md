@@ -1,4 +1,12 @@
-<!-- MystTiq v1.0.8.7: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.8: file reviewed for this release (2026-10-12). -->
+## v1.0.8.8 — The Update Center, Doctor and Diagnostics, Tidied
+
+- Roadmap C-8: the Update Center, Server Doctor, the Crash Analyzer and the Diagnostics Center moved into
+  `DiagnosticsViewModel` (the ComponentUpdates and ConsoleCapture partial files removed). The server-files and pip
+  updates and the machine's instance list stay with the window and are handed to the page; the session gained
+  `ServerIsRunning`. The `MainWindowViewModel` files total 339,118 bytes (were 375,111). Nothing the owner sees changes.
+- Version advanced to 1.0.8.8.
+
 ## v1.0.8.7 — Notifications, Alerts, Automation and Activity, Tidied
 
 - Roadmap C-7: the Notifications, Alert Center, Automation and Activity pages, outside delivery and the Discord bot moved
