@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "Saved {0} repaired",
   "msg.saved_list_admin": "Repairing a saved list needs the Admin role.",
   "msg.unexpected_error_no_record": "Something went wrong ({0}): {1} No record could be written.",
-  "msg.unexpected_error_record": "Something went wrong ({0}): {1} The details are in {2}."
+  "msg.unexpected_error_record": "Something went wrong ({0}): {1} The details are in {2}.",
+  "msg.send_queue_idle": "Nothing is waiting to go out. Since MystTiq started: {0} repeats combined, {1} dropped because the send queue was full.",
+  "msg.send_queue_waiting": "{0} waiting to go out (the oldest for {1} s). Since MystTiq started: {2} repeats combined, {3} dropped because the send queue was full."
 }

@@ -1,62 +1,56 @@
-<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
-# MystTiq v1.0.7.0 Checkpoint: Errors Stay Visible, Nothing Is Lost
+<!-- MystTiq v1.0.7.1: file reviewed for this release (2026-10-08). -->
+# MystTiq v1.0.7.1 Checkpoint: Conflicts Refused, Alert Storms Bounded
 
-The first release from the outside review you sent (roadmap Q-1, Q-2, Q-3 and Q-5), with your decision on damaged
-saved lists (D-10).
+The second release from the outside review (roadmap Q-4 and Q-11). Built on v1.0.7.0, which is not pushed yet either.
 
 ## What I found first
 
-- **A damaged list could wipe your accounts.** If one of MystTiq's own lists (accounts, automation rules, kits and
-  more) couldn't be read, MystTiq started that list empty. The next change then saved it over the file. I reproduced it
-  on a real v1.0.6.1 service: three accounts, `users.json` cut short, a restart, one new account. Only the new one was
-  left.
-- **There was no last-chance error handler** anywhere in the app or the service, so an unexpected error closed the app
-  and left nothing behind.
+- **Work that could overlap a start.** I ran the new conflict smoke against the v1.0.7.0 service. A backup was written
+  while a server was starting, and a backup and a start sent together both ran. SteamCMD updates and MOD changes only
+  checked "is the server running?" and then went ahead.
+- **Alert storms.** Every Discord, email and webhook send started on its own, with no limit.
 
-## Fixed in v1.0.7.0
+## Fixed in v1.0.7.1
 
-- **Saved lists (your decision).** Every save keeps the previous file as a last good copy. A file that can't be read is
-  copied aside, and the last good copy is loaded. If there is no good copy, changes to that list are refused with the
-  reason, and you get a pinned alert with **Open Repair**. That opens Server Doctor with the list marked; its fix starts
-  the list empty and keeps the bad file beside it.
-- **Errors.** An unexpected error is recorded in `%LOCALAPPDATA%\MystTiq\crashes` and shown in a red banner instead of
-  closing the app. The service records them too.
-- **Background work.** The service's background jobs now log their failures once and stop cleanly at shutdown. An
-  automation rule still running isn't started twice.
-- **Retries.** Only a file another program holds is retried. A server state file that stays held now says what to
-  check.
-- **Default preset text.** The Default preset's description no longer mentions a diagnostic log.
+- **One thing at a time.**
+  - Scheduled and manual backups hold the world while they zip it. An edit's own safety backup is part of the edit.
+  - SteamCMD updates, every MOD change, PalDefender updates and console capture changes hold the server.
+  - Whichever comes second is refused with the reason.
+  - Scheduled automation waits up to 10 minutes instead of failing, so a backup and a restart at the same minute run
+    one after the other.
+- **Alert storms.**
+  - Sends go through a queue (200), with two senders.
+  - The same alert within 10 minutes goes out once, then one message with the count.
+  - A full queue drops and records.
+  - Alert Center shows what's waiting.
+  - Test notifications always go out.
+- **One difference from the roadmap text:** Verify All doesn't take the world lock. It only reads backup archives and
+  is already kept apart from backups and restores; locking it would only refuse checks during an edit. This is
+  written down in the architecture doc.
 
 ## Verification
 
-- **Reproduced first** on a real, isolated v1.0.6.1 service: three accounts, `users.json` cut short, a restart, one
-  new account. Only that one was left on disk. The same steps on v1.0.7.0: the new account was refused with the reason
-  and the file was left untouched.
-- **Full gate** `scripts\Test-v1.0.7.0-Logic.ps1 -RunBuild`: 340 / 340 passed, 1 skipped. The skip is the v1.0.2.0
-  system-unit test: the VM's test user has no passwordless sudo, and the per-user unit check covers it. Every earlier
-  check is carried, the frozen v1.0.6.1 gate passes on its own checkpoint, and the Linux VM checks ran and passed.
-  The gate ran twice: the second run was after removing three compiler warnings (unawaited tracker calls) that the
-  package build showed.
-- **Static gate:** 279 / 279. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-- **Saved-lists route smoke** (an isolated service with sign-in on), all passed:
-  - the last good copy loaded, and a named account signs in;
-  - with no copy, `users.json` left byte for byte and the owner token still works;
-  - a change refused inside a service comes back as HTTP 409;
-  - the pinned alert links to the repair, and after the repair changes work again.
-- **LogicHarness:** 178 scenarios, including:
-  - the account wipe, the last good copy, the repair, a log starting empty;
-  - one-at-a-time automation runs and background work logged once and stopped at shutdown;
-  - the retry rule, and the server state file (concurrent, interrupted, held, read-only).
-- **ArtworkHarness:** 822 checks in 12 languages, including:
-  - an error thrown from a command is recorded, shown and leaves the app open;
-  - Open Repair opens Server Doctor with the finding marked;
-  - a refused change shows the service's reason.
-- **Found on the way:** the gate's command-role audit cuts each command at its first comma (a `-contains` bug), so a
-  call after a comma was never checked. Worked around here; offered as a separate task.
+- **Reproduced first:** the new conflict smoke against the published v1.0.7.0 service. A backup was written while a
+  server was starting, and a backup and a start sent together both ran. On v1.0.7.1 both are refused or kept apart.
+- **Full gate** `scripts\Test-v1.0.7.1-Logic.ps1 -RunBuild`: 347 / 347 passed, 1 skipped (the v1.0.2.0 system-unit
+  test: no passwordless sudo on the VM; the per-user unit check covers it). Every earlier check is carried, the frozen
+  v1.0.7.0 gate passes on its own checkpoint, and the Linux VM checks ran and passed.
+- **Static gate:** 285 / 285. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **Conflict route smoke** (an isolated service, a start that never becomes ready): during the start, a backup, a MOD
+  change and a SteamCMD update are each refused with the reason and nothing changes; a backup and a start sent together
+  never overlap; alone, a backup is a completed operation in the history.
+- **LogicHarness:** 182 scenarios, including:
+  - a backup refused during a Pal box edit, while that edit's own safety backup is not;
+  - a held backup blocking an edit, and another server never held up;
+  - a MOD change refused during a start, while Safe Start's switch is not;
+  - a scheduled backup waiting for an edit;
+  - the alert storm against a real local webhook: 299 combined, the queue capped at 200 with the rest dropped and
+    recorded, never more than 2 sends at once, none lost, the summary, two tests both sent.
+- **ArtworkHarness:** 824 checks in 12 languages, including the send queue in Alert Center.
 
 ## For you
 
-1. **Nothing to do** for your servers: the first save of each list starts its last good copy.
-2. **Roadmap:** Q-1, Q-2, Q-3 and Q-5 are `Built`. Next is v1.0.7.1: Q-4 (every conflict refused) and Q-11 (alert
-   storms bounded).
-3. **Push:** this is ready to push and tag as v1.0.7.0 when you say so.
+1. **Nothing to do** for your servers.
+2. **Roadmap:** Q-4 and Q-11 are `Built`. Next is v1.0.7.2: Q-8 (start-up steps), Q-12 (backup scan progress), Q-13
+   (page waits) and Q-7 (connection status).
+3. **Push:** v1.0.7.0 and v1.0.7.1 are both ready to push and tag when you say so.

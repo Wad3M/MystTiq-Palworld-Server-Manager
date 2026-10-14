@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
+<!-- MystTiq v1.0.7.1: file reviewed for this release (2026-10-08). -->
 # Product roadmap to v1.0
 
 Updated 2026-10-04. **Current version: v1.0.1.0. Accepted baseline: v1.0.0.0. Next: the open items below.**

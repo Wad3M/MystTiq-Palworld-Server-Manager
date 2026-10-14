@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "Zapisane dane „{0}” naprawione",
   "msg.saved_list_admin": "Naprawa zapisanej listy wymaga roli administratora.",
   "msg.unexpected_error_no_record": "Coś poszło nie tak ({0}): {1} Nie udało się zapisać raportu.",
-  "msg.unexpected_error_record": "Coś poszło nie tak ({0}): {1} Szczegóły są w {2}."
+  "msg.unexpected_error_record": "Coś poszło nie tak ({0}): {1} Szczegóły są w {2}.",
+  "msg.send_queue_idle": "Nic nie czeka na wysłanie. Od uruchomienia MystTiq: połączono {0} powtórzeń, odrzucono {1}, bo kolejka wysyłki była pełna.",
+  "msg.send_queue_waiting": "{0} czeka na wysłanie (najstarsze od {1} s). Od uruchomienia MystTiq: połączono {2} powtórzeń, odrzucono {3}, bo kolejka wysyłki była pełna."
 }

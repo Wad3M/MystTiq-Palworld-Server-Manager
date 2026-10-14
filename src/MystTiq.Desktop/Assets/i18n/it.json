@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "{0} salvato riparato",
   "msg.saved_list_admin": "Per riparare una lista salvata serve il ruolo Amministratore.",
   "msg.unexpected_error_no_record": "Qualcosa è andato storto ({0}): {1} Non è stato possibile scrivere un rapporto.",
-  "msg.unexpected_error_record": "Qualcosa è andato storto ({0}): {1} I dettagli sono in {2}."
+  "msg.unexpected_error_record": "Qualcosa è andato storto ({0}): {1} I dettagli sono in {2}.",
+  "msg.send_queue_idle": "Nulla è in attesa di essere inviato. Dall'avvio di MystTiq: {0} ripetizioni unite, {1} scartate perché la coda di invio era piena.",
+  "msg.send_queue_waiting": "{0} in attesa di invio (il più vecchio da {1} s). Dall'avvio di MystTiq: {2} ripetizioni unite, {3} scartate perché la coda di invio era piena."
 }

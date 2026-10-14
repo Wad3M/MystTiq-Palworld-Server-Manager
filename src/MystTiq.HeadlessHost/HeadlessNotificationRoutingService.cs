@@ -1,9 +1,11 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Mail;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Collections.Concurrent;
+using System.Threading.Channels;
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
@@ -50,7 +52,14 @@ public sealed record NotificationTemplate(string Id, string TitleFormat, string 
 // page. The v0.7.111.0 alert mute silences alerts entirely; this is the lighter option the roadmap asked for: keep the
 // record in MystTiq, stop the pings. Stored apart from channels.json so saving the channel list (which replaces it
 // whole) can never clear or set a pause by accident.
-public sealed record NotificationDeliveryState(DateTimeOffset? PausedUntilUtc, IReadOnlyList<string> ExternalChannels, string Detail);
+public sealed record NotificationDeliveryState(DateTimeOffset? PausedUntilUtc, IReadOnlyList<string> ExternalChannels, string Detail)
+{
+    // v1.0.7.1 (roadmap Q-11): the outside send queue.
+    public NotificationSendQueueState? Queue { get; init; }
+}
+
+// v1.0.7.1 (roadmap Q-11): what is waiting to be sent outside, and what the queue combined or dropped since MystTiq started.
+public sealed record NotificationSendQueueState(int Waiting, DateTimeOffset? OldestWaitingSinceUtc, int Capacity, int Senders, long Combined, long Dropped, int RepeatWindowMinutes);
 public sealed record NotificationDeliveryPauseRequest(int Minutes);
 public sealed record NotificationDeliveryPause(DateTimeOffset? PausedUntilUtc);
 
@@ -73,6 +82,36 @@ public sealed class HeadlessNotificationRoutingService
     private List<NotificationTemplate> templates;
     // v1.0.2.0 (roadmap R-2): every outside send and its result.
     private readonly NotificationDeliveryLog deliveries;
+
+    // v1.0.7.1 (roadmap Q-11): outside sends used to start one background task per notification, with no limit, so a fault
+    // raising hundreds of alerts started hundreds of overlapping webhook, Discord and email sends. They now go through a
+    // bounded queue read by a fixed number of senders. The same alert (same severity, title and text) within the repeat
+    // window is combined: the first is sent, the repeats are counted, and when the window ends one message says how many
+    // more there were. A send that finds the queue full is dropped and recorded for each channel; one that waited in the
+    // queue says how long.
+    public const int SendQueueCapacity = 200;
+    public const int SenderCount = 2;
+    public static TimeSpan RepeatWindow { get; set; } = TimeSpan.FromMinutes(10);
+    public static TimeSpan RepeatCheckEvery { get; set; } = TimeSpan.FromSeconds(30);
+    private readonly Channel<PendingSend> sendQueue = Channel.CreateBounded<PendingSend>(new BoundedChannelOptions(SendQueueCapacity) { FullMode = BoundedChannelFullMode.Wait });
+    private readonly ConcurrentDictionary<long, DateTimeOffset> waitingSince = new();
+    private readonly Dictionary<string, RepeatState> repeats = new(StringComparer.Ordinal);
+    private readonly object repeatGate = new();
+    private long nextSendId;
+    private long combinedCount;
+    private long droppedCount;
+    private int sendersStarted;
+
+    private sealed record PendingSend(long Id, List<NotificationChannelConfig> Channels, string Severity, string Title, string Message, DateTimeOffset QueuedUtc);
+    private sealed class RepeatState(List<NotificationChannelConfig> channels, string severity, string title, string message, DateTimeOffset firstUtc)
+    {
+        public List<NotificationChannelConfig> Channels { get; } = channels;
+        public string Severity { get; } = severity;
+        public string Title { get; } = title;
+        public string Message { get; } = message;
+        public DateTimeOffset FirstUtc { get; } = firstUtc;
+        public int Repeats { get; set; }
+    }
 
     public HeadlessNotificationRoutingService(IServerPathProfile paths, HeadlessActivityLogService activity)
     {
@@ -137,7 +176,14 @@ public sealed class HeadlessNotificationRoutingService
         var detail = until is { } u
             ? $"Outside delivery is paused until {u:yyyy-MM-dd HH:mm} UTC: notifications still appear on the Notifications page, but nothing is sent to {routes}. Notifications from the pause are not sent afterwards."
             : $"Outside delivery is on ({routes}).";
-        return new(until, external, detail);
+        return new(until, external, detail) { Queue = GetQueueState() };
+    }
+
+    public NotificationSendQueueState GetQueueState()
+    {
+        var waiting = waitingSince.Values.ToArray();
+        return new(waiting.Length, waiting.Length == 0 ? null : waiting.Min(), SendQueueCapacity, SenderCount,
+            Interlocked.Read(ref combinedCount), Interlocked.Read(ref droppedCount), (int)Math.Max(1, RepeatWindow.TotalMinutes));
     }
 
     // v1.0.2.0 (roadmap R-2): each outside channel's delivery health over the last 7 days, and the latest sends.
@@ -163,7 +209,7 @@ public sealed class HeadlessNotificationRoutingService
 
     // Fire-and-forget from HeadlessNotificationService.Create -- a routing failure must never
     // block or fail the underlying (already-persisted) Desktop notification.
-    public void Dispatch(string severity, string title, string message)
+    public void Dispatch(string severity, string title, string message, bool combineRepeats = true)
     {
         List<NotificationChannelConfig> enabled;
         lock (gate) enabled = channels.Channels.Where(c => c.Enabled && c.Channel != NotificationChannel.Desktop).ToList();
@@ -177,11 +223,85 @@ public sealed class HeadlessNotificationRoutingService
                 $"{title} -> {string.Join(", ", enabled.Select(c => c.Channel))}");
             return;
         }
-        BackgroundWork.Shared.Run("outside notification send", _ => DispatchAsync(enabled, severity, title, message));
+        var now = DateTimeOffset.UtcNow;
+        var key = $"{severity}\n{title}\n{message}";
+        lock (repeatGate)
+        {
+            FlushRepeats(now);
+            if (combineRepeats)
+            {
+                if (repeats.TryGetValue(key, out var seen))
+                {
+                    seen.Repeats++;
+                    Interlocked.Increment(ref combinedCount);
+                    return;
+                }
+                repeats[key] = new RepeatState(enabled, severity, title, message, now);
+            }
+        }
+        Enqueue(enabled, severity, title, message, now);
     }
 
-    private async Task DispatchAsync(List<NotificationChannelConfig> enabled, string severity, string title, string message)
+    // Caller holds repeatGate. A window that has ended is closed; if the alert repeated, one message says how often.
+    private void FlushRepeats(DateTimeOffset now)
     {
+        foreach (var (key, state) in repeats.Where(r => now - r.Value.FirstUtc >= RepeatWindow).ToList())
+        {
+            repeats.Remove(key);
+            if (state.Repeats == 0) continue;
+            var times = state.Repeats == 1 ? "time" : "times";
+            Enqueue(state.Channels, state.Severity, $"{state.Title} (repeated {state.Repeats} more {times})",
+                $"{state.Message}\n\nThis alert repeated {state.Repeats} more {times} between {state.FirstUtc:HH:mm} and {now:HH:mm} UTC; the repeats were combined into this message.",
+                now);
+        }
+    }
+
+    private void Enqueue(List<NotificationChannelConfig> enabled, string severity, string title, string message, DateTimeOffset now)
+    {
+        var send = new PendingSend(Interlocked.Increment(ref nextSendId), enabled, severity, title, message, now);
+        waitingSince[send.Id] = now;
+        if (!sendQueue.Writer.TryWrite(send))
+        {
+            waitingSince.TryRemove(send.Id, out _);
+            Interlocked.Increment(ref droppedCount);
+            foreach (var channel in enabled)
+                deliveries.Record(new NotificationDeliveryRecord(now, channel.Channel.ToString(), title, false,
+                    $"Dropped: {SendQueueCapacity} sends were already waiting to go out.", 0));
+            return;
+        }
+        if (Interlocked.CompareExchange(ref sendersStarted, 1, 0) == 0)
+            for (var i = 1; i <= SenderCount; i++)
+                _ = BackgroundWork.Shared.Run($"outside notification sender {i}", SendLoopAsync);
+    }
+
+    private async Task SendLoopAsync(CancellationToken token)
+    {
+        var reader = sendQueue.Reader;
+        while (!token.IsCancellationRequested)
+        {
+            using var tick = CancellationTokenSource.CreateLinkedTokenSource(token);
+            tick.CancelAfter(RepeatCheckEvery);
+            try
+            {
+                if (!await reader.WaitToReadAsync(tick.Token)) return;
+            }
+            catch (OperationCanceledException) when (!token.IsCancellationRequested)
+            {
+                // Quiet for a while: close the repeat windows that have ended, so their summaries go out.
+                lock (repeatGate) FlushRepeats(DateTimeOffset.UtcNow);
+                continue;
+            }
+            while (reader.TryRead(out var send))
+            {
+                waitingSince.TryRemove(send.Id, out _);
+                await DispatchAsync(send.Channels, send.Severity, send.Title, send.Message, DateTimeOffset.UtcNow - send.QueuedUtc);
+            }
+        }
+    }
+
+    private async Task DispatchAsync(List<NotificationChannelConfig> enabled, string severity, string title, string message, TimeSpan queued)
+    {
+        var waitedText = queued >= TimeSpan.FromSeconds(5) ? $" (waited {queued.TotalSeconds:0} s in the send queue)" : string.Empty;
         foreach (var channel in enabled)
         {
             (bool Success, string Detail, int Attempts) outcome;
@@ -201,7 +321,7 @@ public sealed class HeadlessNotificationRoutingService
                 outcome = (false, ex.Message, 1);
             }
             // v1.0.2.0 (roadmap R-2): every send is recorded, delivered or not.
-            deliveries.Record(new NotificationDeliveryRecord(DateTimeOffset.UtcNow, channel.Channel.ToString(), title, outcome.Success, outcome.Detail, outcome.Attempts));
+            deliveries.Record(new NotificationDeliveryRecord(DateTimeOffset.UtcNow, channel.Channel.ToString(), title, outcome.Success, outcome.Detail + waitedText, outcome.Attempts));
         }
     }
 

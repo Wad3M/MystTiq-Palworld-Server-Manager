@@ -1,4 +1,18 @@
-<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
+<!-- MystTiq v1.0.7.1: file reviewed for this release (2026-10-08). -->
+## v1.0.7.1 — Conflicts Refused, Alert Storms Bounded
+
+From the outside quality review (roadmap Q-4, Q-11).
+- Fixed: a backup could run while a server started, and a backup and a start sent together both ran (reproduced on
+  v1.0.7.0). Scheduled and manual backups now hold the world while zipping it (safety backups, taken inside an edit,
+  do not); SteamCMD updates, every MOD change, PalDefender updates and console capture changes hold the server.
+  Whichever comes second is refused with the reason; unattended automation waits up to 10 minutes instead.
+- Fixed: every outside notification started its own send, with no limit. Sends go through a bounded queue (200) with
+  two senders; the same alert within 10 minutes is sent once and summed up when the window ends; a full queue drops
+  and records; a send that waited says so; Alert Center shows the queue. The test notification always goes.
+- Tests: the v1.0.7.1 gate regenerated from v1.0.7.0 (every earlier check kept), a conflict route smoke, LogicHarness
+  scenarios and an ArtworkHarness check; 2 texts in 12 languages.
+- Version advanced to 1.0.7.1.
+
 ## v1.0.7.0 — Errors Stay Visible, Nothing Is Lost
 
 From the outside quality review (roadmap Q-1, Q-2, Q-3, Q-5; owner decision D-10).

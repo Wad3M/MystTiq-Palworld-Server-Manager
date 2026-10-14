@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
+<!-- MystTiq v1.0.7.1: file reviewed for this release (2026-10-08). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -3385,6 +3385,7 @@
             <StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.pause_discord_email_and_webhooks}" FontSize="17" FontWeight="SemiBold"/>
               <TextBlock Text="{services:TrText NotificationDelivery.StatusText}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock x:Name="SendQueueText" Text="{services:TrText NotificationDelivery.QueueText}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding NotificationDelivery.HasQueue}"/>
               <WrapPanel>
                 <Button Classes="caution" Content="{services:Tr ui.pause_1_hour}" Command="{Binding PauseDeliveryCommand}" CommandParameter="60" Margin="0,0,8,8"/>
                 <Button Classes="caution" Content="{services:Tr ui.pause_8_hours}" Command="{Binding PauseDeliveryCommand}" CommandParameter="480" Margin="0,0,8,8"/>

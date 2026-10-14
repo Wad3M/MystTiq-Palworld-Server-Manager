@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -95,6 +95,22 @@ public sealed class HeadlessBackupService
         if (!await backupGate.WaitAsync(0, cancellationToken))
             return HeadlessBackupOperationResult.Conflict("A backup operation is already in progress.");
 
+        // v1.0.7.1 (roadmap Q-4): a scheduled or manual backup holds "world-mutation" while it zips the world, so it never
+        // captures a save edit, a restore or a migration half done, and those are refused while it runs. A safety backup
+        // is taken BY one of those operations, inside the lock it already holds, so it does not take it again.
+        OperationHold? hold = null;
+        if (backupClass != BackupClass.Safety)
+        {
+            (hold, var holdRefusal) = await OperationHold.TryBeginAsync(coordinator, profile, "backup-create", "HeadlessBackupService",
+                ["world-mutation"], "A backup", cancellationToken);
+            if (holdRefusal is not null)
+            {
+                backupGate.Release();
+                return HeadlessBackupOperationResult.Conflict(holdRefusal);
+            }
+        }
+        using var worldHold = hold;
+
         try
         {
             return await CreateInternalAsync(backupClass.ToString().ToLowerInvariant(), backupClass, cancellationToken);
@@ -160,9 +176,10 @@ public sealed class HeadlessBackupService
         // coordinator's "world-mutation" lock for their own save-mutating operations),
         // RestoreAsync previously mutated paths.SaveRoot guarded only by the local backupGate
         // above -- so a restore could run concurrently with one of those transactions on the same
-        // save tree. CreateAsync/DeleteAsync/VerifyAsync deliberately do NOT take this lock: they
-        // don't mutate SaveRoot, and CreateAsync is called BY those already-locked transactions for
-        // their own safety backups, so it must stay lock-free to avoid rejecting its own caller.
+        // save tree. DeleteAsync/VerifyAsync deliberately do NOT take this lock: they read or remove
+        // only archives. v1.0.7.1 (Q-4): CreateAsync takes it for scheduled and manual backups (a world
+        // half way through an edit must not be zipped), and not for the safety backups those
+        // already-locked transactions take, so it never rejects its own caller.
         OperationHandle? operation = null;
         try
         {
@@ -728,8 +745,12 @@ public sealed record HeadlessBackupOperationResult(
     public static HeadlessBackupOperationResult Failure(string message) =>
         new(false, null, null, message);
 
+    // v1.0.7.1 (roadmap Q-4): refused because another operation runs (not a failure of the backup itself), so unattended
+    // work can wait and try again.
+    public bool IsConflict { get; init; }
+
     public static HeadlessBackupOperationResult Conflict(string message) =>
-        new(false, null, null, message);
+        new(false, null, null, message) { IsConflict = true };
 }
 
 public sealed record HeadlessBackupRestoreRequest(bool Confirmed);

@@ -1,5 +1,6 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using System.Diagnostics;
+using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
@@ -10,12 +11,18 @@ public sealed class HeadlessServerDistributionService
     private readonly IServerLifecycleService lifecycle;
     private readonly IServerDistributionPlatformService distribution;
     private readonly SemaphoreSlim operationGate = new(1, 1);
+    private readonly IOperationCoordinator? operations;
+    private readonly ServerProfileId? profileId;
 
     public HeadlessServerDistributionService(
         IServerPathProfile paths,
         IServerLifecycleService lifecycle,
-        IServerDistributionPlatformService distribution)
+        IServerDistributionPlatformService distribution,
+        IOperationCoordinator? operations = null,
+        ServerProfileId? profileId = null)
     {
+        this.operations = operations;
+        this.profileId = profileId;
         this.paths = paths;
         this.lifecycle = lifecycle;
         this.distribution = distribution;
@@ -116,6 +123,17 @@ public sealed class HeadlessServerDistributionService
         if (!await operationGate.WaitAsync(0, cancellationToken))
             return HeadlessServerDistributionOperationResult.Conflict(
                 "A server distribution operation is already in progress.");
+
+        // v1.0.7.1 (roadmap Q-4): the update holds the server (the coordinator's "lifecycle" lock) for its whole run, so a
+        // start cannot begin between the "PalServer is stopped" check and SteamCMD rewriting the server's files.
+        var (hold, holdRefusal) = await OperationHold.TryBeginAsync(operations, profileId, "server-update", nameof(HeadlessServerDistributionService),
+            ["lifecycle"], "Updating the server files", cancellationToken);
+        if (holdRefusal is not null)
+        {
+            operationGate.Release();
+            return HeadlessServerDistributionOperationResult.Conflict(holdRefusal);
+        }
+        using var serverHold = hold;
 
         try
         {

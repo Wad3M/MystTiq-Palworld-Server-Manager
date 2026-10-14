@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "保存された{0}を修復しました",
   "msg.saved_list_admin": "保存されたリストの修復には管理者ロールが必要です。",
   "msg.unexpected_error_no_record": "問題が発生しました（{0}）: {1} 記録を書き込めませんでした。",
-  "msg.unexpected_error_record": "問題が発生しました（{0}）: {1} 詳細は {2} にあります。"
+  "msg.unexpected_error_record": "問題が発生しました（{0}）: {1} 詳細は {2} にあります。",
+  "msg.send_queue_idle": "送信待ちはありません。MystTiq の起動以降: 繰り返し {0} 件をまとめ、送信キューが満杯のため {1} 件を破棄しました。",
+  "msg.send_queue_waiting": "{0} 件が送信待ちです（最も古いものは {1} 秒）。MystTiq の起動以降: 繰り返し {2} 件をまとめ、送信キューが満杯のため {3} 件を破棄しました。"
 }

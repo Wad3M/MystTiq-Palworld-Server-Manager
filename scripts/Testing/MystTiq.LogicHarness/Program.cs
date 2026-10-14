@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -3985,6 +3985,148 @@ try
                 Assert(message.Contains("read-only"), $"a read-only state file says so [{message}]");
             }
             finally { File.SetAttributes(store.StatePath, FileAttributes.Normal); }
+        }
+    }, failures);
+
+    // v1.0.7.1 (roadmap Q-4): the operation coordinator decides every conflict.
+    RunScenarioAsync("Conflicts (Q-4): a scheduled or manual backup is refused while a save edit holds the world, and its own safety backup is not; a held backup blocks an edit; another server is never held up", async () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "q4-backup-" + Guid.NewGuid().ToString("N")));
+        var world = Path.Combine(paths.SaveRoot, "SaveGames", "0", "World");
+        Directory.CreateDirectory(Path.Combine(world, "Players"));
+        File.WriteAllText(Path.Combine(world, "Level.sav"), new string('x', 2048));
+        var operations = new MystTiq.Core.Operations.OperationCoordinator(paths);
+        var profile = new MystTiq.Core.Operations.ServerProfileId("default");
+        var backups = new HeadlessBackupService(paths, new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped }, new HeadlessActivityLogService(paths), operations, profile);
+
+        using (await operations.BeginAsync(profile, "palbox-edit", "harness", ["world-mutation"], CancellationToken.None))
+        {
+            var scheduled = await backups.CreateAsync(BackupClass.Scheduled, CancellationToken.None);
+            Assert(!scheduled.Success && scheduled.IsConflict && scheduled.Message.Contains("A backup is refused while another operation"), $"a scheduled backup during a save edit is refused with the reason [{scheduled.Message}]");
+            var manual = await backups.CreateAsync(BackupClass.Manual, CancellationToken.None);
+            Assert(manual.IsConflict, "so is a manual one");
+            var safety = await backups.CreateAsync(BackupClass.Safety, CancellationToken.None);
+            Assert(!safety.IsConflict, $"the edit's own safety backup is not refused [{safety.Message}]");
+        }
+        var after = await backups.CreateAsync(BackupClass.Manual, CancellationToken.None);
+        Assert(after.Success, $"once the edit is done, a backup runs [{after.Message}]");
+        Assert(operations.ListRecent(profile, 20).Any(o => o.Kind == "backup-create" && o.Phase == MystTiq.Core.Operations.OperationPhase.Completed), "and is an operation in the history");
+
+        var (hold, refusal) = await OperationHold.TryBeginAsync(operations, profile, "backup-create", "harness", ["world-mutation"], "A backup", CancellationToken.None);
+        Assert(hold is not null && refusal is null, "a backup can hold the world");
+        string blocked;
+        try { using var edit = await operations.BeginAsync(profile, "palbox-edit", "harness", ["world-mutation"], CancellationToken.None); blocked = "no"; }
+        catch (InvalidOperationException ex) { blocked = ex.Message; }
+        Assert(blocked.Contains("world-mutation"), $"a save edit is refused while a backup holds the world [{blocked}]");
+        var (other, otherRefusal) = await OperationHold.TryBeginAsync(operations, new MystTiq.Core.Operations.ServerProfileId("second"), "palbox-edit", "harness", ["world-mutation"], "An edit", CancellationToken.None);
+        Assert(other is not null && otherRefusal is null, "another server's world is not held up");
+        other!.Dispose();
+        hold!.Dispose();
+        var (again, _) = await OperationHold.TryBeginAsync(operations, profile, "palbox-edit", "harness", ["world-mutation"], "An edit", CancellationToken.None);
+        Assert(again is not null, "released when the backup ends");
+        again!.Dispose();
+        var (free, freeRefusal) = await OperationHold.TryBeginAsync(null, null, "x", "harness", ["lifecycle"], "Anything", CancellationToken.None);
+        Assert(free is not null && freeRefusal is null, "without a coordinator nothing is held, as before");
+    }, failures);
+
+    RunScenarioAsync("Conflicts (Q-4): a MOD change is refused while a start or stop holds the server, and holds it itself; Safe Start, which holds the server already, still switches MODs", async () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "q4-mods-" + Guid.NewGuid().ToString("N")));
+        var operations = new MystTiq.Core.Operations.OperationCoordinator(paths);
+        var profile = new MystTiq.Core.Operations.ServerProfileId("default");
+        var mods = new HeadlessModManagementService(paths, new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped }, new HeadlessActivityLogService(paths), new HeadlessConsoleLogWriter(paths), operations, profile);
+        using (await operations.BeginAsync(profile, "server-start", "harness", ["lifecycle", "world-mutation"], CancellationToken.None))
+        {
+            var refused = await mods.SetAllEnabledAsync(false, CancellationToken.None);
+            Assert(!refused.Success && refused.Message.Contains("Changing MOD files is refused while another operation"), $"switching MODs during a start is refused with the reason [{refused.Message}]");
+            var safeStart = await mods.SetEnabledAsync("UE4SS", "Missing", true, CancellationToken.None, serverHeldByCaller: true);
+            Assert(!safeStart.Message.Contains("is refused while another operation"), $"Safe Start's own switch is not refused by the hold it already has [{safeStart.Message}]");
+        }
+        var free = await mods.SetAllEnabledAsync(true, CancellationToken.None);
+        Assert(!free.Message.Contains("is refused while another operation"), $"with nothing running, a MOD change is not held up [{free.Message}]");
+        Assert(operations.ListRecent(profile, 20).Any(o => o.Kind == "mods-enable-all" && o.Phase != MystTiq.Core.Operations.OperationPhase.Running), "the MOD change held the server as an operation, and let go");
+    }, failures);
+
+    RunScenarioAsync("Conflicts (Q-4): unattended work waits for a conflicting operation instead of failing at once", async () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "q4-wait-" + Guid.NewGuid().ToString("N")));
+        var world = Path.Combine(paths.SaveRoot, "SaveGames", "0", "World");
+        Directory.CreateDirectory(Path.Combine(world, "Players"));
+        File.WriteAllText(Path.Combine(world, "Level.sav"), new string('x', 2048));
+        var operations = new MystTiq.Core.Operations.OperationCoordinator(paths);
+        var profile = new MystTiq.Core.Operations.ServerProfileId("default");
+        var backups = new HeadlessBackupService(paths, new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped }, new HeadlessActivityLogService(paths), operations, profile);
+        var edit = await operations.BeginAsync(profile, "palbox-edit", "harness", ["world-mutation"], CancellationToken.None);
+        _ = Task.Run(async () => { await Task.Delay(600); edit.Dispose(); });
+        // The same loop the automation uses for a scheduled backup, at a test pace.
+        var waited = TimeSpan.Zero; var every = TimeSpan.FromMilliseconds(200);
+        var result = await backups.CreateAsync(BackupClass.Scheduled, CancellationToken.None);
+        while (result.IsConflict && waited < TimeSpan.FromSeconds(10)) { await Task.Delay(every); waited += every; result = await backups.CreateAsync(BackupClass.Scheduled, CancellationToken.None); }
+        Assert(result.Success && waited > TimeSpan.Zero, $"the scheduled backup waited for the edit, then ran [{waited.TotalMilliseconds:0} ms, {result.Message}]");
+        Assert(HeadlessAutomationService.ConflictWaitLimit == TimeSpan.FromMinutes(10) && HeadlessAutomationService.ConflictRetryEvery == TimeSpan.FromSeconds(15), "automation waits up to 10 minutes, trying every 15 s");
+    }, failures);
+
+    // v1.0.7.1 (roadmap Q-11): alert storms stay bounded.
+    RunScenario("Alert storms (Q-11): a burst goes through a bounded queue with two senders; repeats are combined and summed up once; a full queue drops and records; a test always goes out", () =>
+    {
+        int port;
+        using (var probe = new TcpListener(IPAddress.Loopback, 0)) { probe.Start(); port = ((IPEndPoint)probe.LocalEndpoint).Port; probe.Stop(); }
+        using var listener = new HttpListener();
+        listener.Prefixes.Add($"http://localhost:{port}/hook/");
+        listener.Start();
+        var bodies = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        int active = 0, maxActive = 0;
+        _ = Task.Run(async () =>
+        {
+            while (listener.IsListening)
+            {
+                HttpListenerContext ctx;
+                try { ctx = await listener.GetContextAsync(); } catch { return; }
+                _ = Task.Run(async () =>
+                {
+                    var now = Interlocked.Increment(ref active);
+                    int seen; do { seen = Volatile.Read(ref maxActive); } while (now > seen && Interlocked.CompareExchange(ref maxActive, now, seen) != seen);
+                    using (var reader = new StreamReader(ctx.Request.InputStream)) bodies.Enqueue(await reader.ReadToEndAsync());
+                    await Task.Delay(20);
+                    Interlocked.Decrement(ref active);
+                    ctx.Response.StatusCode = 200; ctx.Response.Close();
+                });
+            }
+        });
+        var window = HeadlessNotificationRoutingService.RepeatWindow; var tick = HeadlessNotificationRoutingService.RepeatCheckEvery;
+        try
+        {
+            HeadlessNotificationRoutingService.RepeatWindow = TimeSpan.FromSeconds(2);
+            HeadlessNotificationRoutingService.RepeatCheckEvery = TimeSpan.FromMilliseconds(300);
+            var paths = new FakePathProfile(Path.Combine(tempRoot, "q11-storm-" + Guid.NewGuid().ToString("N")));
+            var routing = new HeadlessNotificationRoutingService(paths, new HeadlessActivityLogService(paths));
+            routing.SaveChannels(new NotificationChannelConfiguration { Channels = [new(NotificationChannel.Desktop, true, null), new(NotificationChannel.Webhook, true, $"http://localhost:{port}/hook/")] });
+
+            for (var i = 0; i < 300; i++) routing.Dispatch("Warning", "Connection lost", "The REST API stopped answering.");
+            for (var i = 0; i < 400; i++) routing.Dispatch("Information", "Player joined", $"Player {i} joined.");
+            var burst = routing.GetQueueState();
+            Assert(burst.Combined == 299, $"300 copies of one alert are one send and 299 combined [{burst.Combined}]");
+            Assert(burst.Dropped > 0 && burst.Waiting <= HeadlessNotificationRoutingService.SendQueueCapacity && burst.OldestWaitingSinceUtc is not null,
+                $"the queue holds at most {HeadlessNotificationRoutingService.SendQueueCapacity}; the rest is dropped [waiting {burst.Waiting}, dropped {burst.Dropped}]");
+            var dropped = routing.GetDeliveryHealth().Recent.Count(r => r.Detail.StartsWith("Dropped:", StringComparison.Ordinal));
+            Assert(dropped > 0, "each dropped send is recorded with the reason");
+
+            Assert(WaitFor(() => routing.GetQueueState().Waiting == 0, 30000), "the queue drains");
+            var sent = bodies.Count;
+            Assert(Volatile.Read(ref maxActive) <= HeadlessNotificationRoutingService.SenderCount, $"never more than {HeadlessNotificationRoutingService.SenderCount} sends at once [{maxActive}]");
+            Assert(sent + burst.Dropped == 401, $"every send was delivered or dropped, none lost [{sent} sent + {burst.Dropped} dropped]");
+            Assert(WaitFor(() => bodies.Any(b => b.Contains("repeated 299 more times")), 15000), "when the window ends, one message says the alert repeated 299 more times");
+
+            var before = bodies.Count;
+            routing.Dispatch("Information", "Test notification", "check", combineRepeats: false);
+            routing.Dispatch("Information", "Test notification", "check", combineRepeats: false);
+            Assert(WaitFor(() => bodies.Count >= before + 2, 10000), "two test notifications in a row both go out");
+        }
+        finally
+        {
+            HeadlessNotificationRoutingService.RepeatWindow = window;
+            HeadlessNotificationRoutingService.RepeatCheckEvery = tick;
+            listener.Stop();
         }
     }, failures);
 }

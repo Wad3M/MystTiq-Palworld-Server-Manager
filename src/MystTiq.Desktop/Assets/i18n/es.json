@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "{0} guardado reparado",
   "msg.saved_list_admin": "Reparar una lista guardada requiere el rol de Administrador.",
   "msg.unexpected_error_no_record": "Algo salió mal ({0}): {1} No se pudo escribir un registro.",
-  "msg.unexpected_error_record": "Algo salió mal ({0}): {1} Los detalles están en {2}."
+  "msg.unexpected_error_record": "Algo salió mal ({0}): {1} Los detalles están en {2}.",
+  "msg.send_queue_idle": "No hay nada esperando para enviarse. Desde que se inició MystTiq: {0} repeticiones combinadas, {1} descartadas porque la cola de envío estaba llena.",
+  "msg.send_queue_waiting": "{0} esperando para enviarse (el más antiguo desde hace {1} s). Desde que se inició MystTiq: {2} repeticiones combinadas, {3} descartadas porque la cola de envío estaba llena."
 }

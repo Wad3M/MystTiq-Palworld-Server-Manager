@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -18,7 +18,7 @@ public sealed partial class MainWindowViewModel
         Need("Operator", _loadGameIdsCommand, AddPlayerWarningCommand, AnalyzeCrashesCommand,
             ApplyBackupRetentionCommand, BackupAllCommand, BeginModSafeStartCommand, BeginStuckTestLoadCommand, CancelModSafeStartCommand,
             CreateBackupCommand, DeleteBackupCommand, DismissNotificationCommand, DoctorAllCommand,
-            EnvironmentActionCommand, ForceStopServerCommand, InstallMissingEnvironmentCommand,
+            EnvironmentActionCommand, FixDiagnosticCommand, ForceStopServerCommand, InstallMissingEnvironmentCommand,
             InstallPalworldServerFromWizardCommand, MarkAllNotificationsReadCommand, NotificationSelfTestCommand,
             PrepareForWorldImportCommand, PreviewBackupRetentionCommand, RecheckDiagnosticCommand,
             RefreshAllInstancesCommand, RefreshSaveToolsCommand, RefreshTeleportCommand, RefreshTemporaryBansCommand,
@@ -35,7 +35,7 @@ public sealed partial class MainWindowViewModel
             CreateTemporaryBanCommand, DeleteAutomationRuleCommand, DeleteSelectedModCommand, DisableAllModsCommand,
             DisableSelectedModCommand, EnableAllModsCommand, EnableSelectedModCommand, FinishInstallAndAdvanceCommand,
             GiveItemSelectedPlayerCommand, ImportSelectedWorkshopModCommand, InstallPalworldServerWithExtrasCommand,
-            KickSelectedPlayerCommand, PreviewBaseRecoveryCommand, PreviewBaseTransferCommand,
+            KickSelectedPlayerCommand, MuteAlertsCommand, PauseDeliveryCommand, PreviewBaseRecoveryCommand, PreviewBaseTransferCommand,
             PreviewCharacterMigrationCommand, PreviewGuildOwnershipCommand, PreviewPalEditCommand,
             PreviewUe4ssInstallCommand, PromoteSelectedPlayerCommand, RconSendCommand, RefreshDiscordBotConfigCommand,
             RepairFirewallCommand, RepairModsCommand, RepairSelectedModCommand, RollbackSelectedModCommand,

@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "Gespeicherte {0} repariert",
   "msg.saved_list_admin": "Zum Reparieren einer gespeicherten Liste ist die Admin-Rolle nötig.",
   "msg.unexpected_error_no_record": "Etwas ist schiefgegangen ({0}): {1} Es konnte kein Bericht geschrieben werden.",
-  "msg.unexpected_error_record": "Etwas ist schiefgegangen ({0}): {1} Die Details stehen in {2}."
+  "msg.unexpected_error_record": "Etwas ist schiefgegangen ({0}): {1} Die Details stehen in {2}.",
+  "msg.send_queue_idle": "Nichts wartet auf den Versand. Seit dem Start von MystTiq: {0} Wiederholungen zusammengefasst, {1} verworfen, weil die Versandwarteschlange voll war.",
+  "msg.send_queue_waiting": "{0} warten auf den Versand (die älteste seit {1} s). Seit dem Start von MystTiq: {2} Wiederholungen zusammengefasst, {3} verworfen, weil die Versandwarteschlange voll war."
 }

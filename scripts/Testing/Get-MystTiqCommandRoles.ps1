@@ -1,4 +1,4 @@
-# MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+# MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 [CmdletBinding()]
 param([string]$ProjectRoot = '.', [switch]$ShowUnresolved)
 # v0.8.23.0: which role each Desktop command needs, derived from the code rather than kept by hand. Read-only.
@@ -13,14 +13,52 @@ $root = (Resolve-Path $ProjectRoot).Path
 $rank = @{ '' = -1; 'Viewer' = 0; 'Operator' = 1; 'Admin' = 2; 'Owner' = 3 }
 
 function Get-Block([string]$Text, [int]$OpenIndex) {
-    # The text from the brace or parenthesis at $OpenIndex to its match (strings and comments are not special-cased;
-    # good enough for this codebase's method bodies).
+    # The text from the brace or parenthesis at $OpenIndex to its match. String and char literals are skipped
+    # (v1.0.7.1); comments are not special-cased (good enough for this codebase's method bodies).
     $open = $Text[$OpenIndex]; $close = if ($open -eq '{') { '}' } else { ')' }
     $depth = 0
     for ($i = $OpenIndex; $i -lt $Text.Length; $i++) {
-        if ($Text[$i] -eq $open) { $depth++ } elseif ($Text[$i] -eq $close) { $depth--; if ($depth -eq 0) { return $Text.Substring($OpenIndex, $i - $OpenIndex + 1) } }
+        $ch = $Text[$i]
+        if ($ch -eq '"' -or $ch -eq "'" -or $ch -eq '@' -or $ch -eq '$' -or $ch -eq '/') { $i = Skip-Literal $Text $i }
+        elseif ($ch -eq $open) { $depth++ } elseif ($ch -eq $close) { $depth--; if ($depth -eq 0) { return $Text.Substring($OpenIndex, $i - $OpenIndex + 1) } }
     }
     return $Text.Substring($OpenIndex)
+}
+function Skip-Literal([string]$Text, [int]$Index) {
+    # v1.0.7.1: if a C# string or char literal or a comment starts at $Index, the index of its last character; otherwise
+    # $Index. Handles "..." and '.' with backslash escapes, verbatim @"..." with "", interpolated $"..." / $@"..." whose
+    # {holes} are code (literals inside them are skipped too; {{ and }} are escapes), // and /* */ comments (so an
+    # apostrophe in a comment is not taken for a char literal).
+    if ($Text[$Index] -eq '/' -and $Index + 1 -lt $Text.Length) {
+        if ($Text[$Index + 1] -eq '/') { $e = $Text.IndexOf("`n", $Index); return $(if ($e -lt 0) { $Text.Length - 1 } else { $e }) }
+        if ($Text[$Index + 1] -eq '*') { $e = $Text.IndexOf('*/', $Index + 2); return $(if ($e -lt 0) { $Text.Length - 1 } else { $e + 1 }) }
+        return $Index
+    }
+    $i = $Index; $verbatim = $false; $interp = $false
+    while ($i -lt $Text.Length -and ($Text[$i] -eq '@' -or $Text[$i] -eq '$')) { if ($Text[$i] -eq '@') { $verbatim = $true } else { $interp = $true }; $i++ }
+    if ($i -ge $Text.Length) { return $Index }
+    if ($Text[$i] -eq "'" -and $i -eq $Index) {
+        # A char literal is short ('x', '\n', 'A'); anything longer is not one.
+        for ($j = $i + 1; $j -lt [Math]::Min($Text.Length, $i + 10); $j++) { if ($Text[$j] -eq '\') { $j++ } elseif ($Text[$j] -eq "'") { return $j } }
+        return $Index
+    }
+    if ($Text[$i] -ne '"' -or $i - $Index -gt 2) { return $Index }
+    for ($j = $i + 1; $j -lt $Text.Length; $j++) {
+        $c = $Text[$j]
+        if (-not $verbatim -and $c -eq '\') { $j++; continue }
+        if ($c -eq '"') { if ($verbatim -and $j + 1 -lt $Text.Length -and $Text[$j + 1] -eq '"') { $j++; continue }; return $j }
+        if ($interp -and $c -eq '{') {
+            if ($j + 1 -lt $Text.Length -and $Text[$j + 1] -eq '{') { $j++; continue }
+            $hole = 1
+            for ($j = $j + 1; $j -lt $Text.Length -and $hole -gt 0; $j++) {
+                $h = $Text[$j]
+                if ($h -eq '"' -or $h -eq "'" -or $h -eq '@' -or $h -eq '$') { $j = Skip-Literal $Text $j }
+                elseif ($h -eq '{') { $hole++ } elseif ($h -eq '}') { $hole-- }
+            }
+            $j--   # the for loop's $j++ steps past the hole's closing brace
+        }
+    }
+    return $Text.Length - 1
 }
 function ConvertTo-RoutePattern([string]$Path) {
     $p = ($Path -split '\?')[0].TrimEnd('/')
@@ -99,11 +137,18 @@ function Resolve-Role([string]$Name, [string]$Kind, $Calls) {
     [pscustomobject]@{ Command = $Name; Kind = $Kind; Role = $best; Via = ($via | Sort-Object -Unique) -join ' ' }
 }
 foreach ($m in [regex]::Matches($vmText, '(\w+Command) = new (AsyncCommand|RelayCommand(?:<[^>]+>)?)\(')) {
-    $args = Get-Block $vmText ($m.Index + $m.Length - 1)
-    # Only the action (the first argument), not the can-execute condition.
-    $depth = 0; $cut = $args.Length - 1
-    for ($i = 1; $i -lt $args.Length - 1; $i++) { $ch = $args[$i]; if ('({[' -contains $ch) { $depth++ } elseif (')}]' -contains $ch) { $depth-- } elseif ($ch -eq ',' -and $depth -eq 0) { $cut = $i; break } }
-    $action = $args.Substring(1, $cut - 1)
+    $ctorArgs = Get-Block $vmText ($m.Index + $m.Length - 1)
+    # Only the action (the first argument), not the can-execute condition: cut at the first comma outside any nested
+    # (), {} or [] and outside string/char literals. (v1.0.7.1: was '({[' -contains $ch, which tests equality on a
+    # string, so the depth never moved and every action was cut at its first comma.)
+    $depth = 0; $cut = $ctorArgs.Length - 1
+    for ($i = 1; $i -lt $ctorArgs.Length - 1; $i++) {
+        $ch = $ctorArgs[$i]
+        if ($ch -eq '"' -or $ch -eq "'" -or $ch -eq '@' -or $ch -eq '$' -or $ch -eq '/') { $i = Skip-Literal $ctorArgs $i }
+        elseif ('({['.Contains($ch)) { $depth++ } elseif (')}]'.Contains($ch)) { $depth-- }
+        elseif ($ch -eq ',' -and $depth -eq 0) { $cut = $i; break }
+    }
+    $action = $ctorArgs.Substring(1, $cut - 1)
     if ($action -match '^\s*(\w+)\s*$' -and $methodBodies.ContainsKey($Matches[1])) { $action = "$($Matches[1])()" }
     Resolve-Role $m.Groups[1].Value 'Command' (Get-Reach $action @{})
 }

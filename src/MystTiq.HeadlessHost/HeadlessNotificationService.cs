@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using MystTiq.Core.Services;
 
@@ -52,13 +52,14 @@ public sealed class HeadlessNotificationService
 
     // General-purpose notification creation -- the entire integration surface the Alert Center
     // and the automation SendNotification action need. No parallel notification pipeline.
-    public HeadlessNotificationSnapshot Create(string severity, string title, string message, bool pinned = false)
-        => Create(severity, title, message, pinned, out _);
+    // v1.0.7.1 (Q-11): combineRepeats false for a send that must always go out (the test notification).
+    public HeadlessNotificationSnapshot Create(string severity, string title, string message, bool pinned = false, bool combineRepeats = true)
+        => Create(severity, title, message, pinned, out _, null, combineRepeats);
 
     // Same as above, plus the created notification's id -- v0.7.104.0: the Alert Center needs it to
     // unpin the alert once its episode ends (see AlertEpisodeTracker.SetAlertNotificationId).
     // v1.0.7.0 (Q-1): link names where the Desktop opens to act on it, e.g. "diagnostics:saved-file-security-users".
-    public HeadlessNotificationSnapshot Create(string severity, string title, string message, bool pinned, out string id, string? link = null)
+    public HeadlessNotificationSnapshot Create(string severity, string title, string message, bool pinned, out string id, string? link = null, bool combineRepeats = true)
     {
         HeadlessNotificationSnapshot snapshot;
         var item = New(severity, title, message, pinned);
@@ -71,7 +72,7 @@ public sealed class HeadlessNotificationService
             activity.Record("Information", "Notifications", "Created notification", $"severity={severity}; title={title}");
             snapshot = GetSnapshotUnsafe();
         }
-        routing?.Dispatch(severity, title, message);
+        routing?.Dispatch(severity, title, message, combineRepeats);
         id = item.Id;
         return snapshot;
     }

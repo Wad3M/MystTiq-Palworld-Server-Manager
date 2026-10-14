@@ -1,9 +1,10 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
@@ -36,18 +37,34 @@ public sealed class HeadlessModManagementService
     private static readonly HttpClient DescriptionHttp = BuildDescriptionHttpClient();
     private static readonly JsonSerializerOptions DescriptionJsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public HeadlessModManagementService(IServerPathProfile paths, IServerLifecycleService lifecycle, HeadlessActivityLogService activity, HeadlessConsoleLogWriter? consoleLog = null)
+    public HeadlessModManagementService(IServerPathProfile paths, IServerLifecycleService lifecycle, HeadlessActivityLogService activity, HeadlessConsoleLogWriter? consoleLog = null,
+        IOperationCoordinator? operations = null, ServerProfileId? profileId = null)
     {
+        this.operations = operations;
+        this.profileId = profileId;
         this.paths = paths;
         this.lifecycle = lifecycle;
         this.activity = activity;
         this.consoleLog = consoleLog;
     }
 
+    private readonly IOperationCoordinator? operations;
+    private readonly ServerProfileId? profileId;
+
+    // v1.0.7.1 (roadmap Q-4): a MOD change holds the server (the coordinator's "lifecycle" lock) for its whole run, so a
+    // start cannot begin between the "PalServer is stopped" check and the file changes, and a change is refused while a
+    // start, stop or restart runs. The pre-start reconcile and Safe Start run inside a lifecycle operation already, so
+    // they do not take it again.
+    private Task<(OperationHold? Hold, string? Refusal)> HoldServerAsync(string kind, CancellationToken cancellationToken) =>
+        OperationHold.TryBeginAsync(operations, profileId, kind, nameof(HeadlessModManagementService), ["lifecycle"], "Changing MOD files", cancellationToken);
+
     public async Task<HeadlessModMutationResult> InstallZipAsync(string type, string package, Stream content, long? contentLength, CancellationToken cancellationToken)
     {
         if (contentLength is > 536_870_912) return HeadlessModMutationResult.Failure("MOD archive exceeds the 512 MB limit.");
         if (!await mutationGate.WaitAsync(0, cancellationToken)) return HeadlessModMutationResult.Failure("A MOD mutation is already in progress.");
+        var (hold, holdRefusal) = await HoldServerAsync("mods-install", cancellationToken);
+        if (holdRefusal is not null) { mutationGate.Release(); return HeadlessModMutationResult.Failure(holdRefusal); }
+        using var serverHold = hold;
         var staging = Path.Combine(paths.ManagerRuntimeRoot, "mod-staging", Guid.NewGuid().ToString("N"));
         var typeNoteExtra = string.Empty;
         try
@@ -124,6 +141,9 @@ public sealed class HeadlessModManagementService
     public async Task<HeadlessModMutationResult> DeleteAsync(string type, string package, CancellationToken cancellationToken)
     {
         if (!await mutationGate.WaitAsync(0, cancellationToken)) return HeadlessModMutationResult.Failure("A MOD mutation is already in progress.");
+        var (hold, holdRefusal) = await HoldServerAsync("mods-delete", cancellationToken);
+        if (holdRefusal is not null) { mutationGate.Release(); return HeadlessModMutationResult.Failure(holdRefusal); }
+        using var serverHold = hold;
         try
         {
             var blocked = await RejectWhenRunningAsync(cancellationToken); if (blocked is not null) return blocked;
@@ -158,6 +178,9 @@ public sealed class HeadlessModManagementService
     public async Task<HeadlessModMutationResult> SetAllEnabledAsync(bool enabled, CancellationToken cancellationToken)
     {
         if (!await mutationGate.WaitAsync(0, cancellationToken)) return HeadlessModMutationResult.Failure("A MOD mutation is already in progress.");
+        var (hold, holdRefusal) = await HoldServerAsync("mods-enable-all", cancellationToken);
+        if (holdRefusal is not null) { mutationGate.Release(); return HeadlessModMutationResult.Failure(holdRefusal); }
+        using var serverHold = hold;
         try
         {
             var blocked = await RejectWhenRunningAsync(cancellationToken); if (blocked is not null) return blocked;
@@ -176,6 +199,9 @@ public sealed class HeadlessModManagementService
     public async Task<HeadlessModMutationResult> RepairAsync(CancellationToken cancellationToken)
     {
         if (!await mutationGate.WaitAsync(0, cancellationToken)) return HeadlessModMutationResult.Failure("A MOD mutation is already in progress.");
+        var (hold, holdRefusal) = await HoldServerAsync("mods-repair", cancellationToken);
+        if (holdRefusal is not null) { mutationGate.Release(); return HeadlessModMutationResult.Failure(holdRefusal); }
+        using var serverHold = hold;
         try
         {
             var blocked = await RejectWhenRunningAsync(cancellationToken); if (blocked is not null) return blocked;
@@ -350,6 +376,9 @@ public sealed class HeadlessModManagementService
     {
         if (!await mutationGate.WaitAsync(0, cancellationToken))
             return HeadlessModMutationResult.Failure("A MOD mutation is already in progress.");
+        var (hold, holdRefusal) = await HoldServerAsync("mods-rollback", cancellationToken);
+        if (holdRefusal is not null) { mutationGate.Release(); return HeadlessModMutationResult.Failure(holdRefusal); }
+        using var serverHold = hold;
         try
         {
             var blocked = await RejectWhenRunningAsync(cancellationToken); if (blocked is not null) return blocked;
@@ -469,6 +498,9 @@ public sealed class HeadlessModManagementService
     {
         if (!await mutationGate.WaitAsync(0, cancellationToken))
             return Ue4ssInstallResult.Failure("A MOD/engine mutation is already in progress.");
+        var (hold, holdRefusal) = await HoldServerAsync("ue4ss-install", cancellationToken);
+        if (holdRefusal is not null) { mutationGate.Release(); return Ue4ssInstallResult.Failure(holdRefusal); }
+        using var serverHold = hold;
         var staging = Path.Combine(paths.ManagerRuntimeRoot, "ue4ss-install-staging", Guid.NewGuid().ToString("N"));
         try
         {
@@ -569,6 +601,9 @@ public sealed class HeadlessModManagementService
     {
         if (!await mutationGate.WaitAsync(0, cancellationToken))
             return Ue4ssInstallResult.Failure("A MOD/engine mutation is already in progress.");
+        var (hold, holdRefusal) = await HoldServerAsync("ue4ss-rollback", cancellationToken);
+        if (holdRefusal is not null) { mutationGate.Release(); return Ue4ssInstallResult.Failure(holdRefusal); }
+        using var serverHold = hold;
         try
         {
             var status = await lifecycle.GetStatusAsync(cancellationToken);
@@ -826,11 +861,19 @@ public sealed class HeadlessModManagementService
             inventory.Mods);
     }
 
+    // serverHeldByCaller: Safe Start, which holds the server itself for its whole run.
     public async Task<HeadlessModMutationResult> SetEnabledAsync(
-        string type, string package, bool enabled, CancellationToken cancellationToken)
+        string type, string package, bool enabled, CancellationToken cancellationToken, bool serverHeldByCaller = false)
     {
         if (!await mutationGate.WaitAsync(0, cancellationToken))
             return HeadlessModMutationResult.Failure("A MOD state change is already in progress.");
+        OperationHold? hold = null;
+        if (!serverHeldByCaller)
+        {
+            (hold, var holdRefusal) = await HoldServerAsync("mods-enable", cancellationToken);
+            if (holdRefusal is not null) { mutationGate.Release(); return HeadlessModMutationResult.Failure(holdRefusal); }
+        }
+        using var serverHold = hold;
 
         try
         {
@@ -1632,6 +1675,9 @@ public sealed class HeadlessModManagementService
             return HeadlessModMutationResult.Failure("Steam Workshop import requires Windows.");
         if (!await mutationGate.WaitAsync(0, cancellationToken))
             return HeadlessModMutationResult.Failure("A MOD mutation is already in progress.");
+        var (hold, holdRefusal) = await HoldServerAsync("mods-workshop-import", cancellationToken);
+        if (holdRefusal is not null) { mutationGate.Release(); return HeadlessModMutationResult.Failure(holdRefusal); }
+        using var serverHold = hold;
 
         var staging = Path.Combine(paths.ManagerRuntimeRoot, "mod-staging", Guid.NewGuid().ToString("N"));
         try

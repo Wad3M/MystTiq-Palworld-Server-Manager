@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "Kayıtlı {0} onarıldı",
   "msg.saved_list_admin": "Kayıtlı bir listeyi onarmak Yönetici rolü gerektirir.",
   "msg.unexpected_error_no_record": "Bir sorun oluştu ({0}): {1} Kayıt yazılamadı.",
-  "msg.unexpected_error_record": "Bir sorun oluştu ({0}): {1} Ayrıntılar {2} içinde."
+  "msg.unexpected_error_record": "Bir sorun oluştu ({0}): {1} Ayrıntılar {2} içinde.",
+  "msg.send_queue_idle": "Gönderilmeyi bekleyen bir şey yok. MystTiq başladığından beri: {0} tekrar birleştirildi, gönderim kuyruğu dolu olduğu için {1} bırakıldı.",
+  "msg.send_queue_waiting": "{0} gönderilmeyi bekliyor (en eskisi {1} sn). MystTiq başladığından beri: {2} tekrar birleştirildi, gönderim kuyruğu dolu olduğu için {3} bırakıldı."
 }

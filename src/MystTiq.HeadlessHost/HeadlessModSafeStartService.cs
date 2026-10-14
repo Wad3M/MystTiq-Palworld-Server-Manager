@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
@@ -155,7 +155,7 @@ public sealed class HeadlessModSafeStartService
     // state it believes; v0.7.59.0 ignored a refused switch.
     private async Task SwitchAsync(HeadlessModItem mod, bool enabled)
     {
-        var result = await modManagement.SetEnabledAsync(mod.Type, mod.Package, enabled, CancellationToken.None);
+        var result = await modManagement.SetEnabledAsync(mod.Type, mod.Package, enabled, CancellationToken.None, serverHeldByCaller: true);
         if (!result.Success)
             throw new InvalidOperationException(enabled ? $"{mod.Package} could not be enabled: {result.Message}" : $"{mod.Package} could not be disabled: {result.Message}");
     }
@@ -163,7 +163,7 @@ public sealed class HeadlessModSafeStartService
     private async Task RestoreAsync(List<HeadlessModItem> candidates)
     {
         foreach (var mod in candidates)
-            await modManagement.SetEnabledAsync(mod.Type, mod.Package, true, CancellationToken.None);
+            await modManagement.SetEnabledAsync(mod.Type, mod.Package, true, CancellationToken.None, serverHeldByCaller: true);
     }
 
     // v1.0.0.1: one start with every MOD off, timed; then the server is stopped and the MODs switched back on.

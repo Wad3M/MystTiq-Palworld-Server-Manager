@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "已修复已保存的{0}",
   "msg.saved_list_admin": "修复已保存的列表需要“管理员”角色。",
   "msg.unexpected_error_no_record": "出现问题（{0}）：{1} 无法写入记录。",
-  "msg.unexpected_error_record": "出现问题（{0}）：{1} 详细信息在 {2}。"
+  "msg.unexpected_error_record": "出现问题（{0}）：{1} 详细信息在 {2}。",
+  "msg.send_queue_idle": "没有等待发出的消息。自 MystTiq 启动以来：合并了 {0} 条重复消息，因发送队列已满丢弃了 {1} 条。",
+  "msg.send_queue_waiting": "{0} 条等待发出（最早的已等待 {1} 秒）。自 MystTiq 启动以来：合并了 {2} 条重复消息，因发送队列已满丢弃了 {3} 条。"
 }

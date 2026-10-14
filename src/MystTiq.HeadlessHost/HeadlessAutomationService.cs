@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using MystTiq.Core.Automation;
 using MystTiq.Core.Models;
@@ -270,8 +270,16 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
         {
             case AutomationActionKind.CreateBackup:
             {
+                // v1.0.7.1 (roadmap Q-4): a backup refused because another operation runs (a restart, a save edit) waits for it.
+                var waited = TimeSpan.Zero;
                 var result = await backups.CreateAsync(BackupClass.Scheduled, token);
-                return (result.Success, result.Message, null);
+                while (result.IsConflict && waited < ConflictWaitLimit)
+                {
+                    await Task.Delay(ConflictRetryEvery, token);
+                    waited += ConflictRetryEvery;
+                    result = await backups.CreateAsync(BackupClass.Scheduled, token);
+                }
+                return (result.Success, WaitedText(waited) + result.Message, null);
             }
             case AutomationActionKind.SendNotification:
             {
@@ -346,19 +354,30 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
         if (abortIfTrue is not null && await abortIfTrue())
             return (false, "Idle auto-stop was aborted: a player was online at the final recheck.", null);
 
+        // v1.0.7.1 (roadmap Q-4): unattended, so a conflicting operation (a backup at the same minute, a MOD change) is
+        // waited for, up to ConflictWaitLimit, instead of failing the run at once.
         OperationHandle handle;
-        try
+        var waited = TimeSpan.Zero;
+        while (true)
         {
-            handle = await coordinator.BeginAsync(new ServerProfileId(serverProfile.Id), kind, "HeadlessAutomationService", resourceKeys, token);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return (false, ex.Message, null);
+            try
+            {
+                handle = await coordinator.BeginAsync(new ServerProfileId(serverProfile.Id), kind, "HeadlessAutomationService", resourceKeys, token);
+                break;
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (waited >= ConflictWaitLimit)
+                    return (false, $"Waited {waited.TotalMinutes:0} min for another operation on this server to finish. {ex.Message}", null);
+                await Task.Delay(ConflictRetryEvery, token);
+                waited += ConflictRetryEvery;
+            }
         }
 
         try
         {
             var result = await operation();
+            if (waited > TimeSpan.Zero) result = result with { Message = WaitedText(waited) + result.Message };
             if (result.Success) coordinator.Complete(handle.Id, result.Message);
             else coordinator.Fail(handle.Id, result.Message);
             return (result.Success, result.Message, handle.Id.ToString());
@@ -370,6 +389,13 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
         }
         finally { handle.Dispose(); }
     }
+
+    // v1.0.7.1 (roadmap Q-4): how long unattended work waits for a conflicting operation, and how often it tries again.
+    public static TimeSpan ConflictWaitLimit { get; set; } = TimeSpan.FromMinutes(10);
+    public static TimeSpan ConflictRetryEvery { get; set; } = TimeSpan.FromSeconds(15);
+
+    private static string WaitedText(TimeSpan waited) =>
+        waited > TimeSpan.Zero ? $"Waited {waited.TotalSeconds:0} s for another operation on this server to finish. " : string.Empty;
 
     private void RecordRun(AutomationRule rule, DateTimeOffset dueUtc, AutomationRunState state, string detail, string? runId, DateTimeOffset? startedUtc, string? operationId = null)
     {

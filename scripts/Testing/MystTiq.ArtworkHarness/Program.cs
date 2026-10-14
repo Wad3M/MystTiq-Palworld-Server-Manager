@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1699,6 +1699,27 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     serve.Wait(TimeSpan.FromSeconds(10));
     Check(refusal.StartsWith("MystTiq could not read the saved whitelist", StringComparison.Ordinal) && refusal.Contains("Server Doctor") && !other.Contains("could not read the saved"),
         $"A refused change shows the service's reason, not \"409 (Conflict)\"; other conflicts are untouched [{refusal}]");
+}
+// v1.0.7.1 (roadmap Q-11): Alert Center shows what is waiting to go out, the oldest's wait, and what the queue
+// combined or dropped.
+{
+    var delivery = new NotificationDeliveryStateDto
+    {
+        ExternalChannels = ["Webhook"],
+        Queue = new NotificationSendQueueStateDto { Waiting = 3, OldestWaitingSinceUtc = DateTimeOffset.UtcNow.AddSeconds(-12), Capacity = 200, Senders = 2, Combined = 299, Dropped = 4, RepeatWindowMinutes = 10 }
+    };
+    typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.NotificationDelivery))!.SetValue(vm, delivery);
+    vm.NavigateCommand.Execute(nameof(NavigationPage.AlertCenter));
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var queueText = window.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Name == "SendQueueText");
+    Check(queueText is { IsEffectivelyVisible: true } && queueText.Text is { } shown && shown.StartsWith("3 waiting to go out (the oldest for 1", StringComparison.Ordinal) &&
+          shown.Contains("299 repeats combined, 4 dropped"),
+        $"Alert Center shows the send queue: waiting, the oldest's wait, combined and dropped [{queueText?.Text}]");
+    delivery.Queue = new NotificationSendQueueStateDto { Waiting = 0, Combined = 0, Dropped = 0 };
+    typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.NotificationDelivery))!.SetValue(vm, new NotificationDeliveryStateDto { Queue = delivery.Queue });
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    Check(queueText?.Text?.StartsWith("Nothing is waiting to go out.", StringComparison.Ordinal) == true, "and says when nothing is waiting");
+    typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.NotificationDelivery))!.SetValue(vm, new NotificationDeliveryStateDto());
 }
 // v1.0.5.0 (roadmap M-1): the MOD browser against stand-in repositories (Thunderstore, CurseForge, GitHub), a folder of
 // ZIPs, the download host checks, the nxm:// handoff and the card on the MOD Library page.

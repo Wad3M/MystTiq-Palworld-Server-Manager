@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 namespace MystTiq.Desktop.Models;
 
 public sealed class AlertThresholdRuleDto
@@ -111,11 +111,32 @@ public sealed class NotificationDeliveryHealthDto
     public bool HasRecent => Recent.Count > 0;
 }
 
+// v1.0.7.1 (roadmap Q-11): the outside send queue.
+public sealed class NotificationSendQueueStateDto
+{
+    public int Waiting { get; set; }
+    public DateTimeOffset? OldestWaitingSinceUtc { get; set; }
+    public int Capacity { get; set; }
+    public int Senders { get; set; }
+    public long Combined { get; set; }
+    public long Dropped { get; set; }
+    public int RepeatWindowMinutes { get; set; }
+}
+
 public sealed class NotificationDeliveryStateDto
 {
     public DateTimeOffset? PausedUntilUtc { get; set; }
     public List<string> ExternalChannels { get; set; } = [];
     public string Detail { get; set; } = string.Empty;
+    public NotificationSendQueueStateDto? Queue { get; set; }
+
+    // v1.0.7.1 (roadmap Q-11): what is waiting to go out, and what the queue combined or dropped.
+    public bool HasQueue => Queue is not null;
+    public string QueueText => Queue is not { } q
+        ? string.Empty
+        : q.Waiting == 0
+            ? $"Nothing is waiting to go out. Since MystTiq started: {q.Combined} repeats combined, {q.Dropped} dropped because the send queue was full."
+            : $"{q.Waiting} waiting to go out (the oldest for {(int)Math.Max(0, (DateTimeOffset.UtcNow - (q.OldestWaitingSinceUtc ?? DateTimeOffset.UtcNow)).TotalSeconds)} s). Since MystTiq started: {q.Combined} repeats combined, {q.Dropped} dropped because the send queue was full.";
 
     public bool IsPaused => PausedUntilUtc is { } until && until > DateTimeOffset.UtcNow;
     public string StatusText => IsPaused

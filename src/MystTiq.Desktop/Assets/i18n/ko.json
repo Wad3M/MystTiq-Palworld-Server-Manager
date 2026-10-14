@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "저장된 {0} 복구됨",
   "msg.saved_list_admin": "저장된 목록을 복구하려면 관리자 역할이 필요합니다.",
   "msg.unexpected_error_no_record": "문제가 발생했습니다({0}): {1} 기록을 남기지 못했습니다.",
-  "msg.unexpected_error_record": "문제가 발생했습니다({0}): {1} 자세한 내용은 {2}에 있습니다."
+  "msg.unexpected_error_record": "문제가 발생했습니다({0}): {1} 자세한 내용은 {2}에 있습니다.",
+  "msg.send_queue_idle": "보낼 대기 항목이 없습니다. MystTiq 시작 이후: 반복 {0}건을 합쳤고, 전송 대기열이 가득 차 {1}건을 버렸습니다.",
+  "msg.send_queue_waiting": "{0}건이 전송 대기 중입니다(가장 오래된 것은 {1}초). MystTiq 시작 이후: 반복 {2}건을 합쳤고, 전송 대기열이 가득 차 {3}건을 버렸습니다."
 }

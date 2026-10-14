@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "{0} enregistré réparé",
   "msg.saved_list_admin": "Réparer une liste enregistrée nécessite le rôle Administrateur.",
   "msg.unexpected_error_no_record": "Un problème est survenu ({0}) : {1} Aucun rapport n'a pu être écrit.",
-  "msg.unexpected_error_record": "Un problème est survenu ({0}) : {1} Les détails sont dans {2}."
+  "msg.unexpected_error_record": "Un problème est survenu ({0}) : {1} Les détails sont dans {2}.",
+  "msg.send_queue_idle": "Rien n'attend d'être envoyé. Depuis le démarrage de MystTiq : {0} répétitions regroupées, {1} abandonnées car la file d'envoi était pleine.",
+  "msg.send_queue_waiting": "{0} en attente d'envoi (la plus ancienne depuis {1} s). Depuis le démarrage de MystTiq : {2} répétitions regroupées, {3} abandonnées car la file d'envoi était pleine."
 }

@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+// MystTiq v1.0.7.1: file reviewed for this release (2026-10-08).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -193,7 +193,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var configurationApi = new HeadlessConfigurationApiService(effectiveConfigurationPath, configuration, profileId);
             var doctor = new HeadlessDoctorService(configuration, effectiveConfigurationPath, paths, lifecycle, linuxServiceManager);
             var distribution = ServerDistributionPlatformService.ForCurrentPlatform();
-            var serverDistribution = new HeadlessServerDistributionService(paths, lifecycle, distribution);
+            var serverDistribution = new HeadlessServerDistributionService(paths, lifecycle, distribution, operations, profileId);
             var consoleCaptureProxy = new HeadlessConsoleCaptureProxyService(paths);
             var worldExplorer = new HeadlessWorldExplorerService(paths);
             var worldTransactions = new HeadlessWorldTransactionService(paths, lifecycle, backups, activity, worldExplorer, operations, profileId);
@@ -211,7 +211,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var playerDeletion = new HeadlessPlayerDeletionService(paths, lifecycle, backups, activity, playerGuildExplorer, playerRegistry, guildOwnership, operations, profileId);
             var playerCopy = new HeadlessPlayerCopyService(paths, lifecycle, backups, activity, playerGuildExplorer, saveCodec, operations, profileId);
             var consoleLog = new HeadlessConsoleLogWriter(paths);
-            var modManagement = new HeadlessModManagementService(paths, lifecycle, activity, consoleLog);
+            var modManagement = new HeadlessModManagementService(paths, lifecycle, activity, consoleLog, operations, profileId);
             var networkPlatform = NetworkDiagnosticsPlatformService.ForCurrentPlatform();
             var networkDiagnostics = new NetworkDiagnosticsService(networkPlatform, paths.ConfigRoot);
             var wanReachability = new WanReachabilityService(networkPlatform);
@@ -767,8 +767,9 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapPost("/notifications/test", () =>
         {
             var state = p.NotificationRouting.GetDeliveryState();
+            // v1.0.7.1 (Q-11): a test always goes out, even a second one within the repeat window.
             p.Notifications.Create("Information", "Test notification",
-                "Sent from MystTiq to check notification delivery. If this reached Discord, email or a webhook, that channel works.");
+                "Sent from MystTiq to check notification delivery. If this reached Discord, email or a webhook, that channel works.", combineRepeats: false);
             var outcome = state.PausedUntilUtc is not null
                 ? "Created on the Notifications page only: outside delivery is paused."
                 : state.ExternalChannels.Count == 0
@@ -1405,6 +1406,10 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var status = await p.Lifecycle.GetStatusAsync(token);
             if (status.ServerMayBeRunning)
                 return Results.Conflict(new ComponentUpdateResult(false, "Stop PalServer before updating PalDefender; its files are in use while it runs."));
+            // v1.0.7.1 (roadmap Q-4): holds the server while PalDefender's files are replaced, so a start cannot begin meanwhile.
+            var (hold, holdRefusal) = await OperationHold.TryBeginAsync(operations, p.Id, "paldefender-update", "LocalManagementApiHost", ["lifecycle"], "Updating PalDefender", token);
+            if (holdRefusal is not null) return Results.Conflict(new ComponentUpdateResult(false, holdRefusal));
+            using var serverHold = hold;
             var result = await p.ComponentUpdates.UpdatePalDefenderAsync(token);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         });
@@ -1438,12 +1443,19 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
 
         routes.MapPost("/server/console-capture/install", async (CancellationToken token) =>
         {
+            // v1.0.7.1 (roadmap Q-4): writes next to the game's executable, so it holds the server like a MOD change.
+            var (hold, holdRefusal) = await OperationHold.TryBeginAsync(operations, p.Id, "console-capture-install", "LocalManagementApiHost", ["lifecycle"], "Installing console capture", token);
+            if (holdRefusal is not null) return Results.Conflict(new { success = false, message = holdRefusal });
+            using var serverHold = hold;
             var result = await p.ConsoleCaptureProxy.InstallAsync(token);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         });
 
-        routes.MapPost("/server/console-capture/uninstall", async () =>
+        routes.MapPost("/server/console-capture/uninstall", async (CancellationToken token) =>
         {
+            var (hold, holdRefusal) = await OperationHold.TryBeginAsync(operations, p.Id, "console-capture-uninstall", "LocalManagementApiHost", ["lifecycle"], "Removing console capture", token);
+            if (holdRefusal is not null) return Results.Conflict(new { success = false, message = holdRefusal });
+            using var serverHold = hold;
             var result = await p.ConsoleCaptureProxy.UninstallAsync();
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         });

@@ -3983,5 +3983,7 @@
   "msg.saved_list_repaired_title": "{0} salvo reparado",
   "msg.saved_list_admin": "Reparar uma lista salva exige a função de Administrador.",
   "msg.unexpected_error_no_record": "Algo deu errado ({0}): {1} Não foi possível gravar um registro.",
-  "msg.unexpected_error_record": "Algo deu errado ({0}): {1} Os detalhes estão em {2}."
+  "msg.unexpected_error_record": "Algo deu errado ({0}): {1} Os detalhes estão em {2}.",
+  "msg.send_queue_idle": "Nada está esperando para ser enviado. Desde que o MystTiq iniciou: {0} repetições combinadas, {1} descartadas porque a fila de envio estava cheia.",
+  "msg.send_queue_waiting": "{0} aguardando envio (o mais antigo há {1} s). Desde que o MystTiq iniciou: {2} repetições combinadas, {3} descartadas porque a fila de envio estava cheia."
 }

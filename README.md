@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
+<!-- MystTiq v1.0.7.1: file reviewed for this release (2026-10-08). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,13 +21,15 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.7.0 · Accepted baseline: v1.0.0.0**
+**Current version: v1.0.7.1 · Accepted baseline: v1.0.0.0**
 
 MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.7.0
+## What's new in v1.0.7.1
 
-**Nothing lost when a file is damaged.** If one of MystTiq's own lists (accounts, automation rules, kits, notification channels and the rest) can't be read, for example after a power cut, MystTiq loads its last good copy, or refuses changes so nothing is written over it, and alerts you with a link to the repair. **Errors you can see**: an unexpected error is recorded and shown instead of closing the app, and the service's background work logs its failures and stops cleanly.
+**One thing at a time.** A backup, a server update, a MOD change or a PalDefender update can no longer run while the server is starting or a save is being edited: whichever comes second is refused with the reason, and scheduled automation simply waits its turn. **Calm during alert storms**: Discord, email and webhook sends are queued, the same alert repeated within 10 minutes is sent once with a count, and Alert Center shows what is waiting.
+
+**Also new since 1.0 (v1.0.7.0): nothing lost when a file is damaged.** If one of MystTiq's own lists (accounts, automation rules, kits, notification channels and the rest) can't be read, for example after a power cut, MystTiq loads its last good copy, or refuses changes so nothing is written over it, and alerts you with a link to the repair. **Errors you can see**: an unexpected error is recorded and shown instead of closing the app, and the service's background work logs its failures and stops cleanly.
 
 **Also new since 1.0 (v1.0.6.1): your character, not a new one.** If the MystTiq service on your PC is older than the app, the Dashboard now says so and replaces it in one click, so fixes like the identity guard are really running your server. No Launcher preset adds the start options that gave players a different character any more, and the identity alert names them when it happens.
 
@@ -55,7 +57,7 @@ MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Win
 
 **Also new since 1.0 (v1.0.0.1): launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
 
-[Release notes](release-notes/v1.0.7.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v1.0.7.1.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -122,8 +124,9 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v1.0.7.0 | Current | A damaged saved list can no longer wipe your accounts or settings; errors are recorded and shown instead of closing the app |
-| v1.0.6.1 | Previous | Fixes a player getting a new character: an older MystTiq service still running is flagged and replaced in one click; no Launcher preset adds the options behind it |
+| v1.0.7.1 | Current | Backups, updates and MOD changes can no longer overlap a server start or a save edit; a burst of alerts is queued and repeats combined |
+| v1.0.7.0 | Previous | A damaged saved list can no longer wipe your accounts or settings; errors are recorded and shown instead of closing the app |
+| v1.0.6.1 | Earlier | Fixes a player getting a new character: an older MystTiq service still running is flagged and replaced in one click; no Launcher preset adds the options behind it |
 | v1.0.6.0 | Earlier | Add or remove a Pal in a player's Pal box; MODs laid out as the game folder (LogicMods, PAK with scripts) install |
 | v1.0.5.0 | Earlier | A MOD browser: your Downloads folder, Thunderstore, CurseForge, GitHub releases and Nexus Mods, each archive checked before it installs |
 | v1.0.4.0 | Earlier | Guarded save edits: remove or add an item in a player's saved inventory, with a checked backup first |

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
+<!-- MystTiq v1.0.7.1: file reviewed for this release (2026-10-08). -->
 # v0.8.0.0 Build and Test Plan
 
 1. Close artifact-hosted MystTiq desktop and sidecar processes with Clean (also removing
