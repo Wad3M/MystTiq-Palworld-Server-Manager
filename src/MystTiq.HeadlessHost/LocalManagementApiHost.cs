@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -751,9 +751,14 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapDelete("/notifications/{id}", (string id) =>
         { try { return Results.Ok(p.Notifications.Dismiss(id)); } catch (KeyNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); } }).RequireRole(MystTiqRole.Operator, p.Id);
 
-        routes.MapGet("/notifications/channels", () => Results.Ok(p.NotificationRouting.GetChannels()));
+        // v1.0.7.4 (roadmap Q-9): webhook URLs carry their token, so reading the channels needs Admin (as the Discord bot's
+        // settings do), and the SMTP password is never returned.
+        routes.MapGet("/notifications/channels", () => Results.Ok(p.NotificationRouting.GetChannelsView())).RequireRole(MystTiqRole.Admin, p.Id);
         routes.MapPut("/notifications/channels", (NotificationChannelConfiguration request) =>
-            Results.Ok(p.NotificationRouting.SaveChannels(request))).RequireRole(MystTiqRole.Admin, p.Id);
+        {
+            p.NotificationRouting.SaveChannels(request);
+            return Results.Ok(p.NotificationRouting.GetChannelsView());
+        }).RequireRole(MystTiqRole.Admin, p.Id);
         routes.MapGet("/notifications/templates", () => Results.Ok(p.NotificationRouting.GetTemplates()));
         routes.MapPut("/notifications/templates", (List<NotificationTemplate> request) =>
             Results.Ok(p.NotificationRouting.SaveTemplates(request))).RequireRole(MystTiqRole.Admin, p.Id);

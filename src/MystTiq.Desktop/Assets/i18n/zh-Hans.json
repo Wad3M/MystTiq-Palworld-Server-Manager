@@ -4009,5 +4009,7 @@
   "msg.conn_cause_certificate": "服务的证书与此连接固定的证书不一致。请检查连接设置中的证书指纹。",
   "msg.conn_cause_reconnecting": "{0} 上的 MystTiq 服务停止响应。每 5 秒重试一次（第 {1} 次）。",
   "msg.conn_cause_unreachable": "{0} 没有响应。请启动 MystTiq 服务，或检查地址和端口。",
-  "msg.conn_cause_rest": "Palworld 正在运行，但其 REST API 没有响应，因此无法获取玩家和实时数据。 "
+  "msg.conn_cause_rest": "Palworld 正在运行，但其 REST API 没有响应，因此无法获取玩家和实时数据。 ",
+  "msg.delete_plain_copy": "删除明文副本",
+  "msg.delete_plain_copy_confirm": "我了解这会删除明文副本；加密的设置保持不变"
 }

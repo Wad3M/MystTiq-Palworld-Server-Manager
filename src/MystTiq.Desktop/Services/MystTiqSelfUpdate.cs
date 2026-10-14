@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -91,6 +91,9 @@ public sealed class MystTiqSelfUpdate
 
             progress?.Report($"Unpacking {asset}…");
             var unpacked = Path.Combine(temp, "unpacked");
+            // v1.0.7.4 (roadmap Q-15): even a checksum-verified download is checked for size, entries and free space first.
+            if (MystTiq.Core.Services.ArchiveLimits.CheckFile(zipPath, temp) is { } tooBig)
+                return new Result(false, $"{asset} was not unpacked: {tooBig}", null);
             ZipFile.ExtractToDirectory(zipPath, unpacked);
             // The ZIP holds one folder (MystTiqPalworldServer_vX_Windows-x64); a flat ZIP is taken as it is.
             var entries = Directory.GetFileSystemEntries(unpacked);

@@ -4009,5 +4009,7 @@
   "msg.conn_cause_certificate": "Le certificat du service ne correspond pas à celui épinglé pour cette connexion. Vérifiez l'empreinte du certificat dans les paramètres de connexion.",
   "msg.conn_cause_reconnecting": "Le service MystTiq à {0} ne répond plus. Nouvel essai toutes les 5 s (tentative {1}).",
   "msg.conn_cause_unreachable": "Rien ne répond à {0}. Démarrez le service MystTiq ou vérifiez l'adresse et le port.",
-  "msg.conn_cause_rest": "Palworld tourne, mais son API REST ne répond pas : les joueurs et les données en direct sont indisponibles. "
+  "msg.conn_cause_rest": "Palworld tourne, mais son API REST ne répond pas : les joueurs et les données en direct sont indisponibles. ",
+  "msg.delete_plain_copy": "Supprimer la copie non chiffrée",
+  "msg.delete_plain_copy_confirm": "Je comprends que la copie non chiffrée sera supprimée ; les paramètres chiffrés restent"
 }

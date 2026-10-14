@@ -4009,5 +4009,7 @@
   "msg.conn_cause_certificate": "서비스 인증서가 이 연결에 고정된 인증서와 일치하지 않습니다. 연결 설정의 인증서 지문을 확인하세요.",
   "msg.conn_cause_reconnecting": "{0}의 MystTiq 서비스가 응답하지 않습니다. 5초마다 다시 시도합니다({1}번째).",
   "msg.conn_cause_unreachable": "{0}에서 응답이 없습니다. MystTiq 서비스를 시작하거나 주소와 포트를 확인하세요.",
-  "msg.conn_cause_rest": "Palworld는 실행 중이지만 REST API가 응답하지 않아 플레이어와 실시간 데이터를 사용할 수 없습니다. "
+  "msg.conn_cause_rest": "Palworld는 실행 중이지만 REST API가 응답하지 않아 플레이어와 실시간 데이터를 사용할 수 없습니다. ",
+  "msg.delete_plain_copy": "암호화되지 않은 사본 삭제",
+  "msg.delete_plain_copy_confirm": "암호화되지 않은 사본이 삭제된다는 것을 이해합니다. 암호화된 설정은 그대로 남습니다"
 }

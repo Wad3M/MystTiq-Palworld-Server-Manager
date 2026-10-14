@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -4241,6 +4241,87 @@ try
         await guard.EnforceAsync(Online("E290DA9A000000000000000000000000"), CancellationToken.None);
         Assert(fake.Calls.Count == 2, "a different character is kicked at once, as before");
         Assert(IdentityGuard.LoadingGrace == TimeSpan.FromSeconds(90), "the loading grace is 90 s");
+    }, failures);
+
+    // v1.0.7.4 (roadmap Q-9): secrets kept out of logs.
+    RunScenario("Secrets in logs (Q-9): a webhook URL is logged by its host only, and password-style start arguments are hidden; a failed webhook send leaves no URL token in the activity log; the channels the API returns never carry the SMTP password", () =>
+    {
+        Assert(SecretRedaction.Url("https://discord.com/api/webhooks/123/SECRETTOKEN") == "https://discord.com/****", "a Discord webhook URL keeps only its host");
+        Assert(SecretRedaction.Url("http://127.0.0.1:9/hook/abc") == "http://127.0.0.1:9/****" && SecretRedaction.Url("not a url") == "****", "a port is kept; something unreadable is hidden");
+        var args = SecretRedaction.Arguments(["-port=8211", "-AdminPassword=hunter2", "--token", "abc123", "RCONPassword:xyz", "@mysttiq:windowStyle=Hidden", "-useperfthreads"]);
+        Assert(string.Join(" ", args) == "-port=8211 -AdminPassword=**** --token **** RCONPassword:**** @mysttiq:windowStyle=Hidden -useperfthreads", $"password-style arguments are hidden, the rest kept [{string.Join(" ", args)}]");
+        Assert(SecretRedaction.Text("token=abcd1234 and pass=zz", ["abcd1234", "zz"]) == "token=**** and pass=zz", "known secret values are replaced (very short ones are left alone)");
+
+        int port;
+        using (var probe = new TcpListener(IPAddress.Loopback, 0)) { probe.Start(); port = ((IPEndPoint)probe.LocalEndpoint).Port; probe.Stop(); }
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "q9-webhook-" + Guid.NewGuid().ToString("N")));
+        var activity = new HeadlessActivityLogService(paths);
+        var routing = new HeadlessNotificationRoutingService(paths, activity);
+        routing.SaveChannels(new NotificationChannelConfiguration { Channels = [new(NotificationChannel.Desktop, true, null), new(NotificationChannel.Webhook, true, $"http://127.0.0.1:{port}/hook/SECRETTOKEN42")] });
+        routing.Dispatch("Warning", "Closed port", "nobody answers", combineRepeats: false);
+        Assert(WaitFor(() => activity.GetTail(50).Lines.Any(l => l.Contains("Webhook dispatch failed after retry")), 30000), "the failed send is logged");
+        Assert(!activity.GetTail(200).Lines.Any(l => l.Contains("SECRETTOKEN42")) && activity.GetTail(200).Lines.Any(l => l.Contains($"http://127.0.0.1:{port}/****")),
+            "the activity log names the host, not the URL's token");
+
+        // What the API returns never carries the SMTP password; saving that view back keeps it; an empty one clears it.
+        routing.SaveChannels(new NotificationChannelConfiguration { Channels = [new(NotificationChannel.Desktop, true, null), new(NotificationChannel.Email, true, null, SmtpHost: "smtp.example.com", SmtpPassword: "KeepThisPassword7")] });
+        var view = routing.GetChannelsView();
+        Assert(view.Channels.All(c => c.SmtpPassword is null), "the API view has no SMTP password");
+        routing.SaveChannels(view);
+        Assert(routing.GetChannels().Channels.Single(c => c.Channel == NotificationChannel.Email).SmtpPassword == "KeepThisPassword7", "saving the view back keeps the stored password");
+        routing.SaveChannels(new NotificationChannelConfiguration { Channels = [new(NotificationChannel.Email, true, null, SmtpHost: "smtp.example.com", SmtpPassword: "")] });
+        Assert(routing.GetChannels().Channels.Single(c => c.Channel == NotificationChannel.Email).SmtpPassword is null, "an empty password clears it");
+    }, failures);
+
+    // v1.0.7.4 (roadmap Q-14): secrets encrypted at rest.
+    RunScenario("Secrets at rest (Q-14): plain SMTP passwords and webhook URLs from an older version are encrypted at start-up (one plain copy kept beside them), read back as they were, and stay encrypted on every save", () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "q14-secrets-" + Guid.NewGuid().ToString("N")));
+        var folder = Path.Combine(paths.ManagerRuntimeRoot, "notifications");
+        Directory.CreateDirectory(folder);
+        var channelsPath = Path.Combine(folder, "channels.json");
+        File.WriteAllText(channelsPath, """
+            { "Channels": [
+              { "Channel": "Desktop", "Enabled": true, "TargetUrl": null },
+              { "Channel": "Discord", "Enabled": true, "TargetUrl": "https://discord.com/api/webhooks/9/PLAINWEBHOOKTOKEN" },
+              { "Channel": "Email", "Enabled": true, "TargetUrl": null, "SmtpHost": "smtp.example.com", "SmtpPassword": "PlainSmtpPassword99" } ] }
+            """);
+        var routing = new HeadlessNotificationRoutingService(paths, new HeadlessActivityLogService(paths));
+        var plain = routing.GetChannels().Channels;
+        Assert(plain.Single(c => c.Channel == NotificationChannel.Discord).TargetUrl == "https://discord.com/api/webhooks/9/PLAINWEBHOOKTOKEN" &&
+               plain.Single(c => c.Channel == NotificationChannel.Email).SmtpPassword == "PlainSmtpPassword99", "the channels read back exactly as they were");
+        var onDisk = File.ReadAllText(channelsPath);
+        if (OperatingSystem.IsWindows())
+        {
+            Assert(!onDisk.Contains("PLAINWEBHOOKTOKEN") && !onDisk.Contains("PlainSmtpPassword99") && onDisk.Contains(SecretProtector.Prefix), "on disk they are encrypted");
+            Assert(File.Exists(channelsPath + ".before-encryption") && File.ReadAllText(channelsPath + ".before-encryption").Contains("PlainSmtpPassword99"), "one plain copy is kept beside the file, for Server Doctor to name");
+            routing.SaveChannels(routing.GetChannels());
+            Assert(!File.ReadAllText(channelsPath).Contains("PlainSmtpPassword99"), "a save keeps them encrypted");
+            var reloaded = new HeadlessNotificationRoutingService(paths, new HeadlessActivityLogService(paths)).GetChannels().Channels;
+            Assert(reloaded.Single(c => c.Channel == NotificationChannel.Email).SmtpPassword == "PlainSmtpPassword99", "and a restart reads them back");
+            Assert(SecretProtector.Unprotect(SecretProtector.Protect("bot.token.value")) == "bot.token.value" && SecretProtector.Unprotect(SecretProtector.Prefix + "AAAA") is null,
+                "the bot token round-trips; a value that cannot be decrypted reads as empty");
+        }
+        else
+        {
+            Assert((File.GetUnixFileMode(channelsPath) & (UnixFileMode.GroupRead | UnixFileMode.OtherRead)) == 0, "on Linux the file is owner-only");
+        }
+    }, failures);
+
+    // v1.0.7.4 (roadmap Q-15): every archive MystTiq opens has limits.
+    RunScenario("Archive limits (Q-15): too many entries or too much expanded size is refused with the reason before anything is written; a normal archive passes; a broken one says so", () =>
+    {
+        var root = Path.Combine(tempRoot, "q15-archives-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var many = Path.Combine(root, "many.zip");
+        using (var zip = System.IO.Compression.ZipFile.Open(many, System.IO.Compression.ZipArchiveMode.Create))
+            for (var i = 0; i < 30; i++) { using var s = zip.CreateEntry($"f{i}.txt").Open(); s.Write(new byte[1000]); }
+        Assert(ArchiveLimits.CheckFile(many, root, maximumEntries: 20) is { } tooMany && tooMany.Contains("30 entries"), "too many entries is refused with the count");
+        Assert(ArchiveLimits.CheckFile(many, root, maximumExpandedBytes: 10_000) is { } tooBig && tooBig.Contains("expands to more than"), "too much expanded size is refused");
+        Assert(ArchiveLimits.CheckFile(many, root) is null, "a normal archive passes");
+        var broken = Path.Combine(root, "broken.zip"); File.WriteAllText(broken, "not a zip");
+        Assert(ArchiveLimits.CheckFile(broken, root) is { } unreadable && unreadable.StartsWith("The archive could not be read", StringComparison.Ordinal), "a broken archive says so");
+        Assert(ArchiveLimits.MaximumEntries == 20_000 && ArchiveLimits.MaximumExpandedBytes == 8L * 1024 * 1024 * 1024, "the limits match world import's (20,000 entries, 8 GiB)");
     }, failures);
 }
 finally

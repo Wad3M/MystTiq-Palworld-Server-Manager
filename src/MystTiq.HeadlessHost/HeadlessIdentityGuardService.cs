@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 using System.Diagnostics;
 using System.Text.Json;
 using MystTiq.Core.Providers;
@@ -189,7 +189,7 @@ public static class IdentityGuard
     // What the alert advises, from the arguments the server was started with (MystTiq's own @mysttiq: options left out).
     public static string LaunchAdvice(IReadOnlyList<string> arguments)
     {
-        var shown = arguments.Where(a => !a.StartsWith("@mysttiq:", StringComparison.OrdinalIgnoreCase)).ToList();
+        var shown = SecretRedaction.Arguments(arguments.Where(a => !a.StartsWith("@mysttiq:", StringComparison.OrdinalIgnoreCase))).ToList();
         return HasSuspectArguments(shown)
             ? $"This server starts PalServer with {string.Join(" ", shown)}. Players were given the wrong character every time it started with -log, -stdout or -FullStdOutLogOutput, and kept theirs when it started like a double-click: choose Like double-click on Server > Launcher, save, restart the server, then have them join again."
             : "Restart the server and have them join again. If it happens again, compare the launch on Server > Launcher with a manual start.";

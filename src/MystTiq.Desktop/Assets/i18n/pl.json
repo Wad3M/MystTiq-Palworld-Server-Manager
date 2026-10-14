@@ -4009,5 +4009,7 @@
   "msg.conn_cause_certificate": "Certyfikat usługi nie pasuje do przypiętego dla tego połączenia. Sprawdź odcisk certyfikatu w ustawieniach połączenia.",
   "msg.conn_cause_reconnecting": "Usługa MystTiq pod {0} przestała odpowiadać. Ponowna próba co 5 s (próba {1}).",
   "msg.conn_cause_unreachable": "Pod {0} nic nie odpowiada. Uruchom usługę MystTiq lub sprawdź adres i port.",
-  "msg.conn_cause_rest": "Palworld działa, ale jego REST API nie odpowiada, więc gracze i dane na żywo są niedostępne. "
+  "msg.conn_cause_rest": "Palworld działa, ale jego REST API nie odpowiada, więc gracze i dane na żywo są niedostępne. ",
+  "msg.delete_plain_copy": "Usuń niezaszyfrowaną kopię",
+  "msg.delete_plain_copy_confirm": "Rozumiem, że niezaszyfrowana kopia zostanie usunięta; zaszyfrowane ustawienia zostają"
 }

@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 using MystTiq.Core.Automation;
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
@@ -161,6 +161,7 @@ public sealed class HeadlessDiagnosticsService
         findings.AddRange(BuildVersionFindings());
         findings.AddRange(await BuildPortFindingsAsync(cancellationToken));
         findings.AddRange(BuildSavedFileFindings());
+        findings.AddRange(BuildPlainSecretCopyFindings());
 
         return BuildReport(findings, status.Ready);
     }
@@ -620,6 +621,18 @@ public sealed class HeadlessDiagnosticsService
                     ? firewall.Message + " On this computer, use Diagnostics > Allow through Firewall, which asks Windows for administrator rights."
                     : firewall.Message);
 
+            case PlainSecretCopyActionKind:
+                // v1.0.7.4 (roadmap Q-14): the owner confirms the channels work, then the plain copy goes.
+                if (!canAdminister)
+                    return HeadlessDiagnosticFixResult.Failure("Deleting the plain copy of the secrets needs the Admin role.");
+                var deleted = 0;
+                foreach (var copy in PlainSecretCopies())
+                {
+                    try { File.Delete(copy); deleted++; }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return HeadlessDiagnosticFixResult.Failure($"Could not delete {copy}: {ex.Message}"); }
+                }
+                return new HeadlessDiagnosticFixResult(true, $"Deleted {deleted} plain copy(ies) of the secrets. The encrypted settings are unchanged.");
+
             case SavedFiles.RepairActionKind:
                 // v1.0.7.0 (Q-1, D-10): starting a saved list empty is an owner's decision about their own data.
                 if (!canAdminister)
@@ -631,6 +644,35 @@ public sealed class HeadlessDiagnosticsService
                 return HeadlessDiagnosticFixResult.Failure(
                     finding.UnavailableReason ?? "No automatic fix is available for this finding yet.");
         }
+    }
+
+    // v1.0.7.4 (roadmap Q-14): the plain copy kept beside a settings file when its secrets were first encrypted. It still
+    // holds them in clear, so Server Doctor says so until the owner deletes it (after checking the channels work).
+    public const string PlainSecretCopyActionKind = "delete-plain-secrets-copy";
+
+    private IEnumerable<string> PlainSecretCopies()
+    {
+        var folder = Path.Combine(paths.ManagerRuntimeRoot, "notifications");
+        return Directory.Exists(folder) ? Directory.EnumerateFiles(folder, "*.before-encryption") : [];
+    }
+
+    private IEnumerable<DiagnosticFinding> BuildPlainSecretCopyFindings()
+    {
+        var copies = PlainSecretCopies().ToList();
+        if (copies.Count == 0) yield break;
+        yield return new DiagnosticFinding(
+            Id: "security-plain-secrets-copy",
+            Category: "Security",
+            Component: "Plain copy of saved secrets",
+            State: DiagnosticState.Warning,
+            Location: string.Join("; ", copies),
+            Evidence: "When MystTiq first encrypted your notification and Discord secrets, it kept the files as they were, beside them, in case the move had to be undone. Those copies still hold the secrets in plain text.",
+            Recommendation: "Send a test notification (and check the Discord bot) first. Once they work, Fix deletes the plain copies; the encrypted settings stay as they are.",
+            ActionKind: PlainSecretCopyActionKind,
+            ActionSupported: true,
+            UnavailableReason: null,
+            ObservedAt: DateTimeOffset.UtcNow,
+            Duration: TimeSpan.Zero);
     }
 
     // v1.0.7.0 (roadmap Q-1, owner decision D-10): a saved list MystTiq could not read. Refused (no good copy): a failure

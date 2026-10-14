@@ -4009,5 +4009,7 @@
   "msg.conn_cause_certificate": "Hizmetin sertifikası bu bağlantı için sabitlenen sertifikayla eşleşmiyor. Bağlantı ayarlarındaki sertifika parmak izini denetleyin.",
   "msg.conn_cause_reconnecting": "{0} adresindeki MystTiq hizmeti yanıt vermeyi bıraktı. 5 sn'de bir yeniden deneniyor ({1}. deneme).",
   "msg.conn_cause_unreachable": "{0} adresinde yanıt yok. MystTiq hizmetini başlatın veya adresi ve portu denetleyin.",
-  "msg.conn_cause_rest": "Palworld çalışıyor ama REST API yanıt vermiyor; oyuncular ve canlı veriler kullanılamıyor. "
+  "msg.conn_cause_rest": "Palworld çalışıyor ama REST API yanıt vermiyor; oyuncular ve canlı veriler kullanılamıyor. ",
+  "msg.delete_plain_copy": "Şifrelenmemiş Kopyayı Sil",
+  "msg.delete_plain_copy_confirm": "Şifrelenmemiş kopyanın silineceğini anlıyorum; şifreli ayarlar kalır"
 }

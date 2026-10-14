@@ -1,4 +1,18 @@
-<!-- MystTiq v1.0.7.3: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.7.4: file reviewed for this release (2026-10-11). -->
+## v1.0.7.4 — Secrets and Archives
+
+- Secrets encrypted at rest (roadmap Q-14): the SMTP password, webhook and Discord URLs and the Discord bot token use
+  DPAPI (machine scope) on Windows and owner-only files on Linux. Plain settings are moved over at start-up, keeping one
+  plain copy; Server Doctor names it, and its Fix (Admin) deletes it.
+- Every archive has limits (roadmap Q-15): MOD installs, MOD and UE4SS snapshot restores, the UE4SS release, backup
+  restores and the self-update are checked for 20,000 entries, 8 GiB expanded and free space before anything is
+  written.
+- Secrets out of logs (roadmap Q-9): failed webhook and Discord sends are logged by host; password-style start arguments
+  are hidden in the console log and the identity guard's advice; `GET /notifications/channels` needs Admin and never
+  returns the SMTP password (a save without one keeps it). The gate checks that every fleet change route has a role.
+- Tests: the v1.0.7.4 gate regenerated from v1.0.7.3 (every earlier check kept) and three LogicHarness scenarios.
+- Version advanced to 1.0.7.4.
+
 ## v1.0.7.3 — Joining Again, and a Lighter Console
 
 - Fixed (owner report 2026-10-11, "unable to connect"): the identity guard kicked a returning player 8 s after he

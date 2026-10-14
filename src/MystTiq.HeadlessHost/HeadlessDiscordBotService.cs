@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 using System.Text.Json;
 using Discord;
 using Discord.WebSocket;
@@ -581,9 +581,31 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
     }
 
     // v1.0.7.0 (Q-1): an unreadable bot setup (its token included) is never overwritten.
-    private DiscordBotConfiguration Load() => SavedFiles.Load(configPath, "Discord bot settings", () => DiscordBotConfiguration.Default);
+    // v1.0.7.4 (roadmap Q-14): the bot token is encrypted on disk (Windows) or the file is made owner-only (Linux); a plain
+    // one from an older version is moved over at start-up, keeping one plain copy beside it.
+    private DiscordBotConfiguration Load()
+    {
+        var loaded = SavedFiles.Load(configPath, "Discord bot settings", () => DiscordBotConfiguration.Default);
+        var plain = loaded with { BotToken = SecretProtector.Unprotect(loaded.BotToken) };
+        if (SecretProtector.NeedsProtection(loaded.BotToken))
+        {
+            try
+            {
+                SecretProtector.KeepPlainCopyOnce(configPath);
+                SavedFiles.Save(configPath, plain with { BotToken = SecretProtector.Protect(plain.BotToken) });
+                activity.Record("Information", "Discord Bot", "Secrets encrypted", "The bot token in discord-bot.json is now encrypted.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SavedFileRefusedException) { }
+        }
+        SecretProtector.RestrictToOwner(configPath);
+        return plain;
+    }
 
-    private void Persist() => SavedFiles.Save(configPath, config);
+    private void Persist()
+    {
+        SavedFiles.Save(configPath, config with { BotToken = SecretProtector.Protect(config.BotToken) });
+        SecretProtector.RestrictToOwner(configPath);
+    }
 
     public async ValueTask DisposeAsync() => await DisconnectAsync();
 }

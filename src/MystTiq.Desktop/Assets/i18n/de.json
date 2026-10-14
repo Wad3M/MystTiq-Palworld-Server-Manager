@@ -4009,5 +4009,7 @@
   "msg.conn_cause_certificate": "Das Zertifikat des Dienstes passt nicht zu dem für diese Verbindung hinterlegten. Prüfe den Zertifikat-Fingerabdruck in den Verbindungseinstellungen.",
   "msg.conn_cause_reconnecting": "Der MystTiq-Dienst unter {0} antwortet nicht mehr. Neuer Versuch alle 5 s (Versuch {1}).",
   "msg.conn_cause_unreachable": "Unter {0} antwortet nichts. Starte den MystTiq-Dienst oder prüfe Adresse und Port.",
-  "msg.conn_cause_rest": "Palworld läuft, aber seine REST-API antwortet nicht, daher sind Spieler und Live-Daten nicht verfügbar. "
+  "msg.conn_cause_rest": "Palworld läuft, aber seine REST-API antwortet nicht, daher sind Spieler und Live-Daten nicht verfügbar. ",
+  "msg.delete_plain_copy": "Unverschlüsselte Kopie löschen",
+  "msg.delete_plain_copy_confirm": "Ich verstehe, dass die unverschlüsselte Kopie gelöscht wird; die verschlüsselten Einstellungen bleiben"
 }

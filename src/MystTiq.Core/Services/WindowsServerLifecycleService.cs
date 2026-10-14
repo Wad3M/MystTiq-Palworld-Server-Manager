@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -196,7 +196,8 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
 
             AppendLifecycleConsoleLine($"Launching: {executable}");
             AppendLifecycleConsoleLine($"Working directory: {workingDirectory}");
-            AppendLifecycleConsoleLine("Arguments: " + string.Join(" ", startInfo.ArgumentList));
+            // v1.0.7.4 (roadmap Q-9): a password-style argument is not written to the console log (or any export of it).
+            AppendLifecycleConsoleLine("Arguments: " + string.Join(" ", SecretRedaction.Arguments(startInfo.ArgumentList)));
             AppendLifecycleConsoleLine($"Launcher: UseShellExecute={startInfo.UseShellExecute}; CreateNoWindow={startInfo.CreateNoWindow}; WindowStyle={startInfo.WindowStyle}; RedirectStdOut={startInfo.RedirectStandardOutput}; RedirectStdErr={startInfo.RedirectStandardError}; HideManagedWindows={launcher.HideManagedWindows}; ExplicitOptions={launcher.ExplicitConfiguration}.");
             if (networkLine is not null) AppendLifecycleConsoleLine(networkLine);
             AppendLifecycleConsoleLine($"PalServer bootstrap PID {ownedProcess.Id} created; waiting for UDP {expectedGamePort} readiness.");

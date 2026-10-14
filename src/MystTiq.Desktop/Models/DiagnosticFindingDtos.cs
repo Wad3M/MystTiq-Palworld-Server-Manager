@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 namespace MystTiq.Desktop.Models;
 
 // v0.6.4.0 unified diagnostics. State mirrors Core's DiagnosticState int values exactly
@@ -47,6 +47,7 @@ public sealed class DiagnosticFindingDto : System.ComponentModel.INotifyProperty
         "create-backup-root" => "Create Backup Folder",
         "install-distribution" => "Install / Repair Server Files",
         "repair-saved-file" => "Start This List Empty",
+        "delete-plain-secrets-copy" => "Delete Plain Copy",
         _ => "Fix Automatically"
     };
     // v0.7.105.0: what the confirmation checkbox says, specific to what the fix actually does -- the same
@@ -57,6 +58,7 @@ public sealed class DiagnosticFindingDto : System.ComponentModel.INotifyProperty
         "create-backup-root" => "I understand this creates the backup folder",
         "install-distribution" => "I understand this downloads and installs server files",
         "repair-saved-file" => "I understand this list starts empty; the unreadable file is kept beside it",
+        "delete-plain-secrets-copy" => "I understand this deletes the plain copy; the encrypted settings stay",
         _ => "I understand this runs the fix"
     };
 

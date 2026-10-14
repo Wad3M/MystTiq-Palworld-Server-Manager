@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Mail;
@@ -19,10 +19,8 @@ public enum NotificationChannel { Desktop, Webhook, Discord, Email }
 // v0.7.70.0: TargetUrl stays the Webhook/Discord field (both are plain HTTPS POST endpoints); the
 // Smtp*/Email* fields are Email-only, all optional with a safe default (blank/disabled unless
 // explicitly configured), consistent with every existing 3-arg NotificationChannelConfig
-// construction below still compiling unchanged. Plaintext SmtpPassword in channels.json matches
-// this codebase's own established local-secret convention (RCON's AdminPassword in
-// PalWorldSettings.ini, bearer tokens in plain files) -- protected by OS file permissions on the
-// server's own disk, not by application-level encryption, same threat model as those.
+// construction below still compiling unchanged. v1.0.7.4 (roadmap Q-14): SmtpPassword and TargetUrl are
+// encrypted in channels.json (DPAPI on Windows, an owner-only file on Linux); see SecretProtector.
 public sealed record NotificationChannelConfig(
     NotificationChannel Channel,
     bool Enabled,
@@ -129,11 +127,25 @@ public sealed class HeadlessNotificationRoutingService
 
     public NotificationChannelConfiguration GetChannels() { lock (gate) return channels; }
 
+    // v1.0.7.4 (roadmap Q-9): what the API returns. The SMTP password is never sent back (like the Discord bot token).
+    public NotificationChannelConfiguration GetChannelsView()
+    {
+        lock (gate) return new NotificationChannelConfiguration { Channels = channels.Channels.Select(c => c with { SmtpPassword = null }).ToList() };
+    }
+
     public NotificationChannelConfiguration SaveChannels(NotificationChannelConfiguration updated)
     {
         lock (gate)
         {
-            Persist(channelsPath, updated);
+            // v1.0.7.4 (roadmap Q-9): a save without a password (the view never carries one) keeps the stored one; an empty
+            // password clears it.
+            updated = new NotificationChannelConfiguration
+            {
+                Channels = updated.Channels.Select(c => c.SmtpPassword is null
+                    ? c with { SmtpPassword = channels.Channels.FirstOrDefault(old => old.Channel == c.Channel)?.SmtpPassword }
+                    : c.SmtpPassword.Length == 0 ? c with { SmtpPassword = null } : c).ToList()
+            };
+            PersistChannels(updated);
             channels = updated;
             return channels;
         }
@@ -347,7 +359,8 @@ public sealed class HeadlessNotificationRoutingService
         if (string.IsNullOrWhiteSpace(channel.TargetUrl)) return (false, "No webhook URL is set.", 0);
         var payload = new { severity, title, message, createdUtc = DateTimeOffset.UtcNow };
         var result = await PostAsync(channel.TargetUrl, payload);
-        if (!result.Success) activity.Record("Warning", "Notifications", "Webhook dispatch failed after retry", channel.TargetUrl);
+        // v1.0.7.4 (roadmap Q-9): the URL is its own password; only its host is logged.
+        if (!result.Success) activity.Record("Warning", "Notifications", "Webhook dispatch failed after retry", SecretRedaction.Url(channel.TargetUrl));
         return result;
     }
 
@@ -372,7 +385,7 @@ public sealed class HeadlessNotificationRoutingService
             }
         };
         var result = await PostAsync(channel.TargetUrl, payload);
-        if (!result.Success) activity.Record("Warning", "Notifications", "Discord dispatch failed after retry", channel.TargetUrl);
+        if (!result.Success) activity.Record("Warning", "Notifications", "Discord dispatch failed after retry", SecretRedaction.Url(channel.TargetUrl));
         return result;
     }
 
@@ -414,8 +427,37 @@ public sealed class HeadlessNotificationRoutingService
     }
 
     // v1.0.7.0 (Q-1): unreadable channels or templates are never overwritten; a delivery pause just ends.
-    private NotificationChannelConfiguration LoadChannels() =>
-        SavedFiles.Load(channelsPath, "notification channels", () => new NotificationChannelConfiguration());
+    // v1.0.7.4 (roadmap Q-14): the SMTP password and the webhook URLs are encrypted on disk (Windows) or the file is made
+    // owner-only (Linux). Plain ones from an older version are moved over at start-up, keeping one plain copy beside it.
+    private NotificationChannelConfiguration LoadChannels()
+    {
+        var loaded = SavedFiles.Load(channelsPath, "notification channels", () => new NotificationChannelConfiguration());
+        var plain = new NotificationChannelConfiguration
+        {
+            Channels = loaded.Channels.Select(c => c with { TargetUrl = SecretProtector.Unprotect(c.TargetUrl), SmtpPassword = SecretProtector.Unprotect(c.SmtpPassword) }).ToList()
+        };
+        if (loaded.Channels.Any(c => SecretProtector.NeedsProtection(c.TargetUrl) || SecretProtector.NeedsProtection(c.SmtpPassword)))
+        {
+            try
+            {
+                SecretProtector.KeepPlainCopyOnce(channelsPath);
+                PersistChannels(plain);
+                activity.Record("Information", "Notifications", "Secrets encrypted", "The SMTP password and webhook URLs in channels.json are now encrypted.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SavedFileRefusedException) { }
+        }
+        SecretProtector.RestrictToOwner(channelsPath);
+        return plain;
+    }
+
+    private void PersistChannels(NotificationChannelConfiguration value)
+    {
+        Persist(channelsPath, new NotificationChannelConfiguration
+        {
+            Channels = value.Channels.Select(c => c with { TargetUrl = SecretProtector.Protect(c.TargetUrl), SmtpPassword = SecretProtector.Protect(c.SmtpPassword) }).ToList()
+        });
+        SecretProtector.RestrictToOwner(channelsPath);
+    }
 
     private DateTimeOffset? LoadDeliveryPause() =>
         // An older pause coming back would silently stop outside alerts, so an unreadable one means not paused.

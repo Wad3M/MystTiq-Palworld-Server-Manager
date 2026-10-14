@@ -1,4 +1,4 @@
-# MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+# MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 [CmdletBinding()]
 param(
     [ValidateSet('Build','Package','Checksums','Release','All','Clean','Version','Validate','LinuxHeadless','WindowsHeadless','DesktopWindows','DesktopLinux','DeployDesktopLinux','LogicTests')]

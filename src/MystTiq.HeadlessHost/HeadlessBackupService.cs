@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.3: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -304,6 +304,8 @@ public sealed class HeadlessBackupService
             try
             {
                 Directory.CreateDirectory(staging);
+                // v1.0.7.4 (roadmap Q-15): checked before anything is written (size, entries, free space).
+                if (ArchiveLimits.CheckFile(archivePath, staging) is { } tooBig) throw new InvalidDataException(tooBig);
                 ZipFile.ExtractToDirectory(archivePath, staging, overwriteFiles: true);
 
                 if (!Directory.EnumerateFiles(staging, "*", SearchOption.AllDirectories).Any())

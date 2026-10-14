@@ -4009,5 +4009,7 @@
   "msg.conn_cause_certificate": "The service's certificate does not match the one pinned for this connection. Check the certificate fingerprint in the connection settings.",
   "msg.conn_cause_reconnecting": "The MystTiq service at {0} stopped answering. Trying again every 5 s (attempt {1}).",
   "msg.conn_cause_unreachable": "Nothing answers at {0}. Start the MystTiq service, or check the address and port.",
-  "msg.conn_cause_rest": "Palworld is running, but its REST API is not answering, so players and live data are unavailable. "
+  "msg.conn_cause_rest": "Palworld is running, but its REST API is not answering, so players and live data are unavailable. ",
+  "msg.delete_plain_copy": "Delete Plain Copy",
+  "msg.delete_plain_copy_confirm": "I understand this deletes the plain copy; the encrypted settings stay"
 }
