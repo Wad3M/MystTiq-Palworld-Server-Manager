@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using MystTiq.Core.Services;
@@ -90,28 +90,12 @@ public sealed class HeadlessPlayerMetadataService
         }
     }
 
-    private Dictionary<string, PlayerMetadataRecord> Load()
-    {
-        if (!File.Exists(path)) return new(StringComparer.OrdinalIgnoreCase);
-        try
-        {
-            return JsonSerializer.Deserialize<Dictionary<string, PlayerMetadataRecord>>(File.ReadAllText(path))
-                   ?? new(StringComparer.OrdinalIgnoreCase);
-        }
-        catch (JsonException ex) { throw new InvalidDataException("Player metadata store is malformed.", ex); }
-    }
+    // v1.0.7.0 (Q-1): unreadable player notes and flags fall back to their last good copy, else changes are refused.
+    private Dictionary<string, PlayerMetadataRecord> Load() =>
+        new(SavedFiles.Load(path, "player notes and flags", () => new Dictionary<string, PlayerMetadataRecord>()), StringComparer.OrdinalIgnoreCase);
 
-    private void Save(Dictionary<string, PlayerMetadataRecord> store)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var temp = path + $".tmp-{Guid.NewGuid():N}";
-        try
-        {
-            File.WriteAllText(temp, JsonSerializer.Serialize(store, new JsonSerializerOptions { WriteIndented = true }));
-            File.Move(temp, path, true);
-        }
-        finally { if (File.Exists(temp)) File.Delete(temp); }
-    }
+    // Callers hold the service's lock, so one writer at a time.
+    private void Save(Dictionary<string, PlayerMetadataRecord> store) => SavedFiles.Save(path, store);
 
     private static string NormalizeId(string? value)
     {

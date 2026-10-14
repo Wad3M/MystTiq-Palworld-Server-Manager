@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using MystTiq.Core.Models;
 using MystTiq.Core.Providers;
@@ -44,6 +44,9 @@ public sealed class HeadlessTemporaryBanService
         if (duration <= TimeSpan.Zero)
             return new PlayerModerationResult(false, false, "none", "ban", playerId, "Duration must be greater than zero.");
 
+        // v1.0.7.0 (Q-1): a ban whose end could not be saved would never be lifted.
+        if (SavedFiles.Refusal(configPath) is { } refused)
+            return new PlayerModerationResult(false, false, "none", "ban", playerId, refused);
         var result = await playerModeration.ExecuteAsync("ban", playerId, reason, cancellationToken);
         if (!result.Success) return result;
 
@@ -101,16 +104,8 @@ public sealed class HeadlessTemporaryBanService
         lock (gate) Persist();
     }
 
-    private TemporaryBanConfig Load()
-    {
-        try { return File.Exists(configPath) ? JsonSerializer.Deserialize<TemporaryBanConfig>(File.ReadAllText(configPath)) ?? TemporaryBanConfig.Default : TemporaryBanConfig.Default; }
-        catch { return TemporaryBanConfig.Default; }
-    }
+    // v1.0.7.0 (Q-1): an unreadable list of temporary bans (and when each ends) is never overwritten.
+    private TemporaryBanConfig Load() => SavedFiles.Load(configPath, "temporary bans", () => TemporaryBanConfig.Default);
 
-    private void Persist()
-    {
-        var partial = configPath + ".partial";
-        File.WriteAllText(partial, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(partial, configPath, true);
-    }
+    private void Persist() => SavedFiles.Save(configPath, config);
 }

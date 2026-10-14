@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -8,6 +8,18 @@ using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
 using MystTiq.HeadlessHost;
+
+// v1.0.7.0 (roadmap Q-2): no error ends the service unrecorded. An error that ends the process is written to the service's
+// own output (the Windows service and systemd keep it) with when it happened; an unobserved background task's error is
+// written there and to the activity log, and the service carries on.
+AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+    Console.Error.WriteLine($"[{DateTimeOffset.Now:O}] MystTiq service stopped by an unexpected error: {e.ExceptionObject}");
+TaskScheduler.UnobservedTaskException += (_, e) =>
+{
+    Console.Error.WriteLine($"[{DateTimeOffset.Now:O}] Unobserved background error: {e.Exception}");
+    BackgroundWork.Shared.FailureLog?.Invoke("unobserved background task", e.Exception.GetBaseException().Message);
+    e.SetObserved();
+};
 
 var knownCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {

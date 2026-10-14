@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
 # v1.0.0.5 Changed Files
 
 - `src/MystTiq.Desktop/Services/WorldExplorerCards.cs` (new): base cards (decoded location, base-worker Pals, owner) and

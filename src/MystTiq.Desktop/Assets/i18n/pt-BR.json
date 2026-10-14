@@ -3604,7 +3604,7 @@
   "ui.launcher_save_settings": "Salvar configurações do inicializador",
   "ui.launcher_troubleshooting_presets": "Presets de diagnóstico",
   "ui.launcher_preset_default": "Padrão",
-  "ui.launcher_preset_default_desc": "PalServer.exe, raiz normal do servidor, MODs ativados, log de diagnóstico ativado e janela gerenciada oculta.",
+  "ui.launcher_preset_default_desc": "PalServer.exe, pasta do servidor normal, MODs ativados, sem opções de inicialização extras; a janela dele e o console do jogo ficam ocultos e a saída aparece no console do MystTiq.",
   "ui.launcher_apply_default": "Aplicar padrão",
   "ui.launcher_preset_no_mods": "Sem MODs",
   "ui.launcher_preset_no_mods_desc": "Igual ao Padrão, mais -NoMods. Use para isolar envolvimento de MOD / UE4SS.",
@@ -3971,5 +3971,17 @@
   "msg.service_update_done": "O serviço mais antigo foi parado e agora o deste app (v{0}) roda seus servidores.",
   "msg.service_update_failed": "O serviço mais antigo foi parado, mas o deste app não iniciou: {0}",
   "msg.identity_launch_advice": "Este servidor inicia o PalServer com {0}. Os jogadores receberam o personagem errado toda vez que ele iniciou com -log, -stdout ou -FullStdOutLogOutput, e mantiveram o deles quando iniciou como num clique duplo: escolha Como clique duplo em Servidor > Inicializador, salve, reinicie o servidor e peça que entrem de novo.",
-  "msg.launcher_identity_warning": "Os jogadores receberam o personagem errado toda vez que o PalServer iniciou com -log, -stdout, -FullStdOutLogOutput ou -abslog, e mantiveram o deles quando iniciou como num clique duplo. Use Como clique duplo, a menos que esteja diagnosticando."
+  "msg.launcher_identity_warning": "Os jogadores receberam o personagem errado toda vez que o PalServer iniciou com -log, -stdout, -FullStdOutLogOutput ou -abslog, e mantiveram o deles quando iniciou como num clique duplo. Use Como clique duplo, a menos que esteja diagnosticando.",
+  "ui.open_repair": "Abrir reparo",
+  "ui.from_alert": "DO ALERTA",
+  "msg.saved_data": "Dados salvos",
+  "msg.start_this_list_empty": "Começar esta lista vazia",
+  "msg.saved_list_fix_confirm": "Entendo que esta lista começa vazia; o arquivo ilegível é mantido ao lado",
+  "msg.saved_list_refused": "O MystTiq não conseguiu ler {0} salvo e não tem uma cópia boa, então as alterações são recusadas (o arquivo não é sobrescrito). Repare em Doutor do servidor.",
+  "msg.saved_list_unreadable_title": "Não foi possível ler {0} salvo",
+  "msg.saved_list_from_copy_title": "{0} salvo foi carregado da última cópia boa",
+  "msg.saved_list_repaired_title": "{0} salvo reparado",
+  "msg.saved_list_admin": "Reparar uma lista salva exige a função de Administrador.",
+  "msg.unexpected_error_no_record": "Algo deu errado ({0}): {1} Não foi possível gravar um registro.",
+  "msg.unexpected_error_record": "Algo deu errado ({0}): {1} Os detalhes estão em {2}."
 }

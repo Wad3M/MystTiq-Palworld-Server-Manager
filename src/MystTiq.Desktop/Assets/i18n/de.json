@@ -3604,7 +3604,7 @@
   "ui.launcher_save_settings": "Launcher-Einstellungen speichern",
   "ui.launcher_troubleshooting_presets": "Fehlerbehebungsvorgaben",
   "ui.launcher_preset_default": "Standard",
-  "ui.launcher_preset_default_desc": "PalServer.exe, normaler Serverstamm, MODs aktiviert, Diagnoseprotokoll aktiviert, verwaltetes Fenster ausgeblendet.",
+  "ui.launcher_preset_default_desc": "PalServer.exe, normaler Serverordner, MODs an, keine zusätzlichen Startoptionen; sein Fenster und das Konsolenfenster des Spiels sind ausgeblendet, ihre Ausgabe erscheint in der Konsole von MystTiq.",
   "ui.launcher_apply_default": "Standard anwenden",
   "ui.launcher_preset_no_mods": "Keine MODs",
   "ui.launcher_preset_no_mods_desc": "Wie Standard, zusätzlich -NoMods. Damit lässt sich der Einfluss von MOD / UE4SS isolieren.",
@@ -3971,5 +3971,17 @@
   "msg.service_update_done": "Der ältere Dienst wurde gestoppt; jetzt betreibt der Dienst dieser App (v{0}) deine Server.",
   "msg.service_update_failed": "Der ältere Dienst wurde gestoppt, aber der Dienst dieser App startete nicht: {0}",
   "msg.identity_launch_advice": "Dieser Server startet PalServer mit {0}. Spieler bekamen jedes Mal den falschen Charakter, wenn er mit -log, -stdout oder -FullStdOutLogOutput startete, und behielten ihren, wenn er wie per Doppelklick startete: Wähle unter Server > Starter „Wie Doppelklick“, speichere, starte den Server neu und lass sie erneut beitreten.",
-  "msg.launcher_identity_warning": "Spieler bekamen jedes Mal den falschen Charakter, wenn PalServer mit -log, -stdout, -FullStdOutLogOutput oder -abslog startete, und behielten ihren, wenn er wie per Doppelklick startete. Nutze „Wie Doppelklick“, außer du suchst einen Fehler."
+  "msg.launcher_identity_warning": "Spieler bekamen jedes Mal den falschen Charakter, wenn PalServer mit -log, -stdout, -FullStdOutLogOutput oder -abslog startete, und behielten ihren, wenn er wie per Doppelklick startete. Nutze „Wie Doppelklick“, außer du suchst einen Fehler.",
+  "ui.open_repair": "Reparatur öffnen",
+  "ui.from_alert": "AUS WARNUNG",
+  "msg.saved_data": "Gespeicherte Daten",
+  "msg.start_this_list_empty": "Diese Liste leer beginnen",
+  "msg.saved_list_fix_confirm": "Ich verstehe, dass diese Liste leer beginnt; die unlesbare Datei bleibt daneben erhalten",
+  "msg.saved_list_refused": "MystTiq konnte die gespeicherten {0} nicht lesen und hat keine gute Kopie, daher werden Änderungen abgelehnt (die Datei wird nicht überschrieben). Repariere sie im Server-Doktor.",
+  "msg.saved_list_unreadable_title": "Gespeicherte {0} konnten nicht gelesen werden",
+  "msg.saved_list_from_copy_title": "Gespeicherte {0} aus der letzten guten Kopie geladen",
+  "msg.saved_list_repaired_title": "Gespeicherte {0} repariert",
+  "msg.saved_list_admin": "Zum Reparieren einer gespeicherten Liste ist die Admin-Rolle nötig.",
+  "msg.unexpected_error_no_record": "Etwas ist schiefgegangen ({0}): {1} Es konnte kein Bericht geschrieben werden.",
+  "msg.unexpected_error_record": "Etwas ist schiefgegangen ({0}): {1} Die Details stehen in {2}."
 }

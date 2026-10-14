@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Linq;
 using System.Threading.Tasks;
 using MystTiq.Core.Services;
@@ -45,6 +45,13 @@ public sealed partial class App : Application
             localBootstrapper = new LocalManagementBootstrapper();
             viewModel = new MainWindowViewModel(api, profileStore, localDiscovery, serviceDiscovery, localBootstrapper, themeStore, credentialStore);
             mainWindow = new MainWindow { DataContext = viewModel };
+            // v1.0.7.0 (roadmap Q-2): an error on the UI thread is recorded and shown, and the app stays open.
+            Dispatcher.UIThread.UnhandledException += (_, e) =>
+            {
+                CrashRecorder.Record("window", e.Exception);
+                e.Handled = true;
+            };
+            CrashRecorder.Recorded += (source, error, path) => Dispatcher.UIThread.Post(() => viewModel.ShowUnexpectedError(source, error, path));
             desktop.MainWindow = mainWindow;
 
             // v0.7.73.0: the tray icon is the one thing left visible once the window is hidden or

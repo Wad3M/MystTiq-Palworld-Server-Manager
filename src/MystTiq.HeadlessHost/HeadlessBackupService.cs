@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -375,25 +375,26 @@ public sealed class HeadlessBackupService
     private void QueueWorldDays()
     {
         if (worldClock is null || Interlocked.Exchange(ref worldDayReaderRunning, 1) == 1) return;
-        _ = Task.Run(async () =>
+        // v1.0.7.0 (roadmap Q-3): stops at shutdown, and a failure is logged instead of dropped.
+        BackgroundWork.Shared.Run("backup world days", async token =>
         {
             try
             {
                 foreach (var file in Directory.EnumerateFiles(paths.BackupRoot, $"{Prefix}*.zip", SearchOption.TopDirectoryOnly)
                              .Select(f => new FileInfo(f)).OrderByDescending(f => f.LastWriteTimeUtc))
                 {
+                    token.ThrowIfCancellationRequested();
                     HeadlessBackupWorldDay? known;
                     lock (worldDaysGate) worldDays.TryGetValue(file.Name, out known);
                     if (known is not null && (known.Ticks is not null || DateTimeOffset.UtcNow - known.ReadUtc < TimeSpan.FromHours(1))) continue;
-                    var result = await worldClock.ReadBackupAsync(file.FullName, CancellationToken.None);
+                    var result = await worldClock.ReadBackupAsync(file.FullName, token);
                     lock (worldDaysGate)
                     {
                         worldDays[file.Name] = new HeadlessBackupWorldDay(result.Ticks, result.Error, DateTimeOffset.UtcNow);
-                        try { File.WriteAllText(worldDaysPath, JsonSerializer.Serialize(worldDays)); } catch { }
+                        File.WriteAllText(worldDaysPath, JsonSerializer.Serialize(worldDays));
                     }
                 }
             }
-            catch { }
             finally { Interlocked.Exchange(ref worldDayReaderRunning, 0); }
         });
     }

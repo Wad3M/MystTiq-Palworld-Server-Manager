@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 namespace MystTiq.Desktop.Models;
 
 // v0.6.4.0 unified diagnostics. State mirrors Core's DiagnosticState int values exactly
@@ -26,6 +26,8 @@ public sealed class DiagnosticFindingDto : System.ComponentModel.INotifyProperty
     public bool ActionSupported { get; set; }
     public string? UnavailableReason { get; set; }
     public DateTimeOffset ObservedAt { get; set; }
+    // v1.0.7.0 (Q-1): the finding a notification's "Open repair" button opened; listed first and marked.
+    public bool IsFocused { get; set; }
 
     // v0.7.105.0: gates the Fix button, the same "tick a box before the button works" pattern Backup
     // Restore already uses (BackupRestoreConfirmed) -- named as a desired follow-up since v0.7.102.0.
@@ -44,6 +46,7 @@ public sealed class DiagnosticFindingDto : System.ComponentModel.INotifyProperty
         "create-backup-rule" => "Create Nightly Backup Rule",
         "create-backup-root" => "Create Backup Folder",
         "install-distribution" => "Install / Repair Server Files",
+        "repair-saved-file" => "Start This List Empty",
         _ => "Fix Automatically"
     };
     // v0.7.105.0: what the confirmation checkbox says, specific to what the fix actually does -- the same
@@ -53,6 +56,7 @@ public sealed class DiagnosticFindingDto : System.ComponentModel.INotifyProperty
         "create-backup-rule" => "I understand this creates a nightly backup rule",
         "create-backup-root" => "I understand this creates the backup folder",
         "install-distribution" => "I understand this downloads and installs server files",
+        "repair-saved-file" => "I understand this list starts empty; the unreadable file is kept beside it",
         _ => "I understand this runs the fix"
     };
 

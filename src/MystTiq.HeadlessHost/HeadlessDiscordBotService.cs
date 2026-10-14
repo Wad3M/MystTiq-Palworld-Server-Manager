@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using Discord;
 using Discord.WebSocket;
@@ -77,7 +77,7 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
         config = Load();
 
         if (config.Enabled && !string.IsNullOrWhiteSpace(config.BotToken))
-            _ = Task.Run(() => ConnectAsync(CancellationToken.None));
+            BackgroundWork.Shared.Run("Discord bot connection", ConnectAsync);
     }
 
     public DiscordBotConfigurationView GetConfigView()
@@ -113,6 +113,7 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
     {
         lock (gate)
         {
+            SavedFiles.EnsureWritable(configPath);
             var effectiveToken = string.IsNullOrWhiteSpace(updated.BotToken) ? config.BotToken : updated.BotToken;
             var statusChannel = string.IsNullOrWhiteSpace(updated.StatusChannelId) ? null : updated.StatusChannelId.Trim();
             // The bot's one status message lives in one channel: keep its id across saves (the form never
@@ -130,7 +131,7 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
 
         await DisconnectAsync();
         if (config.Enabled && !string.IsNullOrWhiteSpace(config.BotToken))
-            _ = Task.Run(() => ConnectAsync(cancellationToken));
+            _ = BackgroundWork.Shared.Run("Discord bot connection", ConnectAsync, cancellationToken);
         else
             lock (gate) connectionState = DiscordBotConnectionState.NotConfigured;
 
@@ -174,9 +175,9 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
                 {
                     lock (gate) connectionState = DiscordBotConnectionState.Failed;
                     activity.Record("Error", "Discord Bot", "Connection failed", "Discord rejected the bot token (401 Unauthorized) repeatedly; stopping reconnect attempts. Update the token and re-save to retry.");
-                    _ = Task.Run(async () =>
+                    BackgroundWork.Shared.Run("Discord bot teardown", async _ =>
                     {
-                        try { await socket.LogoutAsync(); await socket.StopAsync(); } catch { /* best-effort teardown */ }
+                        try { await socket.LogoutAsync(); await socket.StopAsync(); }
                         finally { if (ReferenceEquals(client, socket)) client = null; socket.Dispose(); }
                     });
                 }
@@ -420,7 +421,7 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
         try { liveLoop?.Cancel(); } catch { /* previous loop already gone */ }
         var cts = new CancellationTokenSource();
         liveLoop = cts;
-        _ = Task.Run(() => RunLiveLoopAsync(socket, cts.Token));
+        BackgroundWork.Shared.Run("Discord live status", token => RunLiveLoopAsync(socket, token), cts.Token);
     }
 
     private async Task RunLiveLoopAsync(DiscordSocketClient socket, CancellationToken cancellationToken)
@@ -579,18 +580,10 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
         return best;
     }
 
-    private DiscordBotConfiguration Load()
-    {
-        try { return File.Exists(configPath) ? JsonSerializer.Deserialize<DiscordBotConfiguration>(File.ReadAllText(configPath)) ?? DiscordBotConfiguration.Default : DiscordBotConfiguration.Default; }
-        catch { return DiscordBotConfiguration.Default; }
-    }
+    // v1.0.7.0 (Q-1): an unreadable bot setup (its token included) is never overwritten.
+    private DiscordBotConfiguration Load() => SavedFiles.Load(configPath, "Discord bot settings", () => DiscordBotConfiguration.Default);
 
-    private void Persist()
-    {
-        var partial = configPath + ".partial";
-        File.WriteAllText(partial, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(partial, configPath, true);
-    }
+    private void Persist() => SavedFiles.Save(configPath, config);
 
     public async ValueTask DisposeAsync() => await DisconnectAsync();
 }

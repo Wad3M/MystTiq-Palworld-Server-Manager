@@ -3604,7 +3604,7 @@
   "ui.launcher_save_settings": "Enregistrer les réglages du lanceur",
   "ui.launcher_troubleshooting_presets": "Préréglages de diagnostic",
   "ui.launcher_preset_default": "Par défaut",
-  "ui.launcher_preset_default_desc": "PalServer.exe, racine serveur normale, MODs activés, journal de diagnostic activé, fenêtre gérée masquée.",
+  "ui.launcher_preset_default_desc": "PalServer.exe, dossier du serveur normal, MODs activés, sans option de démarrage supplémentaire ; sa fenêtre et la console du jeu sont masquées, et leur sortie s'affiche dans la console de MystTiq.",
   "ui.launcher_apply_default": "Appliquer par défaut",
   "ui.launcher_preset_no_mods": "Sans MODs",
   "ui.launcher_preset_no_mods_desc": "Identique à Par défaut, avec -NoMods. Utilisez ceci pour isoler l’implication de MOD / UE4SS.",
@@ -3971,5 +3971,17 @@
   "msg.service_update_done": "Le service plus ancien a été arrêté ; celui de cette application (v{0}) fait maintenant tourner vos serveurs.",
   "msg.service_update_failed": "Le service plus ancien a été arrêté, mais celui de cette application n'a pas démarré : {0}",
   "msg.identity_launch_advice": "Ce serveur démarre PalServer avec {0}. Les joueurs ont reçu le mauvais personnage chaque fois qu'il a démarré avec -log, -stdout ou -FullStdOutLogOutput, et ont gardé le leur quand il a démarré comme un double-clic : choisissez Comme un double-clic dans Serveur > Lanceur, enregistrez, redémarrez le serveur, puis faites-les rejoindre à nouveau.",
-  "msg.launcher_identity_warning": "Les joueurs ont reçu le mauvais personnage chaque fois que PalServer a démarré avec -log, -stdout, -FullStdOutLogOutput ou -abslog, et ont gardé le leur quand il a démarré comme un double-clic. Utilisez Comme un double-clic sauf pour un diagnostic."
+  "msg.launcher_identity_warning": "Les joueurs ont reçu le mauvais personnage chaque fois que PalServer a démarré avec -log, -stdout, -FullStdOutLogOutput ou -abslog, et ont gardé le leur quand il a démarré comme un double-clic. Utilisez Comme un double-clic sauf pour un diagnostic.",
+  "ui.open_repair": "Ouvrir la réparation",
+  "ui.from_alert": "DEPUIS L'ALERTE",
+  "msg.saved_data": "Données enregistrées",
+  "msg.start_this_list_empty": "Repartir de cette liste vide",
+  "msg.saved_list_fix_confirm": "Je comprends que cette liste repart vide ; le fichier illisible est conservé à côté",
+  "msg.saved_list_refused": "MystTiq n'a pas pu lire {0} enregistré et n'en a pas de bonne copie, donc les modifications sont refusées (le fichier n'est pas écrasé). Réparez-le dans Docteur du serveur.",
+  "msg.saved_list_unreadable_title": "{0} enregistré n'a pas pu être lu",
+  "msg.saved_list_from_copy_title": "{0} enregistré chargé depuis sa dernière bonne copie",
+  "msg.saved_list_repaired_title": "{0} enregistré réparé",
+  "msg.saved_list_admin": "Réparer une liste enregistrée nécessite le rôle Administrateur.",
+  "msg.unexpected_error_no_record": "Un problème est survenu ({0}) : {1} Aucun rapport n'a pu être écrit.",
+  "msg.unexpected_error_record": "Un problème est survenu ({0}) : {1} Les détails sont dans {2}."
 }

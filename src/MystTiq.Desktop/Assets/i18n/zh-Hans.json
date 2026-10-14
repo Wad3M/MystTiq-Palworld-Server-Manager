@@ -3604,7 +3604,7 @@
   "ui.launcher_save_settings": "保存启动器设置",
   "ui.launcher_troubleshooting_presets": "故障排除预设",
   "ui.launcher_preset_default": "默认",
-  "ui.launcher_preset_default_desc": "PalServer.exe、标准服务器根目录、启用模组、启用诊断日志、隐藏托管窗口。",
+  "ui.launcher_preset_default_desc": "PalServer.exe，常规服务器根目录，启用 MOD，不加额外启动选项；它的窗口和游戏的控制台窗口都会隐藏，输出显示在 MystTiq 的控制台中。",
   "ui.launcher_apply_default": "应用默认",
   "ui.launcher_preset_no_mods": "无模组",
   "ui.launcher_preset_no_mods_desc": "与默认相同，但增加 -NoMods。用于隔离 MOD / UE4SS 相关问题。",
@@ -3971,5 +3971,17 @@
   "msg.service_update_done": "已停止较旧的服务，现在由此应用自带的服务（v{0}）运行你的服务器。",
   "msg.service_update_failed": "已停止较旧的服务，但此应用的服务未能启动：{0}",
   "msg.identity_launch_advice": "此服务器以 {0} 启动 PalServer。每次带有 -log、-stdout 或 -FullStdOutLogOutput 启动时，玩家都被分配到错误的角色；像双击那样启动时则保留了自己的角色：请在“服务器 > 启动器”中选择“像双击一样”，保存，重启服务器，然后让他们重新加入。",
-  "msg.launcher_identity_warning": "每次 PalServer 带有 -log、-stdout、-FullStdOutLogOutput 或 -abslog 启动时，玩家都被分配到错误的角色；像双击那样启动时则保留了自己的角色。除非在排查问题，请使用“像双击一样”。"
+  "msg.launcher_identity_warning": "每次 PalServer 带有 -log、-stdout、-FullStdOutLogOutput 或 -abslog 启动时，玩家都被分配到错误的角色；像双击那样启动时则保留了自己的角色。除非在排查问题，请使用“像双击一样”。",
+  "ui.open_repair": "打开修复",
+  "ui.from_alert": "来自警报",
+  "msg.saved_data": "已保存的数据",
+  "msg.start_this_list_empty": "将此列表清空重来",
+  "msg.saved_list_fix_confirm": "我了解此列表将清空重来；无法读取的文件会保留在旁边",
+  "msg.saved_list_refused": "MystTiq 无法读取已保存的{0}，也没有完好的副本，因此拒绝对其修改（文件不会被覆盖）。请在“服务器医生”中修复。",
+  "msg.saved_list_unreadable_title": "无法读取已保存的{0}",
+  "msg.saved_list_from_copy_title": "已从最后一份完好的副本加载{0}",
+  "msg.saved_list_repaired_title": "已修复已保存的{0}",
+  "msg.saved_list_admin": "修复已保存的列表需要“管理员”角色。",
+  "msg.unexpected_error_no_record": "出现问题（{0}）：{1} 无法写入记录。",
+  "msg.unexpected_error_record": "出现问题（{0}）：{1} 详细信息在 {2}。"
 }

@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using MystTiq.Core.Models;
 
@@ -44,6 +44,9 @@ public sealed class ServerLifecycleStateStore
         // v0.9.6.0: one writer at a time (two writers shared the same .tmp file), and a replace that Windows refuses
         // because something has the file open (a virus scan, a backup, a script reading it) is retried briefly instead of
         // failing the start or stop that wrote it (seen as "Access to the path is denied" on a start).
+        // v1.0.7.0 (roadmap Q-5): the retry stays (Windows reports a file another program holds as "access denied" on a
+        // replace, so that is retried too), but a failure that outlasts it now says what it was and what to check instead of
+        // a bare "Access to the path is denied" failing the start or stop.
         lock (writeGate)
         {
             var temporaryPath = statePath + ".tmp";
@@ -55,13 +58,30 @@ public sealed class ServerLifecycleStateStore
                     File.Move(temporaryPath, statePath, overwrite: true);
                     return;
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 20)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < WriteAttempts)
                 {
                     Thread.Sleep(25);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    throw new IOException(FailureMessage(statePath, ex), ex);
                 }
             }
         }
     }
 
     private readonly object writeGate = new();
+
+    public const int WriteAttempts = 20;
+
+    /// <summary>v1.0.7.0 (roadmap Q-5): why the state file could not be saved, in words an owner can act on.</summary>
+    public static string FailureMessage(string path, Exception cause) => cause switch
+    {
+        UnauthorizedAccessException when File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReadOnly) != 0 =>
+            $"MystTiq could not save the server's state file ({path}): the file is read-only. Clear its read-only setting.",
+        UnauthorizedAccessException =>
+            $"MystTiq could not save the server's state file ({path}) for 0.5 s: access was denied. Another program may be holding it (an antivirus scan, a backup or sync tool), or this account may not be allowed to change that folder.",
+        _ =>
+            $"MystTiq could not save the server's state file ({path}) for 0.5 s: {cause.Message} Another program may be holding it (an antivirus scan, a backup or sync tool)."
+    };
 }

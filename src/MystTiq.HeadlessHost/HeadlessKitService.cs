@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using MystTiq.Core.Services;
@@ -201,6 +201,8 @@ public sealed partial class HeadlessKitService
         if (errors.Count > 0)
             return new(false, errors[0], GetSnapshot().Config, errors);
 
+        if (SavedFiles.Refusal(configPath) is { } refused)
+            return new(false, refused, GetSnapshot().Config, [refused]);
         lock (gate)
         {
             // The moment auto-gift is switched on (or its kit changes) becomes the cutoff: only players the
@@ -239,6 +241,8 @@ public sealed partial class HeadlessKitService
             ? players.Players.FirstOrDefault(p => string.Equals((p.PlayerId ?? string.Empty).Trim(), playerId.Trim(), StringComparison.OrdinalIgnoreCase))
             : null;
         if (player is null) return new(false, "That player is not online, and kits can only be delivered to an online player.", [], string.Empty);
+        // v1.0.7.0 (Q-1): with the claim list unreadable, a kit could be given twice; nothing is given until it is repaired.
+        if (SavedFiles.Refusal(claimsPath) is { } claimsRefused) return new(false, claimsRefused, [], string.Empty);
 
         var delivered = await DeliverAsync($"Kit '{kit.Name}'", kit, player, cancellationToken);
         if (!delivered.Success) return delivered;
@@ -317,6 +321,7 @@ public sealed partial class HeadlessKitService
         if (!snapshot.AutoGiftEnabled || snapshot.AutoGiftEnabledAtUtc is not { } enabledAt) return;
         var kit = snapshot.Kits.FirstOrDefault(k => k.Id.Equals(snapshot.AutoGiftKitId, StringComparison.OrdinalIgnoreCase));
         if (kit is null || !runner.GetStatus().CanDeliver) return;
+        if (SavedFiles.IsRefused(claimsPath)) return;
         if (!await enforceGate.WaitAsync(0, cancellationToken)) return;
         try
         {
@@ -391,35 +396,20 @@ public sealed partial class HeadlessKitService
         {
             given = MergeGiven(given, delivered);
             try { Persist(givenPath, given); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* the give itself succeeded */ }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SavedFileRefusedException) { /* the give itself succeeded */ }
         }
     }
 
     private void Log(string severity, string action, string detail) => activity.Record(severity, "Players", action, detail);
     private static string NormalizeId(string? value) => (value ?? string.Empty).Trim();
 
-    private KitConfig LoadConfig()
-    {
-        try { return File.Exists(configPath) ? JsonSerializer.Deserialize<KitConfig>(File.ReadAllText(configPath)) ?? KitConfig.Default : KitConfig.Default; }
-        catch { return KitConfig.Default; }
-    }
+    // v1.0.7.0 (Q-1): unreadable kits or claims are never overwritten; the give history is only a convenience list.
+    private KitConfig LoadConfig() => SavedFiles.Load(configPath, "kits", () => KitConfig.Default);
 
-    private List<KitClaim> LoadClaims()
-    {
-        try { return File.Exists(claimsPath) ? JsonSerializer.Deserialize<List<KitClaim>>(File.ReadAllText(claimsPath)) ?? [] : []; }
-        catch { return []; }
-    }
+    private List<KitClaim> LoadClaims() => SavedFiles.Load(claimsPath, "kit claims", () => new List<KitClaim>());
 
-    private static List<T> LoadList<T>(string path)
-    {
-        try { return File.Exists(path) ? JsonSerializer.Deserialize<List<T>>(File.ReadAllText(path)) ?? [] : []; }
-        catch { return []; }
-    }
+    private static List<T> LoadList<T>(string path) =>
+        SavedFiles.Load(path, "recently given items", () => new List<T>(), ownerData: false);
 
-    private static void Persist<T>(string path, T value)
-    {
-        var partial = path + ".partial";
-        File.WriteAllText(partial, JsonSerializer.Serialize(value, JsonOptions));
-        File.Move(partial, path, true);
-    }
+    private static void Persist<T>(string path, T value) => SavedFiles.Save(path, value, JsonOptions);
 }

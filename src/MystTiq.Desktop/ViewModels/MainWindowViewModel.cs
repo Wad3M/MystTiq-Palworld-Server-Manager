@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -487,10 +487,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RefreshAlertCenterCommand = new AsyncCommand(RefreshAlertCenterAsync, () => !IsBusy);
         SaveAlertRulesCommand = new AsyncCommand(SaveAlertRulesAsync, () => !IsBusy);
         // v0.7.111.0: CommandParameter is the mute length in minutes as text ("60", "480", "1440", "0" = unmute).
-        MuteAlertsCommand = new RelayCommand<string>(m => { if (!IsBusy && int.TryParse(m, out var minutes)) Dispatcher.UIThread.Post(async () => await MuteAlertsAsync(minutes)); });
+        MuteAlertsCommand = new RelayCommand<string>(m => { if (!IsBusy && int.TryParse(m, out var minutes)) RunUi(() => MuteAlertsAsync(minutes)); });
         // v0.8.4.0: same shape for pausing outside delivery ("0" resumes).
-        PauseDeliveryCommand = new RelayCommand<string>(m => { if (!IsBusy && int.TryParse(m, out var minutes)) Dispatcher.UIThread.Post(async () => await PauseDeliveryAsync(minutes)); });
-        SendTestNotificationCommand = new RelayCommand(() => { if (!IsBusy) Dispatcher.UIThread.Post(async () => await SendTestNotificationAsync()); });
+        PauseDeliveryCommand = new RelayCommand<string>(m => { if (!IsBusy && int.TryParse(m, out var minutes)) RunUi(() => PauseDeliveryAsync(minutes)); });
+        SendTestNotificationCommand = new RelayCommand(() => { if (!IsBusy) RunUi(() => SendTestNotificationAsync()); });
         RefreshDiscordBotConfigCommand = new AsyncCommand(RefreshDiscordBotConfigAsync, () => !IsBusy);
         SaveDiscordBotConfigCommand = new AsyncCommand(SaveDiscordBotConfigAsync, () => !IsBusy);
         AddDiscordRoleMappingCommand = new RelayCommand(AddDiscordRoleMapping);
@@ -561,10 +561,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         GenerateServerNameCommand = new RelayCommand(GenerateServerName, () => PalworldConfigLoaded && !IsBusy);
         GenerateSetupServerNameCommand = new RelayCommand(() => SetupServerName = GenerateRandomServerName());
         RunDoctorCommand = new AsyncCommand(RunDoctorAsync, () => !IsBusy);
-        RecheckDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy) Dispatcher.UIThread.Post(async () => await RecheckDiagnosticAsync(f)); });
+        RecheckDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy) RunUi(() => RecheckDiagnosticAsync(f)); });
         // v0.7.105.0: FixConfirmed gates this the same way BackupRestoreConfirmed gates RestoreBackupCommand --
         // checked here too, not just via the button's IsEnabled, so the command itself can never fire unconfirmed.
-        FixDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy && f is { CanFix: true, FixConfirmed: true }) Dispatcher.UIThread.Post(async () => await FixDiagnosticAsync(f)); });
+        FixDiagnosticCommand = new RelayCommand<DiagnosticFindingDto>(f => { if (!IsBusy && f is { CanFix: true, FixConfirmed: true }) RunUi(() => FixDiagnosticAsync(f)); });
         RunNetworkDiagnosticsCommand = new AsyncCommand(RunNetworkDiagnosticsAsync, () => !IsBusy);
         DiagnoseConnectionCommand = new AsyncCommand(DiagnoseConnectionAsync, () => !IsBusy && SelectedProfile is not null);
         RepairFirewallCommand = new AsyncCommand(RepairFirewallAsync, () => !IsBusy);
@@ -669,6 +669,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // successful Connect just saved one). Delete-on-nothing-to-delete is a safe no-op either way.
         ForgetSavedTokenCommand = new RelayCommand(ForgetSavedToken, () => SelectedProfile is not null);
         NavigateCommand = new RelayCommand<string>(Navigate);
+        OpenNotificationLinkCommand = new RelayCommand<NotificationItemDto>(OpenNotificationLink);
         ToggleWorldMapCommand = new RelayCommand(() =>
         {
             IsWorldMapExpanded = !IsWorldMapExpanded;
@@ -687,28 +688,28 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ToggleBanListCommand = new RelayCommand(() =>
         {
             IsBanListExpanded = !IsBanListExpanded;
-            if (IsBanListExpanded) Dispatcher.UIThread.Post(async () => await RefreshBanListAsync());
+            if (IsBanListExpanded) RunUi(() => RefreshBanListAsync());
         });
         ToggleWhitelistCommand = new RelayCommand(() =>
         {
             IsWhitelistExpanded = !IsWhitelistExpanded;
-            if (IsWhitelistExpanded) Dispatcher.UIThread.Post(async () => await RefreshWhitelistAsync());
+            if (IsWhitelistExpanded) RunUi(() => RefreshWhitelistAsync());
         });
         ToggleTemporaryBansCommand = new RelayCommand(() =>
         {
             IsTemporaryBansExpanded = !IsTemporaryBansExpanded;
-            if (IsTemporaryBansExpanded) Dispatcher.UIThread.Post(async () => await RefreshTemporaryBansAsync());
+            if (IsTemporaryBansExpanded) RunUi(() => RefreshTemporaryBansAsync());
         });
         RefreshTemporaryBansCommand = new AsyncCommand(RefreshTemporaryBansAsync, () => !IsBusy);
         CreateTemporaryBanCommand = new AsyncCommand(CreateTemporaryBanForSelectedPlayerAsync, () => !IsBusy && SelectedPlayerRecord?.Online == true);
         // No generic async command primitive exists in this codebase for a per-row action bound via
-        // CommandParameter -- following the same Dispatcher.UIThread.Post(async () => ...) pattern
+        // CommandParameter -- following the same RunUi(...) pattern (v1.0.7.0: was a fire-and-forget post)
         // already used by ToggleWhitelistCommand/ToggleBanListCommand above rather than adding one.
-        CancelTemporaryBanCommand = new RelayCommand<string>(playerId => Dispatcher.UIThread.Post(async () => await CancelTemporaryBanAsync(playerId)));
+        CancelTemporaryBanCommand = new RelayCommand<string>(playerId => RunUi(() => CancelTemporaryBanAsync(playerId)));
         // v0.8.23.0: every command exists now, so the role each needs can be attached.
         InstallCommandRoleGates();
         RebuildRibbonGroups();
-        Dispatcher.UIThread.Post(async () =>
+        RunUi(async () =>
         {
             // v0.7.74.0: these two used to share one unguarded async continuation -- an unhandled
             // exception anywhere inside InitializeLocalDashboardAsync (e.g. local-installation
@@ -1687,7 +1688,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         set
         {
             if (!SetField(ref _selectedHistoryRange, value)) return;
-            Dispatcher.UIThread.Post(async () => await RefreshHistoricalMetricsAsync());
+            RunUi(() => RefreshHistoricalMetricsAsync());
         }
     }
     public string HistoryCpuSummary { get => _historyCpuSummary; private set => SetField(ref _historyCpuSummary, value); }
@@ -2885,6 +2886,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand DeleteProfileCommand { get; }
     public ICommand ForgetSavedTokenCommand { get; }
     public ICommand NavigateCommand { get; }
+    public ICommand OpenNotificationLinkCommand { get; }
+    private string? _focusFindingId;
+
+    // v1.0.7.0 (roadmap Q-1, owner decision D-10): a saved list MystTiq could not read is alerted with a link to its
+    // repair; the button opens Server Doctor with that finding first.
+    private void OpenNotificationLink(NotificationItemDto? notification)
+    {
+        if (notification is not { HasLink: true, Link: { } link }) return;
+        _focusFindingId = link[NotificationItemDto.DiagnosticsLinkPrefix.Length..];
+        Navigate(nameof(NavigationPage.Doctor));
+    }
     public ICommand ToggleWorldMapCommand { get; }
     public ICommand TogglePalEditorCommand { get; }
     public ICommand ToggleWanDiagnosticsCommand { get; }
@@ -3394,7 +3406,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private void PerformNavigation(NavigationPage page)
     {
         SelectedPage = page;
-        Dispatcher.UIThread.Post(async () => await RefreshPageForNavigationAsync(page));
+        RunUi(() => RefreshPageForNavigationAsync(page));
     }
 
     public async Task ContinuePendingNavigationSavingConfigurationAsync()
@@ -3975,7 +3987,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ActiveTab = CreateTab();
         SelectedProfile = profile;
         SaveTabSession();
-        Dispatcher.UIThread.Post(async () => await RefreshAsync(silent: false));
+        RunUi(() => RefreshAsync(silent: false));
     }
 
     // v0.7.72.0: which profiles are currently open as tabs, so they can reopen automatically next
@@ -6756,7 +6768,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ToggleKitsCommand = new RelayCommand(() =>
         {
             IsKitsExpanded = !IsKitsExpanded;
-            if (IsKitsExpanded) Dispatcher.UIThread.Post(async () => await RefreshKitsAsync());
+            if (IsKitsExpanded) RunUi(() => RefreshKitsAsync());
         });
         _kitCommands = [refresh, save, test, give, reset];
     }
@@ -7811,7 +7823,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // the same HeadlessDiagnosticsService output.
             LatestDiagnosticsReport = await _api.GetDiagnosticsReportAsync(profile, BearerToken);
             DiagnosticFindings.Clear();
-            foreach (var finding in LatestDiagnosticsReport.Findings) DiagnosticFindings.Add(finding);
+            // v1.0.7.0 (Q-1): a finding opened from a notification is listed first and marked, once.
+            var focus = _focusFindingId;
+            _focusFindingId = null;
+            foreach (var finding in LatestDiagnosticsReport.Findings
+                         .OrderByDescending(f => focus is not null && f.Id.Equals(focus, StringComparison.OrdinalIgnoreCase)))
+            {
+                finding.IsFocused = focus is not null && finding.Id.Equals(focus, StringComparison.OrdinalIgnoreCase);
+                DiagnosticFindings.Add(finding);
+            }
             DoctorStatus = LatestDiagnosticsReport.OverallHealthText;
             // v0.7.30.0 bug fix: was just the raw pass/warn/fail counts, which left "UNKNOWN" (the
             // legitimate result when 17/17 pass but the server simply isn't running -- see
@@ -8876,7 +8896,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // "already installed, check/apply updates" case belongs to Update Center.
             if (item.IsMissing)
             {
-                Dispatcher.UIThread.Post(async () => await InstallMissingEnvironmentAsync());
+                RunUi(() => InstallMissingEnvironmentAsync());
             }
             else
             {
@@ -8888,7 +8908,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SetupOperationState = "VERIFYING";
         SetupOperationTitle = $"Verifying {item.Component}";
         SetupOperationDetail = item.Details;
-        Dispatcher.UIThread.Post(async () => await VerifyEnvironmentAsync());
+        RunUi(() => VerifyEnvironmentAsync());
     }
 
     private async Task RefreshDistributionAsync()

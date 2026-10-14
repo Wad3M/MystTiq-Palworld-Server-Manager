@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Diagnostics;
 using System.Text.Json;
 using MystTiq.Core.Services;
@@ -57,10 +57,9 @@ public sealed class HeadlessResourcePolicyService
     {
         var errors = requested.Validate(processorCount);
         if (errors.Count > 0) return new HeadlessResourcePolicySaveResult(false, string.Join(" ", errors), policy, null);
-        Directory.CreateDirectory(paths.ManagerRuntimeRoot);
-        var temp = policyPath + ".tmp";
-        await File.WriteAllTextAsync(temp, JsonSerializer.Serialize(requested, JsonOptions), token);
-        File.Move(temp, policyPath, overwrite: true);
+        if (SavedFiles.Refusal(policyPath) is { } refused) return new HeadlessResourcePolicySaveResult(false, refused, policy, null);
+        token.ThrowIfCancellationRequested();
+        SavedFiles.Save(policyPath, requested, JsonOptions);
         policy = requested;
         activity.Record("Information", "Performance", "Process priority and eco mode saved",
             $"Priority {requested.Priority}, eco mode {requested.EcoMode}" + (requested.EcoMode == ServerEcoMode.WhenEmpty ? $" after {requested.EcoAfterEmptyMinutes} min empty" : "") + (string.IsNullOrWhiteSpace(requested.Cores) ? ", every core." : $", cores {requested.Cores}."), actor);
@@ -181,17 +180,10 @@ public sealed class HeadlessResourcePolicyService
 
     private ServerResourcePolicy Load()
     {
-        try
-        {
-            if (!File.Exists(policyPath)) return new ServerResourcePolicy();
-            var loaded = JsonSerializer.Deserialize<ServerResourcePolicy>(File.ReadAllText(policyPath), JsonOptions);
-            return loaded is not null && loaded.Validate(processorCount).Count == 0 ? loaded : new ServerResourcePolicy();
-        }
-        catch
-        {
-            // A damaged file must not stop the server's management; nothing is applied until it is saved again.
-            return new ServerResourcePolicy();
-        }
+        // A damaged file must not stop the server's management; nothing is applied until it is saved again.
+        // v1.0.7.0 (Q-1): and it is never overwritten unseen: its last good copy is used, else saving is refused until repaired.
+        var loaded = SavedFiles.Load(policyPath, "process priority and eco mode settings", () => new ServerResourcePolicy(), options: JsonOptions);
+        return loaded.Validate(processorCount).Count == 0 ? loaded : new ServerResourcePolicy();
     }
 }
 

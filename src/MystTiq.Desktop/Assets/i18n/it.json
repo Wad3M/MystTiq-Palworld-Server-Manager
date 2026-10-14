@@ -3604,7 +3604,7 @@
   "ui.launcher_save_settings": "Salva impostazioni launcher",
   "ui.launcher_troubleshooting_presets": "Preset di diagnostica",
   "ui.launcher_preset_default": "Predefinito",
-  "ui.launcher_preset_default_desc": "PalServer.exe, radice server normale, MOD abilitati, log diagnostico abilitato, finestra gestita nascosta.",
+  "ui.launcher_preset_default_desc": "PalServer.exe, cartella del server normale, MOD attivi, nessuna opzione di avvio aggiuntiva; la sua finestra e la console del gioco sono nascoste e il loro output compare nella console di MystTiq.",
   "ui.launcher_apply_default": "Applica predefinito",
   "ui.launcher_preset_no_mods": "Senza MOD",
   "ui.launcher_preset_no_mods_desc": "Come Predefinito, più -NoMods. Usalo per isolare il coinvolgimento di MOD / UE4SS.",
@@ -3971,5 +3971,17 @@
   "msg.service_update_done": "Il servizio più vecchio è stato fermato e ora i tuoi server girano con quello di questa app (v{0}).",
   "msg.service_update_failed": "Il servizio più vecchio è stato fermato, ma quello di questa app non è partito: {0}",
   "msg.identity_launch_advice": "Questo server avvia PalServer con {0}. I giocatori hanno ricevuto il personaggio sbagliato ogni volta che è partito con -log, -stdout o -FullStdOutLogOutput, e hanno tenuto il loro quando è partito come con un doppio clic: scegli Come doppio clic in Server > Avvio, salva, riavvia il server e falli rientrare.",
-  "msg.launcher_identity_warning": "I giocatori hanno ricevuto il personaggio sbagliato ogni volta che PalServer è partito con -log, -stdout, -FullStdOutLogOutput o -abslog, e hanno tenuto il loro quando è partito come con un doppio clic. Usa Come doppio clic, a meno che tu non stia facendo una diagnosi."
+  "msg.launcher_identity_warning": "I giocatori hanno ricevuto il personaggio sbagliato ogni volta che PalServer è partito con -log, -stdout, -FullStdOutLogOutput o -abslog, e hanno tenuto il loro quando è partito come con un doppio clic. Usa Come doppio clic, a meno che tu non stia facendo una diagnosi.",
+  "ui.open_repair": "Apri riparazione",
+  "ui.from_alert": "DALL'AVVISO",
+  "msg.saved_data": "Dati salvati",
+  "msg.start_this_list_empty": "Ricomincia questa lista vuota",
+  "msg.saved_list_fix_confirm": "Ho capito che questa lista riparte vuota; il file illeggibile resta conservato accanto",
+  "msg.saved_list_refused": "MystTiq non è riuscito a leggere {0} salvato e non ne ha una copia valida, quindi le modifiche sono rifiutate (il file non viene sovrascritto). Riparalo in Dottore del server.",
+  "msg.saved_list_unreadable_title": "Impossibile leggere {0} salvato",
+  "msg.saved_list_from_copy_title": "{0} salvato caricato dalla sua ultima copia valida",
+  "msg.saved_list_repaired_title": "{0} salvato riparato",
+  "msg.saved_list_admin": "Per riparare una lista salvata serve il ruolo Amministratore.",
+  "msg.unexpected_error_no_record": "Qualcosa è andato storto ({0}): {1} Non è stato possibile scrivere un rapporto.",
+  "msg.unexpected_error_record": "Qualcosa è andato storto ({0}): {1} I dettagli sono in {2}."
 }

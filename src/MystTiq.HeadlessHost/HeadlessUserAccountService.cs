@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -80,9 +80,11 @@ public sealed partial class HeadlessUserAccountService
         Directory.CreateDirectory(root);
         usersPath = Path.Combine(root, "users.json");
         sessionsPath = Path.Combine(root, "sessions.json");
-        users = Load<UserAccountRecord>(usersPath).ToDictionary(u => u.Id, StringComparer.Ordinal);
+        // v1.0.7.0 (Q-1): an unreadable users.json is never overwritten; sessions are rebuilt by signing in again.
+        users = SavedFiles.Load(usersPath, "user accounts", () => new List<UserAccountRecord>()).ToDictionary(u => u.Id, StringComparer.Ordinal);
         var now = this.clock();
-        sessions = Load<UserSessionRecord>(sessionsPath).Where(s => s.ExpiresUtc > now).ToDictionary(s => s.TokenSha256, StringComparer.Ordinal);
+        sessions = SavedFiles.Load(sessionsPath, "sign-in sessions", () => new List<UserSessionRecord>(), ownerData: false)
+            .Where(s => s.ExpiresUtc > now).ToDictionary(s => s.TokenSha256, StringComparer.Ordinal);
     }
 
     // ---- Password hashing (public for the harness) --------------------------------------------------------
@@ -132,6 +134,7 @@ public sealed partial class HeadlessUserAccountService
         UserAccountDto dto;
         lock (gate)
         {
+            if (SavedFiles.Refusal(usersPath) is { } refused) return new(false, refused, null);
             if (users.Count >= MaximumAccounts) return new(false, $"At most {MaximumAccounts} accounts are allowed.", null);
             if (users.Values.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase))) return new(false, $"An account called '{username}' already exists.", null);
             users[record.Id] = record;
@@ -315,19 +318,7 @@ public sealed partial class HeadlessUserAccountService
 
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
-    private static List<T> Load<T>(string path)
-    {
-        try { return File.Exists(path) ? JsonSerializer.Deserialize<List<T>>(File.ReadAllText(path)) ?? [] : []; }
-        catch { return []; }
-    }
+    private void PersistUsers() => SavedFiles.Save(usersPath, users.Values.ToList(), JsonOptions);
+    private void PersistSessions() => SavedFiles.Save(sessionsPath, sessions.Values.ToList(), JsonOptions);
 
-    private void PersistUsers() => Persist(usersPath, users.Values.ToList());
-    private void PersistSessions() => Persist(sessionsPath, sessions.Values.ToList());
-
-    private static void Persist<T>(string path, T value)
-    {
-        var partial = path + ".partial";
-        File.WriteAllText(partial, JsonSerializer.Serialize(value, JsonOptions));
-        File.Move(partial, path, true);
-    }
 }

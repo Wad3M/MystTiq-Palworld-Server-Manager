@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using MystTiq.Core.Models;
 using MystTiq.Core.Providers;
@@ -46,6 +46,7 @@ public sealed class HeadlessWhitelistService
     {
         lock (gate)
         {
+            SavedFiles.EnsureWritable(configPath);
             var normalized = updated.Entries
                 .Select(e => e with { PlayerId = (e.PlayerId ?? string.Empty).Trim() })
                 .Where(e => !string.IsNullOrWhiteSpace(e.PlayerId))
@@ -95,16 +96,8 @@ public sealed class HeadlessWhitelistService
         lock (gate) recentlyEnforced.RemoveWhere(id => !onlineIds.Contains(id));
     }
 
-    private WhitelistConfig Load()
-    {
-        try { return File.Exists(configPath) ? JsonSerializer.Deserialize<WhitelistConfig>(File.ReadAllText(configPath)) ?? WhitelistConfig.Default : WhitelistConfig.Default; }
-        catch { return WhitelistConfig.Default; }
-    }
+    // v1.0.7.0 (Q-1): an unreadable whitelist is never overwritten (and, read as the default, enforces nothing).
+    private WhitelistConfig Load() => SavedFiles.Load(configPath, "whitelist", () => WhitelistConfig.Default);
 
-    private void Persist()
-    {
-        var partial = configPath + ".partial";
-        File.WriteAllText(partial, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(partial, configPath, true);
-    }
+    private void Persist() => SavedFiles.Save(configPath, config);
 }

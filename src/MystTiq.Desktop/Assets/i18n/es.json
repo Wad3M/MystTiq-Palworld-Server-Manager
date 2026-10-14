@@ -3604,7 +3604,7 @@
   "ui.launcher_save_settings": "Guardar configuración del lanzador",
   "ui.launcher_troubleshooting_presets": "Preajustes de diagnóstico",
   "ui.launcher_preset_default": "Predeterminado",
-  "ui.launcher_preset_default_desc": "PalServer.exe, raíz normal del servidor, MODs habilitados, registro de diagnóstico habilitado y ventana administrada oculta.",
+  "ui.launcher_preset_default_desc": "PalServer.exe, carpeta del servidor normal, MODs activados, sin opciones de inicio extra; su ventana y la consola del juego quedan ocultas y su salida aparece en la consola de MystTiq.",
   "ui.launcher_apply_default": "Aplicar predeterminado",
   "ui.launcher_preset_no_mods": "Sin MODs",
   "ui.launcher_preset_no_mods_desc": "Igual que Predeterminado, más -NoMods. Úsalo para aislar la participación de MOD / UE4SS.",
@@ -3971,5 +3971,17 @@
   "msg.service_update_done": "Se detuvo el servicio más antiguo y ahora el de esta aplicación (v{0}) ejecuta tus servidores.",
   "msg.service_update_failed": "Se detuvo el servicio más antiguo, pero el de esta aplicación no arrancó: {0}",
   "msg.identity_launch_advice": "Este servidor inicia PalServer con {0}. Los jugadores recibieron el personaje equivocado cada vez que arrancó con -log, -stdout o -FullStdOutLogOutput, y conservaron el suyo cuando arrancó como con doble clic: elige Como doble clic en Servidor > Lanzador, guarda, reinicia el servidor y pídeles que vuelvan a entrar.",
-  "msg.launcher_identity_warning": "Los jugadores recibieron el personaje equivocado cada vez que PalServer arrancó con -log, -stdout, -FullStdOutLogOutput o -abslog, y conservaron el suyo cuando arrancó como con doble clic. Usa Como doble clic salvo que estés diagnosticando."
+  "msg.launcher_identity_warning": "Los jugadores recibieron el personaje equivocado cada vez que PalServer arrancó con -log, -stdout, -FullStdOutLogOutput o -abslog, y conservaron el suyo cuando arrancó como con doble clic. Usa Como doble clic salvo que estés diagnosticando.",
+  "ui.open_repair": "Abrir reparación",
+  "ui.from_alert": "DESDE LA ALERTA",
+  "msg.saved_data": "Datos guardados",
+  "msg.start_this_list_empty": "Empezar esta lista vacía",
+  "msg.saved_list_fix_confirm": "Entiendo que esta lista empieza vacía; el archivo ilegible se guarda a su lado",
+  "msg.saved_list_refused": "MystTiq no pudo leer {0} guardado y no tiene una copia buena, así que se rechazan los cambios (el archivo no se sobrescribe). Repáralo en Doctor del servidor.",
+  "msg.saved_list_unreadable_title": "No se pudo leer {0} guardado",
+  "msg.saved_list_from_copy_title": "{0} guardado se cargó desde su última copia buena",
+  "msg.saved_list_repaired_title": "{0} guardado reparado",
+  "msg.saved_list_admin": "Reparar una lista guardada requiere el rol de Administrador.",
+  "msg.unexpected_error_no_record": "Algo salió mal ({0}): {1} No se pudo escribir un registro.",
+  "msg.unexpected_error_record": "Algo salió mal ({0}): {1} Los detalles están en {2}."
 }

@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -263,12 +263,11 @@ public sealed class HeadlessTeleportService : IAsyncDisposable
         };
         var errors = TeleportChat.Validate(normalized);
         if (errors.Count > 0) return new(false, errors[0], GetSnapshot().Config, errors);
+        if (SavedFiles.Refusal(configPath) is { } refused) return new(false, refused, GetSnapshot().Config, [refused]);
         lock (gate)
         {
+            SavedFiles.Save(configPath, normalized, JsonOptions);
             config = normalized;
-            var partial = configPath + ".partial";
-            File.WriteAllText(partial, JsonSerializer.Serialize(config, JsonOptions));
-            File.Move(partial, configPath, true);
         }
         activity.Record("Information", "Players", "Teleport points saved", $"{normalized.Points.Count} point(s); chat command {(normalized.Enabled ? "on" : "off")} ({normalized.CommandPrefix}).");
         return new(true, "Teleport points saved.", normalized, []);
@@ -460,12 +459,9 @@ public sealed class HeadlessTeleportService : IAsyncDisposable
 
     private TeleportConfig Load()
     {
-        try
-        {
-            var loaded = File.Exists(configPath) ? JsonSerializer.Deserialize<TeleportConfig>(File.ReadAllText(configPath)) : null;
-            return loaded is null ? TeleportConfig.Default : loaded with { Points = loaded.Points ?? [], CommandPrefix = loaded.CommandPrefix ?? "!tp" };
-        }
-        catch { return TeleportConfig.Default; }
+        // v1.0.7.0 (Q-1): unreadable teleport points are never overwritten.
+        var loaded = SavedFiles.Load(configPath, "teleport points", () => TeleportConfig.Default, options: JsonOptions);
+        return loaded with { Points = loaded.Points ?? [], CommandPrefix = loaded.CommandPrefix ?? "!tp" };
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

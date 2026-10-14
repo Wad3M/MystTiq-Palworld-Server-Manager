@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 namespace MystTiq.Desktop.Models;
 
 public sealed class NotificationItemDto
@@ -10,6 +10,10 @@ public sealed class NotificationItemDto
     public bool Read { get; set; }
     public bool Pinned { get; set; }
     public DateTimeOffset CreatedUtc { get; set; }
+    // v1.0.7.0 (Q-1): where the notification's button opens ("diagnostics:<finding id>": that finding on Server Doctor).
+    public string? Link { get; set; }
+    public bool HasLink => Link?.StartsWith(DiagnosticsLinkPrefix, StringComparison.Ordinal) == true;
+    public const string DiagnosticsLinkPrefix = "diagnostics:";
     public string StateText => $"{(Pinned ? "PINNED · " : string.Empty)}{(Read ? "READ" : "UNREAD")} · {CreatedUtc.ToLocalTime():g}";
 }
 

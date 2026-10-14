@@ -1,8 +1,10 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -1266,9 +1268,41 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         }
 
         // Without a pin, normal OS certificate validation remains authoritative.
-        return string.IsNullOrWhiteSpace(profile.ServerId)
+        HttpMessageHandler inner = string.IsNullOrWhiteSpace(profile.ServerId)
             ? handler
             : new ServerScopedRoutingHandler(profile.ServerId) { InnerHandler = handler };
+        return new SavedFileRefusalHandler { InnerHandler = inner };
+    }
+
+    // v1.0.7.0 (roadmap Q-1): a change to a saved list the service could not read is refused with HTTP 409 and a reason.
+    // Every call goes through here, so each shows that reason (and where to repair it) instead of "409 (Conflict)".
+    private sealed class SavedFileRefusalHandler : DelegatingHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var response = await base.SendAsync(request, cancellationToken);
+            if (response.StatusCode != HttpStatusCode.Conflict || response.Content.Headers.ContentType?.MediaType != "application/json")
+                return response;
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            string? message = null;
+            try
+            {
+                using var json = JsonDocument.Parse(body);
+                if (json.RootElement.ValueKind == JsonValueKind.Object &&
+                    json.RootElement.TryGetProperty("error", out var error) && error.GetString() == "saved-file-refused" &&
+                    json.RootElement.TryGetProperty("message", out var text))
+                    message = text.GetString();
+            }
+            catch (JsonException) { }
+            if (message is null)
+            {
+                // Not ours: hand the body back unread for the caller.
+                response.Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+                return response;
+            }
+            response.Dispose();
+            throw new HttpRequestException(message, null, HttpStatusCode.Conflict);
+        }
     }
 
     // v0.7.63.0: routes a multi-server fleet host's requests to one specific server profile.

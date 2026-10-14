@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using MystTiq.Core.Providers;
 using MystTiq.Core.Services;
@@ -45,6 +45,7 @@ public sealed class HeadlessNameGuardService
     {
         lock (gate)
         {
+            SavedFiles.EnsureWritable(configPath);
             config = updated with { Claims = NameGuard.Normalize(updated.Claims ?? [], DateTimeOffset.UtcNow) };
             Persist();
             handledThisSession.Clear();
@@ -54,13 +55,15 @@ public sealed class HeadlessNameGuardService
 
     public IReadOnlyList<NameGuardEvent> RecentEvents()
     {
-        try { return File.Exists(eventsPath) ? JsonSerializer.Deserialize<List<NameGuardEvent>>(File.ReadAllText(eventsPath)) ?? [] : []; }
-        catch { return []; }
+        return SavedFiles.Load(eventsPath, "unique-name events", () => new List<NameGuardEvent>(), ownerData: false);
     }
 
     public async Task EnforceAsync(HeadlessPlayersSnapshot players, CancellationToken cancellationToken)
     {
         if (!players.Available) return;
+        // v1.0.7.0 (Q-1): with the claims unreadable, whoever joined first would take every name, the real owners
+        // included; the guard stands down until the list is repaired (the owner is alerted).
+        if (SavedFiles.IsRefused(configPath)) return;
         NameGuardConfig snapshot;
         lock (gate) snapshot = config;
         if (!snapshot.Enabled)
@@ -117,28 +120,31 @@ public sealed class HeadlessNameGuardService
             var list = RecentEvents().ToList();
             list.Add(entry);
             if (list.Count > MaximumEvents) list.RemoveRange(0, list.Count - MaximumEvents);
-            try { File.WriteAllText(eventsPath, JsonSerializer.Serialize(list)); } catch { }
+            try { SavedFiles.SaveText(eventsPath, JsonSerializer.Serialize(list)); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* the event is still logged */ }
         }
     }
 
     private void Persist()
     {
-        try { File.WriteAllText(configPath, JsonSerializer.Serialize(config)); } catch { }
+        try { SavedFiles.SaveText(configPath, JsonSerializer.Serialize(config)); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            activity.Record("Warning", "Players", "Unique names not saved", ex.Message);
+        }
     }
 
     // First use: the players already known own their names (the earliest first), so nobody new can take one before its
     // owner next joins. Names two known players share go to the earlier; the activity log says which.
     private NameGuardConfig Load(HeadlessPlayerRegistryService registry)
     {
-        try
+        // v1.0.7.0 (Q-1): an unreadable claim list is never overwritten (and never re-seeded over); only a list that was
+        // never saved is seeded.
+        if (File.Exists(configPath) || File.Exists(configPath + SavedFiles.GoodCopySuffix))
         {
-            if (File.Exists(configPath))
-            {
-                var loaded = JsonSerializer.Deserialize<NameGuardConfig>(File.ReadAllText(configPath)) ?? NameGuardConfig.Default;
-                return loaded with { Claims = NameGuard.Normalize(loaded.Claims ?? [], DateTimeOffset.UtcNow) };
-            }
+            var loaded = SavedFiles.Load(configPath, "unique-name claims", () => NameGuardConfig.Default);
+            return loaded with { Claims = NameGuard.Normalize(loaded.Claims ?? [], DateTimeOffset.UtcNow) };
         }
-        catch { return NameGuardConfig.Default; }
 
         var seed = NameGuard.Seed(registry.Snapshot().Select(r => new NameGuardKnownPlayer(NameGuard.AccountOf(r.UserId, r.PlayerId), r.LastKnownName ?? string.Empty, r.FirstSeenUtc)));
         config = NameGuardConfig.Default with { Claims = seed.Claims };

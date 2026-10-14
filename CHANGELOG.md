@@ -1,4 +1,21 @@
-<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
+## v1.0.7.0 — Errors Stay Visible, Nothing Is Lost
+
+From the outside quality review (roadmap Q-1, Q-2, Q-3, Q-5; owner decision D-10).
+- Fixed: a saved list MystTiq could not read loaded as empty and the next change saved it over the file (reproduced on
+  v1.0.6.1: three accounts became one). Every save now keeps a last good copy; an unreadable file is copied aside; the
+  last good copy is loaded, or changes are refused with the reason and a pinned alert links to the repair on Server
+  Doctor (start the list empty, keeping the unreadable file). Logs MystTiq rebuilds start empty.
+- Fixed: an error nobody caught closed the desktop with no record. It is now recorded under
+  `%LOCALAPPDATA%\MystTiq\crashes` and shown on every page; the service records such errors too.
+- The service's background work is tracked: a failure is logged once, it stops at shutdown, and an automation rule
+  still running is not started again.
+- Only a file another program holds is retried; a lasting failure to save the server's state file says what to check.
+- The Default Launcher preset's description no longer mentions a diagnostic log.
+- Tests: the v1.0.7.0 gate regenerated from v1.0.6.1 (every earlier check kept), a saved-lists route smoke, LogicHarness
+  scenarios and ArtworkHarness checks; 14 texts in 12 languages.
+- Version advanced to 1.0.7.0.
+
 ## v1.0.6.1 — Your Character, Not a New One
 
 - Fixed (reported 2026-10-06): a player joining with his Steam account got a new character. A v1.0.6.0 desktop was

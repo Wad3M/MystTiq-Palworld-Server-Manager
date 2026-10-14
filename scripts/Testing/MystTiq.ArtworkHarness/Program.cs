@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1617,6 +1617,88 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
           vm.PalBoxPals[0].RowVerbatim.Contains("SheepBall") && vm.PalBoxPals[0].RowVerbatim.Contains("\"Fluffy\""),
         $"The Players page's Pal box card lists the box (place, species, level, name), with a species picker, Remove red and Add styled [{list?.ItemCount} rows]");
     vm.PalBoxPals.Clear(); vm.PalBoxSpecies.Clear();
+}
+// v1.0.7.0 (roadmap Q-2): an error thrown from a command is recorded and shown on every page, and the app stays open.
+// (Q-1, D-10) A notification about a saved list MystTiq could not read has an Open Repair button that opens Server Doctor,
+// where the finding it names is marked.
+{
+    var crashFolder = Path.Combine(Path.GetTempPath(), "MystTiq-ArtCrash-" + Guid.NewGuid().ToString("N"));
+    CrashRecorder.Folder = crashFolder;
+    void Show(string source, Exception error, string? path) => vm.ShowUnexpectedError(source, error, path);
+    CrashRecorder.Recorded += Show;
+    vm.NavigateCommand.Execute(nameof(NavigationPage.Players));
+    var runUi = typeof(MainWindowViewModel).GetMethod("RunUi", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    runUi.Invoke(vm, [new Func<Task>(() => throw new InvalidOperationException("harness boom")), "harness-check"]);
+    for (var i = 0; i < 5; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(20); }
+    window.UpdateLayout();
+    var banner = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "UnexpectedErrorBanner");
+    var record = Directory.Exists(crashFolder) ? Directory.GetFiles(crashFolder, "crash-*.log").SingleOrDefault() : null;
+    var recordText = record is null ? string.Empty : File.ReadAllText(record);
+    Check(banner is { IsEffectivelyVisible: true } && vm.UnexpectedErrorText.Contains("harness boom") && vm.UnexpectedErrorText.Contains(crashFolder) &&
+          recordText.Contains("Caught by: harness-check") && recordText.Contains("harness boom") && !vm.IsBusy,
+        $"An error thrown from a command is recorded and shown on the page, the app stays open and is not left busy [{vm.UnexpectedErrorText}]");
+    vm.DismissUnexpectedErrorCommand.Execute(null);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    Check(banner is { IsEffectivelyVisible: false }, "Dismiss hides the error");
+    CrashRecorder.Recorded -= Show;
+    try { Directory.Delete(crashFolder, true); } catch (IOException) { }
+
+    vm.Notifications.Clear();
+    var alert = new NotificationItemDto { Id = "n1", Severity = "Critical", Title = "Saved user accounts could not be read", Message = "Changes to it are refused.", Pinned = true, Link = "diagnostics:saved-file-security-users", CreatedUtc = DateTimeOffset.UtcNow };
+    vm.Notifications.Add(alert);
+    vm.Notifications.Add(new NotificationItemDto { Id = "n2", Severity = "Information", Title = "Plain", Message = "No link.", CreatedUtc = DateTimeOffset.UtcNow });
+    typeof(MainWindowViewModel).GetMethod("ApplyNotificationFilters", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, []);
+    vm.NavigateCommand.Execute(nameof(NavigationPage.Notifications));
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var repairButtons = window.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible && b.DataContext is NotificationItemDto && b.Classes.Contains("open")).ToList();
+    Check(repairButtons.Count == 1 && ReferenceEquals(repairButtons[0].DataContext, alert),
+        $"Only the notification with a repair link shows Open Repair, styled as an open button [{repairButtons.Count}]");
+    vm.OpenNotificationLinkCommand.Execute(alert);
+    Dispatcher.UIThread.RunJobs();
+    Check(vm.SelectedPage == NavigationPage.Doctor, "Open Repair opens Server Doctor");
+    vm.DiagnosticFindings.Clear();
+    vm.DiagnosticFindings.Add(new DiagnosticFindingDto { Id = "saved-file-security-users", Category = "Saved data", Component = "User accounts", State = 2, Evidence = "The saved user accounts could not be read.", Recommendation = "Fix starts the user accounts empty.", ActionKind = "repair-saved-file", ActionSupported = true, IsFocused = true });
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var focusedTag = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("tag") && b.Classes.Contains("info") && b.IsEffectivelyVisible && b.DataContext is DiagnosticFindingDto { IsFocused: true });
+    var fix = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.IsEffectivelyVisible && b.DataContext is DiagnosticFindingDto && b.Classes.Contains("apply"));
+    Check(focusedTag is not null && fix is not null && vm.DiagnosticFindings[0].FixButtonText == "Start This List Empty" && vm.DiagnosticFindings[0].FixConfirmText.Contains("unreadable file is kept"),
+        "On Server Doctor the finding from the alert is marked, and its fix says it starts the list empty, keeping the unreadable file");
+    vm.DiagnosticFindings.Clear(); vm.Notifications.Clear(); vm.FilteredNotifications.Clear();
+}
+// v1.0.7.0 (roadmap Q-1): a change the service refuses because a saved list cannot be read comes back as HTTP 409 with
+// the reason; every call shows that reason instead of "409 (Conflict)", and other 409 answers are left to the caller.
+{
+    int port; { var l = new TcpListener(IPAddress.Loopback, 0); l.Start(); port = ((IPEndPoint)l.LocalEndpoint).Port; l.Stop(); }
+    using var standIn = new HttpListener();
+    standIn.Prefixes.Add($"http://127.0.0.1:{port}/");
+    standIn.Start();
+    var serve = Task.Run(async () =>
+    {
+        for (var i = 0; i < 2; i++)
+        {
+            var context = await standIn.GetContextAsync();
+            var refused = context.Request.Url!.AbsolutePath.EndsWith("/whitelist", StringComparison.Ordinal);
+            var body = refused
+                ? """{"error":"saved-file-refused","message":"MystTiq could not read the saved whitelist and has no good copy, so changes to it are refused (the file is not overwritten). Repair it in Server Doctor.","repair":"Doctor"}"""
+                : """{"success":false,"message":"A different conflict."}""";
+            context.Response.StatusCode = 409;
+            context.Response.ContentType = "application/json";
+            var bytes = Encoding.UTF8.GetBytes(body);
+            await context.Response.OutputStream.WriteAsync(bytes);
+            context.Response.Close();
+        }
+    });
+    var api = new MystTiqApiClient();
+    var standInProfile = ConnectionProfile.LocalDefault with { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
+    string refusal;
+    try { Task.Run(() => api.SaveWhitelistAsync(standInProfile, new WhitelistConfigDto())).GetAwaiter().GetResult(); refusal = "no error"; }
+    catch (HttpRequestException ex) { refusal = ex.Message; }
+    string other;
+    try { Task.Run(() => api.GetNameGuardAsync(standInProfile)).GetAwaiter().GetResult(); other = "no error"; }
+    catch (Exception ex) { other = ex.Message; }
+    serve.Wait(TimeSpan.FromSeconds(10));
+    Check(refusal.StartsWith("MystTiq could not read the saved whitelist", StringComparison.Ordinal) && refusal.Contains("Server Doctor") && !other.Contains("could not read the saved"),
+        $"A refused change shows the service's reason, not \"409 (Conflict)\"; other conflicts are untouched [{refusal}]");
 }
 // v1.0.5.0 (roadmap M-1): the MOD browser against stand-in repositories (Thunderstore, CurseForge, GitHub), a folder of
 // ZIPs, the download host checks, the nxm:// handoff and the card on the MOD Library page.

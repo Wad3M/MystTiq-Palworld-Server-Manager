@@ -3604,7 +3604,7 @@
   "ui.launcher_save_settings": "Başlatıcı ayarlarını kaydet",
   "ui.launcher_troubleshooting_presets": "Sorun giderme ön ayarları",
   "ui.launcher_preset_default": "Varsayılan",
-  "ui.launcher_preset_default_desc": "PalServer.exe, normal sunucu kökü, MODlar etkin, tanılama günlüğü etkin, yönetilen pencere gizli.",
+  "ui.launcher_preset_default_desc": "PalServer.exe, normal sunucu klasörü, MOD’lar açık, ek başlatma seçeneği yok; penceresi ve oyunun konsol penceresi gizlenir, çıktıları MystTiq konsolunda görünür.",
   "ui.launcher_apply_default": "Varsayılanı uygula",
   "ui.launcher_preset_no_mods": "MOD yok",
   "ui.launcher_preset_no_mods_desc": "Varsayılan ile aynı, ayrıca -NoMods. MOD / UE4SS etkisini ayırmak için kullanın.",
@@ -3971,5 +3971,17 @@
   "msg.service_update_done": "Eski hizmet durduruldu; sunucularınızı artık bu uygulamanın hizmeti (v{0}) çalıştırıyor.",
   "msg.service_update_failed": "Eski hizmet durduruldu ama bu uygulamanın hizmeti başlamadı: {0}",
   "msg.identity_launch_advice": "Bu sunucu PalServer’ı {0} ile başlatıyor. -log, -stdout veya -FullStdOutLogOutput ile her başladığında oyunculara yanlış karakter verildi; çift tıklama gibi başladığında kendi karakterleri kaldı: Sunucu > Başlatıcı’da Çift tıklama gibi’yi seçip kaydedin, sunucuyu yeniden başlatın ve tekrar katılmalarını isteyin.",
-  "msg.launcher_identity_warning": "PalServer -log, -stdout, -FullStdOutLogOutput veya -abslog ile her başladığında oyunculara yanlış karakter verildi; çift tıklama gibi başladığında kendi karakterleri kaldı. Sorun incelemiyorsanız Çift tıklama gibi’yi kullanın."
+  "msg.launcher_identity_warning": "PalServer -log, -stdout, -FullStdOutLogOutput veya -abslog ile her başladığında oyunculara yanlış karakter verildi; çift tıklama gibi başladığında kendi karakterleri kaldı. Sorun incelemiyorsanız Çift tıklama gibi’yi kullanın.",
+  "ui.open_repair": "Onarımı Aç",
+  "ui.from_alert": "UYARIDAN",
+  "msg.saved_data": "Kayıtlı veriler",
+  "msg.start_this_list_empty": "Bu Listeyi Boş Başlat",
+  "msg.saved_list_fix_confirm": "Bu listenin boş başlayacağını anlıyorum; okunamayan dosya yanında saklanır",
+  "msg.saved_list_refused": "MystTiq kayıtlı {0} verisini okuyamadı ve sağlam bir kopyası yok; bu yüzden değişiklikler reddediliyor (dosyanın üzerine yazılmıyor). Sunucu Doktoru'nda onarın.",
+  "msg.saved_list_unreadable_title": "Kayıtlı {0} okunamadı",
+  "msg.saved_list_from_copy_title": "Kayıtlı {0} son sağlam kopyasından yüklendi",
+  "msg.saved_list_repaired_title": "Kayıtlı {0} onarıldı",
+  "msg.saved_list_admin": "Kayıtlı bir listeyi onarmak Yönetici rolü gerektirir.",
+  "msg.unexpected_error_no_record": "Bir sorun oluştu ({0}): {1} Kayıt yazılamadı.",
+  "msg.unexpected_error_record": "Bir sorun oluştu ({0}): {1} Ayrıntılar {2} içinde."
 }

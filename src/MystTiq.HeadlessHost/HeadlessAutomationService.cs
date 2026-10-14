@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using MystTiq.Core.Automation;
 using MystTiq.Core.Models;
@@ -38,6 +38,8 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
     private readonly Dictionary<AutomationRuleId, AutomationRule> rules;
     private readonly List<AutomationRunRecord> runs;
     private readonly Dictionary<string, CancellationTokenSource> activeRuns = new(StringComparer.Ordinal);
+    // v1.0.7.0 (roadmap Q-3): the rules with a run in progress, so a run that outlasts its interval is not started again.
+    private readonly SingleRunGate<AutomationRuleId> runningRules = new();
 
     private CancellationTokenSource? loopCts;
     private Task? loopTask;
@@ -192,7 +194,7 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
             // Reset immediately so a slow-running warning countdown can't cause this same rule to
             // be picked up again on the next 15s tick while it's still executing.
             lock (gate) rule.IdleSinceUtc = null;
-            _ = Task.Run(() => ExecuteRuleAsync(rule, now, hostToken), hostToken);
+            Dispatch(rule, now, hostToken);
         }
     }
 
@@ -216,7 +218,7 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
                 continue;
             }
 
-            _ = Task.Run(() => ExecuteRuleAsync(rule, now, hostToken), hostToken);
+            Dispatch(rule, now, hostToken);
         }
     }
 
@@ -466,7 +468,7 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
             CreatedUtc = DateTimeOffset.UtcNow
         };
         rule.NextDueUtc = trigger.Kind == AutomationTriggerKind.IdleEmpty ? null : ComputeNextDue(trigger, DateTimeOffset.UtcNow);
-        lock (gate) { rules[rule.Id] = rule; PersistRules(); }
+        lock (gate) { SavedFiles.EnsureWritable(rulesPath); rules[rule.Id] = rule; PersistRules(); }
         activity.Record("Information", "Automation", "Created automation rule", $"id={rule.Id}; name={rule.Name}");
         return rule;
     }
@@ -516,7 +518,24 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
     {
         AutomationRule rule;
         lock (gate) rule = rules.TryGetValue(id, out var existing) ? existing : throw new KeyNotFoundException("Automation rule was not found.");
-        _ = Task.Run(() => ExecuteRuleAsync(rule, DateTimeOffset.UtcNow, hostToken), hostToken);
+        Dispatch(rule, DateTimeOffset.UtcNow, hostToken);
+    }
+
+    // v1.0.7.0 (roadmap Q-3): one run of a rule at a time. A rule still running when it comes due again (a long
+    // warning countdown, a slow backup) is recorded as Skipped instead of starting a second run beside the first.
+    // The run goes through the service's background tracker, so shutdown waits for it and cancels it.
+    private void Dispatch(AutomationRule rule, DateTimeOffset dueUtc, CancellationToken hostToken)
+    {
+        if (!runningRules.TryEnter(rule.Id))
+        {
+            RecordRun(rule, dueUtc, AutomationRunState.Skipped, "Skipped: the previous run of this rule is still in progress.", null, null);
+            return;
+        }
+        BackgroundWork.Shared.Run($"automation rule '{rule.Name}'", async token =>
+        {
+            try { await ExecuteRuleAsync(rule, dueUtc, token); }
+            finally { runningRules.Exit(rule.Id); }
+        }, hostToken);
     }
 
     public bool CancelRun(string runId)
@@ -534,38 +553,18 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
         lock (gate) return runs.AsEnumerable().Reverse().Take(Math.Clamp(max, 1, MaximumRuns)).ToList();
     }
 
-    private Dictionary<AutomationRuleId, AutomationRule> LoadRules()
-    {
-        try
-        {
-            if (!File.Exists(rulesPath)) return [];
-            var list = JsonSerializer.Deserialize<List<AutomationRule>>(File.ReadAllText(rulesPath)) ?? [];
-            return list.ToDictionary(r => r.Id);
-        }
-        catch { return []; }
-    }
+    // v1.0.7.0 (Q-1): unreadable rules are never overwritten; the run history is rebuilt as rules run.
+    private Dictionary<AutomationRuleId, AutomationRule> LoadRules() =>
+        SavedFiles.Load(rulesPath, "automation rules", () => new List<AutomationRule>()).ToDictionary(r => r.Id);
 
     // Caller must already hold gate.
-    private void PersistRules()
-    {
-        var partial = rulesPath + ".partial";
-        File.WriteAllText(partial, JsonSerializer.Serialize(rules.Values.ToList(), new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(partial, rulesPath, true);
-    }
+    private void PersistRules() => SavedFiles.Save(rulesPath, rules.Values.ToList());
 
-    private List<AutomationRunRecord> LoadRuns()
-    {
-        try { return File.Exists(runsPath) ? JsonSerializer.Deserialize<List<AutomationRunRecord>>(File.ReadAllText(runsPath)) ?? [] : []; }
-        catch { return []; }
-    }
+    private List<AutomationRunRecord> LoadRuns() =>
+        SavedFiles.Load(runsPath, "automation run history", () => new List<AutomationRunRecord>(), ownerData: false);
 
     // Caller must already hold gate.
-    private void PersistRuns()
-    {
-        var partial = runsPath + ".partial";
-        File.WriteAllText(partial, JsonSerializer.Serialize(runs, new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(partial, runsPath, true);
-    }
+    private void PersistRuns() => SavedFiles.Save(runsPath, runs);
 }
 
 public sealed record AutomationRuleRequest(string Name, AutomationTrigger Trigger, AutomationCondition Condition, AutomationAction Action);

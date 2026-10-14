@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using MystTiq.Core.Automation;
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
@@ -41,6 +41,7 @@ public sealed class HeadlessDiagnosticsService
     private readonly NetworkDiagnosticsService? network;
     private readonly string? serverId;
     private readonly IReadOnlyList<string> launchArguments;
+    private readonly string? fleetRuntimeRoot;
     private readonly object backupRuleGate = new();
 
     public HeadlessDiagnosticsService(
@@ -59,8 +60,10 @@ public sealed class HeadlessDiagnosticsService
         HeadlessComponentUpdateService? componentUpdates = null,
         NetworkDiagnosticsService? network = null,
         string? serverId = null,
-        IReadOnlyList<string>? launchArguments = null)
+        IReadOnlyList<string>? launchArguments = null,
+        string? fleetRuntimeRoot = null)
     {
+        this.fleetRuntimeRoot = fleetRuntimeRoot;
         this.componentUpdates = componentUpdates;
         this.network = network;
         this.serverId = serverId;
@@ -157,6 +160,7 @@ public sealed class HeadlessDiagnosticsService
         findings.AddRange(await BuildIdentityFindingsAsync(cancellationToken));
         findings.AddRange(BuildVersionFindings());
         findings.AddRange(await BuildPortFindingsAsync(cancellationToken));
+        findings.AddRange(BuildSavedFileFindings());
 
         return BuildReport(findings, status.Ready);
     }
@@ -616,9 +620,49 @@ public sealed class HeadlessDiagnosticsService
                     ? firewall.Message + " On this computer, use Diagnostics > Allow through Firewall, which asks Windows for administrator rights."
                     : firewall.Message);
 
+            case SavedFiles.RepairActionKind:
+                // v1.0.7.0 (Q-1, D-10): starting a saved list empty is an owner's decision about their own data.
+                if (!canAdminister)
+                    return HeadlessDiagnosticFixResult.Failure("Repairing a saved list needs the Admin role.");
+                var repair = SavedFiles.Repair(finding.Location);
+                return new HeadlessDiagnosticFixResult(repair.Success, repair.Message);
+
             default:
                 return HeadlessDiagnosticFixResult.Failure(
                     finding.UnavailableReason ?? "No automatic fix is available for this finding yet.");
+        }
+    }
+
+    // v1.0.7.0 (roadmap Q-1, owner decision D-10): a saved list MystTiq could not read. Refused (no good copy): a failure
+    // whose fix starts the list empty, keeping the unreadable file beside it. Loaded from the last good copy, or a log
+    // started empty: a warning saying so, nothing to fix. Users and API tokens belong to the fleet, so every server shows them.
+    private IEnumerable<DiagnosticFinding> BuildSavedFileFindings()
+    {
+        var roots = fleetRuntimeRoot is null ? new[] { paths.ManagerRuntimeRoot } : new[] { paths.ManagerRuntimeRoot, fleetRuntimeRoot };
+        foreach (var file in SavedFiles.Snapshot(roots).OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            var refused = file.ChangesRefused;
+            var recommendation = file.State switch
+            {
+                SavedFileState.Unreadable =>
+                    $"Fix starts the {file.Name} empty and allows changes again; the unreadable file stays kept beside it. If you have a good copy, put it back at {file.Path} instead and restart the MystTiq service.",
+                SavedFileState.LoadedFromCopy => $"Check the {file.Name} looks right: changes made after the last good copy are not in it.",
+                SavedFileState.Repaired => "Nothing to do. Set the list up again where needed.",
+                _ => "Nothing to do: MystTiq rebuilds this list as it runs."
+            };
+            yield return new DiagnosticFinding(
+                Id: SavedFiles.FindingId(file.Path),
+                Category: "Saved data",
+                Component: char.ToUpperInvariant(file.Name[0]) + file.Name[1..],
+                State: refused ? DiagnosticState.Fail : DiagnosticState.Warning,
+                Location: file.Path,
+                Evidence: file.Detail,
+                Recommendation: recommendation,
+                ActionKind: refused ? SavedFiles.RepairActionKind : null,
+                ActionSupported: refused,
+                UnavailableReason: refused ? null : "Nothing to repair.",
+                ObservedAt: file.ObservedUtc,
+                Duration: TimeSpan.Zero);
         }
     }
 

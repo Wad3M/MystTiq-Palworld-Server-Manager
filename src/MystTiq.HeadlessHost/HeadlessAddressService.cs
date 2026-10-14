@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
@@ -21,7 +21,7 @@ public sealed class HeadlessAddressService(WanReachabilityService wan)
         if (refresh || current is null)
             current = await RefreshPublicAsync(token);
         else if (DateTimeOffset.UtcNow - current.CheckedAt > PublicRefresh)
-            _ = Task.Run(() => RefreshPublicAsync(CancellationToken.None));
+            _ = BackgroundWork.Shared.Run("public address refresh", RefreshPublicAsync);
         return new HostAddressSnapshot(gamePort, HostAddresses.Local(), current?.Address, current?.Source, current?.CheckedAt, current?.Error);
     }
 

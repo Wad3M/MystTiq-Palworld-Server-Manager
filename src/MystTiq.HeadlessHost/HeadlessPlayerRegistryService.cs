@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text;
 using System.Text.Json;
 using MystTiq.Core.Services;
@@ -154,52 +154,24 @@ public sealed class HeadlessPlayerRegistryService
     private static string Coalesce(string? incoming, string fallback) => string.IsNullOrWhiteSpace(incoming) ? fallback : incoming;
     private static string NormalizeId(string? value) => (value ?? string.Empty).Trim();
 
+    // v1.0.7.0 (Q-1): the player history is the owner's record of who played (first seen, names, play time): an
+    // unreadable one falls back to its last good copy, else it is kept as it is and not overwritten. Presence events are
+    // a log and start empty. Neither ever blocks management start-up.
     private void Load()
     {
-        try
-        {
-            if (File.Exists(recordsPath))
-            {
-                var loaded = JsonSerializer.Deserialize<List<PlayerRegistryRecord>>(File.ReadAllText(recordsPath));
-                if (loaded is not null)
-                    foreach (var record in loaded)
-                        records[record.PlayerId] = record.CurrentlyOnline ? record with { CurrentlyOnline = false, CurrentSessionStartUtc = null } : record;
-            }
-            if (File.Exists(eventsPath))
-            {
-                var loadedEvents = JsonSerializer.Deserialize<List<PlayerPresenceEvent>>(File.ReadAllText(eventsPath));
-                if (loadedEvents is not null) events.AddRange(loadedEvents);
-            }
-        }
-        catch
-        {
-            // Registry history is optional and must never block management startup. A malformed
-            // store is treated as empty rather than thrown -- it will rebuild from live observation.
-        }
+        foreach (var record in SavedFiles.Load(recordsPath, "player history", () => new List<PlayerRegistryRecord>(), options: JsonOptions))
+            records[record.PlayerId] = record.CurrentlyOnline ? record with { CurrentlyOnline = false, CurrentSessionStartUtc = null } : record;
+        events.AddRange(SavedFiles.Load(eventsPath, "player presence events", () => new List<PlayerPresenceEvent>(), ownerData: false, options: JsonOptions));
     }
 
     private void Save()
     {
-        try
-        {
-            SaveJson(recordsPath, records.Values.ToArray());
-            SaveJson(eventsPath, events);
-            lastPersistedAt = DateTimeOffset.UtcNow;
-        }
-        catch
-        {
-            // A persistence failure must not affect PalServer lifecycle operations.
-        }
-    }
-
-    private static void SaveJson<T>(string path, T value)
-    {
-        var temp = path + $".tmp-{Guid.NewGuid():N}";
-        try
-        {
-            File.WriteAllText(temp, JsonSerializer.Serialize(value, JsonOptions), new UTF8Encoding(false));
-            File.Move(temp, path, true);
-        }
-        finally { if (File.Exists(temp)) File.Delete(temp); }
+        // A persistence failure must not affect PalServer lifecycle operations. A refused history (unreadable, not yet
+        // repaired) keeps what it learns in memory only; the owner was alerted when it was read.
+        try { SavedFiles.Save(recordsPath, records.Values.ToArray(), JsonOptions); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SavedFileRefusedException) { }
+        try { SavedFiles.Save(eventsPath, events, JsonOptions); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        lastPersistedAt = DateTimeOffset.UtcNow;
     }
 }

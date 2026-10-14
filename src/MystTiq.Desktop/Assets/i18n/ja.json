@@ -3604,7 +3604,7 @@
   "ui.launcher_save_settings": "ランチャー設定を保存",
   "ui.launcher_troubleshooting_presets": "トラブルシューティング用プリセット",
   "ui.launcher_preset_default": "既定",
-  "ui.launcher_preset_default_desc": "PalServer.exe、通常のサーバールート、MOD 有効、診断ログ有効、管理対象ウィンドウ非表示。",
+  "ui.launcher_preset_default_desc": "PalServer.exe、通常のサーバーフォルダー、MOD 有効、追加の起動オプションなし。PalServer とゲームのコンソールウィンドウは非表示になり、出力は MystTiq のコンソールに表示されます。",
   "ui.launcher_apply_default": "既定を適用",
   "ui.launcher_preset_no_mods": "MOD なし",
   "ui.launcher_preset_no_mods_desc": "既定と同じ設定に -NoMods を追加します。MOD / UE4SS の影響を切り分けるために使用します。",
@@ -3971,5 +3971,17 @@
   "msg.service_update_done": "古いサービスを停止しました。今はこのアプリのサービス（v{0}）がサーバーを動かしています。",
   "msg.service_update_failed": "古いサービスは停止しましたが、このアプリのサービスが起動しませんでした: {0}",
   "msg.identity_launch_advice": "このサーバーは {0} で PalServer を起動します。-log、-stdout、-FullStdOutLogOutput 付きで起動したときは毎回プレイヤーに別のキャラクターが割り当てられ、ダブルクリックと同じ起動では自分のキャラクターのままでした。「サーバー > ランチャー」で「ダブルクリックと同じ」を選んで保存し、サーバーを再起動してから入り直してもらってください。",
-  "msg.launcher_identity_warning": "PalServer を -log、-stdout、-FullStdOutLogOutput、-abslog 付きで起動したときは毎回プレイヤーに別のキャラクターが割り当てられ、ダブルクリックと同じ起動では自分のキャラクターのままでした。原因を調べるとき以外は「ダブルクリックと同じ」を使ってください。"
+  "msg.launcher_identity_warning": "PalServer を -log、-stdout、-FullStdOutLogOutput、-abslog 付きで起動したときは毎回プレイヤーに別のキャラクターが割り当てられ、ダブルクリックと同じ起動では自分のキャラクターのままでした。原因を調べるとき以外は「ダブルクリックと同じ」を使ってください。",
+  "ui.open_repair": "修復を開く",
+  "ui.from_alert": "アラートから",
+  "msg.saved_data": "保存データ",
+  "msg.start_this_list_empty": "このリストを空から始める",
+  "msg.saved_list_fix_confirm": "このリストが空から始まることを理解しました。読めないファイルは隣に保存されます",
+  "msg.saved_list_refused": "MystTiq は保存された{0}を読み込めず、正常なコピーもないため、変更を拒否しています（ファイルは上書きされません）。「サーバードクター」で修復してください。",
+  "msg.saved_list_unreadable_title": "保存された{0}を読み込めませんでした",
+  "msg.saved_list_from_copy_title": "保存された{0}を最後の正常なコピーから読み込みました",
+  "msg.saved_list_repaired_title": "保存された{0}を修復しました",
+  "msg.saved_list_admin": "保存されたリストの修復には管理者ロールが必要です。",
+  "msg.unexpected_error_no_record": "問題が発生しました（{0}）: {1} 記録を書き込めませんでした。",
+  "msg.unexpected_error_record": "問題が発生しました（{0}）: {1} 詳細は {2} にあります。"
 }

@@ -1,59 +1,62 @@
-<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
-# MystTiq v1.0.6.1 Checkpoint: Your Character, Not a New One
+<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
+# MystTiq v1.0.7.0 Checkpoint: Errors Stay Visible, Nothing Is Lost
 
-You reported joining from another computer with your own Steam account and getting a new character ("Unknown Player")
-instead of Wade, while a hand start gave you Wade.
+The first release from the outside review you sent (roadmap Q-1, Q-2, Q-3 and Q-5), with your decision on damaged
+saved lists (D-10).
 
-## What I found
+## What I found first
 
-- **Your Steam account still maps to Wade.** It is `steam_76561197962020201`, and Palworld's Steam rule gives that
-  account `67D8D355`, Wade. The server gave it `E290DA9A`, the same wrong ID as in the v1.0.0.1 incident. Your character
-  was never touched.
-- **An older service was running your server.** Your desktop was v1.0.6.0, but the service running the server was
-  **v1.0.0.0**, left running since 5 October. The desktop simply connected to it. So nothing since v1.0.0.0 was running
-  for your server, including the identity guard that would have kicked you before a new character was made.
-- **It started PalServer with the options behind wrong characters.** Your main server's saved options are `-port=8211
-  -log -stdout -FullStdOutLogOutput -abslog=…`. Every wrong-character start had those; double-click starts didn't.
-  Every Launcher preset except **Like double-click** was still switching them on. The Launcher page also showed them
-  switched on for a server with no saved launch settings, so saving that page wrote them in. That's likely how they got
-  onto your main server.
-- **What I'm not sure of:** on 11 August, before MystTiq's Launcher existed, Melly got a wrong ID while you got the right
-  one in the same session. The options are the strongest lead, not a proven sole cause.
+- **A damaged list could wipe your accounts.** If one of MystTiq's own lists (accounts, automation rules, kits and
+  more) couldn't be read, MystTiq started that list empty. The next change then saved it over the file. I reproduced it
+  on a real v1.0.6.1 service: three accounts, `users.json` cut short, a restart, one new account. Only the new one was
+  left.
+- **There was no last-chance error handler** anywhere in the app or the service, so an unexpected error closed the app
+  and left nothing behind.
 
-## Done on your PC (with your OK)
+## Fixed in v1.0.7.0
 
-The old v1.0.0.0 service was stopped while PalServer was stopped. Your desktop starts its own service the next time it
-connects. I did not change your saved launch options: you didn't ask for that.
-
-## Fixed in v1.0.6.1
-
-- **Older service warning.** When the service on your PC is older than the app, the Dashboard says so in red. **Update
-  Service To This Version** stops the old one and starts the app's own. A running PalServer keeps running, and players
-  stay connected.
-- **Launcher presets.** No preset adds `-log`, `-stdout`, `-FullStdOutLogOutput` or `-abslog` any more, a server with no
-  saved settings shows them off, and the Launcher warns when they're on.
-- **Identity alert.** It names the options the server started with and says to choose Like double-click.
+- **Saved lists (your decision).** Every save keeps the previous file as a last good copy. A file that can't be read is
+  copied aside, and the last good copy is loaded. If there is no good copy, changes to that list are refused with the
+  reason, and you get a pinned alert with **Open Repair**. That opens Server Doctor with the list marked; its fix starts
+  the list empty and keeps the bad file beside it.
+- **Errors.** An unexpected error is recorded in `%LOCALAPPDATA%\MystTiq\crashes` and shown in a red banner instead of
+  closing the app. The service records them too.
+- **Background work.** The service's background jobs now log their failures once and stop cleanly at shutdown. An
+  automation rule still running isn't started twice.
+- **Retries.** Only a file another program holds is retried. A server state file that stays held now says what to
+  check.
+- **Default preset text.** The Default preset's description no longer mentions a diagnostic log.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.0.6.1-Logic.ps1 -RunBuild`: 322 / 322 passed. The 6 Linux VM checks were skipped because the
-  VM was switched off by then (all of them passed for v1.0.6.0 a few hours earlier). Every v1.0.6.0 check is carried, and the
-  frozen v1.0.6.0 gate passes on its own checkpoint.
-- **Static gate:** 267 / 267. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-- **Validator fix:** the first fourth-number release after v1.0.6.0 flagged that version's own test scripts as stale.
-  Scripts named for their own release may now name it.
-- **LogicHarness:** the alert's advice for your actual saved options (named, with Like double-click advised) and for none.
-- **ArtworkHarness:** 815 checks, including:
-  - an older local service flagged, while the same, newer, remote or unknown versions are not;
-  - the red Dashboard banner with Update Service To This Version, gone with the app's own version;
-  - no preset or default switching on the four options;
-  - the warning when one is on.
-- **Live:** with your OK, the v1.0.0.0 service was stopped while PalServer was stopped. Your join as Wade is still owed.
+- **Reproduced first** on a real, isolated v1.0.6.1 service: three accounts, `users.json` cut short, a restart, one
+  new account. Only that one was left on disk. The same steps on v1.0.7.0: the new account was refused with the reason
+  and the file was left untouched.
+- **Full gate** `scripts\Test-v1.0.7.0-Logic.ps1 -RunBuild`: 340 / 340 passed, 1 skipped. The skip is the v1.0.2.0
+  system-unit test: the VM's test user has no passwordless sudo, and the per-user unit check covers it. Every earlier
+  check is carried, the frozen v1.0.6.1 gate passes on its own checkpoint, and the Linux VM checks ran and passed.
+  The gate ran twice: the second run was after removing three compiler warnings (unawaited tracker calls) that the
+  package build showed.
+- **Static gate:** 279 / 279. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **Saved-lists route smoke** (an isolated service with sign-in on), all passed:
+  - the last good copy loaded, and a named account signs in;
+  - with no copy, `users.json` left byte for byte and the owner token still works;
+  - a change refused inside a service comes back as HTTP 409;
+  - the pinned alert links to the repair, and after the repair changes work again.
+- **LogicHarness:** 178 scenarios, including:
+  - the account wipe, the last good copy, the repair, a log starting empty;
+  - one-at-a-time automation runs and background work logged once and stopped at shutdown;
+  - the retry rule, and the server state file (concurrent, interrupted, held, read-only).
+- **ArtworkHarness:** 822 checks in 12 languages, including:
+  - an error thrown from a command is recorded, shown and leaves the app open;
+  - Open Repair opens Server Doctor with the finding marked;
+  - a refused change shows the service's reason.
+- **Found on the way:** the gate's command-role audit cuts each command at its first comma (a `-contains` bug), so a
+  call after a comma was never checked. Worked around here; offered as a separate task.
 
 ## For you
 
-1. **Launcher:** on **Server > Launcher**, click **Like double-click**, then **Save Launcher Settings**.
-2. **Test:** start the server from MystTiq and join from the other computer. You should be Wade. Tell me what you see.
-3. **Leftover:** the new "Unknown Player" character (E290DA9A) is harmless. Leave it, or I can remove it later with a
-   backup first, if you say so.
-4. **Push:** this is ready to push and tag as v1.0.6.1 when you say so.
+1. **Nothing to do** for your servers: the first save of each list starts its last good copy.
+2. **Roadmap:** Q-1, Q-2, Q-3 and Q-5 are `Built`. Next is v1.0.7.1: Q-4 (every conflict refused) and Q-11 (alert
+   storms bounded).
+3. **Push:** this is ready to push and tag as v1.0.7.0 when you say so.

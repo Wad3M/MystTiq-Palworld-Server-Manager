@@ -3604,7 +3604,7 @@
   "ui.launcher_save_settings": "Zapisz ustawienia launchera",
   "ui.launcher_troubleshooting_presets": "Ustawienia diagnostyczne",
   "ui.launcher_preset_default": "Domyślne",
-  "ui.launcher_preset_default_desc": "PalServer.exe, normalny katalog główny serwera, MODy włączone, log diagnostyczny włączony, zarządzane okno ukryte.",
+  "ui.launcher_preset_default_desc": "PalServer.exe, zwykły folder serwera, MOD-y włączone, bez dodatkowych opcji uruchamiania; jego okno i konsola gry są ukryte, a ich wyjście pojawia się w konsoli MystTiq.",
   "ui.launcher_apply_default": "Zastosuj domyślne",
   "ui.launcher_preset_no_mods": "Bez MODów",
   "ui.launcher_preset_no_mods_desc": "Jak Domyślne, plus -NoMods. Użyj, aby odizolować wpływ MOD / UE4SS.",
@@ -3971,5 +3971,17 @@
   "msg.service_update_done": "Starsza usługa została zatrzymana; teraz Twoje serwery obsługuje usługa tej aplikacji (v{0}).",
   "msg.service_update_failed": "Starsza usługa została zatrzymana, ale usługa tej aplikacji się nie uruchomiła: {0}",
   "msg.identity_launch_advice": "Ten serwer uruchamia PalServer z {0}. Gracze dostawali złą postać za każdym razem, gdy startował z -log, -stdout lub -FullStdOutLogOutput, a zachowywali swoją, gdy startował jak po dwukliku: wybierz Jak dwuklik w Serwer > Uruchamianie, zapisz, uruchom serwer ponownie i poproś ich o ponowne dołączenie.",
-  "msg.launcher_identity_warning": "Gracze dostawali złą postać za każdym razem, gdy PalServer startował z -log, -stdout, -FullStdOutLogOutput lub -abslog, a zachowywali swoją, gdy startował jak po dwukliku. Używaj Jak dwuklik, chyba że szukasz przyczyny problemu."
+  "msg.launcher_identity_warning": "Gracze dostawali złą postać za każdym razem, gdy PalServer startował z -log, -stdout, -FullStdOutLogOutput lub -abslog, a zachowywali swoją, gdy startował jak po dwukliku. Używaj Jak dwuklik, chyba że szukasz przyczyny problemu.",
+  "ui.open_repair": "Otwórz naprawę",
+  "ui.from_alert": "Z ALERTU",
+  "msg.saved_data": "Zapisane dane",
+  "msg.start_this_list_empty": "Zacznij tę listę od pustej",
+  "msg.saved_list_fix_confirm": "Rozumiem, że ta lista zacznie się od pustej; nieczytelny plik zostaje obok",
+  "msg.saved_list_refused": "MystTiq nie mógł odczytać zapisanych danych „{0}” i nie ma dobrej kopii, więc zmiany są odrzucane (plik nie jest nadpisywany). Napraw je w Doktorze serwera.",
+  "msg.saved_list_unreadable_title": "Nie można odczytać zapisanych danych „{0}”",
+  "msg.saved_list_from_copy_title": "Zapisane dane „{0}” wczytano z ostatniej dobrej kopii",
+  "msg.saved_list_repaired_title": "Zapisane dane „{0}” naprawione",
+  "msg.saved_list_admin": "Naprawa zapisanej listy wymaga roli administratora.",
+  "msg.unexpected_error_no_record": "Coś poszło nie tak ({0}): {1} Nie udało się zapisać raportu.",
+  "msg.unexpected_error_record": "Coś poszło nie tak ({0}): {1} Szczegóły są w {2}."
 }

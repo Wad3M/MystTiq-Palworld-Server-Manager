@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,13 +21,15 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.6.1 · Accepted baseline: v1.0.0.0**
+**Current version: v1.0.7.0 · Accepted baseline: v1.0.0.0**
 
 MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.6.1
+## What's new in v1.0.7.0
 
-**Your character, not a new one.** If the MystTiq service on your PC is older than the app, the Dashboard now says so and replaces it in one click, so fixes like the identity guard are really running your server. No Launcher preset adds the start options that gave players a different character any more, and the identity alert names them when it happens.
+**Nothing lost when a file is damaged.** If one of MystTiq's own lists (accounts, automation rules, kits, notification channels and the rest) can't be read, for example after a power cut, MystTiq loads its last good copy, or refuses changes so nothing is written over it, and alerts you with a link to the repair. **Errors you can see**: an unexpected error is recorded and shown instead of closing the app, and the service's background work logs its failures and stops cleanly.
+
+**Also new since 1.0 (v1.0.6.1): your character, not a new one.** If the MystTiq service on your PC is older than the app, the Dashboard now says so and replaces it in one click, so fixes like the identity guard are really running your server. No Launcher preset adds the start options that gave players a different character any more, and the identity alert names them when it happens.
 
 **Also new since 1.0 (v1.0.6.0): Pals in the Pal box.** On the Players page, add a Pal to a player's Pal box or remove one, with the same preview, confirmation, checked safety backup and verification as the inventory edits. An added Pal is a copy of one of its kind already in a Pal box, so its stats are the game's own. **MODs laid out as the game folder** (blueprint MODs for UE4SS, a PAK with scripts) now install where the game loads them.
 
@@ -53,7 +55,7 @@ MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Win
 
 **Also new since 1.0 (v1.0.0.1): launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
 
-[Release notes](release-notes/v1.0.6.1.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v1.0.7.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -120,8 +122,9 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v1.0.6.1 | Current | Fixes a player getting a new character: an older MystTiq service still running is flagged and replaced in one click; no Launcher preset adds the options behind it |
-| v1.0.6.0 | Previous | Add or remove a Pal in a player's Pal box; MODs laid out as the game folder (LogicMods, PAK with scripts) install |
+| v1.0.7.0 | Current | A damaged saved list can no longer wipe your accounts or settings; errors are recorded and shown instead of closing the app |
+| v1.0.6.1 | Previous | Fixes a player getting a new character: an older MystTiq service still running is flagged and replaced in one click; no Launcher preset adds the options behind it |
+| v1.0.6.0 | Earlier | Add or remove a Pal in a player's Pal box; MODs laid out as the game folder (LogicMods, PAK with scripts) install |
 | v1.0.5.0 | Earlier | A MOD browser: your Downloads folder, Thunderstore, CurseForge, GitHub releases and Nexus Mods, each archive checked before it installs |
 | v1.0.4.0 | Earlier | Guarded save edits: remove or add an item in a player's saved inventory, with a checked backup first |
 | v1.0.3.0 | Earlier | A read-only browser view (status, players, backups) and a Docker image of the headless service |

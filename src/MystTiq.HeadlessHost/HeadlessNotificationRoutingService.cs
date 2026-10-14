@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Mail;
@@ -94,8 +94,8 @@ public sealed class HeadlessNotificationRoutingService
     {
         lock (gate)
         {
+            Persist(channelsPath, updated);
             channels = updated;
-            Persist(channelsPath, channels);
             return channels;
         }
     }
@@ -106,8 +106,8 @@ public sealed class HeadlessNotificationRoutingService
     {
         lock (gate)
         {
+            Persist(templatesPath, updated);
             templates = updated;
-            Persist(templatesPath, templates);
             return templates;
         }
     }
@@ -177,7 +177,7 @@ public sealed class HeadlessNotificationRoutingService
                 $"{title} -> {string.Join(", ", enabled.Select(c => c.Channel))}");
             return;
         }
-        _ = Task.Run(() => DispatchAsync(enabled, severity, title, message));
+        BackgroundWork.Shared.Run("outside notification send", _ => DispatchAsync(enabled, severity, title, message));
     }
 
     private async Task DispatchAsync(List<NotificationChannelConfig> enabled, string severity, string title, string message)
@@ -293,28 +293,16 @@ public sealed class HeadlessNotificationRoutingService
         return (false, detail, 2);
     }
 
-    private NotificationChannelConfiguration LoadChannels()
-    {
-        try { return File.Exists(channelsPath) ? JsonSerializer.Deserialize<NotificationChannelConfiguration>(File.ReadAllText(channelsPath)) ?? new() : new(); }
-        catch { return new(); }
-    }
+    // v1.0.7.0 (Q-1): unreadable channels or templates are never overwritten; a delivery pause just ends.
+    private NotificationChannelConfiguration LoadChannels() =>
+        SavedFiles.Load(channelsPath, "notification channels", () => new NotificationChannelConfiguration());
 
-    private DateTimeOffset? LoadDeliveryPause()
-    {
-        try { return File.Exists(deliveryPath) ? JsonSerializer.Deserialize<NotificationDeliveryPause>(File.ReadAllText(deliveryPath))?.PausedUntilUtc : null; }
-        catch { return null; }
-    }
+    private DateTimeOffset? LoadDeliveryPause() =>
+        // An older pause coming back would silently stop outside alerts, so an unreadable one means not paused.
+        SavedFiles.Load(deliveryPath, "notification delivery pause", () => new NotificationDeliveryPause(null), ownerData: false, useGoodCopy: false).PausedUntilUtc;
 
-    private List<NotificationTemplate> LoadTemplates()
-    {
-        try { return File.Exists(templatesPath) ? JsonSerializer.Deserialize<List<NotificationTemplate>>(File.ReadAllText(templatesPath)) ?? [] : []; }
-        catch { return []; }
-    }
+    private List<NotificationTemplate> LoadTemplates() =>
+        SavedFiles.Load(templatesPath, "notification templates", () => new List<NotificationTemplate>());
 
-    private static void Persist<T>(string path, T value)
-    {
-        var partial = path + ".partial";
-        File.WriteAllText(partial, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(partial, path, true);
-    }
+    private static void Persist<T>(string path, T value) => SavedFiles.Save(path, value);
 }

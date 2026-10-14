@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -43,7 +43,7 @@ public sealed class HeadlessRbacService
             expiresUtc,
             true,
             string.IsNullOrWhiteSpace(scopedServerProfileId) ? null : scopedServerProfileId.Trim());
-        lock (gate) { principals[id] = record; Persist(); }
+        lock (gate) { SavedFiles.EnsureWritable(statePath); principals[id] = record; Persist(); }
         return (ToPrincipal(record), token);
     }
 
@@ -80,24 +80,12 @@ public sealed class HeadlessRbacService
 
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
-    private Dictionary<string, HeadlessPrincipalRecord> Load()
-    {
-        try
-        {
-            if (!File.Exists(statePath)) return new(StringComparer.Ordinal);
-            var list = JsonSerializer.Deserialize<List<HeadlessPrincipalRecord>>(File.ReadAllText(statePath)) ?? [];
-            return list.ToDictionary(p => p.Id, StringComparer.Ordinal);
-        }
-        catch { return new(StringComparer.Ordinal); }
-    }
+    // v1.0.7.0 (Q-1): an unreadable principals.json is never overwritten.
+    private Dictionary<string, HeadlessPrincipalRecord> Load() =>
+        SavedFiles.Load(statePath, "API tokens", () => new List<HeadlessPrincipalRecord>()).ToDictionary(p => p.Id, StringComparer.Ordinal);
 
     // Caller must already hold gate.
-    private void Persist()
-    {
-        var partial = statePath + ".partial";
-        File.WriteAllText(partial, JsonSerializer.Serialize(principals.Values.ToList(), new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(partial, statePath, true);
-    }
+    private void Persist() => SavedFiles.Save(statePath, principals.Values.ToList());
 }
 
 public sealed record HeadlessPrincipalRecord(string Id, string Name, MystTiqRole Role, string TokenSha256, DateTimeOffset CreatedUtc, DateTimeOffset? ExpiresUtc, bool Enabled, string? ScopedServerProfileId = null);

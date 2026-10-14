@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -172,9 +172,9 @@ public sealed class HeadlessComponentUpdateService
         if ((!known || DateTimeOffset.UtcNow - cached.At >= PublicBuildCacheAge) && File.Exists(steamCmd) &&
             Interlocked.CompareExchange(ref publicBuildRefreshing, 1, 0) == 0)
         {
-            _ = Task.Run(async () =>
+            BackgroundWork.Shared.Run("Steam public build check", async token =>
             {
-                try { await GetPublicBuildAsync(CancellationToken.None); }
+                try { await GetPublicBuildAsync(token); }
                 finally { Interlocked.Exchange(ref publicBuildRefreshing, 0); }
             });
         }
@@ -248,10 +248,11 @@ public sealed class HeadlessComponentUpdateService
     {
         if (DateTimeOffset.UtcNow - ue4ssCheckedAt > Ue4ssRefresh && Interlocked.CompareExchange(ref ue4ssRefreshing, 1, 0) == 0)
         {
-            _ = Task.Run(async () =>
+            BackgroundWork.Shared.Run("UE4SS version check", async token =>
             {
-                try { await CheckUe4ssAsync(DateTimeOffset.UtcNow, CancellationToken.None); }
-                catch { ue4ssCheckedAt = DateTimeOffset.UtcNow; }
+                // A failed check is not retried until the next interval; the tracker logs why it failed.
+                try { await CheckUe4ssAsync(DateTimeOffset.UtcNow, token); }
+                catch { ue4ssCheckedAt = DateTimeOffset.UtcNow; throw; }
                 finally { Interlocked.Exchange(ref ue4ssRefreshing, 0); }
             });
         }

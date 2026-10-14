@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.6.1: file reviewed for this release (2026-10-06). -->
+<!-- MystTiq v1.0.7.0: file reviewed for this release (2026-10-08). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -330,6 +330,13 @@
         <!-- v0.8.14.0: says so when cards are hidden or read-only because of the signed-in role (RoleAccess). -->
         <Border x:Name="RoleHiddenNotice" Classes="statuscard" Padding="10,6" IsVisible="{Binding HasRoleHiddenNotice}">
           <TextBlock Text="{services:TrText RoleHiddenNotice}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap"/>
+        </Border>
+        <!-- v1.0.7.0 (roadmap Q-2): an error nobody caught is shown here, on every page, instead of closing the app. -->
+        <Border x:Name="UnexpectedErrorBanner" Classes="statuscard" BorderBrush="{DynamicResource RedBrush}" BorderThickness="1" Padding="10,7" IsVisible="{Binding HasUnexpectedError}">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <SelectableTextBlock Text="{services:TrText UnexpectedErrorText}" Foreground="{DynamicResource RedBrush}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Classes="plain" Content="{services:Tr ui.dismiss}" Command="{Binding DismissUnexpectedErrorCommand}"/>
+          </Grid>
         </Border>
         <!-- DASHBOARD -->
         <!-- v0.7.53.0: Dashboard Layout Density, item 13. Smaller/denser stat cards, matching the
@@ -3021,6 +3028,7 @@
                     <StackPanel Grid.Column="1" MinWidth="150" VerticalAlignment="Center">
                       <TextBlock Text="{services:TrText Component}" FontSize="13" FontWeight="SemiBold"/>
                       <TextBlock Text="{services:TrText Category}" Foreground="{DynamicResource MutedBrush}" FontSize="10"/>
+                      <Border Classes="tag info" HorizontalAlignment="Left" IsVisible="{Binding IsFocused}"><TextBlock Text="{services:Tr ui.from_alert}"/></Border>
                     </StackPanel>
                     <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1">
                       <TextBlock Text="{services:TrText Evidence}" TextWrapping="Wrap" FontSize="11"/>
@@ -3280,7 +3288,7 @@
           <Border Classes="card accentSystem"><Grid ColumnDefinitions="*"><StackPanel><TextBlock Text="{services:TrText NotificationState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Grid></Border>
           <Border Classes="card accentSystem"><StackPanel Spacing="10"><Grid ColumnDefinitions="2*,*" ColumnSpacing="8"><TextBox Text="{Binding NotificationSearchText}" PlaceholderText="{services:Tr ui.search_notifications}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_severity_filter}" Grid.Column="1" ItemsSource="{Binding NotificationSeverityOptions}" SelectedItem="{Binding NotificationSeverityFilter}"/></Grid>
             <Grid ColumnDefinitions="2*,*" ColumnSpacing="12">
-              <ListBox AutomationProperties.Name="{services:Tr nav.Notifications}" ItemsSource="{Binding FilteredNotifications}" SelectedItem="{Binding SelectedNotification}" MaxHeight="470"><ListBox.ItemTemplate><DataTemplate x:DataType="models:NotificationItemDto"><Border Classes="statuscard accentSystem" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{services:TrText Title}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Message}" TextWrapping="Wrap"/><TextBlock Text="{services:TrText Severity}" Foreground="{DynamicResource VioletBrush}"/><TextBlock Text="{services:TrText StateText}" Classes="muted" FontSize="10"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+              <ListBox AutomationProperties.Name="{services:Tr nav.Notifications}" ItemsSource="{Binding FilteredNotifications}" SelectedItem="{Binding SelectedNotification}" MaxHeight="470"><ListBox.ItemTemplate><DataTemplate x:DataType="models:NotificationItemDto"><Border Classes="statuscard accentSystem" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{services:TrText Title}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Message}" TextWrapping="Wrap"/><TextBlock Text="{services:TrText Severity}" Foreground="{DynamicResource VioletBrush}"/><TextBlock Text="{services:TrText StateText}" Classes="muted" FontSize="10"/><Button Classes="open" HorizontalAlignment="Left" Content="{services:Tr ui.open_repair}" IsVisible="{Binding HasLink}" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).OpenNotificationLinkCommand}" CommandParameter="{Binding}"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
               <Border Grid.Column="1" Classes="statuscard accentSystem"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.selected_notification}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:TrText SelectedNotification.Title}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText SelectedNotification.Message}" TextWrapping="Wrap"/><TextBlock Text="{services:TrText SelectedNotification.StateText}" Classes="muted"/><Button Classes="caution" Content="{services:Tr ui.toggle_read_unread}" Command="{Binding ToggleNotificationReadCommand}"/><Button Classes="caution" Content="{services:Tr ui.pin_unpin}" Command="{Binding ToggleNotificationPinCommand}"/><Button Classes="plain" Content="{services:Tr ui.dismiss}" Command="{Binding DismissNotificationCommand}"/></StackPanel></Border>
             </Grid>
           </StackPanel></Border>

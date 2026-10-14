@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Runtime.InteropServices;
 using Avalonia;
 
@@ -16,6 +16,8 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // v1.0.7.0 (roadmap Q-2): no error ends the app unrecorded.
+        Services.CrashRecorder.Install();
         // v1.0.5.0 (roadmap M-1): started by the browser with a Nexus "Mod Manager Download" link. The link goes to the
         // inbox; the running MystTiq (or this one, once started) picks it up from there.
         var nxmDelivered = Services.NxmLinkHandoff.FindLink(args) is { } nxm && TryDeliver(nxm);

@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using MystTiq.Core.Models;
@@ -65,8 +65,8 @@ public sealed class HeadlessAntiCheatService
     {
         lock (gate)
         {
+            Persist(rulesPath, updated);
             rules = updated;
-            Persist(rulesPath, rules);
             return rules;
         }
     }
@@ -167,22 +167,11 @@ public sealed class HeadlessAntiCheatService
             $"{(result.Success ? "Enforced" : "Failed to enforce")} {action} for rule {ruleKey}", result.Message);
     }
 
-    private AntiCheatRuleSet LoadRules()
-    {
-        try { return File.Exists(rulesPath) ? JsonSerializer.Deserialize<AntiCheatRuleSet>(File.ReadAllText(rulesPath)) ?? new() : new(); }
-        catch { return new(); }
-    }
+    // v1.0.7.0 (Q-1): unreadable anti-cheat rules are never overwritten; the findings list is a log.
+    private AntiCheatRuleSet LoadRules() => SavedFiles.Load(rulesPath, "anti-cheat rules", () => new AntiCheatRuleSet());
 
-    private List<AntiCheatFinding> LoadFindings()
-    {
-        try { return File.Exists(findingsPath) ? JsonSerializer.Deserialize<List<AntiCheatFinding>>(File.ReadAllText(findingsPath)) ?? [] : []; }
-        catch { return []; }
-    }
+    private List<AntiCheatFinding> LoadFindings() =>
+        SavedFiles.Load(findingsPath, "anti-cheat findings", () => new List<AntiCheatFinding>(), ownerData: false);
 
-    private static void Persist<T>(string path, T value)
-    {
-        var partial = path + ".partial";
-        File.WriteAllText(partial, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(partial, path, true);
-    }
+    private static void Persist<T>(string path, T value) => SavedFiles.Save(path, value);
 }

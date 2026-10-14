@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -68,7 +68,7 @@ public sealed class HeadlessWorldClockService
             if (lastAttempt.TryGetValue(worldPath, out var at) && DateTime.UtcNow - at < RefreshEvery) return;
             lastAttempt[worldPath] = DateTime.UtcNow;
         }
-        _ = Task.Run(async () => { try { await RefreshAsync(worldPath, CancellationToken.None); } catch { } });
+        BackgroundWork.Shared.Run("world clock refresh", token => RefreshAsync(worldPath, token));
     }
 
     /// <summary>Decodes a copy of the world's Level.sav, writes Level.sav.json beside it, and returns its clock.</summary>

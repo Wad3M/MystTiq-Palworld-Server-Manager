@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
@@ -110,7 +110,7 @@ public sealed class HeadlessModSafeStartService
 
         activity.Record("Information", "Mods", mode == SafeStartMode.TestLoad ? "Stuck-start test load started" : "Safe-start diagnostic started",
             $"{candidates.Count} enabled MOD(s){(stopStuckFirst ? "; the stuck start is stopped first" : string.Empty)}.");
-        _ = Task.Run(() => RunAsync(job, candidates, stopStuckFirst, handle, job.Cts.Token));
+        _ = BackgroundWork.Shared.Run("MOD safe start", token => RunAsync(job, candidates, stopStuckFirst, handle, token), job.Cts.Token);
         return new HeadlessModMutationResult(true, string.Empty, string.Empty, false, 0,
             mode == SafeStartMode.TestLoad
                 ? $"Test load began: the server starts once with every MOD off ({candidates.Count}), then they are switched back on."

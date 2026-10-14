@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using MystTiq.Core.Services;
 
@@ -72,10 +72,8 @@ public sealed class HeadlessAlertCenterService
     {
         lock (gate)
         {
+            SavedFiles.Save(rulesPath, updated);
             rules = updated;
-            var partial = rulesPath + ".partial";
-            File.WriteAllText(partial, JsonSerializer.Serialize(rules, new JsonSerializerOptions { WriteIndented = true }));
-            File.Move(partial, rulesPath, true);
             return rules;
         }
     }
@@ -327,11 +325,8 @@ public sealed class HeadlessAlertCenterService
         return ((last.WorldSizeBytes - first.WorldSizeBytes) / days, snapshot.Samples.Count);
     }
 
-    private AlertRuleSet Load()
-    {
-        try { return File.Exists(rulesPath) ? JsonSerializer.Deserialize<AlertRuleSet>(File.ReadAllText(rulesPath)) ?? new() : new(); }
-        catch { return new(); }
-    }
+    // v1.0.7.0 (Q-1): unreadable alert rules are never overwritten.
+    private AlertRuleSet Load() => SavedFiles.Load(rulesPath, "alert rules", () => new AlertRuleSet());
 }
 
 public sealed record AlertThresholdRule(bool Enabled, double ThresholdPercent, int CooldownMinutes);

@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 namespace MystTiq.Desktop.Models;
 
 // v1.0.0.2: unique player names, GET/PUT /players/name-guard. Like the whitelist, the whole list is read and replaced at

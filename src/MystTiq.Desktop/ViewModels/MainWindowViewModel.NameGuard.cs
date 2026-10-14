@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using MystTiq.Desktop.Models;
@@ -36,7 +36,7 @@ public sealed partial class MainWindowViewModel
     private void ToggleNameGuard()
     {
         IsNameGuardExpanded = !IsNameGuardExpanded;
-        if (IsNameGuardExpanded) Avalonia.Threading.Dispatcher.UIThread.Post(async () => await RefreshNameGuardAsync());
+        if (IsNameGuardExpanded) RunUi(() => RefreshNameGuardAsync());
     }
 
     private async Task RefreshNameGuardAsync()

@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -3527,9 +3527,18 @@ try
 
         var reloaded = new HeadlessResourcePolicyService(paths, server, _ => Task.FromResult(online), activity, control, () => now);
         Assert(reloaded.GetPolicy() == new ServerResourcePolicy(ServerPriorityLevel.AboveNormal, ServerEcoMode.WhenEmpty, 10), "the policy is kept across a restart of MystTiq");
-        File.WriteAllText(Path.Combine(paths.ManagerRuntimeRoot, "resource-policy.json"), "{ not json");
-        Assert(new HeadlessResourcePolicyService(paths, server, _ => Task.FromResult(online), activity, control, () => now).GetPolicy() == new ServerResourcePolicy(),
-            "a damaged policy file falls back to changing nothing");
+        // v1.0.7.0 (Q-1): a damaged policy file loads its last good copy; with none, it changes nothing and is not overwritten.
+        var policyFile = Path.Combine(paths.ManagerRuntimeRoot, "resource-policy.json");
+        File.WriteAllText(policyFile, "{ not json");
+        SavedFiles.ResetForTests();
+        new HeadlessResourcePolicyService(paths, server, _ => Task.FromResult(online), activity, control, () => now);
+        Assert(SavedFiles.Snapshot(paths.ManagerRuntimeRoot).Any(h => h.State == SavedFileState.LoadedFromCopy), "a damaged policy file loads its last good copy");
+        File.Delete(policyFile + SavedFiles.GoodCopySuffix);
+        SavedFiles.ResetForTests();
+        Assert(new HeadlessResourcePolicyService(paths, server, _ => Task.FromResult(online), activity, control, () => now).GetPolicy() == new ServerResourcePolicy() && SavedFiles.IsRefused(policyFile),
+            "a damaged policy file falls back to changing nothing (with no good copy), and saving over it is refused until it is repaired");
+        SavedFiles.ResetForTests();
+        File.Delete(policyFile);
         server.Running = false;
         var stopped = service.ApplyAsync(CancellationToken.None).GetAwaiter().GetResult();
         Assert(!stopped.Running && !stopped.EcoActive && stopped.EcoReason.Contains("not running"), "a stopped server has nothing to apply");
@@ -3803,6 +3812,180 @@ try
         Assert(new[] { "POST", "PUT", "DELETE", "PATCH" }.All(m => RbacEndpointExtensions.DefaultMinimum(m) == MystTiqRole.Admin),
             "every changing method needs Admin unless the route itself allows a lower role");
         Assert(new RequiredRoleMetadata(MystTiqRole.Operator).Minimum == MystTiqRole.Operator, "a route's own role is recorded on it");
+    }, failures);
+
+    // v1.0.7.0 (roadmap Q-1, owner decision D-10): a saved list that cannot be read is never overwritten.
+    RunScenario("Saved lists (Q-1): the account wipe reproduced on 2026-10-08 no longer happens: an unreadable users.json is kept, changes are refused with the reason, and the file is left byte for byte", () =>
+    {
+        SavedFiles.ResetForTests();
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "saved-users-" + Guid.NewGuid().ToString("N")));
+        var users = new HeadlessUserAccountService(paths, new HeadlessActivityLogService(paths));
+        foreach (var name in new[] { "alice", "bob", "carol" })
+            Assert(users.Create(new(name, null, MystTiqRole.Operator, "long enough pw", null), "t").Success, $"{name} is created");
+        var file = Path.Combine(paths.ManagerRuntimeRoot, "security", "users.json");
+        // Cut short, as after a power cut; the good copy is removed too, so there is nothing to fall back to.
+        var text = File.ReadAllText(file);
+        File.WriteAllText(file, text[..(text.Length / 2)]);
+        File.Delete(file + SavedFiles.GoodCopySuffix);
+        var damaged = File.ReadAllBytes(file);
+
+        var restarted = new HeadlessUserAccountService(paths, new HeadlessActivityLogService(paths));
+        var health = SavedFiles.Snapshot(paths.ManagerRuntimeRoot).Single();
+        Assert(health.State == SavedFileState.Unreadable && health.ChangesRefused && health.Name == "user accounts", "the list is reported unreadable and refused");
+        Assert(health.KeptCopy is { } kept && File.Exists(kept) && File.ReadAllBytes(kept).SequenceEqual(damaged), "the unreadable file is kept as a copy");
+        var refused = restarted.Create(new("dave", null, MystTiqRole.Viewer, "long enough pw", null), "t");
+        Assert(!refused.Success && refused.Message.Contains("changes to it are refused") && refused.Message.Contains("Server Doctor"), "creating an account is refused with the reason and where to repair it");
+        Assert(File.ReadAllBytes(file).SequenceEqual(damaged), "users.json is left exactly as it was");
+        Assert(restarted.List().Count == 0, "nothing was added in memory either");
+        Assert(SavedFiles.FindingId(file) == "saved-file-security-users", "the repair finding has a stable id");
+    }, failures);
+
+    RunScenario("Saved lists (Q-1): every save keeps the file it replaces as the last good copy; an unreadable file loads that copy, and the bad file never becomes the good copy", () =>
+    {
+        SavedFiles.ResetForTests();
+        var root = Path.Combine(tempRoot, "saved-copy-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var file = Path.Combine(root, "rules.json");
+        SavedFiles.Save(file, new List<string> { "first" });
+        Assert(!File.Exists(file + SavedFiles.GoodCopySuffix), "the first save has nothing to keep");
+        SavedFiles.Save(file, new List<string> { "first", "second" });
+        Assert(SavedFiles.Load(file + SavedFiles.GoodCopySuffix, "x", () => new List<string>()).SequenceEqual(new[] { "first" }), "the second save kept the first as the good copy");
+        File.WriteAllText(file, "{ not json");
+        var loaded = SavedFiles.Load(file, "test rules", () => new List<string>());
+        Assert(loaded.SequenceEqual(new[] { "first" }), "the unreadable file loads its last good copy");
+        var health = SavedFiles.Snapshot(root).Single();
+        Assert(health.State == SavedFileState.LoadedFromCopy && !health.ChangesRefused && health.Detail.Contains("last good copy"), "it says so, and changes are allowed");
+        for (var i = 0; i < 4; i++) SavedFiles.Load(file, "test rules", () => new List<string>());
+        Assert(Directory.GetFiles(root, "rules.json" + SavedFiles.UnreadableInfix + "*").Length == 1, "a list read again and again keeps one copy of the bad file, not one per read");
+        SavedFiles.Save(file, new List<string> { "first", "third" });
+        Assert(SavedFiles.Load(file + SavedFiles.GoodCopySuffix, "x", () => new List<string>()).SequenceEqual(new[] { "first" }), "saving over the bad file kept the good copy, not the bad file");
+        Assert(SavedFiles.Load(file, "test rules", () => new List<string>()).SequenceEqual(new[] { "first", "third" }) && SavedFiles.Snapshot(root).Count == 0,
+            "once saved, the file reads again and the report is closed");
+    }, failures);
+
+    RunScenario("Saved lists (Q-1): the repair starts a refused list empty, keeps the unreadable file beside it and allows changes; a file that reads again is left for a restart; a log just starts empty", () =>
+    {
+        SavedFiles.ResetForTests();
+        var root = Path.Combine(tempRoot, "saved-repair-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var file = Path.Combine(root, "kits.json");
+        File.WriteAllText(file, "[ 1, 2");
+        Assert(SavedFiles.Load(file, "kits", () => new List<int>()).Count == 0 && SavedFiles.IsRefused(file), "an unreadable owner list with no copy is refused");
+        try { SavedFiles.Save(file, new List<int> { 9 }); Assert(false, "a save to a refused list must throw"); }
+        catch (SavedFileRefusedException ex) { Assert(ex.Message.Contains("saved kits"), "the refusal names the list"); }
+
+        File.WriteAllText(file, "[ 1, 2 ]");
+        var early = SavedFiles.Repair(file);
+        Assert(!early.Success && early.Message.Contains("Restart the MystTiq service") && SavedFiles.IsRefused(file), "a file that reads again is not touched: restart to load it");
+
+        File.WriteAllText(file, "[ 1, 2");
+        var repaired = SavedFiles.Repair(file);
+        Assert(repaired.Success && !SavedFiles.IsRefused(file) && !File.Exists(file), "the repair starts it empty and allows changes");
+        Assert(Directory.GetFiles(root, "kits.json" + SavedFiles.UnreadableInfix + "*").Any(f => File.ReadAllText(f) == "[ 1, 2"), "the unreadable file is kept beside it");
+        SavedFiles.Save(file, new List<int> { 9 });
+        Assert(SavedFiles.Load(file, "kits", () => new List<int>()).SequenceEqual(new[] { 9 }), "changes are saved again");
+
+        var log = Path.Combine(root, "runs.json");
+        File.WriteAllText(log, "garbage");
+        Assert(SavedFiles.Load(log, "run history", () => new List<int>(), ownerData: false).Count == 0 && !SavedFiles.IsRefused(log), "a log MystTiq rebuilds starts empty and is not refused");
+        Assert(SavedFiles.Snapshot(root).Single(h => h.Path.EndsWith("runs.json")).State == SavedFileState.StartedEmpty, "and it is reported as started empty");
+        SavedFiles.ResetForTests();
+    }, failures);
+
+    // v1.0.7.0 (roadmap Q-5): only a held or locked file is retried.
+    RunScenario("File retry (Q-5): a held or locked file is retried, anything else fails at once", () =>
+    {
+        Assert(FileRetry.IsHeld(new IOException("held", unchecked((int)0x80070020))), "a sharing violation is held");
+        Assert(FileRetry.IsHeld(new IOException("locked", unchecked((int)0x80070021))), "a lock violation is held");
+        Assert(FileRetry.IsHeld(new IOException("replace", unchecked((int)0x80070497))), "unable to remove the file to be replaced is held");
+        Assert(!FileRetry.IsHeld(new FileNotFoundException("gone")) && !FileRetry.IsHeld(new IOException("full", unchecked((int)0x80070070))), "a missing file or a full disk is not");
+        var started = DateTime.UtcNow;
+        try { FileRetry.Move(Path.Combine(tempRoot, "no-such-" + Guid.NewGuid().ToString("N")), Path.Combine(tempRoot, "x")); Assert(false, "moving a missing file must throw"); }
+        catch (FileNotFoundException) { }
+        Assert(DateTime.UtcNow - started < FileRetry.Pause, "and fails without waiting");
+    }, failures);
+
+    // v1.0.7.0 (roadmap Q-3): background work is named, logged once, cancelled at shutdown; one run of a rule at a time.
+    RunScenarioAsync("Background work (Q-3): a failure is logged once per distinct message (again after a success), shutdown cancels running work, and work that ignores it is named", async () =>
+    {
+        var work = new BackgroundWork();
+        var logged = new List<string>();
+        work.FailureLog = (name, message) => { lock (logged) logged.Add($"{name}: {message}"); };
+        await work.Run("check", _ => throw new IOException("disk gone"));
+        await work.Run("check", _ => throw new IOException("disk gone"));
+        Assert(logged.SequenceEqual(new[] { "check: disk gone" }), $"the same failure twice is logged once [{string.Join(" | ", logged)}]");
+        await work.Run("check", _ => throw new IOException("access denied"));
+        Assert(logged.Count == 2 && logged[1] == "check: access denied", "a different failure is logged");
+        await work.Run("check", _ => Task.CompletedTask);
+        await work.Run("check", _ => throw new IOException("access denied"));
+        Assert(logged.Count == 3, "after a success the same failure is logged again");
+
+        var cancelled = false;
+        var waiting = work.Run("waits for shutdown", async token =>
+        {
+            try { await Task.Delay(Timeout.Infinite, token); }
+            catch (OperationCanceledException) { cancelled = true; throw; }
+        });
+        var stubborn = new TaskCompletionSource();
+        _ = work.Run("ignores shutdown", _ => stubborn.Task);
+        Assert(work.Running.Contains("waits for shutdown") && work.Running.Contains("ignores shutdown"), "running work is listed by name");
+        var started = DateTime.UtcNow;
+        var still = await work.StopAsync(TimeSpan.FromMilliseconds(300));
+        await waiting;
+        Assert(cancelled && still.SequenceEqual(new[] { "ignores shutdown" }) && DateTime.UtcNow - started < TimeSpan.FromSeconds(5),
+            $"shutdown cancels running work and names what did not stop [{string.Join(", ", still)}]");
+        Assert(logged.Count == 3, "a cancelled run at shutdown is not logged as a failure");
+        stubborn.SetResult();
+    }, failures);
+
+    RunScenario("Automation (Q-3): a rule still running when it comes due again is not started a second time", () =>
+    {
+        var gate = new SingleRunGate<AutomationRuleId>();
+        var rule = AutomationRuleId.New();
+        var other = AutomationRuleId.New();
+        Assert(gate.TryEnter(rule), "the first run starts");
+        Assert(!gate.TryEnter(rule) && gate.IsRunning(rule), "a second run of the same rule is refused while the first runs");
+        Assert(gate.TryEnter(other), "another rule is not held up");
+        gate.Exit(rule);
+        Assert(gate.TryEnter(rule), "once the first run ends, the rule runs again");
+    }, failures);
+
+    // v1.0.7.0 (roadmap Q-5): the server's state file: concurrent and interrupted writes, and a lasting failure named.
+    RunScenario("Server state file (Q-5): concurrent writers leave a readable file, a write interrupted earlier does not block the next, and a file held past the retry fails with what to check", () =>
+    {
+        var root = Path.Combine(tempRoot, "state-store-" + Guid.NewGuid().ToString("N"));
+        var store = new ServerLifecycleStateStore(root);
+        Parallel.For(0, 4, writer =>
+        {
+            for (var i = 0; i < 40; i++)
+                store.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Running, 1000 + writer, DateTimeOffset.UtcNow, false, $"writer {writer} write {i}"));
+        });
+        var read = store.Read();
+        Assert(read is { Phase: ServerLifecyclePhase.Running } && read.Detail.EndsWith("write 39"), $"four writers at once leave a whole, readable file [{read?.Detail}]");
+
+        File.WriteAllText(store.StatePath + ".tmp", "{ half a wri");
+        store.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopped, null, DateTimeOffset.UtcNow, true, "after an interrupted write"));
+        Assert(store.Read()?.Detail == "after an interrupted write", "a .tmp left by an interrupted write does not stop the next write");
+
+        if (OperatingSystem.IsWindows())
+        {
+            string message;
+            using (new FileStream(store.StatePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                try { store.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Running, 1, DateTimeOffset.UtcNow, false, "held")); message = "no error"; }
+                catch (IOException ex) { message = ex.Message; }
+            }
+            Assert(message.Contains("could not save the server's state file") && message.Contains("Another program may be holding it"),
+                $"a file held past the retry fails with what it was and what to check [{message}]");
+            File.SetAttributes(store.StatePath, FileAttributes.ReadOnly);
+            try
+            {
+                try { store.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Running, 1, DateTimeOffset.UtcNow, false, "read-only")); message = "no error"; }
+                catch (IOException ex) { message = ex.Message; }
+                Assert(message.Contains("read-only"), $"a read-only state file says so [{message}]");
+            }
+            finally { File.SetAttributes(store.StatePath, FileAttributes.Normal); }
+        }
     }, failures);
 }
 finally

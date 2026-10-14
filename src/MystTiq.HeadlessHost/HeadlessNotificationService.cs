@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Text.Json;
 using MystTiq.Core.Services;
 
@@ -57,10 +57,12 @@ public sealed class HeadlessNotificationService
 
     // Same as above, plus the created notification's id -- v0.7.104.0: the Alert Center needs it to
     // unpin the alert once its episode ends (see AlertEpisodeTracker.SetAlertNotificationId).
-    public HeadlessNotificationSnapshot Create(string severity, string title, string message, bool pinned, out string id)
+    // v1.0.7.0 (Q-1): link names where the Desktop opens to act on it, e.g. "diagnostics:saved-file-security-users".
+    public HeadlessNotificationSnapshot Create(string severity, string title, string message, bool pinned, out string id, string? link = null)
     {
         HeadlessNotificationSnapshot snapshot;
         var item = New(severity, title, message, pinned);
+        item.Link = link;
         lock (gate)
         {
             var items = Load();
@@ -145,6 +147,8 @@ public sealed class HeadlessNotificationItem
     public bool Read { get; set; }
     public bool Pinned { get; set; }
     public DateTimeOffset CreatedUtc { get; set; }
+    // v1.0.7.0 (Q-1): where the Desktop opens to act on this notification ("diagnostics:<finding id>"), or null.
+    public string? Link { get; set; }
 }
 public sealed record HeadlessNotificationSnapshot(IReadOnlyList<HeadlessNotificationItem> Items, int UnreadCount, int PinnedCount, DateTimeOffset ObservedAt, string Detail);
 public sealed record HeadlessNotificationFlagRequest(bool Value);

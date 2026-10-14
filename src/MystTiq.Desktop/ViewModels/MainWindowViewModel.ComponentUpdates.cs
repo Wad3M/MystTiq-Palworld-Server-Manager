@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Diagnostics;
 using System.Windows.Input;
 using Avalonia.Threading;
@@ -27,7 +27,7 @@ public sealed partial class MainWindowViewModel
     private void UpdateComponent(ComponentVersionDto? component)
     {
         if (component is null || !component.CanUpdate) return;
-        Dispatcher.UIThread.Post(async () => await UpdateComponentAsync(component));
+        RunUi(() => UpdateComponentAsync(component));
     }
 
     public async Task UpdateComponentAsync(ComponentVersionDto component)

@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -28,6 +28,43 @@ namespace MystTiq.HeadlessHost;
 // log to each profile's own activity log).
 public sealed class LocalManagementApiHost : IAsyncDisposable
 {
+    // v1.0.7.0 (roadmap Q-1, owner decision D-10): every saved list MystTiq could not read is alerted once, on the server
+    // whose folder holds it (users and API tokens on the default server), linking to its repair on the Server Doctor page.
+    // A list refused until repaired is a pinned critical alert; one loaded from its last good copy is a warning; a log
+    // MystTiq rebuilds itself is only written to the activity log.
+    private static void WatchSavedFiles(Dictionary<ServerProfileId, ServerProfileHost> profiles, HeadlessActivityLogService fleetActivity)
+    {
+        var alerted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var gate = new object();
+        void Alert(SavedFileHealth file)
+        {
+            lock (gate)
+                if (!alerted.Add($"{file.Path}|{file.State}|{file.KeptCopy}")) return;
+            fleetActivity.Record(file.ChangesRefused ? "Error" : "Warning", "Saved data", $"Saved {file.Name}: {file.State}", file.Detail);
+            if (file.State == SavedFileState.StartedEmpty) return;
+            var owner = profiles.Values.FirstOrDefault(p => file.Path.StartsWith(
+                                Path.TrimEndingDirectorySeparator(Path.GetFullPath(p.Paths.ManagerRuntimeRoot)) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                        ?? profiles.Values.FirstOrDefault(p => p.Id.Value == "default") ?? profiles.Values.FirstOrDefault();
+            if (owner is null) return;
+            var link = "diagnostics:" + SavedFiles.FindingId(file.Path);
+            switch (file.State)
+            {
+                case SavedFileState.Unreadable:
+                    owner.Notifications.Create("Critical", $"Saved {file.Name} could not be read",
+                        file.Detail + " Open the repair in Server Doctor.", pinned: true, out _, link);
+                    break;
+                case SavedFileState.LoadedFromCopy:
+                    owner.Notifications.Create("Warning", $"Saved {file.Name} loaded from its last good copy", file.Detail, pinned: false, out _, link);
+                    break;
+                case SavedFileState.Repaired:
+                    owner.Notifications.Create("Information", $"Saved {file.Name} repaired", file.Detail, pinned: false, out _, link);
+                    break;
+            }
+        }
+        SavedFiles.Changed += Alert;
+        foreach (var file in SavedFiles.Snapshot()) Alert(file);
+    }
+
     private readonly WebApplication app;
     private readonly IReadOnlyDictionary<ServerProfileId, ServerProfileHost> profiles;
 
@@ -232,7 +269,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 activity);
             policyLifecycle.AfterStart = async token => await resourcePolicy.ApplyAsync(token);
             var automation = new HeadlessAutomationService(paths, configuration, serverConfig, lifecycle, backups, notifications, notificationRouting, rcon, operations, activity, alertCenter, monitoring, antiCheat, crashReports, resourcePolicy);
-            var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer, backups, crashAndSaveTools, () => alertCenter.LowDiskCriticalPercent(), automation, componentUpdates, networkDiagnostics, profileId.Value, serverConfig.LaunchArguments);
+            var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer, backups, crashAndSaveTools, () => alertCenter.LowDiskCriticalPercent(), automation, componentUpdates, networkDiagnostics, profileId.Value, serverConfig.LaunchArguments, fleetPaths.ManagerRuntimeRoot);
             var worldClone = new HeadlessWorldCloneService(paths, lifecycle, serverConfig, fleetConfigurationApi, palworldConfiguration, activity);
             var modSafeStart = new HeadlessModSafeStartService(
                 lifecycle, modManagement, serverConfig, activity, operations, profileId,
@@ -307,6 +344,9 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         }
 
         var host = new LocalManagementApiHost(app, profiles);
+        WatchSavedFiles(profiles, fleetActivity);
+        // v1.0.7.0 (roadmap Q-3): background work that fails is written to the activity log (once per distinct failure).
+        BackgroundWork.Shared.FailureLog = (name, message) => fleetActivity.Record("Warning", "Background", $"{name} failed", message);
 
         app.Use(async (context, next) =>
         {
@@ -327,6 +367,18 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                     $"{context.Request.Method} {path}",
                     $"HTTP {context.Response.StatusCode} in {(DateTimeOffset.UtcNow - started).TotalMilliseconds:F0} ms",
                     (context.Items[RbacEndpointExtensions.PrincipalItemKey] as MystTiqPrincipal)?.Name);
+            }
+        });
+
+        // v1.0.7.0 (roadmap Q-1): a change to a saved list MystTiq could not read (and has no good copy of) is refused,
+        // never written over the file; the caller gets why and where to repair it.
+        app.Use(async (context, next) =>
+        {
+            try { await next(); }
+            catch (SavedFileRefusedException ex) when (!context.Response.HasStarted)
+            {
+                context.Response.StatusCode = StatusCodes.Status409Conflict;
+                await context.Response.WriteAsJsonAsync(new { error = "saved-file-refused", message = ex.Message, repair = "Doctor" });
             }
         });
 
@@ -1543,6 +1595,9 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // v1.0.7.0 (roadmap Q-3): background work is cancelled and given up to 10 s to finish before the profiles go.
+        var still = await BackgroundWork.Shared.StopAsync(TimeSpan.FromSeconds(10));
+        if (still.Count > 0) Console.Error.WriteLine($"Still running at shutdown: {string.Join(", ", still)}");
         foreach (var p in profiles.Values)
             await p.DisposeAsync();
         await app.DisposeAsync();

@@ -1,4 +1,4 @@
-// MystTiq v1.0.6.1: file reviewed for this release (2026-10-06).
+// MystTiq v1.0.7.0: file reviewed for this release (2026-10-08).
 using System.Diagnostics;
 using System.Text.Json;
 using MystTiq.Core.Providers;
@@ -53,16 +53,15 @@ public sealed class HeadlessIdentityGuardService
     {
         lock (gate)
         {
+            SavedFiles.SaveText(configPath, JsonSerializer.Serialize(updated));
             config = updated;
-            File.WriteAllText(configPath, JsonSerializer.Serialize(updated));
             return config;
         }
     }
 
     public IReadOnlyList<IdentityGuardEvent> RecentEvents()
     {
-        try { return File.Exists(eventsPath) ? JsonSerializer.Deserialize<List<IdentityGuardEvent>>(File.ReadAllText(eventsPath)) ?? [] : []; }
-        catch { return []; }
+        return SavedFiles.Load(eventsPath, "identity guard events", () => new List<IdentityGuardEvent>(), ownerData: false);
     }
 
     public async Task EnforceAsync(HeadlessPlayersSnapshot players, CancellationToken cancellationToken)
@@ -130,15 +129,13 @@ public sealed class HeadlessIdentityGuardService
             var list = RecentEvents().ToList();
             list.Add(entry);
             if (list.Count > MaximumEvents) list.RemoveRange(0, list.Count - MaximumEvents);
-            try { File.WriteAllText(eventsPath, JsonSerializer.Serialize(list)); } catch { }
+            try { SavedFiles.SaveText(eventsPath, JsonSerializer.Serialize(list)); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* the event is still alerted and logged */ }
         }
     }
 
-    private IdentityGuardConfig Load()
-    {
-        try { return File.Exists(configPath) ? JsonSerializer.Deserialize<IdentityGuardConfig>(File.ReadAllText(configPath)) ?? IdentityGuardConfig.Default : IdentityGuardConfig.Default; }
-        catch { return IdentityGuardConfig.Default; }
-    }
+    // v1.0.7.0 (Q-1): an unreadable identity guard setting is never overwritten.
+    private IdentityGuardConfig Load() => SavedFiles.Load(configPath, "identity guard settings", () => IdentityGuardConfig.Default);
 }
 
 public sealed record IdentityGuardConfig(bool Enabled, bool KickMismatched)

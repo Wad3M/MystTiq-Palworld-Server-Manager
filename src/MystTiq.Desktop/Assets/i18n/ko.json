@@ -3604,7 +3604,7 @@
   "ui.launcher_save_settings": "런처 설정 저장",
   "ui.launcher_troubleshooting_presets": "문제 해결 프리셋",
   "ui.launcher_preset_default": "기본값",
-  "ui.launcher_preset_default_desc": "PalServer.exe, 일반 서버 루트, MOD 활성화, 진단 로그 활성화, 관리 창 숨김.",
+  "ui.launcher_preset_default_desc": "PalServer.exe, 일반 서버 폴더, MOD 사용, 추가 시작 옵션 없음. 창과 게임 콘솔 창은 숨겨지고 출력은 MystTiq 콘솔에 표시됩니다.",
   "ui.launcher_apply_default": "기본값 적용",
   "ui.launcher_preset_no_mods": "MOD 없음",
   "ui.launcher_preset_no_mods_desc": "기본값과 같지만 -NoMods를 추가합니다. MOD / UE4SS 영향을 분리해 확인할 때 사용합니다.",
@@ -3971,5 +3971,17 @@
   "msg.service_update_done": "오래된 서비스를 멈췄습니다. 이제 이 앱의 서비스(v{0})가 서버를 실행합니다.",
   "msg.service_update_failed": "오래된 서비스는 멈췄지만 이 앱의 서비스가 시작되지 않았습니다: {0}",
   "msg.identity_launch_advice": "이 서버는 {0}(으)로 PalServer를 시작합니다. -log, -stdout, -FullStdOutLogOutput으로 시작할 때마다 플레이어가 다른 캐릭터를 받았고, 더블클릭처럼 시작했을 때는 자기 캐릭터를 유지했습니다. 서버 > 런처에서 더블클릭처럼을 고르고 저장한 뒤 서버를 다시 시작하고 다시 접속하게 하세요.",
-  "msg.launcher_identity_warning": "PalServer를 -log, -stdout, -FullStdOutLogOutput, -abslog로 시작할 때마다 플레이어가 다른 캐릭터를 받았고, 더블클릭처럼 시작했을 때는 자기 캐릭터를 유지했습니다. 문제를 진단하는 경우가 아니라면 더블클릭처럼을 사용하세요."
+  "msg.launcher_identity_warning": "PalServer를 -log, -stdout, -FullStdOutLogOutput, -abslog로 시작할 때마다 플레이어가 다른 캐릭터를 받았고, 더블클릭처럼 시작했을 때는 자기 캐릭터를 유지했습니다. 문제를 진단하는 경우가 아니라면 더블클릭처럼을 사용하세요.",
+  "ui.open_repair": "복구 열기",
+  "ui.from_alert": "알림에서",
+  "msg.saved_data": "저장된 데이터",
+  "msg.start_this_list_empty": "이 목록을 비운 채로 시작",
+  "msg.saved_list_fix_confirm": "이 목록이 비어 있는 상태로 시작된다는 것을 이해합니다. 읽을 수 없는 파일은 옆에 보관됩니다",
+  "msg.saved_list_refused": "MystTiq가 저장된 {0}을(를) 읽지 못했고 정상 사본도 없어 변경을 거부합니다(파일은 덮어쓰지 않습니다). 서버 닥터에서 복구하세요.",
+  "msg.saved_list_unreadable_title": "저장된 {0}을(를) 읽을 수 없습니다",
+  "msg.saved_list_from_copy_title": "저장된 {0}을(를) 마지막 정상 사본에서 불러왔습니다",
+  "msg.saved_list_repaired_title": "저장된 {0} 복구됨",
+  "msg.saved_list_admin": "저장된 목록을 복구하려면 관리자 역할이 필요합니다.",
+  "msg.unexpected_error_no_record": "문제가 발생했습니다({0}): {1} 기록을 남기지 못했습니다.",
+  "msg.unexpected_error_record": "문제가 발생했습니다({0}): {1} 자세한 내용은 {2}에 있습니다."
 }
