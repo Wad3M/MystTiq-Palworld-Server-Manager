@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -456,4 +456,9 @@ public interface IMystTiqApiClient
     Task<HostAddressesDto?> GetHostAddressesAsync(ConnectionProfile profile, bool refresh = false, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<SafeStartStatusDto?> GetModSafeStartStatusAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<ModMutationResultDto> CancelModSafeStartAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v1.0.9.2 (roadmap B-3): UE4SS's load order and MOD profiles (the profile travels as the service's own JSON).
+    Task<ModLoadOrderDto> GetModLoadOrderAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ModMutationResultDto> SetUe4ssLoadOrderAsync(ConnectionProfile profile, IReadOnlyList<string> order, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<string> ExportModProfileAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ModProfileImportResultDto> ImportModProfileAsync(ConnectionProfile profile, string profileJson, bool apply, string? bearerToken = null, CancellationToken cancellationToken = default);
 }

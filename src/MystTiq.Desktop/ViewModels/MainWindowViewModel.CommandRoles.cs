@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -28,7 +28,7 @@ public sealed partial class MainWindowViewModel
             Alerts.ToggleNotificationPinCommand, Alerts.ToggleNotificationReadCommand, Players.ToggleTemporaryBansCommand,
             Players.ToggleWhitelistCommand, Fleet.UpdateAllCommand, UpdatePalworldServerCommand, Backups.VerifyAllBackupsCommand,
             Backups.VerifySelectedBackupCommand);
-        Need("Admin", World.ApplyBaseRecoveryCommand, World.ApplyBaseTransferCommand, World.ApplyCharacterMigrationCommand,
+        Need("Admin", Mods.SaveLoadOrderCommand, Mods.ApplyProfileImportCommand, World.ApplyBaseRecoveryCommand, World.ApplyBaseTransferCommand, World.ApplyCharacterMigrationCommand,
             World.ApplyGuildOwnershipCommand, World.ApplyPalEditCommand, Configuration.ApplyStarterPresetCommand, Mods.ApplyUe4ssInstallCommand,
             World.ApplyWorldTransactionCommand, Players.BanSelectedPlayerCommand, Players.CancelTemporaryBanCommand,
             Map.CaptureTeleportPositionCommand, Alerts.CreateAutomationRuleCommand, CreateDefaultServerSettingsCommand,

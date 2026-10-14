@@ -1,4 +1,14 @@
-<!-- MystTiq v1.0.9.1: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.2: file reviewed for this release (2026-10-12). -->
+## v1.0.9.2 — MOD Load Order and Profiles
+
+- Roadmap B-3: the MOD Library's Load Order and MOD Profiles card. UE4SS's order (`mods.txt`, top to bottom) can be changed
+  (only the MOD lines move; the previous file is kept; the server must be stopped); PAKs are listed with why no order
+  applies. A MOD profile (each MOD, on or off, UE4SS place, version, source, file hash; never the files) exports to a
+  file; importing previews, then switches MODs and sets the order for those present, and lists the missing ones. New
+  routes `GET`/`POST /mods/load-order`, `GET /mods/profile`, `POST /mods/profile/import`; the card's text in 12
+  languages.
+- Version advanced to 1.0.9.2.
+
 ## v1.0.9.1 — Discord Commands That Answer
 
 - Roadmap B-4: the Discord bot's commands were answered only after their work, past Discord's 3-second limit, so a start,

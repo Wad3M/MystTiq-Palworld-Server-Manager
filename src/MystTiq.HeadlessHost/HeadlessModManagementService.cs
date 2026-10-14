@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -918,6 +918,183 @@ public sealed class HeadlessModManagementService
         {
             mutationGate.Release();
         }
+    }
+
+    // ---- v1.0.9.2 (roadmap B-3): load order and MOD profiles ---------------------------------------------------------
+
+    /// <summary>
+    /// UE4SS's load order (mods.txt, top to bottom) and the PAKs. PAKs have no order a file name sets: the game resolves
+    /// two PAKs replacing the same asset by the asset, so MystTiq lists them and does not pretend to order them.
+    /// </summary>
+    public async Task<HeadlessModLoadOrder> GetLoadOrderAsync(CancellationToken cancellationToken)
+    {
+        var inventory = await GetInventoryAsync(cancellationToken);
+        var root = ResolveUe4ss().ActiveModsRoot;
+        var modsTxt = Path.Combine(root, "mods.txt");
+        var entries = File.Exists(modsTxt) ? ModLoadOrder.Parse(File.ReadAllLines(modsTxt)) : [];
+        var ue4ss = entries.Select((e, i) => new HeadlessLoadOrderEntry(i + 1, e.Package, e.Enabled, Directory.Exists(Path.Combine(root, e.Package)))).ToList();
+        var paks = inventory.Mods.Where(m => m.Type == "PAK").Select(m => m.Package).OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToList();
+        return new HeadlessModLoadOrder(inventory.ServerRunning, File.Exists(modsTxt), ue4ss, paks, DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>Puts the UE4SS MODs in this order. The list must name MODs mods.txt has (a stale list is refused).</summary>
+    public Task<HeadlessModMutationResult> SetUe4ssLoadOrderAsync(IReadOnlyList<string> order, CancellationToken cancellationToken) =>
+        RunWhileStoppedAsync("mods-load-order", "Stop PalServer before changing the MOD load order.", cancellationToken, () =>
+        {
+            var modsTxt = Path.Combine(ResolveUe4ss().ActiveModsRoot, "mods.txt");
+            if (!File.Exists(modsTxt)) return HeadlessModMutationResult.Failure("UE4SS has no mods.txt yet, so there is no load order to change.");
+            var lines = File.ReadAllLines(modsTxt);
+            var reordered = ModLoadOrder.Reorder(lines, order ?? [], strict: true);
+            if (reordered.SequenceEqual(lines)) return new HeadlessModMutationResult(true, "UE4SS", string.Empty, true, 0, "The load order is already this one.");
+            KeepPreviousModsTxt(modsTxt);
+            AtomicWrite(modsTxt, string.Join(Environment.NewLine, reordered));
+            var now = ModLoadOrder.Parse(reordered);
+            activity.Record("Information", "MODs", "Changed the UE4SS load order", string.Join(" > ", now.Select(e => e.Package)));
+            return new HeadlessModMutationResult(true, "UE4SS", string.Empty, true, now.Count,
+                "Load order saved. UE4SS loads the MODs in this order from the next server start; the previous mods.txt is kept as mods.txt.previous.");
+        });
+
+    /// <summary>Every MOD with its state, its UE4SS place, version, source and a hash of its files.</summary>
+    public async Task<ModProfile> ExportProfileAsync(CancellationToken cancellationToken)
+    {
+        var inventory = await GetInventoryAsync(cancellationToken);
+        var modsTxt = Path.Combine(ResolveUe4ss().ActiveModsRoot, "mods.txt");
+        var order = (File.Exists(modsTxt) ? ModLoadOrder.Parse(File.ReadAllLines(modsTxt)) : []).Select(e => e.Package).ToList();
+        var position = order.Select((p, i) => (p, i)).ToDictionary(x => x.p, x => x.i + 1, StringComparer.OrdinalIgnoreCase);
+        var mods = inventory.Mods.Select(m => new ModProfileEntry(m.Type, m.Package, m.Enabled,
+            m.Type == "UE4SS" && position.TryGetValue(m.Package, out var place) ? place : null,
+            m.InstalledVersion, ReadDescriptionCache(m.Type, m.Package)?.SourceUrl, ModFilesHash(m))).ToList();
+        activity.Record("Information", "MODs", "Exported a MOD profile", $"{mods.Count} MOD(s)");
+        return new ModProfile(ModProfile.FormatName, ModProfile.CurrentVersion, DateTimeOffset.UtcNow, order, mods);
+    }
+
+    /// <summary>
+    /// What a profile would change here (<paramref name="apply"/> false), or that change made: each MOD present is switched
+    /// on or off as the profile has it and UE4SS takes the profile's order. MODs the profile has and this server does not
+    /// are listed with their source; nothing is downloaded.
+    /// </summary>
+    public async Task<HeadlessModProfileImportResult> ImportProfileAsync(ModProfile? profile, bool apply, CancellationToken cancellationToken)
+    {
+        if (profile is null || profile.Format != ModProfile.FormatName || profile.Mods is null)
+            return HeadlessModProfileImportResult.Refused("This file is not a MystTiq MOD profile.");
+        if (profile.Version > ModProfile.CurrentVersion)
+            return HeadlessModProfileImportResult.Refused($"This MOD profile was made by a newer MystTiq (format {profile.Version}); update MystTiq to read it.");
+
+        var inventory = await GetInventoryAsync(cancellationToken);
+        var present = inventory.Mods.GroupBy(m => Key(m.Type, m.Package)).ToDictionary(g => g.Key, g => g.First());
+        var toggles = new List<(HeadlessModItem Mod, bool Enabled)>();
+        var changes = new List<string>(); var notes = new List<string>(); var missing = new List<ModProfileMissing>();
+        foreach (var entry in profile.Mods.Where(e => !string.IsNullOrWhiteSpace(e.Package)))
+        {
+            if (!present.TryGetValue(Key(entry.Type, entry.Package), out var mod))
+            {
+                missing.Add(new ModProfileMissing(entry.Type, entry.Package, entry.Source));
+                continue;
+            }
+            if (mod.Enabled != entry.Enabled)
+            {
+                toggles.Add((mod, entry.Enabled));
+                changes.Add($"{(entry.Enabled ? "Switch on" : "Switch off")} {mod.Type} {mod.Package}");
+            }
+            if (entry.Sha256 is { Length: > 0 } wanted && ModFilesHash(mod) is { } have && !have.Equals(wanted, StringComparison.OrdinalIgnoreCase))
+                notes.Add($"{mod.Type} {mod.Package} is installed, but its files differ from the profile's (another version?).");
+        }
+
+        var modsTxt = Path.Combine(ResolveUe4ss().ActiveModsRoot, "mods.txt");
+        var reorderNeeded = File.Exists(modsTxt) && (profile.Ue4ssOrder?.Count ?? 0) > 0 &&
+            !ModLoadOrder.Reorder(File.ReadAllLines(modsTxt), profile.Ue4ssOrder!, strict: false).SequenceEqual(File.ReadAllLines(modsTxt));
+        if (reorderNeeded) changes.Add("Set the UE4SS load order to the profile's");
+
+        if (!apply || changes.Count == 0)
+        {
+            var summary = changes.Count == 0 ? "This server already matches the profile." : $"{changes.Count} change(s) to make.";
+            if (missing.Count > 0) summary += $" {missing.Count} MOD(s) in the profile are not installed here.";
+            return new HeadlessModProfileImportResult(true, false, changes, notes, missing, summary);
+        }
+
+        var result = await RunWhileStoppedAsync("mods-profile-import", "Stop PalServer before importing a MOD profile.", cancellationToken, () =>
+        {
+            KeepPreviousModsTxt(modsTxt);
+            foreach (var (mod, enabled) in toggles)
+            {
+                var changed = mod.Type.Equals("PAK", StringComparison.OrdinalIgnoreCase) ? TogglePak(mod.Package, enabled)
+                    : mod.Type.Equals("UE4SS", StringComparison.OrdinalIgnoreCase) ? ToggleUe4ss(mod.Package, enabled)
+                    : mod.Type.Equals("NATIVE", StringComparison.OrdinalIgnoreCase) ? ToggleNative(mod.Package, enabled) : 0;
+                if (changed <= 0) throw new IOException($"{mod.Type} {mod.Package} could not be switched {(enabled ? "on" : "off")}.");
+            }
+            if (reorderNeeded)
+                AtomicWrite(modsTxt, string.Join(Environment.NewLine, ModLoadOrder.Reorder(File.ReadAllLines(modsTxt), profile.Ue4ssOrder!, strict: false)));
+            activity.Record("Information", "MODs", "Imported a MOD profile", string.Join("; ", changes));
+            return new HeadlessModMutationResult(true, string.Empty, string.Empty, true, changes.Count, $"Imported: {changes.Count} change(s) made.");
+        });
+        var message = result.Message + (missing.Count > 0 ? $" {missing.Count} MOD(s) in the profile are not installed here." : string.Empty);
+        return new HeadlessModProfileImportResult(result.Success, result.Success, changes, notes, missing, message);
+
+        static (string, string) Key(string type, string package) => ((type ?? string.Empty).ToUpperInvariant(), (package ?? string.Empty).Trim().ToLowerInvariant());
+    }
+
+    // The gate, the coordinator's hold and the stopped-server check every MOD change takes (as SetEnabledAsync does).
+    private async Task<HeadlessModMutationResult> RunWhileStoppedAsync(string kind, string runningRefusal, CancellationToken cancellationToken, Func<HeadlessModMutationResult> work)
+    {
+        if (!await mutationGate.WaitAsync(0, cancellationToken))
+            return HeadlessModMutationResult.Failure("A MOD state change is already in progress.");
+        OperationHold? hold;
+        (hold, var holdRefusal) = await HoldServerAsync(kind, cancellationToken);
+        if (holdRefusal is not null) { mutationGate.Release(); return HeadlessModMutationResult.Failure(holdRefusal); }
+        using var serverHold = hold;
+        try
+        {
+            if ((await lifecycle.GetStatusAsync(cancellationToken)).ServerMayBeRunning)
+                return HeadlessModMutationResult.Failure(runningRefusal);
+            return work();
+        }
+        catch (Exception ex) { return HeadlessModMutationResult.Failure(ex.Message); }
+        finally { mutationGate.Release(); }
+    }
+
+    // One step back, as the MOD snapshots are: the mods.txt before this change.
+    private static void KeepPreviousModsTxt(string modsTxt)
+    {
+        if (File.Exists(modsTxt)) File.Copy(modsTxt, modsTxt + ".previous", overwrite: true);
+    }
+
+    // A hash of the MOD's files, so a profile tells the same MOD from another version of it. Switching a MOD off
+    // (".disabled") and UE4SS's enabled.txt markers do not change it.
+    private static string? ModFilesHash(HeadlessModItem mod)
+    {
+        try
+        {
+            string baseDirectory; IEnumerable<string> files;
+            if (File.Exists(mod.InstallPath)) { baseDirectory = Path.GetDirectoryName(mod.InstallPath)!; files = [mod.InstallPath]; }
+            else if (Directory.Exists(mod.InstallPath))
+            {
+                baseDirectory = mod.InstallPath;
+                files = mod.Type == "PAK" && Path.GetFileName(mod.InstallPath).Equals("~mods", StringComparison.OrdinalIgnoreCase)
+                    ? Directory.EnumerateFiles(mod.InstallPath, "*", SearchOption.TopDirectoryOnly)
+                        .Where(f => Path.GetFileNameWithoutExtension(Active(f)).Equals(mod.Package, StringComparison.OrdinalIgnoreCase))
+                    : Directory.EnumerateFiles(mod.InstallPath, "*", SearchOption.AllDirectories);
+            }
+            else return null;
+
+            using var sha = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+            var listed = files
+                .Select(f => (Name: Active(Path.GetRelativePath(baseDirectory, f)).Replace('\\', '/').ToLowerInvariant(), Path: f))
+                .Where(f => !Path.GetFileName(f.Name).StartsWith("enabled.txt", StringComparison.Ordinal))
+                .OrderBy(f => f.Name, StringComparer.Ordinal).ToList();
+            if (listed.Count == 0) return null;
+            var buffer = new byte[81920];
+            foreach (var file in listed)
+            {
+                sha.AppendData(System.Text.Encoding.UTF8.GetBytes(file.Name + "\n"));
+                using var stream = File.OpenRead(file.Path);
+                int read;
+                while ((read = stream.Read(buffer, 0, buffer.Length)) > 0) sha.AppendData(buffer, 0, read);
+            }
+            return Convert.ToHexString(sha.GetHashAndReset()).ToLowerInvariant();
+        }
+        catch { return null; }
+
+        static string Active(string path) => path.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase) ? path[..^".disabled".Length] : path;
     }
 
     private static readonly string[] WorkshopPakRootNames = ["~WorkshopMods", "LogicMods"];
@@ -2341,3 +2518,28 @@ internal sealed record Ue4ssSnapshotMeta(string[] PlannedPaths, string[] Existed
 internal sealed record Ue4ssInstallManifest(string Source, string TagName, DateTimeOffset InstalledAtUtc);
 
 internal sealed record Ue4ssRuntimeVerification(DateTimeOffset VerifiedAtUtc);
+
+// v1.0.9.2 (roadmap B-3): the load order and MOD profiles.
+public sealed record HeadlessLoadOrderEntry(int Position, string Package, bool Enabled, bool Installed);
+
+public sealed record HeadlessModLoadOrder(bool ServerRunning, bool HasModsTxt, IReadOnlyList<HeadlessLoadOrderEntry> Ue4ss,
+    IReadOnlyList<string> Paks, DateTimeOffset ObservedAt);
+
+public sealed record Ue4ssLoadOrderRequest(IReadOnlyList<string> Order);
+
+public sealed record ModProfileEntry(string Type, string Package, bool Enabled, int? Order, string? Version, string? Source, string? Sha256);
+
+/// <summary>A MOD profile file: which MODs, on or off, UE4SS's order. It never carries MOD files.</summary>
+public sealed record ModProfile(string Format, int Version, DateTimeOffset ExportedUtc, IReadOnlyList<string>? Ue4ssOrder, IReadOnlyList<ModProfileEntry>? Mods)
+{
+    public const string FormatName = "mysttiq-mod-profile";
+    public const int CurrentVersion = 1;
+}
+
+public sealed record ModProfileMissing(string Type, string Package, string? Source);
+
+public sealed record HeadlessModProfileImportResult(bool Success, bool Applied, IReadOnlyList<string> Changes, IReadOnlyList<string> Notes,
+    IReadOnlyList<ModProfileMissing> Missing, string Message)
+{
+    public static HeadlessModProfileImportResult Refused(string message) => new(false, false, [], [], [], message);
+}

@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -585,6 +585,54 @@ public sealed partial class MainWindow : Window
             redacted = true,
             contents = new[] { "diagnostics.txt" }
         });
+    }
+
+    // v1.0.9.2 (roadmap B-3): a MOD profile to a file and back. The file is the service's own profile JSON, so it is
+    // written and read unchanged; the service checks it on import.
+    private const int MaximumModProfileChars = 2_000_000;
+
+    private async void ExportModProfile_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanSave) return;
+        if (await vm.Mods.ExportProfileJsonAsync() is not { } json) return;
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = Localizer.T("Export MOD profile"),
+            SuggestedFileName = $"MystTiq-MOD-Profile-{DateTime.Now:yyyyMMdd-HHmmss}.json",
+            DefaultExtension = "json",
+            FileTypeChoices = [new FilePickerFileType(Localizer.T("MystTiq MOD profile")) { Patterns = ["*.json"] }]
+        });
+        if (file is null) return;
+        await using (var stream = await file.OpenWriteAsync())
+        {
+            stream.SetLength(0);
+            await using var writer = new StreamWriter(stream);
+            await writer.WriteAsync(json);
+        }
+        vm.Mods.ProfileSaved(file.Name);
+    }
+
+    private async void ImportModProfile_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || !StorageProvider.CanOpen) return;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = Localizer.T("Import MOD profile"),
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType(Localizer.T("MystTiq MOD profile")) { Patterns = ["*.json"] }]
+        });
+        if (files.Count == 0) return;
+        string json;
+        await using (var stream = await files[0].OpenReadAsync())
+        using (var reader = new StreamReader(stream))
+        {
+            // Read at most a little past the limit: a profile is small, and a huge file is refused unread.
+            var buffer = new char[MaximumModProfileChars + 1];
+            var read = await reader.ReadBlockAsync(buffer, 0, buffer.Length);
+            if (read > MaximumModProfileChars) { vm.Mods.ProfileRefused("This file is too large to be a MOD profile."); return; }
+            json = new string(buffer, 0, read);
+        }
+        await vm.Mods.PreviewProfileImportAsync(json);
     }
 
     private async void WorkspaceBrowse_Click(object? sender, RoutedEventArgs e)

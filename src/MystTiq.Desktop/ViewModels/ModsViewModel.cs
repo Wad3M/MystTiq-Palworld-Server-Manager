@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -33,6 +33,7 @@ public sealed class ModsViewModel : PageViewModel
         _credentialStore = credentialStore;
         Navigate = navigate;
         RefreshModsCommand = new AsyncCommand(RefreshModsAsync, () => !Session.IsBusy);
+        InitializeLoadOrderCommands();
         VerifyModsCommand = new AsyncCommand(VerifyModsAsync, () => !Session.IsBusy);
         EnableSelectedModCommand = new AsyncCommand(() => SetSelectedModEnabledAsync(true), () => !Session.IsBusy);
         DisableSelectedModCommand = new AsyncCommand(() => SetSelectedModEnabledAsync(false), () => !Session.IsBusy);
@@ -344,6 +345,195 @@ public sealed class ModsViewModel : PageViewModel
             await ApplyUe4ssInstallAsync();
     }
 
+    // ---- v1.0.9.2 (roadmap B-3): UE4SS's load order and MOD profiles ---------------------------------------------
+
+    public ObservableCollection<LoadOrderItem> LoadOrder { get; } = [];
+    public ObservableCollection<string> LoadOrderPaks { get; } = [];
+    public bool HasLoadOrderPaks => LoadOrderPaks.Count > 0;
+    private string _loadOrderStatus = "Open the MOD Library to read UE4SS's load order.";
+    public string LoadOrderStatus { get => _loadOrderStatus; private set => SetField(ref _loadOrderStatus, value); }
+    private bool _hasLoadOrderChanges;
+    public bool HasLoadOrderChanges
+    {
+        get => _hasLoadOrderChanges;
+        private set { if (SetField(ref _hasLoadOrderChanges, value)) (SaveLoadOrderCommand as AsyncCommand)?.RaiseCanExecuteChanged(); }
+    }
+    public ICommand MoveLoadOrderUpCommand { get; private set; } = null!;
+    public ICommand MoveLoadOrderDownCommand { get; private set; } = null!;
+    public ICommand SaveLoadOrderCommand { get; private set; } = null!;
+
+    public ObservableCollection<string> ProfileImportChanges { get; } = [];
+    public ObservableCollection<string> ProfileImportNotes { get; } = [];
+    public ObservableCollection<ModProfileMissingDto> ProfileImportMissing { get; } = [];
+    public bool HasProfileImportChanges => ProfileImportChanges.Count > 0;
+    public bool HasProfileImportNotes => ProfileImportNotes.Count > 0;
+    public bool HasProfileImportMissing => ProfileImportMissing.Count > 0;
+    // The previewed profile, kept until it is applied or cancelled (Apply sends exactly what was previewed).
+    private string? _pendingProfileJson;
+    public bool HasPendingProfileImport => _pendingProfileJson is not null;
+    private string _profileStatus = string.Empty;
+    public string ProfileStatus { get => _profileStatus; private set { if (SetField(ref _profileStatus, value)) RaisePropertyChanged(nameof(HasProfileStatus)); } }
+    public bool HasProfileStatus => ProfileStatus.Length > 0;
+    public ICommand ApplyProfileImportCommand { get; private set; } = null!;
+    public ICommand CancelProfileImportCommand { get; private set; } = null!;
+
+    private void InitializeLoadOrderCommands()
+    {
+        MoveLoadOrderUpCommand = new RelayCommand<LoadOrderItem>(item => MoveLoadOrder(item, -1));
+        MoveLoadOrderDownCommand = new RelayCommand<LoadOrderItem>(item => MoveLoadOrder(item, +1));
+        SaveLoadOrderCommand = new AsyncCommand(SaveLoadOrderAsync, () => !Session.IsBusy && HasLoadOrderChanges);
+        ApplyProfileImportCommand = new AsyncCommand(ApplyProfileImportAsync, () => !Session.IsBusy && HasPendingProfileImport);
+        CancelProfileImportCommand = new RelayCommand(() => { ClearProfileImport(); ProfileStatus = string.Empty; });
+    }
+
+    internal async Task RefreshLoadOrderAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = Session.BuildProfile(); }
+        catch (Exception ex) { LoadOrderStatus = ex.Message; return; }
+        try
+        {
+            var order = await Session.Api.GetModLoadOrderAsync(profile, Session.BearerToken);
+            LoadOrder.Clear();
+            foreach (var entry in order.Ue4ss) LoadOrder.Add(new LoadOrderItem(entry.Package, entry.Enabled, entry.Installed));
+            Renumber();
+            LoadOrderPaks.Clear();
+            foreach (var pak in order.Paks) LoadOrderPaks.Add(pak);
+            RaisePropertyChanged(nameof(HasLoadOrderPaks));
+            HasLoadOrderChanges = false;
+            LoadOrderStatus = !order.HasModsTxt ? "UE4SS has no mods.txt yet, so there is no load order to set."
+                : order.ServerRunning ? "UE4SS loads these top to bottom. Stop the server to change the order."
+                : "UE4SS loads these top to bottom. Move a MOD, then Save Load Order; it takes effect at the next server start.";
+        }
+        catch (Exception ex) { LoadOrderStatus = ex.Message; }
+    }
+
+    private void MoveLoadOrder(LoadOrderItem? item, int step)
+    {
+        if (item is null) return;
+        var index = LoadOrder.IndexOf(item);
+        var target = index + step;
+        if (index < 0 || target < 0 || target >= LoadOrder.Count) return;
+        LoadOrder.Move(index, target);
+        Renumber();
+        HasLoadOrderChanges = true;
+    }
+
+    private void Renumber()
+    {
+        for (var i = 0; i < LoadOrder.Count; i++) LoadOrder[i].Position = i + 1;
+    }
+
+    private async Task SaveLoadOrderAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = Session.BuildProfile(); }
+        catch (Exception ex) { LoadOrderStatus = ex.Message; return; }
+        string message;
+        var saved = false;
+        Session.IsBusy = true;
+        try
+        {
+            var result = await Session.Api.SetUe4ssLoadOrderAsync(profile, LoadOrder.Select(i => i.Package).ToList(), Session.BearerToken);
+            message = result.Message;
+            saved = result.Success;
+        }
+        catch (Exception ex) { message = ex.Message; }
+        finally { Session.IsBusy = false; }
+        if (saved) await RefreshLoadOrderAsync();
+        LoadOrderStatus = message;
+    }
+
+    /// <summary>The profile as the service writes it, for the code-behind to save to a file; null (with the reason shown) when it failed.</summary>
+    internal async Task<string?> ExportProfileJsonAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = Session.BuildProfile(); }
+        catch (Exception ex) { ProfileStatus = ex.Message; return null; }
+        try { return await Session.Api.ExportModProfileAsync(profile, Session.BearerToken); }
+        catch (Exception ex) { ProfileStatus = ex.Message; return null; }
+    }
+
+    internal void ProfileSaved(string fileName) => ProfileStatus = $"MOD profile saved as {fileName}.";
+
+    internal void ProfileRefused(string reason)
+    {
+        ClearProfileImport();
+        ProfileStatus = reason;
+    }
+
+    /// <summary>Shows what importing <paramref name="json"/> would change; Apply Profile then makes those changes.</summary>
+    internal async Task PreviewProfileImportAsync(string json)
+    {
+        ClearProfileImport();
+        ConnectionProfile profile;
+        try { profile = Session.BuildProfile(); }
+        catch (Exception ex) { ProfileStatus = ex.Message; return; }
+        Session.IsBusy = true;
+        try
+        {
+            var preview = await Session.Api.ImportModProfileAsync(profile, json, apply: false, Session.BearerToken);
+            ProfileStatus = preview.Message;
+            if (!preview.Success) return;
+            ShowProfileImport(preview);
+            if (preview.Changes.Count > 0) SetPendingProfile(json);
+        }
+        catch (Exception ex) { ProfileStatus = ex.Message; }
+        finally { Session.IsBusy = false; }
+    }
+
+    private async Task ApplyProfileImportAsync()
+    {
+        if (_pendingProfileJson is not { } json) return;
+        ConnectionProfile profile;
+        try { profile = Session.BuildProfile(); }
+        catch (Exception ex) { ProfileStatus = ex.Message; return; }
+        var applied = false;
+        Session.IsBusy = true;
+        try
+        {
+            var result = await Session.Api.ImportModProfileAsync(profile, json, apply: true, Session.BearerToken);
+            ProfileStatus = result.Message;
+            applied = result.Applied;
+            if (applied) { SetPendingProfile(null); ShowProfileImport(result); }
+        }
+        catch (Exception ex) { ProfileStatus = ex.Message; }
+        finally { Session.IsBusy = false; }
+        if (!applied) return;
+        var status = ProfileStatus;
+        await RefreshModsAsync();
+        ProfileStatus = status;
+    }
+
+    private void ShowProfileImport(ModProfileImportResultDto result)
+    {
+        ProfileImportChanges.Clear(); foreach (var change in result.Changes) ProfileImportChanges.Add(change);
+        ProfileImportNotes.Clear(); foreach (var note in result.Notes) ProfileImportNotes.Add(note);
+        ProfileImportMissing.Clear(); foreach (var missing in result.Missing) ProfileImportMissing.Add(missing);
+        RaiseProfileImportLists();
+    }
+
+    private void ClearProfileImport()
+    {
+        SetPendingProfile(null);
+        ProfileImportChanges.Clear(); ProfileImportNotes.Clear(); ProfileImportMissing.Clear();
+        RaiseProfileImportLists();
+    }
+
+    private void SetPendingProfile(string? json)
+    {
+        _pendingProfileJson = json;
+        RaisePropertyChanged(nameof(HasPendingProfileImport));
+        (ApplyProfileImportCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+    }
+
+    private void RaiseProfileImportLists()
+    {
+        RaisePropertyChanged(nameof(HasProfileImportChanges));
+        RaisePropertyChanged(nameof(HasProfileImportNotes));
+        RaisePropertyChanged(nameof(HasProfileImportMissing));
+    }
+
     internal async Task RefreshModsAsync()
     {
         ConnectionProfile profile;
@@ -358,6 +548,8 @@ public sealed class ModsViewModel : PageViewModel
         // this runtime" concern. Gated to the UE4SS page specifically since this same command also
         // serves MOD Dashboard/Library's plain "Refresh MODs", which has no reason to hit GitHub.
         if ((Session.Page == NavigationPage.Ue4ss)) await RefreshUe4ssReleaseCatalogAsync();
+        // v1.0.9.2: the MOD Library also shows UE4SS's load order.
+        if (Session.Page == NavigationPage.ModLibrary) await RefreshLoadOrderAsync();
     }
 
     private async Task RefreshUe4ssReleaseCatalogAsync()
@@ -1369,4 +1561,16 @@ public sealed class ModsViewModel : PageViewModel
         NxmProtocolRegistration.Unregister(exe);
         RefreshNxmHandlerText();
     }
+}
+
+/// <summary>v1.0.9.2 (roadmap B-3): one UE4SS MOD in the load order list; its place changes as it is moved.</summary>
+public sealed class LoadOrderItem(string package, bool enabled, bool installed) : ViewModelBase
+{
+    private int _position;
+    public string Package { get; } = package;
+    public string PackageName => Package;
+    public bool Enabled { get; } = enabled;
+    public bool Installed { get; } = installed;
+    public int Position { get => _position; set => SetField(ref _position, value); }
+    public string StateText => !Installed ? "Not installed" : Enabled ? "On" : "Off";
 }

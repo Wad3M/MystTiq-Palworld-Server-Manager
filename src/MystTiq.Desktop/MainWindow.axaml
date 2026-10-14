@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.9.1: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.2: file reviewed for this release (2026-10-12). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -2668,6 +2668,63 @@
                 <TextBlock Text="{services:TrText Mods.NexusRateText}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal"/>
                 <TextBlock Text="{services:Tr ui.mod_data_from_nexus_mods_nexusmods_com_mysttiq_i_c8f955}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
               </StackPanel>
+            </Expander>
+          </Border>
+
+          <!-- v1.0.9.2 (roadmap B-3): UE4SS's load order (mods.txt, top to bottom) and MOD profiles to a file and back. -->
+          <Border x:Name="ModLoadOrderCard" Classes="card accentMods" IsVisible="{Binding IsModLibraryPage}">
+            <Expander Header="{services:Tr ui.load_order_and_mod_profiles}" FontSize="17" FontWeight="SemiBold" IsExpanded="False">
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="16" Margin="0,8,0,0">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="{services:Tr ui.ue4ss_load_order}" FontSize="14" FontWeight="SemiBold"/>
+                  <TextBlock Text="{services:TrText Mods.LoadOrderStatus}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.a11y_ue4ss_load_order}" ItemsSource="{Binding Mods.LoadOrder}" MaxHeight="280">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:LoadOrderItem">
+                        <Grid ColumnDefinitions="28,*,Auto,Auto,Auto" ColumnSpacing="6">
+                          <TextBlock Text="{Binding Position, StringFormat='{}{0}.'}" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal"/>
+                          <TextBlock Grid.Column="1" Text="{Binding PackageName}" VerticalAlignment="Center" FontWeight="Normal" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Grid.Column="2" Text="{services:TrText StateText}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal"/>
+                          <Button Grid.Column="3" Classes="plain" Content="▲" Padding="8,2" ToolTip.Tip="{services:Tr ui.load_earlier}" AutomationProperties.Name="{services:Tr ui.load_earlier}"
+                                  Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Mods.MoveLoadOrderUpCommand}" CommandParameter="{Binding}"/>
+                          <Button Grid.Column="4" Classes="plain" Content="▼" Padding="8,2" ToolTip.Tip="{services:Tr ui.load_later}" AutomationProperties.Name="{services:Tr ui.load_later}"
+                                  Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).Mods.MoveLoadOrderDownCommand}" CommandParameter="{Binding}"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <Button Classes="apply" Content="{services:Tr ui.save_load_order}" Command="{Binding Mods.SaveLoadOrderCommand}" HorizontalAlignment="Left"/>
+                  <TextBlock Text="{services:Tr ui.paks_heading}" FontSize="14" FontWeight="SemiBold" Margin="0,8,0,0" IsVisible="{Binding Mods.HasLoadOrderPaks}"/>
+                  <TextBlock Text="{services:Tr ui.paks_have_no_load_order_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding Mods.HasLoadOrderPaks}"/>
+                  <ItemsControl ItemsSource="{Binding Mods.LoadOrderPaks}" MaxHeight="140" IsVisible="{Binding Mods.HasLoadOrderPaks}">
+                    <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding StringFormat='•  {0}'}" Margin="0,2" FontWeight="Normal" FontSize="12"/></DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="8">
+                  <TextBlock Text="{services:Tr ui.mod_profile}" FontSize="14" FontWeight="SemiBold"/>
+                  <TextBlock Text="{services:Tr ui.mod_profile_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
+                  <WrapPanel>
+                    <Button Classes="info" Content="{services:Tr ui.export_profile}" Click="ExportModProfile_Click" Margin="0,0,6,6"/>
+                    <Button Classes="apply" Content="{services:Tr ui.import_profile}" Click="ImportModProfile_Click" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,6,6"/>
+                  </WrapPanel>
+                  <TextBlock Text="{services:TrText Mods.ProfileStatus}" IsVisible="{Binding Mods.HasProfileStatus}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:Tr ui.profile_changes}" FontWeight="SemiBold" IsVisible="{Binding Mods.HasProfileImportChanges}"/>
+                  <ItemsControl ItemsSource="{Binding Mods.ProfileImportChanges}" IsVisible="{Binding Mods.HasProfileImportChanges}">
+                    <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{services:TrText}" Margin="0,2" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <ItemsControl ItemsSource="{Binding Mods.ProfileImportNotes}" IsVisible="{Binding Mods.HasProfileImportNotes}">
+                    <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{services:TrText}" Margin="0,2" FontWeight="Normal" FontSize="12" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Text="{services:Tr ui.not_installed_here}" FontWeight="SemiBold" IsVisible="{Binding Mods.HasProfileImportMissing}"/>
+                  <ItemsControl ItemsSource="{Binding Mods.ProfileImportMissing}" MaxHeight="140" IsVisible="{Binding Mods.HasProfileImportMissing}">
+                    <ItemsControl.ItemTemplate><DataTemplate x:DataType="models:ModProfileMissingDto"><SelectableTextBlock Text="{Binding DisplayLine}" Margin="0,2" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <WrapPanel IsVisible="{Binding Mods.HasPendingProfileImport}">
+                    <Button Classes="apply" Content="{services:Tr ui.apply_profile}" Command="{Binding Mods.ApplyProfileImportCommand}" Margin="0,0,6,6"/>
+                    <Button Classes="plain" Content="{services:Tr ui.cancel}" Command="{Binding Mods.CancelProfileImportCommand}" Margin="0,0,6,6"/>
+                  </WrapPanel>
+                </StackPanel>
+              </Grid>
             </Expander>
           </Border>
 

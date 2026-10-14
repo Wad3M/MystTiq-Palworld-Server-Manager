@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
 using System.Text.Json.Serialization;
 namespace MystTiq.Desktop.Models;
 
@@ -127,4 +127,36 @@ public sealed class SafeStartStatusDto
     [JsonPropertyName("mode")] public string Mode { get; init; } = "OneAtATime";
     public string ProgressText => TotalCandidates > 0 ? $"{TestedCount} / {TotalCandidates} tested" : string.Empty;
     public bool CompletedUnsuccessfully => Completed && !Success;
+}
+
+// v1.0.9.2 (roadmap B-3): UE4SS's load order and a MOD profile import's preview or result.
+public sealed class LoadOrderEntryDto
+{
+    [JsonPropertyName("position")] public int Position { get; init; }
+    [JsonPropertyName("package")] public string Package { get; init; } = string.Empty;
+    [JsonPropertyName("enabled")] public bool Enabled { get; init; }
+    [JsonPropertyName("installed")] public bool Installed { get; init; }
+}
+public sealed class ModLoadOrderDto
+{
+    [JsonPropertyName("serverRunning")] public bool ServerRunning { get; init; }
+    [JsonPropertyName("hasModsTxt")] public bool HasModsTxt { get; init; }
+    [JsonPropertyName("ue4ss")] public IReadOnlyList<LoadOrderEntryDto> Ue4ss { get; init; } = [];
+    [JsonPropertyName("paks")] public IReadOnlyList<string> Paks { get; init; } = [];
+}
+public sealed class ModProfileMissingDto
+{
+    [JsonPropertyName("type")] public string Type { get; init; } = string.Empty;
+    [JsonPropertyName("package")] public string Package { get; init; } = string.Empty;
+    [JsonPropertyName("source")] public string? Source { get; init; }
+    public string DisplayLine => string.IsNullOrWhiteSpace(Source) ? $"{Type} {Package}" : $"{Type} {Package} — {Source}";
+}
+public sealed class ModProfileImportResultDto
+{
+    [JsonPropertyName("success")] public bool Success { get; init; }
+    [JsonPropertyName("applied")] public bool Applied { get; init; }
+    [JsonPropertyName("changes")] public IReadOnlyList<string> Changes { get; init; } = [];
+    [JsonPropertyName("notes")] public IReadOnlyList<string> Notes { get; init; } = [];
+    [JsonPropertyName("missing")] public IReadOnlyList<ModProfileMissingDto> Missing { get; init; } = [];
+    [JsonPropertyName("message")] public string Message { get; init; } = string.Empty;
 }

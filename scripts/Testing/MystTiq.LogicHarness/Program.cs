@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -1028,6 +1028,73 @@ try
             Assert(DiscordBotFormatting.RequiredRole(adminCommand) == MystTiqRole.Admin, $"{adminCommand} must be Admin");
         Assert(DiscordBotFormatting.RequiredRole("mysttiq-something-new") == MystTiqRole.Owner, "an unrecognised command must default to the strictest role");
         Assert(DiscordBotFormatting.SupportedCommands.All(c => DiscordBotFormatting.RequiredRole(c) != MystTiqRole.Owner), "every supported command must have an explicit role");
+    }, failures);
+    // v1.0.9.2 (roadmap B-3): UE4SS's load order and MOD profiles.
+    RunScenario("MOD load order: a new order moves only the MOD lines (comments, blank lines and each line's own text stay); a stale list is refused, a profile's unknown names are skipped", () =>
+    {
+        string[] lines = ["; UE4SS mods", "ModA : 1", "ModB:0", "", "Keybinds : 1", "# end"];
+        Assert(ModLoadOrder.Parse(lines).Select(e => $"{e.Package}={e.Enabled}").SequenceEqual(["ModA=True", "ModB=False", "Keybinds=True"]), "parsed in file order");
+        var moved = ModLoadOrder.Reorder(lines, ["Keybinds", "ModA", "ModB"], strict: true);
+        Assert(moved.SequenceEqual(["; UE4SS mods", "Keybinds : 1", "ModA : 1", "", "ModB:0", "# end"]), "entries change places, the rest stays: " + string.Join(" | ", moved));
+        Assert(ModLoadOrder.Reorder(lines, ["ModB"], strict: true).SequenceEqual(["; UE4SS mods", "ModB:0", "ModA : 1", "", "Keybinds : 1", "# end"]), "named first, the others after in their order");
+        AssertThrows<InvalidDataException>(() => ModLoadOrder.Reorder(lines, ["Ghost", "ModA"], strict: true), "a name mods.txt does not have is refused when strict");
+        Assert(ModLoadOrder.Reorder(lines, ["Ghost", "ModB", "modb"], strict: false).SequenceEqual(["; UE4SS mods", "ModB:0", "ModA : 1", "", "Keybinds : 1", "# end"]), "a profile's unknown and repeated names are skipped");
+    }, failures);
+
+    RunScenarioAsync("MOD load order: Save rewrites mods.txt in the new order and keeps the previous file; a stale list or a running server is refused with nothing changed", async () =>
+    {
+        var (paths, mods, modsTxt) = BuildModTree(tempRoot, "b3-order", running: false);
+        var original = File.ReadAllText(modsTxt);
+        var order = await mods.GetLoadOrderAsync(CancellationToken.None);
+        Assert(order.HasModsTxt && order.Ue4ss.Select(e => e.Package).SequenceEqual(["ModA", "ModB", "Keybinds"]) && order.Paks.SequenceEqual(["Thing"]),
+            $"read: {string.Join(",", order.Ue4ss.Select(e => e.Package))} / {string.Join(",", order.Paks)}");
+        var saved = await mods.SetUe4ssLoadOrderAsync(["Keybinds", "ModB", "ModA"], CancellationToken.None);
+        Assert(saved.Success, saved.Message);
+        Assert(File.ReadAllLines(modsTxt).SequenceEqual(["; managed by the harness", "Keybinds : 1", "ModB : 0", "", "ModA : 1"]), "new order on disk: " + string.Join(" | ", File.ReadAllLines(modsTxt)));
+        Assert(File.ReadAllText(modsTxt + ".previous") == original, "the previous mods.txt is kept");
+        var now = File.ReadAllText(modsTxt);
+        var stale = await mods.SetUe4ssLoadOrderAsync(["Ghost", "ModA"], CancellationToken.None);
+        Assert(!stale.Success && stale.Message.Contains("is not in mods.txt") && File.ReadAllText(modsTxt) == now, $"a stale list changes nothing [{stale.Message}]");
+
+        var (_, runningMods, runningTxt) = BuildModTree(tempRoot, "b3-order-running", running: true);
+        var before = File.ReadAllText(runningTxt);
+        var refused = await runningMods.SetUe4ssLoadOrderAsync(["Keybinds", "ModA", "ModB"], CancellationToken.None);
+        Assert(!refused.Success && refused.Message.Contains("Stop PalServer") && File.ReadAllText(runningTxt) == before, $"refused while running [{refused.Message}]");
+    }, failures);
+
+    RunScenarioAsync("MOD profiles: export lists every MOD with its state, UE4SS place and a file hash; import previews and then applies switches and order, lists missing MODs, notes changed files, and refuses what is not a profile", async () =>
+    {
+        var (paths, mods, modsTxt) = BuildModTree(tempRoot, "b3-profile", running: false);
+        var profile = await mods.ExportProfileAsync(CancellationToken.None);
+        Assert(profile.Format == ModProfile.FormatName && profile.Version == 1 && profile.Ue4ssOrder!.SequenceEqual(["ModA", "ModB", "Keybinds"]), "format, version and UE4SS order");
+        var modA = profile.Mods!.Single(m => m.Type == "UE4SS" && m.Package == "ModA");
+        var thing = profile.Mods!.Single(m => m.Type == "PAK" && m.Package == "Thing");
+        Assert(modA.Enabled && modA.Order == 1 && modA.Sha256 is { Length: 64 } && thing.Sha256 is { Length: 64 } && thing.Order is null, "each MOD with its place and hash");
+
+        // The profile as another server would want it: ModB on, ModB first, and a MOD this server does not have.
+        var wanted = profile with
+        {
+            Ue4ssOrder = ["ModB", "ModA", "Keybinds"],
+            Mods = [.. profile.Mods!.Select(m => m.Package == "ModB" ? m with { Enabled = true } : m), new ModProfileEntry("UE4SS", "Ghost", true, 4, "1.0", "https://example.invalid/ghost", null)]
+        };
+        File.WriteAllText(Path.Combine(paths.Ue4ssModsRoot, "ModA", "Scripts", "main.lua"), "print('changed')");
+        var beforePreview = File.ReadAllText(modsTxt);
+        var preview = await mods.ImportProfileAsync(wanted, apply: false, CancellationToken.None);
+        Assert(preview.Success && !preview.Applied && File.ReadAllText(modsTxt) == beforePreview, "a preview changes nothing");
+        Assert(preview.Changes.SequenceEqual(["Switch on UE4SS ModB", "Set the UE4SS load order to the profile's"]), "changes: " + string.Join(" / ", preview.Changes));
+        Assert(preview.Missing.Single() is { Package: "Ghost", Source: "https://example.invalid/ghost" }, "the missing MOD with its source");
+        Assert(preview.Notes.Single().Contains("ModA") && preview.Notes.Single().Contains("differ"), "a MOD whose files changed is noted: " + string.Join(" / ", preview.Notes));
+
+        var applied = await mods.ImportProfileAsync(wanted, apply: true, CancellationToken.None);
+        Assert(applied.Applied && applied.Message.Contains("2 change(s) made") && applied.Message.Contains("1 MOD(s) in the profile are not installed here"), applied.Message);
+        Assert(File.ReadAllLines(modsTxt).SequenceEqual(["; managed by the harness", "ModB : 1", "ModA : 1", "", "Keybinds : 1"]), "switched on and reordered: " + string.Join(" | ", File.ReadAllLines(modsTxt)));
+        Assert(File.ReadAllText(modsTxt + ".previous") == beforePreview, "the mods.txt before the import is kept");
+        var again = await mods.ImportProfileAsync(wanted, apply: false, CancellationToken.None);
+        Assert(again.Changes.Count == 0 && again.Message.StartsWith("This server already matches the profile."), again.Message);
+
+        Assert((await mods.ImportProfileAsync(null, apply: false, CancellationToken.None)) is { Success: false, Message: "This file is not a MystTiq MOD profile." }, "not a profile");
+        var newer = await mods.ImportProfileAsync(profile with { Version = 2 }, apply: false, CancellationToken.None);
+        Assert(!newer.Success && newer.Message.Contains("newer MystTiq"), newer.Message);
     }, failures);
     // v1.0.9.1 (roadmap B-4): what one slash command does, in order, against a reply that records every call.
     RunScenarioAsync("Discord commands: a refusal is answered at once and only to the caller, and nothing runs", async () =>
@@ -4449,6 +4516,28 @@ static void RunScenarioAsync(string name, Func<Task> action, List<string> failur
 
 static string Describe(List<(string Action, string PlayerId)> calls) =>
     calls.Count == 0 ? "(no calls)" : string.Join(", ", calls.Select(c => $"{c.Action}({c.PlayerId})"));
+
+// v1.0.9.2: a server folder with UE4SS (three MODs in mods.txt, one a comment and a blank line apart) and one PAK.
+static (FakePathProfile Paths, HeadlessModManagementService Mods, string ModsTxt) BuildModTree(string tempRoot, string name, bool running)
+{
+    var paths = new FakePathProfile(Path.Combine(tempRoot, name + "-" + Guid.NewGuid().ToString("N")));
+    Directory.CreateDirectory(paths.Ue4ssRoot);
+    foreach (var mod in new[] { "ModA", "ModB", "Keybinds" })
+    {
+        Directory.CreateDirectory(Path.Combine(paths.Ue4ssModsRoot, mod, "Scripts"));
+        File.WriteAllText(Path.Combine(paths.Ue4ssModsRoot, mod, "Scripts", "main.lua"), $"print('{mod}')");
+    }
+    var modsTxt = Path.Combine(paths.Ue4ssModsRoot, "mods.txt");
+    File.WriteAllLines(modsTxt, ["; managed by the harness", "ModA : 1", "ModB : 0", "", "Keybinds : 1"]);
+    var paks = Path.Combine(paths.ServerRoot, "Pal", "Content", "Paks", "~mods");
+    Directory.CreateDirectory(paks);
+    File.WriteAllBytes(Path.Combine(paks, "Thing.pak"), [1, 2, 3, 4]);
+    var operations = new MystTiq.Core.Operations.OperationCoordinator(paths);
+    var lifecycle = new ScriptedLifecycle { Running = running, Phase = running ? ServerLifecyclePhase.Running : ServerLifecyclePhase.Stopped };
+    var mods = new HeadlessModManagementService(paths, lifecycle, new HeadlessActivityLogService(paths), new HeadlessConsoleLogWriter(paths), operations,
+        new MystTiq.Core.Operations.ServerProfileId("default"));
+    return (paths, mods, modsTxt);
+}
 
 static (HeadlessWhitelistService Whitelist, FakeModerationProvider Fake) Build(string tempRoot, string scenarioName)
 {

@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -1139,6 +1139,36 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     {
         using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsync("/api/v1/mods/repair", null, cancellationToken);
         return await ReadOperationAsync<ModMutationResultDto>(response, cancellationToken);
+    }
+
+    public async Task<ModLoadOrderDto> GetModLoadOrderAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        return await client.GetFromJsonAsync<ModLoadOrderDto>("/api/v1/mods/load-order", cancellationToken)
+            ?? throw new InvalidOperationException("MystTiq returned an empty load order.");
+    }
+
+    public async Task<ModMutationResultDto> SetUe4ssLoadOrderAsync(ConnectionProfile profile, IReadOnlyList<string> order, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsJsonAsync("/api/v1/mods/load-order", new { order }, cancellationToken);
+        return await ReadOperationAsync<ModMutationResultDto>(response, cancellationToken);
+    }
+
+    public async Task<string> ExportModProfileAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.GetAsync("/api/v1/mods/profile", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync(cancellationToken);
+    }
+
+    public async Task<ModProfileImportResultDto> ImportModProfileAsync(ConnectionProfile profile, string profileJson, bool apply, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var content = new StringContent(profileJson, System.Text.Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync($"/api/v1/mods/profile/import?apply={apply.ToString().ToLowerInvariant()}", content, cancellationToken);
+        return await ReadOperationAsync<ModProfileImportResultDto>(response, cancellationToken);
     }
 
     public async Task<WorkshopScanResultDto> ScanWorkshopModsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)

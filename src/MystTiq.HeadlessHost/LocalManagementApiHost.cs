@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -1316,6 +1316,26 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var result = await p.ModManagement.RepairAsync(token);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         });
+
+        // v1.0.9.2 (roadmap B-3): UE4SS's load order and MOD profiles (reading needs Viewer, changing Admin, as every MOD route).
+        routes.MapGet("/mods/load-order", async (CancellationToken token) =>
+            Results.Ok(await p.ModManagement.GetLoadOrderAsync(token)));
+        routes.MapPost("/mods/load-order", async (Ue4ssLoadOrderRequest request, CancellationToken token) =>
+        {
+            var result = await p.ModManagement.SetUe4ssLoadOrderAsync(request.Order ?? [], token);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        });
+        routes.MapGet("/mods/profile", async (CancellationToken token) =>
+            Results.Ok(await p.ModManagement.ExportProfileAsync(token)));
+        // The body is read here, not bound, so a file that is not a profile is answered in words rather than a bare 400.
+        routes.MapPost("/mods/profile/import", async (HttpRequest request, bool? apply, CancellationToken token) =>
+        {
+            ModProfile? profile;
+            try { profile = await request.ReadFromJsonAsync<ModProfile>(token); }
+            catch (System.Text.Json.JsonException) { profile = null; }
+            var result = await p.ModManagement.ImportProfileAsync(profile, apply == true, token);
+            return result.Success ? Results.Ok(result) : Results.Conflict(result);
+        }).DisableAntiforgery();
 
         routes.MapGet("/mods/workshop", async (CancellationToken token) =>
             Results.Ok(await p.ModManagement.ScanWorkshopAsync(token)));
