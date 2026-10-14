@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.1: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
 using System.Security.Cryptography;
 using System.Text.Json;
 using MystTiq.Core.Operations;

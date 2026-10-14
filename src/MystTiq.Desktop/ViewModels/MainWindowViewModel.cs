@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.1: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -154,21 +154,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _playerGuildDetail = "Connect to explore player and guild identities.";
     private string _semanticStateText = "—";
     private string _semanticSourceText = "—";
-    private string _playerRecordCountText = "—";
     private string _guildRecordCountText = "—";
     private PlayerExplorerItemDto? _selectedExplorerPlayer;
     private PlayerSnapshotDto? _selectedOnlinePlayer;
-    private PlayerExplorerItemDto? _selectedPlayerRecord;
-    private string _playerSearchText = string.Empty;
-    private string _selectedPlayerViewFilter = "All Players";
-    private string _selectedPlayerAdminFilter = "All Records";
-    private bool _hideDuplicatePlayerNames;
-    private string _playersPageState = "Not loaded";
-    private string _playersPageDetail = "Connect to discover live and saved player records.";
-    private string _playerVisibleCountText = "0 visible";
-    private string _selectedPlayerNotes = string.Empty;
-    private string _newPlayerWarning = string.Empty;
-    private string _playerMetadataState = "Select a player to load notes and warnings.";
     private PlayerExplorerItemDto? _migrationSourcePlayer;
     private PlayerExplorerItemDto? _migrationDestinationPlayer;
     private string _migrationState = "Pick a source and destination player, then Preview.";
@@ -306,11 +294,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private DiskSpacePredictionDto? _diskSpacePrediction;
     private string _discordBotState = "Open Alert Center to load Discord bot configuration.";
     private DiscordBotConfigurationDto _discordBotConfig = new();
-    private WhitelistConfigDto _whitelistConfig = new();
-    private string _whitelistState = "Click Refresh to load the whitelist.";
-    private string _newWhitelistPlayerId = string.Empty;
-    private string _newWhitelistLabel = string.Empty;
-    private WhitelistEntryDto? _selectedWhitelistEntry;
     private bool _discordBotTokenConfigured;
     private string _discordBotConnectionState = "NotConfigured";
     private string _newRoleMappingDiscordRoleId = string.Empty;
@@ -331,12 +314,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _saveToolsState = "Open Save Tools to inspect server-side dependencies and saves.";
     private string _saveToolsPaths = "Not inspected";
     private SaveFileDto? _selectedSaveFile;
-    private string _playerAdminStatusText = "Right-click a player for administration actions.";
-    private string _banListText = "Click Refresh to load the RCON ban list.";
-    private string _moderationProviderStatusText = string.Empty;
-    private string _playerRegistrySummaryText = string.Empty;
-    private string _playerActionMessage = "Removed by administrator.";
-    private string _playerActionItem = string.Empty;
     private string _palworldConfigState = "Not loaded";
     private string _palworldConfigPath = "Not loaded";
     private bool _palworldConfigLoaded;
@@ -349,11 +326,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private bool _isLocalDiagnosticsExpanded;
     private bool _isDiscordBotExpanded;
     private bool _isAntiCheatExpanded;
-    private bool _isBanListExpanded;
-    private bool _isWhitelistExpanded;
-    private bool _isTemporaryBansExpanded;
-    private string _temporaryBanState = "Click Refresh to load active temporary bans.";
-    private double _newTemporaryBanDurationHours = 24;
     private string _configSearchText = string.Empty;
     private string _selectedConfigCategory = "All Categories";
     private string _selectedConfigPreset = "Balanced QoL";
@@ -390,11 +362,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         _api = api;
         // v1.0.8.0 (roadmap C-0): the shared session the page ViewModels use, and the pages moved out of this file so far.
-        Session = new SessionContext(api, ActiveProfileOrNull, () => BearerToken, () => IsBusy, busy => IsBusy = busy, () => SelectedPage, RunUi, () => SelectedProfile, () => ActiveTab);
+        Session = new SessionContext(api, ActiveProfileOrNull, () => BearerToken, () => IsBusy, busy => IsBusy = busy, () => SelectedPage, RunUi, () => SelectedProfile, () => ActiveTab, () => BuildProfileFromEditor(SelectedProfile?.Id));
         Logs = new ConsoleLogViewModel(Session);
         Host = new HostPageViewModel(Session);
         Dashboard = new DashboardViewModel(Session);
-        _pages = [Logs, Host, Dashboard];
+        Players = new PlayersViewModel(Session, RefreshActivityAsync, RefreshPlayersPageAsync);
+        Players.CommandStatesChanged += () =>
+        {
+            (TeleportPlayerToMeCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (TeleportToPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        };
+        _pages = [Logs, Host, Dashboard, Players];
         _nexus = nexusClient ?? new NexusModsClient();
         _profileStore = profileStore;
         _localDiscovery = localDiscovery;
@@ -410,12 +388,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // v1.0.5.0 (roadmap M-1): the MOD browser.
         InitializeModBrowser();
         // v1.0.6.0 (roadmap S-3): the Players page's Pal box.
-        InitializePalBox();
         // v0.8.5.0: the saved display language, before anything is shown.
         Localizer.Instance.SetLanguage(_languageStore.Load());
         Localizer.Instance.LanguageChanged += OnLanguageChanged;
-        InitializeKits();
-        InitializeGameIdPicker();
         InitializeTeleportCommands();
         InitializeUserAccountCommands();
         _tabSessionStore = tabSessionStore ?? new TabSessionStore();
@@ -475,10 +450,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SaveDiscordBotConfigCommand = new AsyncCommand(SaveDiscordBotConfigAsync, () => !IsBusy);
         AddDiscordRoleMappingCommand = new RelayCommand(AddDiscordRoleMapping);
         RemoveDiscordRoleMappingCommand = new RelayCommand(RemoveDiscordRoleMapping);
-        RefreshWhitelistCommand = new AsyncCommand(RefreshWhitelistAsync, () => !IsBusy);
-        SaveWhitelistCommand = new AsyncCommand(SaveWhitelistAsync, () => !IsBusy);
-        AddWhitelistEntryCommand = new RelayCommand(AddWhitelistEntry);
-        RemoveWhitelistEntryCommand = new RelayCommand(RemoveSelectedWhitelistEntry);
         // v1.0.0.5: Bases and Guilds link to each other and to the map (MainWindowViewModel.WorldCards.cs).
         ShowSelectedBaseOnMapCommand = new RelayCommand(ShowSelectedBaseOnMap);
         OpenSelectedBaseGuildCommand = new RelayCommand(OpenSelectedBaseGuild);
@@ -486,11 +457,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // v1.0.0.4: the save-folder access fix (MainWindowViewModel.SaveAccess.cs).
         FixSaveFolderAccessCommand = new AsyncCommand(FixSaveFolderAccessAsync, () => !IsBusy);
         // v1.0.0.2: unique player names (MainWindowViewModel.NameGuard.cs).
-        ToggleNameGuardCommand = new RelayCommand(ToggleNameGuard);
-        RefreshNameGuardCommand = new AsyncCommand(RefreshNameGuardAsync, () => !IsBusy);
-        SaveNameGuardCommand = new AsyncCommand(SaveNameGuardAsync, () => !IsBusy);
-        ReserveNameCommand = new RelayCommand(ReserveName);
-        ReleaseNameCommand = new RelayCommand(ReleaseSelectedName);
         RefreshAntiCheatCommand = new AsyncCommand(RefreshAntiCheatAsync, () => !IsBusy);
         SaveAntiCheatRulesCommand = new AsyncCommand(SaveAntiCheatRulesAsync, () => !IsBusy);
         RefreshFleetCommand = new AsyncCommand(RefreshFleetAsync, () => !IsBusy);
@@ -504,22 +470,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RefreshSaveToolsCommand = new AsyncCommand(() => RefreshSaveToolsAsync(false), () => !IsBusy);
         RunSaveToolsSelfTestCommand = new AsyncCommand(() => RefreshSaveToolsAsync(true), () => !IsBusy && ManagementApiConnected);
         RefreshPlayersCommand = new AsyncCommand(RefreshPlayersPageAsync, () => !IsBusy);
-        LoadPlayerMetadataCommand = new AsyncCommand(LoadSelectedPlayerMetadataAsync, () => !IsBusy && SelectedPlayerRecord is not null);
-        SavePlayerNotesCommand = new AsyncCommand(SaveSelectedPlayerNotesAsync, () => !IsBusy && SelectedPlayerRecord is not null);
         PreviewCharacterMigrationCommand = new AsyncCommand(PreviewCharacterMigrationAsync, () => !IsBusy && MigrationSourcePlayer is not null && MigrationDestinationPlayer is not null);
         ApplyCharacterMigrationCommand = new AsyncCommand(ApplyCharacterMigrationAsync, () => !IsBusy && MigrationPreview is { CanApply: true });
-        AddPlayerWarningCommand = new AsyncCommand(AddSelectedPlayerWarningAsync, () => !IsBusy && SelectedPlayerRecord is not null && !string.IsNullOrWhiteSpace(NewPlayerWarning));
-        KickSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("kick"), () => !IsBusy && SelectedPlayerRecord?.Online == true);
-        BanSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("ban"), () => !IsBusy && SelectedPlayerRecord?.Online == true);
-        UnbanSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("unban", requireOnline: false), () => !IsBusy && SelectedPlayerRecord is not null);
-        TeleportPlayerToMeCommand = new AsyncCommand(() => RunTeleportAsync(toMe: true), () => !IsBusy && SelectedPlayerRecord?.Online == true);
-        TeleportToPlayerCommand = new AsyncCommand(() => RunTeleportAsync(toMe: false), () => !IsBusy && SelectedPlayerRecord?.Online == true);
+        TeleportPlayerToMeCommand = new AsyncCommand(() => RunTeleportAsync(toMe: true), () => !IsBusy && Players.SelectedPlayerRecord?.Online == true);
+        TeleportToPlayerCommand = new AsyncCommand(() => RunTeleportAsync(toMe: false), () => !IsBusy && Players.SelectedPlayerRecord?.Online == true);
         SaveWorldNowCommand = new AsyncCommand(SaveWorldNowAsync, () => !IsBusy);
-        RefreshBanListCommand = new AsyncCommand(RefreshBanListAsync, () => !IsBusy);
-        WhisperSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("whisper"), () => false);
-        PromoteSelectedPlayerCommand = new AsyncCommand(() => RunSelectedPlayerAdminActionAsync("promote"), () => false);
-        // v0.7.112.0: real now (PalDefender over RCON, the Starter Kits provider), no longer hardcoded off.
-        GiveItemSelectedPlayerCommand = new AsyncCommand(GiveItemsToSelectedPlayerAsync, () => !IsBusy && SelectedPlayerRecord?.Online == true && !string.IsNullOrWhiteSpace(GiveItemsText));
+        // v0.7.112.0: real now (PalDefender over RCON, the Starter Players.Kits provider), no longer hardcoded off.
         RefreshBackupsCommand = new AsyncCommand(RefreshBackupsAsync, () => !IsBusy);
         CreateBackupCommand = new AsyncCommand(CreateBackupAsync, () => !IsBusy && ManagementApiConnected);
         DeleteBackupCommand = new AsyncCommand(DeleteBackupAsync, () => !IsBusy && SelectedBackup is not null);
@@ -566,7 +522,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // v1.0.1.0: Update on every Update Center row (MainWindowViewModel.ComponentUpdates.cs); pip's own command folded in.
         UpdateComponentCommand = new RelayCommand<ComponentVersionDto>(UpdateComponent, component => component?.CanUpdate == true);
         // v1.0.4.0 (roadmap S-1, S-2): the selected player's inventory (MainWindowViewModel.Inventory.cs).
-        LoadInventoryCommand = new AsyncCommand(LoadInventoryAsync, () => !IsBusy && SelectedPlayerRecord is not null);
         RefreshWorldExplorerCommand = new AsyncCommand(RefreshWorldExplorerAsync, () => !IsBusy);
         ValidateActiveWorldCommand = new AsyncCommand(ValidateActiveWorldAsync, () => !IsBusy && ManagementApiConnected);
         ApplyWorldTransactionCommand = new AsyncCommand(ApplyWorldTransactionAsync, () => !IsBusy && WorldTransactionConfirmed && !string.IsNullOrWhiteSpace(WorldPreviewToken));
@@ -667,27 +622,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ToggleLocalDiagnosticsCommand = new RelayCommand(() => IsLocalDiagnosticsExpanded = !IsLocalDiagnosticsExpanded);
         ToggleDiscordBotCommand = new RelayCommand(() => IsDiscordBotExpanded = !IsDiscordBotExpanded);
         ToggleAntiCheatCommand = new RelayCommand(() => IsAntiCheatExpanded = !IsAntiCheatExpanded);
-        ToggleBanListCommand = new RelayCommand(() =>
-        {
-            IsBanListExpanded = !IsBanListExpanded;
-            if (IsBanListExpanded) RunUi(() => RefreshBanListAsync());
-        });
-        ToggleWhitelistCommand = new RelayCommand(() =>
-        {
-            IsWhitelistExpanded = !IsWhitelistExpanded;
-            if (IsWhitelistExpanded) RunUi(() => RefreshWhitelistAsync());
-        });
-        ToggleTemporaryBansCommand = new RelayCommand(() =>
-        {
-            IsTemporaryBansExpanded = !IsTemporaryBansExpanded;
-            if (IsTemporaryBansExpanded) RunUi(() => RefreshTemporaryBansAsync());
-        });
-        RefreshTemporaryBansCommand = new AsyncCommand(RefreshTemporaryBansAsync, () => !IsBusy);
-        CreateTemporaryBanCommand = new AsyncCommand(CreateTemporaryBanForSelectedPlayerAsync, () => !IsBusy && SelectedPlayerRecord?.Online == true);
         // No generic async command primitive exists in this codebase for a per-row action bound via
         // CommandParameter -- following the same RunUi(...) pattern (v1.0.7.0: was a fire-and-forget post)
-        // already used by ToggleWhitelistCommand/ToggleBanListCommand above rather than adding one.
-        CancelTemporaryBanCommand = new RelayCommand<string>(playerId => RunUi(() => CancelTemporaryBanAsync(playerId)));
+        // already used by Players.ToggleWhitelistCommand/Players.ToggleBanListCommand above rather than adding one.
         // v0.8.23.0: every command exists now, so the role each needs can be attached.
         InstallCommandRoleGates();
         RebuildRibbonGroups();
@@ -1010,7 +947,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // v0.7.8.0 correction: v0.7.6.0 cleared SelectedOnlinePlayer here on the assumption
             // (from the bug scan that prompted it) that it was what Kick/Ban/Ban-list-driven actions
             // read -- direct inspection while adding Unban/Teleport here found that assumption was
-            // wrong. Kick/Ban/Unban/Teleport all actually read SelectedPlayerRecord, the Players
+            // wrong. Kick/Ban/Unban/Teleport all actually read Players.SelectedPlayerRecord, the Players
             // page's "Directory" selection (a completely different, and until now unaddressed,
             // property), which is populated only by RefreshPlayersPageAsync -- a page-navigation
             // trigger, not the 5-second timer -- so it was not only unfixed by v0.7.6.0 but has an
@@ -1020,7 +957,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // the actual mechanism these player-targeted actions use, not just the one this class of
             // bug was first reported against.
             SelectedOnlinePlayer = null;
-            SelectedPlayerRecord = null;
+            Players.SelectedPlayerRecord = null;
             SelectedBackup = null;
             SelectedMod = null;
             SelectedExplorerPal = null;
@@ -1039,7 +976,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             MapPalsStatusText = string.Empty;
             // v0.8.3.0: the Give Item picker's ids come from this server's own world save; another server's list
             // must not be offered here.
-            ClearGameIdCatalog();
+            Players.ClearGameIdCatalog();
             BaseMapPoints.Clear();
             MapBasesStatusText = string.Empty;
             // v0.7.100.0: a new server starts on the whole map, not zoomed on the previous one's base.
@@ -1341,9 +1278,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<WorldTransactionJournalDto> WorldTransactionHistory { get; } = [];
     public ObservableCollection<OperationRecordDto> RecentOperations { get; } = [];
     public ObservableCollection<PlayerExplorerItemDto> ExplorerPlayers { get; } = [];
-    public ObservableCollection<PlayerExplorerItemDto> PlayerRecords { get; } = [];
-    public ObservableCollection<PlayerExplorerItemDto> FilteredPlayerRecords { get; } = [];
-    public ObservableCollection<PlayerWarningDto> SelectedPlayerWarnings { get; } = [];
     public ObservableCollection<GuildExplorerItemDto> ExplorerGuilds { get; } = [];
     public ObservableCollection<GuildExplorerItemDto> FilteredExplorerGuilds { get; } = [];
     public ObservableCollection<BaseExplorerItemDto> ExplorerBases { get; } = [];
@@ -1371,8 +1305,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<PalworldSettingDto> SimpleNetworkSettings { get; } = [];
     public ObservableCollection<string> PalworldConfigCategories { get; } = ["All Categories"];
     public IReadOnlyList<string> PalworldConfigPresets { get => _palworldConfigPresets; private set => SetField(ref _palworldConfigPresets, value); }
-    public IReadOnlyList<string> PlayerViewFilters { get; } = ["All Players", "Online", "Known Saves", "Missing Saves"];
-    public IReadOnlyList<string> PlayerAdminFilters { get; } = ["All Records", "Actionable Online", "Needs Review"];
     public IReadOnlyList<string> GuildStatusFilters { get; } = ["All Guilds", "Healthy", "Needs Review"];
     public IReadOnlyList<string> BaseStatusFilters { get; } = ["All Bases", "Healthy Owner", "Needs Review"];
 
@@ -1382,71 +1314,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         set
         {
             if (!SetField(ref _selectedOnlinePlayer, value)) return;
-            (KickSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (BanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (WhisperSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (PromoteSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.KickSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.BanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.WhisperSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.PromoteSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         }
     }
 
-    public PlayerExplorerItemDto? SelectedPlayerRecord
-    {
-        get => _selectedPlayerRecord;
-        set
-        {
-            if (!SetField(ref _selectedPlayerRecord, value)) return;
-            SelectedPlayerWarnings.Clear();
-            SelectedPlayerNotes = string.Empty;
-            PlayerMetadataState = value is null ? "Select a player to load notes and warnings." : "Metadata not loaded.";
-            RaisePlayerCommandStates();
-            RaiseKitCommandStates();
-        }
-    }
 
-    public string PlayerSearchText
-    {
-        get => _playerSearchText;
-        set { if (SetField(ref _playerSearchText, value ?? string.Empty)) ApplyPlayerFilters(); }
-    }
-
-    public string SelectedPlayerViewFilter
-    {
-        get => _selectedPlayerViewFilter;
-        set { if (SetField(ref _selectedPlayerViewFilter, value ?? "All Players")) ApplyPlayerFilters(); }
-    }
-
-    public string SelectedPlayerAdminFilter
-    {
-        get => _selectedPlayerAdminFilter;
-        set { if (SetField(ref _selectedPlayerAdminFilter, value ?? "All Records")) ApplyPlayerFilters(); }
-    }
-
-    // v0.7.18.0: requested directly -- a selectable way to declutter the Directory list when the
-    // same physical player shows up multiple times under the same display name (a rejoin under a
-    // different platform ID, a stale record from an old save, etc.). Purely a view-side filter --
-    // it hides rows, it never deletes or merges the underlying player records those extra PlayerIds
-    // still legitimately identify, so switching it off always brings every record straight back.
-    public bool HideDuplicatePlayerNames
-    {
-        get => _hideDuplicatePlayerNames;
-        set { if (SetField(ref _hideDuplicatePlayerNames, value)) ApplyPlayerFilters(); }
-    }
-
-    public string PlayersPageState { get => _playersPageState; private set => SetField(ref _playersPageState, value); }
-    public string PlayersPageDetail { get => _playersPageDetail; private set => SetField(ref _playersPageDetail, value); }
-    public string PlayerVisibleCountText { get => _playerVisibleCountText; private set => SetField(ref _playerVisibleCountText, value); }
-    public string SelectedPlayerNotes { get => _selectedPlayerNotes; set => SetField(ref _selectedPlayerNotes, value ?? string.Empty); }
-    public string NewPlayerWarning
-    {
-        get => _newPlayerWarning;
-        set
-        {
-            if (!SetField(ref _newPlayerWarning, value ?? string.Empty)) return;
-            (AddPlayerWarningCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        }
-    }
-    public string PlayerMetadataState { get => _playerMetadataState; private set => SetField(ref _playerMetadataState, value); }
     public PlayerExplorerItemDto? MigrationSourcePlayer { get => _migrationSourcePlayer; set { if (SetField(ref _migrationSourcePlayer, value)) (PreviewCharacterMigrationCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public PlayerExplorerItemDto? MigrationDestinationPlayer { get => _migrationDestinationPlayer; set { if (SetField(ref _migrationDestinationPlayer, value)) (PreviewCharacterMigrationCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string MigrationState { get => _migrationState; private set => SetField(ref _migrationState, value); }
@@ -1760,22 +1636,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string NewRoleMappingRole { get => _newRoleMappingRole; set => SetField(ref _newRoleMappingRole, value ?? "Viewer"); }
     public DiscordRoleMappingDto? SelectedRoleMapping { get => _selectedRoleMapping; set => SetField(ref _selectedRoleMapping, value); }
 
-    // v0.7.10.0: whitelist config is read/replaced as a whole, mirroring the Discord Bot config
-    // pattern immediately above (add/remove entries locally, one explicit Save persists the list).
-    public string WhitelistState { get => _whitelistState; private set => SetField(ref _whitelistState, value); }
-    public WhitelistConfigDto WhitelistConfig { get => _whitelistConfig; set => SetField(ref _whitelistConfig, value ?? new()); }
-    public ObservableCollection<WhitelistEntryDto> WhitelistEntries { get; } = [];
-    public string NewWhitelistPlayerId { get => _newWhitelistPlayerId; set => SetField(ref _newWhitelistPlayerId, value ?? string.Empty); }
-    public string NewWhitelistLabel { get => _newWhitelistLabel; set => SetField(ref _newWhitelistLabel, value ?? string.Empty); }
-    public WhitelistEntryDto? SelectedWhitelistEntry { get => _selectedWhitelistEntry; set => SetField(ref _selectedWhitelistEntry, value); }
-
-    // v0.7.15.0: temporary ban -- bans the currently selected player (same selection/online gating
-    // as Kick/Ban above) for a chosen duration, then the headless service auto-unbans once it
-    // elapses. This card only ever displays server-reported state (GetTemporaryBansAsync); there is
-    // no local add/remove list to edit before saving, unlike Whitelist.
-    public string TemporaryBanState { get => _temporaryBanState; private set => SetField(ref _temporaryBanState, value); }
-    public ObservableCollection<TemporaryBanEntryDto> TemporaryBans { get; } = [];
-    public double NewTemporaryBanDurationHours { get => _newTemporaryBanDurationHours; set => SetField(ref _newTemporaryBanDurationHours, value <= 0 ? 1 : value); }
 
     public string AntiCheatState { get => _antiCheatState; private set => SetField(ref _antiCheatState, value); }
     public AntiCheatRuleSetDto AntiCheatRules { get => _antiCheatRules; set => SetField(ref _antiCheatRules, value ?? new()); }
@@ -1812,12 +1672,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool CloneWorldConfirmed { get => _cloneWorldConfirmed; set { if (SetField(ref _cloneWorldConfirmed, value)) (CloneWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
     public string ActivityFileText { get => _activityFileText; private set => SetField(ref _activityFileText, value); }
     public string ActivityDetail { get => _activityDetail; private set => SetField(ref _activityDetail, value); }
-    public string PlayerAdminStatusText { get => _playerAdminStatusText; private set => SetField(ref _playerAdminStatusText, value); }
-    public string BanListText { get => _banListText; private set => SetField(ref _banListText, value); }
-    public string ModerationProviderStatusText { get => _moderationProviderStatusText; private set => SetField(ref _moderationProviderStatusText, value); }
-    public string PlayerRegistrySummaryText { get => _playerRegistrySummaryText; private set => SetField(ref _playerRegistrySummaryText, value); }
-    public string PlayerActionMessage { get => _playerActionMessage; set => SetField(ref _playerActionMessage, value); }
-    public string PlayerActionItem { get => _playerActionItem; set => SetField(ref _playerActionItem, value); }
 
     public string ConnectionState
     {
@@ -2129,7 +1983,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string PlayerGuildDetail { get => _playerGuildDetail; private set => SetField(ref _playerGuildDetail, value); }
     public string SemanticStateText { get => _semanticStateText; private set => SetField(ref _semanticStateText, value); }
     public string SemanticSourceText { get => _semanticSourceText; private set => SetField(ref _semanticSourceText, value); }
-    public string PlayerRecordCountText { get => _playerRecordCountText; private set => SetField(ref _playerRecordCountText, value); }
     public string GuildRecordCountText { get => _guildRecordCountText; private set => SetField(ref _guildRecordCountText, value); }
     public PlayerExplorerItemDto? SelectedExplorerPlayer
     {
@@ -2137,11 +1990,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         set
         {
             if (!SetField(ref _selectedExplorerPlayer, value)) return;
-            (KickSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (BanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (WhisperSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (PromoteSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.KickSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.BanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.WhisperSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.PromoteSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         }
     }
     public GuildExplorerItemDto? SelectedExplorerGuild
@@ -2493,9 +2346,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
             RaiseAllAsyncCommandStates();
             RaiseNexusCommandStates();
-            RaiseKitCommandStates();
+            Players.RaiseKitCommandStates();
             Host.RaiseHostCommandStates();
-            _loadGameIdsCommand?.RaiseCanExecuteChanged();
+            Players._loadGameIdsCommand?.RaiseCanExecuteChanged();
             (ConnectCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (DetectLocalServiceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (DiscoverServicesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -2511,21 +2364,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             (RefreshEnvironmentCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (VerifyEnvironmentCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (CreateDefaultServerSettingsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (KickSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (BanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (UnbanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.KickSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.BanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.UnbanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (TeleportPlayerToMeCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (TeleportToPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (SaveWorldNowCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RefreshBanListCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RefreshTemporaryBansCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (CreateTemporaryBanCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (WhisperSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (PromoteSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (LoadPlayerMetadataCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (SavePlayerNotesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (AddPlayerWarningCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.RefreshBanListCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.RefreshTemporaryBansCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.CreateTemporaryBanCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.WhisperSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.PromoteSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.LoadPlayerMetadataCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.SavePlayerNotesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Players.AddPlayerWarningCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (OpenSelectedGuildLeaderCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RefreshBackupsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -2627,7 +2480,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(PageSubtitle));
         RaisePropertyChanged(nameof(SelectedUiLanguage));
         // v0.9.2.0: item and Pal names come in the display language; a loaded picker is read again (the map refreshes itself).
-        if (_gameIdCatalog.Count > 0 && SelectedProfile is not null && !IsBusy) _ = LoadGameIdsAsync();
+        Players.OnLanguageChanged();
     }
 
     public bool ShowGlobalPageHeader => true;
@@ -2717,10 +2570,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand SaveDiscordBotConfigCommand { get; }
     public ICommand AddDiscordRoleMappingCommand { get; }
     public ICommand RemoveDiscordRoleMappingCommand { get; }
-    public ICommand RefreshWhitelistCommand { get; }
-    public ICommand SaveWhitelistCommand { get; }
-    public ICommand AddWhitelistEntryCommand { get; }
-    public ICommand RemoveWhitelistEntryCommand { get; }
     public ICommand RefreshAntiCheatCommand { get; }
     public ICommand SaveAntiCheatRulesCommand { get; }
     public ICommand RefreshFleetCommand { get; }
@@ -2733,21 +2582,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand RefreshSaveToolsCommand { get; }
     public ICommand RunSaveToolsSelfTestCommand { get; }
     public ICommand RefreshPlayersCommand { get; }
-    public ICommand LoadPlayerMetadataCommand { get; }
-    public ICommand SavePlayerNotesCommand { get; }
     public ICommand PreviewCharacterMigrationCommand { get; }
     public ICommand ApplyCharacterMigrationCommand { get; }
-    public ICommand AddPlayerWarningCommand { get; }
-    public ICommand KickSelectedPlayerCommand { get; }
-    public ICommand BanSelectedPlayerCommand { get; }
-    public ICommand UnbanSelectedPlayerCommand { get; }
     public ICommand TeleportPlayerToMeCommand { get; }
     public ICommand TeleportToPlayerCommand { get; }
     public ICommand SaveWorldNowCommand { get; }
-    public ICommand RefreshBanListCommand { get; }
-    public ICommand WhisperSelectedPlayerCommand { get; }
-    public ICommand PromoteSelectedPlayerCommand { get; }
-    public ICommand GiveItemSelectedPlayerCommand { get; }
     public ICommand RefreshBackupsCommand { get; }
     public ICommand CreateBackupCommand { get; }
     public ICommand DeleteBackupCommand { get; }
@@ -2882,12 +2721,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand ToggleLocalDiagnosticsCommand { get; }
     public ICommand ToggleDiscordBotCommand { get; }
     public ICommand ToggleAntiCheatCommand { get; }
-    public ICommand ToggleBanListCommand { get; }
-    public ICommand ToggleWhitelistCommand { get; }
-    public ICommand ToggleTemporaryBansCommand { get; }
-    public ICommand RefreshTemporaryBansCommand { get; }
-    public ICommand CreateTemporaryBanCommand { get; }
-    public ICommand CancelTemporaryBanCommand { get; }
 
     public bool IsWorldMapExpanded { get => _isWorldMapExpanded; private set => SetField(ref _isWorldMapExpanded, value); }
     public bool IsPalEditorExpanded { get => _isPalEditorExpanded; private set => SetField(ref _isPalEditorExpanded, value); }
@@ -2895,9 +2728,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool IsLocalDiagnosticsExpanded { get => _isLocalDiagnosticsExpanded; private set => SetField(ref _isLocalDiagnosticsExpanded, value); }
     public bool IsDiscordBotExpanded { get => _isDiscordBotExpanded; private set => SetField(ref _isDiscordBotExpanded, value); }
     public bool IsAntiCheatExpanded { get => _isAntiCheatExpanded; private set => SetField(ref _isAntiCheatExpanded, value); }
-    public bool IsBanListExpanded { get => _isBanListExpanded; private set => SetField(ref _isBanListExpanded, value); }
-    public bool IsWhitelistExpanded { get => _isWhitelistExpanded; private set => SetField(ref _isWhitelistExpanded, value); }
-    public bool IsTemporaryBansExpanded { get => _isTemporaryBansExpanded; private set => SetField(ref _isTemporaryBansExpanded, value); }
 
     public string CrashAnalyzerState { get => _crashAnalyzerState; private set => SetField(ref _crashAnalyzerState, value); }
     public string SaveToolsState { get => _saveToolsState; private set => SetField(ref _saveToolsState, value); }
@@ -4869,7 +4699,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         try
         {
             var identities = await _api.GetPlayerGuildExplorerAsync(profile, BearerToken);
-            PlayerRecordCountText = identities.Players.Count.ToString();
+            Players.PlayerRecordCountText = identities.Players.Count.ToString();
             GuildRecordCountText = identities.Guilds.Count.ToString();
             Dashboard.GuildText = $"{identities.Guilds.Count} guild(s) · {identities.Players.Count} known player(s)";
         }
@@ -5104,155 +4934,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private async Task RefreshPlayersPageAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayersPageDetail = ex.Message; return; }
-
-        // v0.7.8.0: same guard as RefreshAsync/RefreshStatusPollingAsync -- a response for a tab the
-        // user has since switched away from must not overwrite the newly active tab's player list.
-        var requestTab = ActiveTab;
-        var selectedId = SelectedPlayerRecord?.PlayerId;
-        IsBusy = true;
-        PlayersPageState = "Discovering live and saved players…";
-        try
-        {
-            // One aggregate status request supplies all live state. Save discovery remains an
-            // explicit headless endpoint so remote desktops never inspect server-side paths.
-            var pollTask = _api.GetStatusPollingAsync(profile, 120, BearerToken);
-            var explorerTask = _api.GetPlayerGuildExplorerAsync(profile, BearerToken);
-            await Task.WhenAll(pollTask, explorerTask);
-            if (!ReferenceEquals(requestTab, ActiveTab)) return;
-
-            var poll = await pollTask;
-            ApplyStatus(poll.Status);
-            ApplyServiceStatus(poll.Service);
-            ApplyPlayers(poll.Players);
-            ApplyMetrics(poll.Metrics);
-            ApplyLogs(poll.LogTail);
-            ApplyDashboardSupport(poll);
-
-            var snapshot = await explorerTask;
-            ApplyBaseLocations(snapshot);
-            PlayerRecords.Clear();
-            foreach (var player in snapshot.Players.OrderByDescending(x => x.Online).ThenBy(x => x.PlayerName).ThenBy(x => x.PlayerId))
-                PlayerRecords.Add(player);
-
-            ApplyPlayerFilters();
-            SelectedPlayerRecord = !string.IsNullOrWhiteSpace(selectedId)
-                ? PlayerRecords.FirstOrDefault(x => string.Equals(x.PlayerId, selectedId, StringComparison.OrdinalIgnoreCase))
-                : FilteredPlayerRecords.FirstOrDefault();
-
-            PlayersPageState = snapshot.Available ? $"Ready · {poll.Players.OnlineCount} online" : "Player discovery unavailable";
-            PlayersPageDetail = snapshot.Detail;
-            ManagementApiConnected = true;
-            ConnectionState = "Connected";
-            StatusBarObservedText = $"Updated {poll.ObservedAt.ToLocalTime():HH:mm:ss}";
-
-            if (SelectedPlayerRecord is not null)
-                await LoadSelectedPlayerMetadataCoreAsync(profile, SelectedPlayerRecord.PlayerId);
-
-            try
-            {
-                var providers = await _api.GetPlayerModerationProvidersAsync(profile, BearerToken);
-                ModerationProviderStatusText = providers.Count == 0
-                    ? string.Empty
-                    : string.Join("   ", providers.Select(x => $"{x.DisplayName}: {x.Health}"));
-            }
-            catch { ModerationProviderStatusText = string.Empty; }
-        }
-        catch (Exception ex)
-        {
-            PlayersPageState = "Unavailable";
-            PlayersPageDetail = ex.Message;
-        }
-        finally { IsBusy = false; }
-    }
-
-    private void ApplyPlayerFilters()
-    {
-        var selectedId = SelectedPlayerRecord?.PlayerId;
-        var search = PlayerSearchText.Trim();
-        var filtered = PlayerRecords.Where(player =>
-        {
-            if (!string.IsNullOrWhiteSpace(search) &&
-                !player.PlayerId.Contains(search, StringComparison.OrdinalIgnoreCase) &&
-                !player.PlayerName.Contains(search, StringComparison.OrdinalIgnoreCase) &&
-                !player.SteamId.Contains(search, StringComparison.OrdinalIgnoreCase) &&
-                !player.UserId.Contains(search, StringComparison.OrdinalIgnoreCase) &&
-                !player.GuildName.Contains(search, StringComparison.OrdinalIgnoreCase) &&
-                !player.Platform.Contains(search, StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            if (SelectedPlayerViewFilter == "Online" && !player.Online) return false;
-            if (SelectedPlayerViewFilter == "Known Saves" && !player.SaveExists) return false;
-            if (SelectedPlayerViewFilter == "Missing Saves" && player.SaveExists) return false;
-            if (SelectedPlayerAdminFilter == "Actionable Online" && !player.Online) return false;
-            if (SelectedPlayerAdminFilter == "Needs Review" && player.SaveExists) return false;
-            return true;
-        }).ToArray();
-
-        var duplicatesHidden = 0;
-        if (HideDuplicatePlayerNames)
-        {
-            var beforeCount = filtered.Length;
-            // One row per distinct PlayerName (case-insensitive; blank names are left ungrouped --
-            // multiple genuinely-nameless records shouldn't collapse into one). Preference order for
-            // which PlayerId "wins" a name: currently online, then has a save at all, then most
-            // recently written -- the record an operator is actually looking for, not an arbitrary one.
-            filtered = filtered
-                .GroupBy(p => string.IsNullOrWhiteSpace(p.PlayerName) ? $"\0{p.PlayerId}" : p.PlayerName, StringComparer.OrdinalIgnoreCase)
-                .Select(g => g
-                    .OrderByDescending(p => p.Online)
-                    .ThenByDescending(p => p.SaveExists)
-                    .ThenByDescending(p => p.SaveLastWriteUtc ?? DateTimeOffset.MinValue)
-                    .First())
-                .ToArray();
-            duplicatesHidden = beforeCount - filtered.Length;
-        }
-
-        FilteredPlayerRecords.Clear();
-        foreach (var player in filtered) FilteredPlayerRecords.Add(player);
-        PlayerVisibleCountText = duplicatesHidden > 0
-            ? $"{filtered.Length} visible / {PlayerRecords.Count} known ({duplicatesHidden} duplicate name(s) hidden)"
-            : $"{filtered.Length} visible / {PlayerRecords.Count} known";
-
-        if (!string.IsNullOrWhiteSpace(selectedId))
-            SelectedPlayerRecord = filtered.FirstOrDefault(x => string.Equals(x.PlayerId, selectedId, StringComparison.OrdinalIgnoreCase));
-        SelectedPlayerRecord ??= filtered.FirstOrDefault();
-    }
-
-    private async Task LoadSelectedPlayerMetadataAsync()
-    {
-        if (SelectedPlayerRecord is null) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayerMetadataState = ex.Message; return; }
-
-        IsBusy = true;
-        try { await LoadSelectedPlayerMetadataCoreAsync(profile, SelectedPlayerRecord.PlayerId); }
-        catch (Exception ex) { PlayerMetadataState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task LoadSelectedPlayerMetadataCoreAsync(ConnectionProfile profile, string playerId)
-    {
-        var metadata = await _api.GetPlayerMetadataAsync(profile, playerId, BearerToken);
-        if (!string.Equals(SelectedPlayerRecord?.PlayerId, playerId, StringComparison.OrdinalIgnoreCase)) return;
-        ApplyPlayerMetadata(metadata, "Metadata loaded");
-
-        try
-        {
-            var registry = await _api.GetPlayerRegistryAsync(profile, BearerToken);
-            if (!string.Equals(SelectedPlayerRecord?.PlayerId, playerId, StringComparison.OrdinalIgnoreCase)) return;
-            var record = registry.FirstOrDefault(r => string.Equals(r.PlayerId, playerId, StringComparison.OrdinalIgnoreCase));
-            PlayerRegistrySummaryText = record is null
-                ? "No registry history yet — first observed on the next status poll."
-                : $"First seen {record.FirstSeenUtc.ToLocalTime():yyyy-MM-dd} · Last seen {record.LastSeenUtc.ToLocalTime():yyyy-MM-dd HH:mm} · {record.TotalSessions} session(s) · {record.TotalPlaytimeMinutes / 60:F1}h tracked playtime";
-        }
-        catch { PlayerRegistrySummaryText = string.Empty; }
-    }
 
     private async Task PreviewCharacterMigrationAsync()
     {
@@ -5305,84 +4986,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
-    private async Task SaveSelectedPlayerNotesAsync()
-    {
-        if (SelectedPlayerRecord is null) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayerMetadataState = ex.Message; return; }
-
-        IsBusy = true;
-        PlayerMetadataState = "Saving notes…";
-        try
-        {
-            var metadata = await _api.SavePlayerNotesAsync(profile, SelectedPlayerRecord.PlayerId, SelectedPlayerNotes, BearerToken);
-            ApplyPlayerMetadata(metadata, "Notes saved and audited by the headless service");
-        }
-        catch (Exception ex) { PlayerMetadataState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task AddSelectedPlayerWarningAsync()
-    {
-        if (SelectedPlayerRecord is null || string.IsNullOrWhiteSpace(NewPlayerWarning)) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayerMetadataState = ex.Message; return; }
-
-        IsBusy = true;
-        PlayerMetadataState = "Adding warning…";
-        try
-        {
-            var metadata = await _api.AddPlayerWarningAsync(profile, SelectedPlayerRecord.PlayerId, NewPlayerWarning, BearerToken);
-            NewPlayerWarning = string.Empty;
-            ApplyPlayerMetadata(metadata, "Warning added and audited by the headless service");
-        }
-        catch (Exception ex) { PlayerMetadataState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private void ApplyPlayerMetadata(PlayerMetadataDto metadata, string state)
-    {
-        SelectedPlayerNotes = metadata.Notes;
-        SelectedPlayerWarnings.Clear();
-        foreach (var warning in metadata.Warnings.OrderByDescending(x => x.CreatedAt))
-            SelectedPlayerWarnings.Add(warning);
-        PlayerMetadataState = $"{state} · {metadata.Warnings.Count} warning(s) · {metadata.UpdatedAt.ToLocalTime():yyyy-MM-dd HH:mm}";
-    }
-
-    public string ExportVisiblePlayersCsv()
-    {
-        static string Csv(string? value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
-        var builder = new StringBuilder();
-        builder.AppendLine("PlayerId,PlayerName,SteamId,UserId,Online,Platform,Ping,GuildId,GuildName,Role,SaveExists,SaveSizeBytes,SaveLastWriteUtc,Evidence");
-        foreach (var player in FilteredPlayerRecords)
-        {
-            builder.AppendLine(string.Join(',', new[]
-            {
-                Csv(player.PlayerId), Csv(player.PlayerName), Csv(player.SteamId), Csv(player.UserId), Csv(player.Online.ToString()), Csv(player.Platform), Csv(player.Ping),
-                Csv(player.GuildId), Csv(player.GuildName), Csv(player.Role), Csv(player.SaveExists.ToString()),
-                Csv(player.SaveSizeBytes.ToString()), Csv(player.SaveLastWriteUtc?.ToString("O")), Csv(player.Evidence)
-            }));
-        }
-        return builder.ToString();
-    }
-
-    private void RaisePlayerCommandStates()
-    {
-        (KickSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (BanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (CreateTemporaryBanCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (UnbanSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (TeleportPlayerToMeCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (TeleportToPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (WhisperSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (PromoteSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (LoadPlayerMetadataCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (SavePlayerNotesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (AddPlayerWarningCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-    }
 
     private async Task RefreshMonitoringAsyncCore(ConnectionProfile profile)
     {
@@ -5770,7 +5373,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
 
     // Clicking a player dot selects that player, so the existing Teleport To Me / Teleport To Player
-    // commands (which act on SelectedPlayerRecord) work straight from the map. Palworld's vanilla
+    // commands (which act on Players.SelectedPlayerRecord) work straight from the map. Palworld's vanilla
     // RCON has no "teleport to coordinates" command, so map clicks can only target a player.
     private void SelectMapPlayer(string? playerId)
     {
@@ -5780,8 +5383,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // v0.7.100.0: clicking a marker (or a name in the list) also zooms in on it.
         var marker = PlayerMapPoints.FirstOrDefault(p => Norm(p.PlayerId) == wanted);
         if (marker is not null) ZoomToMapPoint(marker.UnzoomedX, marker.UnzoomedY);
-        var match = PlayerRecords.FirstOrDefault(p => Norm(p.PlayerId) == wanted);
-        if (match is not null) SelectedPlayerRecord = match;
+        var match = Players.PlayerRecords.FirstOrDefault(p => Norm(p.PlayerId) == wanted);
+        if (match is not null) Players.SelectedPlayerRecord = match;
         else MapBasesStatusText = "That player is not in the loaded player list yet. Refresh Players, then click again.";
     }
 
@@ -5797,7 +5400,75 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     // The HOST page's navigation flags (the nav pane and the category bar bind them).
     public bool IsHostPage => SelectedPage == NavigationPage.Host;
     public bool IsV5HostCategory => SelectedPage == NavigationPage.Host;
+    public PlayersViewModel Players { get; }
     private readonly IReadOnlyList<PageViewModel> _pages;
+
+    // v1.0.8.2 (roadmap C-2): the Players page refresh is one part of the whole status refresh, so it stays here.
+    private async Task RefreshPlayersPageAsync()
+    {
+        ConnectionProfile profile;
+        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
+        catch (Exception ex) { Players.PlayersPageDetail = ex.Message; return; }
+
+        // v0.7.8.0: same guard as RefreshAsync/RefreshStatusPollingAsync -- a response for a tab the
+        // user has since switched away from must not overwrite the newly active tab's player list.
+        var requestTab = ActiveTab;
+        var selectedId = Players.SelectedPlayerRecord?.PlayerId;
+        IsBusy = true;
+        Players.PlayersPageState = "Discovering live and saved players…";
+        try
+        {
+            // One aggregate status request supplies all live state. Save discovery remains an
+            // explicit headless endpoint so remote desktops never inspect server-side paths.
+            var pollTask = _api.GetStatusPollingAsync(profile, 120, BearerToken);
+            var explorerTask = _api.GetPlayerGuildExplorerAsync(profile, BearerToken);
+            await Task.WhenAll(pollTask, explorerTask);
+            if (!ReferenceEquals(requestTab, ActiveTab)) return;
+
+            var poll = await pollTask;
+            ApplyStatus(poll.Status);
+            ApplyServiceStatus(poll.Service);
+            ApplyPlayers(poll.Players);
+            ApplyMetrics(poll.Metrics);
+            ApplyLogs(poll.LogTail);
+            ApplyDashboardSupport(poll);
+
+            var snapshot = await explorerTask;
+            ApplyBaseLocations(snapshot);
+            Players.PlayerRecords.Clear();
+            foreach (var player in snapshot.Players.OrderByDescending(x => x.Online).ThenBy(x => x.PlayerName).ThenBy(x => x.PlayerId))
+                Players.PlayerRecords.Add(player);
+
+            Players.ApplyPlayerFilters();
+            Players.SelectedPlayerRecord = !string.IsNullOrWhiteSpace(selectedId)
+                ? Players.PlayerRecords.FirstOrDefault(x => string.Equals(x.PlayerId, selectedId, StringComparison.OrdinalIgnoreCase))
+                : Players.FilteredPlayerRecords.FirstOrDefault();
+
+            Players.PlayersPageState = snapshot.Available ? $"Ready · {poll.Players.OnlineCount} online" : "Player discovery unavailable";
+            Players.PlayersPageDetail = snapshot.Detail;
+            ManagementApiConnected = true;
+            ConnectionState = "Connected";
+            StatusBarObservedText = $"Updated {poll.ObservedAt.ToLocalTime():HH:mm:ss}";
+
+            if (Players.SelectedPlayerRecord is not null)
+                await Players.LoadSelectedPlayerMetadataCoreAsync(profile, Players.SelectedPlayerRecord.PlayerId);
+
+            try
+            {
+                var providers = await _api.GetPlayerModerationProvidersAsync(profile, BearerToken);
+                Players.ModerationProviderStatusText = providers.Count == 0
+                    ? string.Empty
+                    : string.Join("   ", providers.Select(x => $"{x.DisplayName}: {x.Health}"));
+            }
+            catch { Players.ModerationProviderStatusText = string.Empty; }
+        }
+        catch (Exception ex)
+        {
+            Players.PlayersPageState = "Unavailable";
+            Players.PlayersPageDetail = ex.Message;
+        }
+        finally { IsBusy = false; }
+    }
 
     private ConnectionProfile? ActiveProfileOrNull()
     {
@@ -6611,204 +6282,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SelectedRoleMapping = null;
     }
 
-    // ---- v0.7.94.0: Starter Kits -----------------------------------------------------------------
-    // Edit kits locally (name plus one entry per line), one explicit Save persists them all. Delivery
-    // needs PalDefender (vanilla Palworld has no give command), so the card shows the provider's real
-    // status and a Test button rather than assuming it works.
-    private bool _isKitsExpanded;
-    private string _kitStatusText = "Open this card to load starter kits.";
-    private string _kitProviderText = string.Empty;
-    private KitDefinitionDto? _selectedKit;
-    private string _kitNameText = string.Empty;
-    private string _kitEntriesText = string.Empty;
-    private bool _kitAutoGiftEnabled;
-    private KitDefinitionDto? _kitAutoGiftKit;
-    private string _kitAutoGiftNote = string.Empty;
-    private bool _loadingKitEditor;
-    private AsyncCommand[] _kitCommands = [];
-
-    public ObservableCollection<KitDefinitionDto> Kits { get; } = [];
-    public ObservableCollection<KitClaimDto> KitClaims { get; } = [];
-    public bool IsKitsExpanded { get => _isKitsExpanded; private set => SetField(ref _isKitsExpanded, value); }
-    public string KitStatusText { get => _kitStatusText; private set => SetField(ref _kitStatusText, value); }
-    public string KitProviderText { get => _kitProviderText; private set => SetField(ref _kitProviderText, value); }
-    public string KitAutoGiftNote { get => _kitAutoGiftNote; private set => SetField(ref _kitAutoGiftNote, value); }
-    public bool KitAutoGiftEnabled { get => _kitAutoGiftEnabled; set => SetField(ref _kitAutoGiftEnabled, value); }
-    public KitDefinitionDto? KitAutoGiftKit { get => _kitAutoGiftKit; set => SetField(ref _kitAutoGiftKit, value); }
-    public bool HasSelectedKit => _selectedKit is not null;
-    public KitDefinitionDto? SelectedKit
-    {
-        get => _selectedKit;
-        set
-        {
-            if (!SetField(ref _selectedKit, value)) return;
-            _loadingKitEditor = true;
-            KitNameText = value?.Name ?? string.Empty;
-            KitEntriesText = value is null ? string.Empty : KitEntryText.Format(value.Entries.Select(e => new KitTextEntry(e.Type, e.Id, e.Amount)));
-            _loadingKitEditor = false;
-            RaisePropertyChanged(nameof(HasSelectedKit));
-            RaiseKitCommandStates();
-        }
-    }
-    public string KitNameText
-    {
-        get => _kitNameText;
-        set
-        {
-            if (!SetField(ref _kitNameText, value ?? string.Empty) || _loadingKitEditor || _selectedKit is null) return;
-            _selectedKit.Name = _kitNameText;
-        }
-    }
-    // Live-synced into the selected kit whenever the text parses; a bad line just leaves the last good
-    // entries in place and says which line to fix, and Save refuses until it parses.
-    public string KitEntriesText
-    {
-        get => _kitEntriesText;
-        set
-        {
-            if (!SetField(ref _kitEntriesText, value ?? string.Empty) || _loadingKitEditor || _selectedKit is null) return;
-            if (KitEntryText.TryParse(_kitEntriesText, out var parsed, out var error))
-            {
-                _selectedKit.Entries = parsed.Select(e => new KitEntryDto { Type = e.Type, Id = e.Id, Amount = e.Amount }).ToList();
-                KitStatusText = "Unsaved kit changes. Press Save Kits to keep them.";
-            }
-            else KitStatusText = error;
-        }
-    }
-    public ICommand ToggleKitsCommand { get; private set; } = null!;
-    public ICommand RefreshKitsCommand { get; private set; } = null!;
-    public ICommand NewKitCommand { get; private set; } = null!;
-    public ICommand DeleteKitCommand { get; private set; } = null!;
-    public ICommand SaveKitsCommand { get; private set; } = null!;
-    public ICommand TestKitProviderCommand { get; private set; } = null!;
-    public ICommand GiveSelectedKitCommand { get; private set; } = null!;
-    public ICommand ResetKitClaimCommand { get; private set; } = null!;
-
-    private void InitializeKits()
-    {
-        var refresh = new AsyncCommand(RefreshKitsAsync, () => !IsBusy);
-        var save = new AsyncCommand(SaveKitsAsync, () => !IsBusy);
-        var test = new AsyncCommand(TestKitProviderAsync, () => !IsBusy);
-        var give = new AsyncCommand(GiveSelectedKitAsync, () => !IsBusy && SelectedKit is not null && SelectedPlayerRecord?.Online == true);
-        var reset = new AsyncCommand(ResetKitClaimAsync, () => !IsBusy && SelectedPlayerRecord is not null);
-        RefreshKitsCommand = refresh;
-        SaveKitsCommand = save;
-        TestKitProviderCommand = test;
-        GiveSelectedKitCommand = give;
-        ResetKitClaimCommand = reset;
-        NewKitCommand = new RelayCommand(NewKit);
-        DeleteKitCommand = new RelayCommand(DeleteSelectedKit);
-        ToggleKitsCommand = new RelayCommand(() =>
-        {
-            IsKitsExpanded = !IsKitsExpanded;
-            if (IsKitsExpanded) RunUi(() => RefreshKitsAsync());
-        });
-        _kitCommands = [refresh, save, test, give, reset];
-    }
-
-    private void RaiseKitCommandStates()
-    {
-        foreach (var command in _kitCommands) command.RaiseCanExecuteChanged();
-    }
-
-    private void ApplyKitConfig(KitConfigDto config, KitProviderStatusDto? provider, IEnumerable<KitClaimDto>? claims)
-    {
-        var keepId = SelectedKit?.Id;
-        Kits.Clear();
-        foreach (var kit in config.Kits) Kits.Add(kit);
-        SelectedKit = Kits.FirstOrDefault(k => k.Id == keepId) ?? Kits.FirstOrDefault();
-        KitAutoGiftEnabled = config.AutoGiftEnabled;
-        KitAutoGiftKit = Kits.FirstOrDefault(k => k.Id.Equals(config.AutoGiftKitId, StringComparison.OrdinalIgnoreCase));
-        KitAutoGiftNote = config.AutoGiftEnabled && config.AutoGiftEnabledAtUtc is { } since
-            ? $"Auto-gift has been on since {since.ToLocalTime():g}. Only players MystTiq first saw after that are gifted, once each."
-            : "Auto-gift is off. When on, only players MystTiq first sees after you turn it on are gifted, once each. Existing players are never gifted.";
-        if (provider is not null)
-            KitProviderText = (provider.CanDeliver ? "Ready: " : "Cannot deliver: ") + provider.Detail;
-        if (claims is not null)
-        {
-            KitClaims.Clear();
-            foreach (var claim in claims) KitClaims.Add(claim);
-        }
-    }
-
-    private async Task RefreshKitsAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var snapshot = await _api.GetKitsAsync(SelectedProfile, BearerToken);
-            ApplyKitConfig(snapshot.Config, snapshot.Provider, snapshot.Claims);
-            KitStatusText = $"{Kits.Count} kit(s) loaded, {KitClaims.Count} recent claim(s).";
-        }
-        catch (Exception ex) { KitStatusText = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private void NewKit()
-    {
-        var kit = new KitDefinitionDto
-        {
-            Id = "kit-" + Guid.NewGuid().ToString("N")[..8],
-            Name = "New kit",
-            Entries = [new KitEntryDto { Type = "Item", Id = "PalSphere", Amount = 10 }]
-        };
-        Kits.Add(kit);
-        SelectedKit = kit;
-        KitStatusText = "New kit added. Edit it, then press Save Kits.";
-    }
-
-    private void DeleteSelectedKit()
-    {
-        if (SelectedKit is not { } kit) return;
-        if (ReferenceEquals(KitAutoGiftKit, kit)) { KitAutoGiftKit = null; KitAutoGiftEnabled = false; }
-        Kits.Remove(kit);
-        SelectedKit = Kits.FirstOrDefault();
-        KitStatusText = "Kit removed. Press Save Kits to keep that.";
-    }
-
-    private async Task SaveKitsAsync()
-    {
-        if (SelectedProfile is null) return;
-        if (!KitEntryText.TryParse(KitEntriesText, out _, out var parseError)) { KitStatusText = parseError; return; }
-        IsBusy = true;
-        try
-        {
-            var request = new KitConfigDto
-            {
-                AutoGiftEnabled = KitAutoGiftEnabled && KitAutoGiftKit is not null,
-                AutoGiftKitId = KitAutoGiftKit?.Id ?? string.Empty,
-                Kits = [.. Kits]
-            };
-            var result = await _api.SaveKitsAsync(SelectedProfile, request, BearerToken);
-            if (!result.Success)
-            {
-                KitStatusText = result.Errors.Count > 0 ? string.Join(" ", result.Errors) : (string.IsNullOrWhiteSpace(result.Message) ? "The kits were not saved." : result.Message);
-                return;
-            }
-
-            ApplyKitConfig(result.Config, null, null);
-            KitStatusText = "Kits saved.";
-        }
-        catch (Exception ex) { KitStatusText = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task TestKitProviderAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true; KitStatusText = "Asking the server's PalDefender (version command over RCON)…";
-        try
-        {
-            var result = await _api.TestKitProviderAsync(SelectedProfile, BearerToken);
-            KitStatusText = result.Success
-                ? $"The server answered: {(string.IsNullOrWhiteSpace(result.Response) ? "(no text)" : result.Response)}"
-                : result.Message;
-        }
-        catch (Exception ex) { KitStatusText = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
     // ---- v0.7.113.0: Teleport Points (Map page) ----------------------------------------------------------
     // Points are edited as text, one per line ("spawn -358 270", optional height), the same way kits are.
     private bool _teleportEnabled;
@@ -6892,7 +6365,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private async Task CaptureTeleportPositionAsync()
     {
         if (SelectedProfile is null) return;
-        if (SelectedPlayerRecord is not { Online: true } player) { TeleportStatusText = "Select an online player first (click a green dot or a name). Their current position becomes the point."; return; }
+        if (Players.SelectedPlayerRecord is not { Online: true } player) { TeleportStatusText = "Select an online player first (click a green dot or a name). Their current position becomes the point."; return; }
         IsBusy = true;
         try
         {
@@ -6909,7 +6382,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private async Task SendPlayerToTeleportPointAsync()
     {
         if (SelectedProfile is null) return;
-        if (SelectedPlayerRecord is not { Online: true } player) { TeleportStatusText = "Select an online player first."; return; }
+        if (Players.SelectedPlayerRecord is not { Online: true } player) { TeleportStatusText = "Select an online player first."; return; }
         if (string.IsNullOrWhiteSpace(TeleportSendPointName)) { TeleportStatusText = "Type the name of a saved point to send them to."; return; }
         IsBusy = true;
         try
@@ -6921,223 +6394,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
-    // ---- v0.8.3.0: Give Item picker -------------------------------------------------------------------------
-    // Search the item and Pal ids this server knows (world save, kits, earlier gives) and add one as a line to the
-    // Give box or the selected kit, instead of typing internal ids from memory. Typing by hand still works.
-    public const int MaximumShownGameIds = 300;
-    private readonly List<GameIdCatalogEntryDto> _gameIdCatalog = [];
-    private string _gameIdFilterText = string.Empty;
-    private string _gameIdAmountText = "1";
-    private string _gameIdCatalogStatus = "Press Load IDs to list the item and Pal ids this world knows.";
-    private string _gameIdCatalogDetail = string.Empty;
-    private GameIdCatalogEntryDto? _selectedGameId;
-    private AsyncCommand? _loadGameIdsCommand;
-    private RelayCommand? _addGameIdToGiveCommand;
-    private RelayCommand? _addGameIdToKitCommand;
-
-    public ObservableCollection<GameIdCatalogEntryDto> FilteredGameIds { get; } = [];
-    public string GameIdCatalogStatus { get => _gameIdCatalogStatus; private set => SetField(ref _gameIdCatalogStatus, value); }
-    public string GameIdFilterText
-    {
-        get => _gameIdFilterText;
-        set { if (SetField(ref _gameIdFilterText, value ?? string.Empty)) ApplyGameIdFilter(); }
-    }
-    public string GameIdAmountText { get => _gameIdAmountText; set => SetField(ref _gameIdAmountText, value ?? string.Empty); }
-    public string GameIdAmountLabel => SelectedGameId?.IsPal == true ? "Level" : "Amount";
-    public GameIdCatalogEntryDto? SelectedGameId
-    {
-        get => _selectedGameId;
-        set
-        {
-            var wasPal = _selectedGameId?.IsPal == true;
-            if (!SetField(ref _selectedGameId, value)) return;
-            RaisePropertyChanged(nameof(GameIdAmountLabel));
-            // Switching between items (counts) and Pals (levels) resets a value that would not make sense for the other.
-            if (value is not null && value.IsPal != wasPal) GameIdAmountText = "1";
-            _addGameIdToGiveCommand?.RaiseCanExecuteChanged();
-            _addGameIdToKitCommand?.RaiseCanExecuteChanged();
-        }
-    }
-    public ICommand LoadGameIdsCommand { get; private set; } = null!;
-    public ICommand AddGameIdToGiveCommand { get; private set; } = null!;
-    public ICommand AddGameIdToKitCommand { get; private set; } = null!;
-
-    private void InitializeGameIdPicker()
-    {
-        _loadGameIdsCommand = new AsyncCommand(LoadGameIdsAsync, () => !IsBusy);
-        _addGameIdToGiveCommand = new RelayCommand(() => AddSelectedGameId(toKit: false), () => SelectedGameId is not null);
-        _addGameIdToKitCommand = new RelayCommand(() => AddSelectedGameId(toKit: true), () => SelectedGameId is not null);
-        LoadGameIdsCommand = _loadGameIdsCommand;
-        AddGameIdToGiveCommand = _addGameIdToGiveCommand;
-        AddGameIdToKitCommand = _addGameIdToKitCommand;
-    }
-
-    private async Task LoadGameIdsAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true; GameIdCatalogStatus = "Reading the item and Pal ids from the world save…";
-        try
-        {
-            var catalog = await _api.GetGameIdCatalogAsync(SelectedProfile, BearerToken);
-            _gameIdCatalog.Clear();
-            _gameIdCatalog.AddRange(catalog.Entries);
-            ApplyGameIdFilter();
-            // v0.8.13.0: say where the names come from, or why there are none.
-            _gameIdCatalogDetail = string.IsNullOrWhiteSpace(catalog.NamesDetail) ? catalog.Detail : $"{catalog.Detail} {catalog.NamesDetail}";
-            GameIdCatalogStatus = _gameIdCatalogDetail;
-        }
-        catch (Exception ex) { GameIdCatalogStatus = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private void ClearGameIdCatalog()
-    {
-        _gameIdCatalog.Clear();
-        FilteredGameIds.Clear();
-        SelectedGameId = null;
-        GameIdCatalogStatus = "Press Load IDs to list the item and Pal ids this world knows.";
-    }
-
-    private void ApplyGameIdFilter()
-    {
-        var keep = SelectedGameId;
-        // v0.8.13.0: the display name is searched too ("pal sphere", "lamball").
-        var matches = _gameIdCatalog.Where(e => GameIdSearch.Matches(e.Id, e.Name, GameIdFilterText)).ToList();
-        FilteredGameIds.Clear();
-        foreach (var entry in matches.Take(MaximumShownGameIds)) FilteredGameIds.Add(entry);
-        SelectedGameId = keep is not null && FilteredGameIds.Contains(keep) ? keep : null;
-        // v0.8.13.0: back to the catalogue's own line once the search is narrow enough (it used to keep the "first 300" note).
-        if (_gameIdCatalog.Count > 0)
-            GameIdCatalogStatus = matches.Count > MaximumShownGameIds
-                ? $"Showing the first {MaximumShownGameIds} of {matches.Count} matches. Type more of the name to narrow it down."
-                : _gameIdCatalogDetail;
-    }
-
-    private void AddSelectedGameId(bool toKit)
-    {
-        if (SelectedGameId is not { } entry) return;
-        var type = entry.IsPal ? "Pal" : "Item";
-        if (!KitEntryText.TryParseAmount(type, GameIdAmountText, out var amount, out var error)) { GameIdCatalogStatus = error; return; }
-        var line = new KitTextEntry(type, entry.Id, amount);
-        if (toKit)
-        {
-            if (SelectedKit is null) { GameIdCatalogStatus = "Select or create a kit under Starter Kits first."; return; }
-            KitEntriesText = KitEntryText.Append(KitEntriesText, line);
-            GameIdCatalogStatus = $"Added {KitEntryText.Format([line])} to kit '{SelectedKit.Name}'. Press Save Kits to keep it.";
-        }
-        else
-        {
-            GiveItemsText = KitEntryText.Append(GiveItemsText, line);
-            GameIdCatalogStatus = $"Added {KitEntryText.Format([line])} to the Give box.";
-        }
-    }
-
-    // v0.7.112.0: items/Pals to give the selected online player, in the kit editor's line format.
-    private string _giveItemsText = string.Empty;
-    public string GiveItemsText
-    {
-        get => _giveItemsText;
-        set { if (SetField(ref _giveItemsText, value ?? string.Empty)) (GiveItemSelectedPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged(); }
-    }
-
-    private async Task GiveItemsToSelectedPlayerAsync()
-    {
-        if (SelectedProfile is null || SelectedPlayerRecord is not { Online: true } player) return;
-        if (!KitEntryText.TryParse(GiveItemsText, out var parsed, out var error)) { PlayerAdminStatusText = error; return; }
-        if (parsed.Count == 0) { PlayerAdminStatusText = "Enter at least one item or Pal to give."; return; }
-        IsBusy = true; PlayerAdminStatusText = $"Giving {parsed.Count} entr{(parsed.Count == 1 ? "y" : "ies")} to {player.PlayerName}…";
-        try
-        {
-            var entries = parsed.Select(e => new KitEntryDto { Type = e.Type, Id = e.Id, Amount = e.Amount }).ToList();
-            var result = await _api.GiveItemsAsync(SelectedProfile, player.PlayerId, entries, BearerToken);
-            PlayerAdminStatusText = result.Success
-                ? $"{result.Message}{(string.IsNullOrWhiteSpace(result.Response) ? string.Empty : " Server: " + result.Response)}"
-                : result.Message;
-        }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task GiveSelectedKitAsync()
-    {
-        if (SelectedProfile is null || SelectedKit is not { } kit || SelectedPlayerRecord is not { } player) return;
-        IsBusy = true; KitStatusText = $"Giving '{kit.Name}' to {player.PlayerName}…";
-        try
-        {
-            var result = await _api.GiveKitAsync(SelectedProfile, kit.Id, player.PlayerId, BearerToken);
-            KitStatusText = result.Success
-                ? $"{result.Message}{(string.IsNullOrWhiteSpace(result.Response) ? string.Empty : " Server: " + result.Response)}"
-                : result.Message + (result.Message.Contains("no longer exists", StringComparison.OrdinalIgnoreCase) ? " Press Save Kits first, then try again." : string.Empty);
-        }
-        catch (Exception ex) { KitStatusText = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task ResetKitClaimAsync()
-    {
-        if (SelectedProfile is null || SelectedPlayerRecord is not { } player) return;
-        IsBusy = true;
-        try
-        {
-            await _api.ForgetKitClaimsAsync(SelectedProfile, player.PlayerId, BearerToken);
-            KitStatusText = $"Cleared {player.PlayerName}'s kit claims, so auto-gift can give them the kit again if they qualify.";
-            var snapshot = await _api.GetKitsAsync(SelectedProfile, BearerToken);
-            KitClaims.Clear();
-            foreach (var claim in snapshot.Claims) KitClaims.Add(claim);
-        }
-        catch (Exception ex) { KitStatusText = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task RefreshWhitelistAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var config = await _api.GetWhitelistAsync(SelectedProfile, BearerToken);
-            WhitelistConfig = config;
-            WhitelistEntries.Clear();
-            foreach (var entry in config.Entries) WhitelistEntries.Add(entry);
-            WhitelistState = config.Enabled
-                ? $"Whitelist enabled -- {config.Entries.Count} player(s) allowed; anyone else is auto-kicked."
-                : $"Whitelist disabled -- {config.Entries.Count} player(s) saved but not enforced.";
-        }
-        catch (Exception ex) { WhitelistState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task SaveWhitelistAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            WhitelistConfig.Entries = [.. WhitelistEntries];
-            var saved = await _api.SaveWhitelistAsync(SelectedProfile, WhitelistConfig, BearerToken);
-            WhitelistConfig = saved;
-            WhitelistEntries.Clear();
-            foreach (var entry in saved.Entries) WhitelistEntries.Add(entry);
-            WhitelistState = "Whitelist saved.";
-        }
-        catch (Exception ex) { WhitelistState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private void AddWhitelistEntry()
-    {
-        if (string.IsNullOrWhiteSpace(NewWhitelistPlayerId)) return;
-        WhitelistEntries.Add(new WhitelistEntryDto { PlayerId = NewWhitelistPlayerId.Trim(), Label = NewWhitelistLabel.Trim() });
-        NewWhitelistPlayerId = string.Empty;
-        NewWhitelistLabel = string.Empty;
-    }
-
-    private void RemoveSelectedWhitelistEntry()
-    {
-        if (SelectedWhitelistEntry is null) return;
-        WhitelistEntries.Remove(SelectedWhitelistEntry);
-        SelectedWhitelistEntry = null;
-    }
 
     private async Task RefreshAntiCheatAsync()
     {
@@ -7384,99 +6640,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string ExportCrashAnalysis() => JsonSerializer.Serialize(new { state = CrashAnalyzerState, findings = CrashFindings, isolationPlan = CrashIsolationPlan, history = CrashHistory }, new JsonSerializerOptions { WriteIndented = true });
     public string ExportSaveToolsDiagnostics() => JsonSerializer.Serialize(new { state = SaveToolsState, paths = SaveToolsPaths, tests = SaveToolsTests, files = SaveFiles }, new JsonSerializerOptions { WriteIndented = true });
 
-    // v0.7.8.0: requireOnline defaults to true (kick/ban's original behavior) but is false for
-    // unban -- a banned player is, by definition, never online, so gating it the same way as
-    // kick/ban would make the action permanently unusable.
-    private async Task RunSelectedPlayerAdminActionAsync(string action, bool requireOnline = true)
-    {
-        if (SelectedPlayerRecord is null)
-        {
-            PlayerAdminStatusText = "Select a player first.";
-            return;
-        }
-        if (requireOnline && !SelectedPlayerRecord.Online)
-        {
-            PlayerAdminStatusText = "This action requires a currently online player.";
-            return;
-        }
-        var playerId = SelectedPlayerRecord.PlayerId;
-        if (string.IsNullOrWhiteSpace(playerId))
-        {
-            PlayerAdminStatusText = "The selected player does not have a usable server-side identity.";
-            return;
-        }
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return; }
-
-        IsBusy = true;
-        PlayerAdminStatusText = $"Sending {action} for {SelectedPlayerRecord.PlayerName}…";
-        try
-        {
-            var result = await _api.RunPlayerAdminActionAsync(profile, playerId, action, PlayerActionMessage, PlayerActionItem, BearerToken);
-            PlayerAdminStatusText = result.Message;
-            await RefreshActivityAsync();
-            if (action is "kick" or "ban" or "unban") await RefreshPlayersPageAsync();
-        }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    // v0.7.75.0: "Delete Player Completely" / "Copy Player" -- code-behind (MainWindow.axaml.cs)
-    // owns the dialog interaction (this ViewModel has no Window reference), these methods own the
-    // actual API calls, matching how every other dialog-driven action in this codebase splits that
-    // responsibility (e.g. CloseTabButton_OnClick / StopTabServerAsync).
-    public async Task<PlayerDeletionPreviewDto?> PreviewDeleteSelectedPlayerAsync()
-    {
-        if (SelectedPlayerRecord is null) { PlayerAdminStatusText = "Select a player first."; return null; }
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return null; }
-
-        IsBusy = true;
-        try
-        {
-            var preview = await _api.PreviewPlayerDeletionAsync(profile, SelectedPlayerRecord.PlayerId, BearerToken);
-            if (!preview.CanApply) PlayerAdminStatusText = string.Join(" ", preview.Findings);
-            return preview;
-        }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return null; }
-        finally { IsBusy = false; }
-    }
-
-    public async Task<bool> ApplyDeleteSelectedPlayerAsync(string previewToken)
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return false; }
-
-        IsBusy = true;
-        try
-        {
-            var result = await _api.ApplyPlayerDeletionAsync(profile, previewToken, true, BearerToken);
-            PlayerAdminStatusText = result.Message;
-            await RefreshPlayersPageAsync();
-            await RefreshActivityAsync();
-            return result.Success;
-        }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return false; }
-        finally { IsBusy = false; }
-    }
 
     public async Task<PlayerCopyPreviewDto?> PreviewCopyPlayerAsync(string sourcePlayerId, string destinationPlayerId)
     {
         ConnectionProfile profile;
         try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return null; }
+        catch (Exception ex) { Players.PlayerAdminStatusText = ex.Message; return null; }
 
         IsBusy = true;
         try
         {
             var preview = await _api.PreviewPlayerCopyAsync(profile, sourcePlayerId, destinationPlayerId, BearerToken);
-            if (!preview.CanApply) PlayerAdminStatusText = string.Join(" ", preview.Findings);
+            if (!preview.CanApply) Players.PlayerAdminStatusText = string.Join(" ", preview.Findings);
             return preview;
         }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return null; }
+        catch (Exception ex) { Players.PlayerAdminStatusText = ex.Message; return null; }
         finally { IsBusy = false; }
     }
 
@@ -7484,18 +6662,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         ConnectionProfile profile;
         try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return false; }
+        catch (Exception ex) { Players.PlayerAdminStatusText = ex.Message; return false; }
 
         IsBusy = true;
         try
         {
             var result = await _api.ApplyPlayerCopyAsync(profile, previewToken, true, BearerToken);
-            PlayerAdminStatusText = result.Message;
+            Players.PlayerAdminStatusText = result.Message;
             await RefreshPlayersPageAsync();
             await RefreshActivityAsync();
             return result.Success;
         }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return false; }
+        catch (Exception ex) { Players.PlayerAdminStatusText = ex.Message; return false; }
         finally { IsBusy = false; }
     }
 
@@ -7609,24 +6787,24 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     // response text is surfaced as-is so the operator can tell the two apart themselves.
     private async Task RunTeleportAsync(bool toMe)
     {
-        if (SelectedPlayerRecord is null) { PlayerAdminStatusText = "Select a player first."; return; }
-        if (!SelectedPlayerRecord.Online) { PlayerAdminStatusText = "Teleport requires a currently online player."; return; }
-        var playerId = SelectedPlayerRecord.PlayerId;
-        if (string.IsNullOrWhiteSpace(playerId)) { PlayerAdminStatusText = "The selected player does not have a usable server-side identity."; return; }
+        if (Players.SelectedPlayerRecord is null) { Players.PlayerAdminStatusText = "Select a player first."; return; }
+        if (!Players.SelectedPlayerRecord.Online) { Players.PlayerAdminStatusText = "Teleport requires a currently online player."; return; }
+        var playerId = Players.SelectedPlayerRecord.PlayerId;
+        if (string.IsNullOrWhiteSpace(playerId)) { Players.PlayerAdminStatusText = "The selected player does not have a usable server-side identity."; return; }
         ConnectionProfile profile;
         try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return; }
+        catch (Exception ex) { Players.PlayerAdminStatusText = ex.Message; return; }
 
         IsBusy = true;
-        PlayerAdminStatusText = toMe ? $"Summoning {SelectedPlayerRecord.PlayerName} to you…" : $"Teleporting to {SelectedPlayerRecord.PlayerName}…";
+        Players.PlayerAdminStatusText = toMe ? $"Summoning {Players.SelectedPlayerRecord.PlayerName} to you…" : $"Teleporting to {Players.SelectedPlayerRecord.PlayerName}…";
         try
         {
             var result = toMe
                 ? await _api.TeleportToMeAsync(profile, playerId, BearerToken)
                 : await _api.TeleportToPlayerAsync(profile, playerId, BearerToken);
-            PlayerAdminStatusText = result.Message;
+            Players.PlayerAdminStatusText = result.Message;
         }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; }
+        catch (Exception ex) { Players.PlayerAdminStatusText = ex.Message; }
         finally { IsBusy = false; }
     }
 
@@ -7634,107 +6812,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         ConnectionProfile profile;
         try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayersPageDetail = ex.Message; return; }
+        catch (Exception ex) { Players.PlayersPageDetail = ex.Message; return; }
 
         IsBusy = true;
-        PlayersPageDetail = "Saving world…";
+        Players.PlayersPageDetail = "Saving world…";
         try
         {
             var result = await _api.SaveWorldNowAsync(profile, BearerToken);
-            PlayersPageDetail = result.Message;
+            Players.PlayersPageDetail = result.Message;
         }
-        catch (Exception ex) { PlayersPageDetail = ex.Message; }
+        catch (Exception ex) { Players.PlayersPageDetail = ex.Message; }
         finally { IsBusy = false; }
     }
 
-    private async Task RefreshBanListAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { BanListText = ex.Message; return; }
-
-        IsBusy = true;
-        BanListText = "Loading ban list…";
-        try
-        {
-            var result = await _api.GetBanListAsync(profile, BearerToken);
-            BanListText = string.IsNullOrWhiteSpace(result.Response) ? "(empty -- no banned players, or the server returned no text)" : result.Response;
-        }
-        catch (Exception ex) { BanListText = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task RefreshTemporaryBansAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { TemporaryBanState = ex.Message; return; }
-
-        IsBusy = true;
-        try
-        {
-            var config = await _api.GetTemporaryBansAsync(profile, BearerToken);
-            TemporaryBans.Clear();
-            foreach (var entry in config.Entries) TemporaryBans.Add(entry);
-            TemporaryBanState = TemporaryBans.Count == 0
-                ? "No active temporary bans."
-                : $"{TemporaryBans.Count} active temporary ban(s).";
-        }
-        catch (Exception ex) { TemporaryBanState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    // v0.7.15.0: bans the currently selected online player (same selection this Kick/Ban card
-    // already uses) for NewTemporaryBanDurationHours, reusing the reason text from
-    // PlayerActionMessage. The headless service applies the ban immediately via the existing
-    // ban path and auto-unbans once the duration elapses (HeadlessTemporaryBanService.EnforceAsync,
-    // polled the same way HeadlessWhitelistService already is).
-    private async Task CreateTemporaryBanForSelectedPlayerAsync()
-    {
-        if (SelectedPlayerRecord is null) { PlayerAdminStatusText = "Select a player first."; return; }
-        if (!SelectedPlayerRecord.Online) { PlayerAdminStatusText = "Temporary ban requires a currently online player."; return; }
-        var playerId = SelectedPlayerRecord.PlayerId;
-        if (string.IsNullOrWhiteSpace(playerId)) { PlayerAdminStatusText = "The selected player does not have a usable server-side identity."; return; }
-
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; return; }
-
-        IsBusy = true;
-        PlayerAdminStatusText = $"Applying a {NewTemporaryBanDurationHours:F1}-hour temporary ban to {SelectedPlayerRecord.PlayerName}…";
-        try
-        {
-            var result = await _api.CreateTemporaryBanAsync(profile, playerId, SelectedPlayerRecord.PlayerName, PlayerActionMessage, NewTemporaryBanDurationHours, BearerToken);
-            PlayerAdminStatusText = result.Message;
-            await RefreshActivityAsync();
-            await RefreshPlayersPageAsync();
-            if (IsTemporaryBansExpanded) await RefreshTemporaryBansAsync();
-        }
-        catch (Exception ex) { PlayerAdminStatusText = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    // v0.7.15.0: early-lifts one active temporary ban from the list card below, via the same
-    // unban action the standalone Unban button uses -- the headless service clears its own tracked
-    // expiry for this player as soon as that unban succeeds (HeadlessTemporaryBanService.ForgetIfPresent),
-    // so its poll sweep won't attempt a second, redundant unban later.
-    private async Task CancelTemporaryBanAsync(string? playerId)
-    {
-        if (string.IsNullOrWhiteSpace(playerId)) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { TemporaryBanState = ex.Message; return; }
-
-        IsBusy = true;
-        try
-        {
-            var result = await _api.RunPlayerAdminActionAsync(profile, playerId, "unban", "Temporary ban cancelled by administrator.", null, BearerToken);
-            TemporaryBanState = result.Message;
-            await RefreshTemporaryBansAsync();
-        }
-        catch (Exception ex) { TemporaryBanState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
     private async Task RunDoctorAsync()
     {
@@ -9392,7 +8482,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 ? ExplorerBases.FirstOrDefault(x => string.Equals(x.BaseId, selectedBaseId, StringComparison.OrdinalIgnoreCase))
                 : FilteredExplorerBases.FirstOrDefault();
 
-            PlayerRecordCountText = snapshot.Players.Count.ToString();
+            Players.PlayerRecordCountText = snapshot.Players.Count.ToString();
             GuildRecordCountText = snapshot.Guilds.Count.ToString();
             SemanticStateText = snapshot.SemanticAvailable
                 ? "Decoded guild semantics available"
@@ -9461,9 +8551,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(leaderId)) return;
         SelectedPage = NavigationPage.Players;
         await RefreshPlayersPageAsync();
-        SelectedPlayerRecord = PlayerRecords.FirstOrDefault(x => string.Equals(x.PlayerId, leaderId, StringComparison.OrdinalIgnoreCase));
-        if (SelectedPlayerRecord is not null)
-            await LoadSelectedPlayerMetadataAsync();
+        Players.SelectedPlayerRecord = Players.PlayerRecords.FirstOrDefault(x => string.Equals(x.PlayerId, leaderId, StringComparison.OrdinalIgnoreCase));
+        if (Players.SelectedPlayerRecord is not null)
+            await Players.LoadSelectedPlayerMetadataAsync();
     }
 
     public string ExportVisibleGuildsCsv()

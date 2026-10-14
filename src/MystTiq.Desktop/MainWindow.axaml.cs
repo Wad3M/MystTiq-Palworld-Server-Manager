@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.1: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -295,15 +295,15 @@ public sealed partial class MainWindow : Window
     // CloseTabButton_OnClick's own split above.
     private async void DeletePlayer_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || vm.SelectedPlayerRecord is null) return;
-        var preview = await vm.PreviewDeleteSelectedPlayerAsync();
+        if (DataContext is not MainWindowViewModel vm || vm.Players.SelectedPlayerRecord is null) return;
+        var preview = await vm.Players.PreviewDeleteSelectedPlayerAsync();
         if (preview is not { CanApply: true }) return;
 
         var dialog = new Views.ConfirmDeletePlayerDialog(preview.PlayerName, preview.Findings);
         var result = await dialog.ShowDialog<Views.ConfirmDeletePlayerResult>(this);
         if (result != Views.ConfirmDeletePlayerResult.Delete) return;
 
-        await vm.ApplyDeleteSelectedPlayerAsync(preview.PreviewToken);
+        await vm.Players.ApplyDeleteSelectedPlayerAsync(preview.PreviewToken);
     }
 
     // v0.7.75.0: "Copy Player" -- picks a source player from a populated dropdown (not a
@@ -311,10 +311,10 @@ public sealed partial class MainWindow : Window
     // deletion above.
     private async void CopyIntoPlayer_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || vm.SelectedPlayerRecord is null) return;
-        var destination = vm.SelectedPlayerRecord;
+        if (DataContext is not MainWindowViewModel vm || vm.Players.SelectedPlayerRecord is null) return;
+        var destination = vm.Players.SelectedPlayerRecord;
 
-        var options = vm.FilteredPlayerRecords
+        var options = vm.Players.FilteredPlayerRecords
             .Where(p => p.PlayerId != destination.PlayerId)
             .Select(p => new Views.SelectPlayerOption(p.PlayerId, p.PlayerName))
             .ToList();
@@ -370,12 +370,12 @@ public sealed partial class MainWindow : Window
     private async Task EditInventoryAsync(string action)
     {
         if (DataContext is not MainWindowViewModel vm) return;
-        var preview = await vm.PreviewInventoryEditAsync(action);
+        var preview = await vm.Players.PreviewInventoryEditAsync(action);
         if (preview is not { CanApply: true, Token: { } token }) return;
         var dialog = new Views.ConfirmOperationDialog(Localizer.T(preview.Summary), preview.Findings.Select(Localizer.T).ToList(),
             Localizer.T(action == "remove" ? "Remove" : "Add"), danger: action == "remove");
         if (await dialog.ShowDialog<bool>(this) != true) return;
-        await vm.ApplyInventoryEditAsync(token);
+        await vm.Players.ApplyInventoryEditAsync(token);
     }
 
     // v1.0.5.0 (roadmap M-1): the MOD browser fetches the file and reads what it holds, then asks before installing.
@@ -423,12 +423,12 @@ public sealed partial class MainWindow : Window
     private async Task EditPalBoxAsync(string action)
     {
         if (DataContext is not MainWindowViewModel vm) return;
-        var preview = await vm.PreviewPalBoxEditAsync(action);
+        var preview = await vm.Players.PreviewPalBoxEditAsync(action);
         if (preview is not { CanApply: true, Token: { } token }) return;
         var dialog = new Views.ConfirmOperationDialog(Localizer.T(preview.Summary), preview.Findings.Select(Localizer.T).ToList(),
             Localizer.T(action == "remove" ? "Remove" : "Add"), danger: action == "remove");
         if (await dialog.ShowDialog<bool>(this) != true) return;
-        await vm.ApplyPalBoxEditAsync(token);
+        await vm.Players.ApplyPalBoxEditAsync(token);
     }
 
     private async void WipeBase_OnClick(object? sender, RoutedEventArgs e)
@@ -473,7 +473,7 @@ public sealed partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || vm.SelectedExplorerGuild is null) return;
         var guild = vm.SelectedExplorerGuild;
 
-        var options = vm.FilteredPlayerRecords
+        var options = vm.Players.FilteredPlayerRecords
             .Select(p => new Views.SelectPlayerOption(p.PlayerId, p.PlayerName))
             .ToList();
         if (options.Count == 0) return;
@@ -734,7 +734,7 @@ public sealed partial class MainWindow : Window
         await using var stream = await file.OpenWriteAsync();
         stream.SetLength(0);
         using var writer = new StreamWriter(stream);
-        await writer.WriteAsync(vm.ExportVisiblePlayersCsv());
+        await writer.WriteAsync(vm.Players.ExportVisiblePlayersCsv());
     }
 
     private async void ExportGuildsCsv_Click(object? sender, RoutedEventArgs e) =>

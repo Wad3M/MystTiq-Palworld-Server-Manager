@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.8.1: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.8.2: file reviewed for this release (2026-10-12). -->
 # Product roadmap
 
-Updated 2026-10-08. **Current version: v1.0.8.1. Accepted baseline: v1.0.0.0. Next milestone: v1.0.8.2 (the ViewModel split: C-2, Players; agreed with the owner 2026-10-08).**
+Updated 2026-10-08. **Current version: v1.0.8.2. Accepted baseline: v1.0.0.0. Next milestone: v1.0.8.3 (the ViewModel split: C-3, World; agreed with the owner 2026-10-08).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -165,7 +165,7 @@ Exit gate (per release):
 | --- | --- | --- | --- |
 | C-0 | v1.0.8.0 | Foundation: the shared session context (profile, API client, sign-in, busy state, `RunUi`, text lookup) and the child-ViewModel pattern. The gate's checks read the new files. Console and logs move first, as the pilot. Recorded (v1.0.8.0, 2026-10-11): `SessionContext` and `PageViewModel` (`ViewModels/SessionContext.cs`), the commands in `Commands.cs`, the Console page in `ConsoleLogViewModel` (`vm.Logs`), and the role audit reading every ViewModel file. The full gate and the ArtworkHarness pass with the console checks reading the new ViewModel. `MainWindowViewModel.cs`: 619,028 bytes and 10,801 lines before, 609,714 and 10,604 after. | Built |
 | C-1 | v1.0.8.1 | Dashboard, HOST, addresses, bandwidth. Recorded (v1.0.8.1, 2026-10-11): `HostPageViewModel` (`vm.Host`, the three HOST partial files merged) and `DashboardViewModel` (`vm.Dashboard`: the 20 card texts, recent activity, the addresses line); the health state stays with the window (its glow follows the server's start and stop). The full gate and the ArtworkHarness pass with the HOST checks reading `vm.Host`. `MainWindowViewModel.cs` 606,140 bytes; all its files 704,238 (were 732,039). | Built |
-| C-2 | v1.0.8.2 | Players: moderation lists, name guard, kits, Give Item, inventory and Pal box edits. | Planned |
+| C-2 | v1.0.8.2 | Players: moderation lists, name guard, kits, Give Item, inventory and Pal box edits. Recorded (v1.0.8.2, 2026-10-12): `PlayersViewModel` (`vm.Players`, with the NameGuard, PalBox and Inventory partial files, the kits and Give Item sections); the page's refresh and the map's teleport buttons stay with the window. A reusable mover does the extraction. The busy-state refresh now covers every page's commands (Save names and Save Whitelist stayed disabled without it). The full gate and the ArtworkHarness pass. `MainWindowViewModel.cs` 558,219 bytes; all its files 644,530 (were 704,238). | Built |
 | C-3 | v1.0.8.3 | World: Map, Bases, Guilds, Inspector, world transactions. | Planned |
 | C-4 | v1.0.8.4 | Server: setup wizard, Configuration, Launcher, Workspace. | Planned |
 | C-5 | v1.0.8.5 | Backups and Save Tools. | Planned |

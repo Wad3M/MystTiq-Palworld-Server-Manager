@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.1: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using MystTiq.Core.Services;

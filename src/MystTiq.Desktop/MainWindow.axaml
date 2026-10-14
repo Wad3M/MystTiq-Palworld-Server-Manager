@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.1: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.8.2: file reviewed for this release (2026-10-12). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -439,7 +439,7 @@
           </Grid>
 
           <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
-            <Border Classes="card glowPurple" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.players}" Classes="muted"/><TextBlock Text="{services:TrFormat dashboard.format.online, Path=OnlinePlayerCountText}" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.known, Path=PlayerRecordCountText}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="Players"/></Grid></Border>
+            <Border Classes="card glowPurple" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.players}" Classes="muted"/><TextBlock Text="{services:TrFormat dashboard.format.online, Path=OnlinePlayerCountText}" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.known, Path=Players.PlayerRecordCountText}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="Players"/></Grid></Border>
             <Border Grid.Column="1" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.guildsBases}" Classes="muted"/><TextBlock Text="{services:TrText Dashboard.GuildText}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{services:TrText SemanticStateText}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="Guilds"/></Grid></Border>
             <Border Grid.Column="2" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.modPlatform}" Classes="muted"/><TextBlock Text="{services:TrText Dashboard.ModText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.health, Path=ModHealth}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="ModDashboard"/></Grid></Border>
             <Border Grid.Column="3" Classes="card accentHome" Padding="8,6" ClipToBounds="True">
@@ -460,7 +460,7 @@
             <Grid ColumnDefinitions="1.25*,1*,1*,1.25*,1.4*" ColumnSpacing="12">
               <StackPanel><TextBlock Text="{services:Tr dashboard.worldPulse}" Foreground="{DynamicResource BlueBrush}" FontSize="9" FontWeight="Bold"/><TextBlock Text="{services:TrText Dashboard.WorldClockText}" FontSize="15" FontWeight="Bold"/><TextBlock Text="{services:TrText Dashboard.WorldClockDetailText}" Classes="muted" FontSize="9" TextTrimming="CharacterEllipsis"/></StackPanel>
               <StackPanel Grid.Column="1"><TextBlock Text="{services:Tr dashboard.serverSession}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText UptimeText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Dashboard.SessionText}" Classes="muted" FontSize="9"/></StackPanel>
-              <StackPanel Grid.Column="2"><TextBlock Text="{services:Tr dashboard.playersThisSession}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText Dashboard.PlayersSessionText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.knownPlayers, Path=PlayerRecordCountText}" Classes="muted" FontSize="9"/></StackPanel>
+              <StackPanel Grid.Column="2"><TextBlock Text="{services:Tr dashboard.playersThisSession}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText Dashboard.PlayersSessionText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.knownPlayers, Path=Players.PlayerRecordCountText}" Classes="muted" FontSize="9"/></StackPanel>
               <StackPanel Grid.Column="3"><TextBlock Text="{services:Tr dashboard.worldSave}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText Dashboard.PulseSaveText}" FontSize="12" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Dashboard.PulseBackupText}" Classes="muted" FontSize="9"/></StackPanel>
               <StackPanel Grid.Column="4"><TextBlock Text="{services:Tr dashboard.lastActivity}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText Dashboard.LastActivityText}" TextWrapping="Wrap" MaxHeight="40" FontSize="9" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
             </Grid>
@@ -1383,7 +1383,7 @@
                 <StackPanel Spacing="8">
                   <TextBlock Text="{services:Tr ui.players_on_the_map}" FontSize="17" FontWeight="SemiBold"/>
                   <TextBlock Text="{services:Tr ui.online_offline_last_known_position_click_a_name_1be6cc}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
-                  <TextBlock Text="{Binding SelectedPlayerRecord.PlayerName, StringFormat='Selected: {0}', FallbackValue='No player selected. Click a dot or a name.'}" TextTrimming="CharacterEllipsis"/>
+                  <TextBlock Text="{Binding Players.SelectedPlayerRecord.PlayerName, StringFormat='Selected: {0}', FallbackValue='No player selected. Click a dot or a name.'}" TextTrimming="CharacterEllipsis"/>
                   <WrapPanel Orientation="Horizontal">
                     <Button Classes="apply" Content="{services:Tr ui.teleport_to_me}" Command="{Binding TeleportPlayerToMeCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.summons_the_selected_online_player_to_your_admin_67d902}"/>
                     <Button Classes="apply" Content="{services:Tr ui.teleport_to_player}" Command="{Binding TeleportToPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.moves_your_admin_character_to_the_selected_onlin_c77733}"/>
@@ -1488,21 +1488,21 @@
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                 <StackPanel Spacing="4">
                   <TextBlock Text="{services:Tr ui.player_directory}" FontSize="21" FontWeight="SemiBold"/>
-                  <TextBlock Text="{services:TrText PlayersPageState}" Foreground="{DynamicResource GreenBrush}"/>
-                  <TextBlock Text="{services:TrText PlayersPageDetail}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Players.PlayersPageState}" Foreground="{DynamicResource GreenBrush}"/>
+                  <TextBlock Text="{services:TrText Players.PlayersPageDetail}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
                 </StackPanel>
-                <TextBlock Grid.Column="1" Text="{services:TrText PlayerVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="{services:TrText Players.PlayerVisibleCountText}" Foreground="{DynamicResource VioletBrush}" VerticalAlignment="Center"/>
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="2*,*,*,Auto" ColumnSpacing="10">
-                <TextBox PlaceholderText="{services:Tr ui.search_player_id_guild_or_platform}" Text="{Binding PlayerSearchText}"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_player_filter}" Grid.Column="1" ItemsSource="{Binding PlayerViewFilters}" SelectedItem="{Binding SelectedPlayerViewFilter}"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_admin_filter}" Grid.Column="2" ItemsSource="{Binding PlayerAdminFilters}" SelectedItem="{Binding SelectedPlayerAdminFilter}"/>
+                <TextBox PlaceholderText="{services:Tr ui.search_player_id_guild_or_platform}" Text="{Binding Players.PlayerSearchText}"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_player_filter}" Grid.Column="1" ItemsSource="{Binding Players.PlayerViewFilters}" SelectedItem="{Binding Players.SelectedPlayerViewFilter}"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_admin_filter}" Grid.Column="2" ItemsSource="{Binding Players.PlayerAdminFilters}" SelectedItem="{Binding Players.SelectedPlayerAdminFilter}"/>
                 <!-- v0.7.18.0: requested directly: a selectable way to hide rows that share a
                      display name with another record (a rejoin under a different platform ID, a
                      stale entry from an old save, etc.). View-only: nothing is deleted or merged,
                      so unchecking always restores every record. -->
                 <!-- v0.7.42.0: Discover Saves/Export CSV moved to the ribbon. -->
-                <CheckBox Grid.Column="3" Content="{services:Tr ui.hide_duplicate_names}" IsChecked="{Binding HideDuplicatePlayerNames}" VerticalAlignment="Center" ToolTip.Tip="{services:Tr ui.shows_only_one_row_per_player_name_preferring_on_e7f24c}"/>
+                <CheckBox Grid.Column="3" Content="{services:Tr ui.hide_duplicate_names}" IsChecked="{Binding Players.HideDuplicatePlayerNames}" VerticalAlignment="Center" ToolTip.Tip="{services:Tr ui.shows_only_one_row_per_player_name_preferring_on_e7f24c}"/>
               </Grid>
             </Grid>
           </Border>
@@ -1511,18 +1511,18 @@
             <Border Classes="card accentWorld">
               <Grid RowDefinitions="Auto,*" RowSpacing="8">
                 <TextBlock Text="{services:Tr ui.live_and_known_players}" FontSize="17" FontWeight="SemiBold"/>
-                <ListBox Grid.Row="1" ItemsSource="{Binding FilteredPlayerRecords}" SelectedItem="{Binding SelectedPlayerRecord}" MaxHeight="520" ToolTip.Tip="{services:Tr ui.select_a_player_right_click_online_records_for_s_ff8201}">
+                <ListBox Grid.Row="1" ItemsSource="{Binding Players.FilteredPlayerRecords}" SelectedItem="{Binding Players.SelectedPlayerRecord}" MaxHeight="520" ToolTip.Tip="{services:Tr ui.select_a_player_right_click_online_records_for_s_ff8201}">
                   <ListBox.ContextMenu>
                     <ContextMenu>
-                      <MenuItem Header="{services:Tr ui.kick_player}" Command="{Binding KickSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" ToolTip.Tip="{services:Tr ui.available_only_while_the_selected_player_is_onli_f21796}"/>
-                      <MenuItem Header="{services:Tr ui.ban_player}" Command="{Binding BanSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" ToolTip.Tip="{services:Tr ui.available_only_while_the_selected_player_is_onli_f21796}"/>
+                      <MenuItem Header="{services:Tr ui.kick_player}" Command="{Binding Players.KickSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" ToolTip.Tip="{services:Tr ui.available_only_while_the_selected_player_is_onli_f21796}"/>
+                      <MenuItem Header="{services:Tr ui.ban_player}" Command="{Binding Players.BanSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" ToolTip.Tip="{services:Tr ui.available_only_while_the_selected_player_is_onli_f21796}"/>
                       <Separator/>
                       <MenuItem Header="{services:Tr ui.copy_player_data_from}" Click="CopyIntoPlayer_OnClick" IsEnabled="{Binding CanManageAdmin}" ToolTip.Tip="{services:Tr ui.copies_inventory_recipes_records_skins_and_quest_c1ee83}"/>
                       <MenuItem Header="{services:Tr ui.delete_player_completely}" Click="DeletePlayer_OnClick" IsEnabled="{Binding CanManageAdmin}" ToolTip.Tip="{services:Tr ui.permanently_deletes_this_player_s_save_file_and_a85585}"/>
                       <Separator/>
-                      <MenuItem Header="{services:Tr ui.whisper_backend_required}" Command="{Binding WhisperSelectedPlayerCommand}" IsEnabled="False"/>
-                      <MenuItem Header="{services:Tr ui.promote_backend_required}" Command="{Binding PromoteSelectedPlayerCommand}" IsEnabled="False"/>
-                      <MenuItem Header="{services:Tr ui.give_items_typed_in_player_administration}" Command="{Binding GiveItemSelectedPlayerCommand}" ToolTip.Tip="{services:Tr ui.gives_the_items_and_pals_typed_in_the_give_box_u_d5e13e}"/>
+                      <MenuItem Header="{services:Tr ui.whisper_backend_required}" Command="{Binding Players.WhisperSelectedPlayerCommand}" IsEnabled="False"/>
+                      <MenuItem Header="{services:Tr ui.promote_backend_required}" Command="{Binding Players.PromoteSelectedPlayerCommand}" IsEnabled="False"/>
+                      <MenuItem Header="{services:Tr ui.give_items_typed_in_player_administration}" Command="{Binding Players.GiveItemSelectedPlayerCommand}" ToolTip.Tip="{services:Tr ui.gives_the_items_and_pals_typed_in_the_give_box_u_d5e13e}"/>
                     </ContextMenu>
                   </ListBox.ContextMenu>
                   <ListBox.ItemTemplate>
@@ -1551,35 +1551,35 @@
             <StackPanel Grid.Column="1" Spacing="14">
               <Border Classes="card accentWorld">
                 <StackPanel Spacing="7">
-                  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr ui.selected_player}" FontSize="17" FontWeight="SemiBold"/><Button Classes="info" Grid.Column="1" Content="{services:Tr ui.load_metadata}" Command="{Binding LoadPlayerMetadataCommand}"/></Grid>
-                  <TextBlock Text="{Binding SelectedPlayerRecord.PlayerName}" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource VioletBrush}"/>
-                  <TextBlock Text="{Binding SelectedPlayerRecord.PlayerId}" Foreground="{DynamicResource MutedBrush}"/>
+                  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr ui.selected_player}" FontSize="17" FontWeight="SemiBold"/><Button Classes="info" Grid.Column="1" Content="{services:Tr ui.load_metadata}" Command="{Binding Players.LoadPlayerMetadataCommand}"/></Grid>
+                  <TextBlock Text="{Binding Players.SelectedPlayerRecord.PlayerName}" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource VioletBrush}"/>
+                  <TextBlock Text="{Binding Players.SelectedPlayerRecord.PlayerId}" Foreground="{DynamicResource MutedBrush}"/>
                   <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="3">
                     <TextBlock Text="{services:Tr ui.steam_id}" Foreground="{DynamicResource MutedBrush}"/>
-                    <TextBlock Grid.Column="1" Text="{Binding SelectedPlayerRecord.SteamIdVerbatim}" FontFamily="Consolas, monospace" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Players.SelectedPlayerRecord.SteamIdVerbatim}" FontFamily="Consolas, monospace" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Grid.Row="1" Text="{services:Tr ui.palworld_user_id}" Foreground="{DynamicResource MutedBrush}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedPlayerRecord.UserIdVerbatim}" FontFamily="Consolas, monospace" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Players.SelectedPlayerRecord.UserIdVerbatim}" FontFamily="Consolas, monospace" TextTrimming="CharacterEllipsis"/>
                   </Grid>
-                  <Button Classes="open" Content="{services:Tr ui.open_steam_profile}" HorizontalAlignment="Left" IsVisible="{Binding SelectedPlayerRecord.HasSteamId}" Tag="{Binding SelectedPlayerRecord.SteamId}" Click="OpenSteamProfile_OnClick"/>
-                  <TextBlock Text="{services:TrText SelectedPlayerRecord.OnlineText}"/>
-                  <TextBlock Text="{services:TrText SelectedPlayerRecord.SaveStateText}"/>
-                  <TextBlock Text="{services:TrText SelectedPlayerRecord.UpdatedText}" Foreground="{DynamicResource MutedBrush}"/>
-                  <TextBlock Text="{Binding SelectedPlayerRecord.GuildName}"/>
-                  <TextBlock Text="{services:TrText SelectedPlayerRecord.Role}" Foreground="{DynamicResource MutedBrush}"/>
-                  <TextBlock Text="{services:TrText SelectedPlayerRecord.Evidence}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                  <TextBlock Text="{services:TrText PlayerRegistrySummaryText}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
+                  <Button Classes="open" Content="{services:Tr ui.open_steam_profile}" HorizontalAlignment="Left" IsVisible="{Binding Players.SelectedPlayerRecord.HasSteamId}" Tag="{Binding Players.SelectedPlayerRecord.SteamId}" Click="OpenSteamProfile_OnClick"/>
+                  <TextBlock Text="{services:TrText Players.SelectedPlayerRecord.OnlineText}"/>
+                  <TextBlock Text="{services:TrText Players.SelectedPlayerRecord.SaveStateText}"/>
+                  <TextBlock Text="{services:TrText Players.SelectedPlayerRecord.UpdatedText}" Foreground="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="{Binding Players.SelectedPlayerRecord.GuildName}"/>
+                  <TextBlock Text="{services:TrText Players.SelectedPlayerRecord.Role}" Foreground="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="{services:TrText Players.SelectedPlayerRecord.Evidence}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Players.PlayerRegistrySummaryText}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
                 </StackPanel>
               </Border>
 
               <Border Classes="card accentWorld">
                 <StackPanel Spacing="8">
                   <TextBlock Text="{services:Tr ui.notes_and_warnings}" FontSize="17" FontWeight="SemiBold"/>
-                  <TextBlock Text="{services:TrText PlayerMetadataState}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                  <TextBox PlaceholderText="{services:Tr ui.private_operator_notes}" Text="{Binding SelectedPlayerNotes}" AcceptsReturn="True" MinHeight="78" MaxLength="4000" TextWrapping="Wrap"/>
-                  <Button Classes="apply" Content="{services:Tr ui.save_notes}" Command="{Binding SavePlayerNotesCommand}"/>
-                  <TextBox PlaceholderText="{services:Tr ui.add_an_operator_warning}" Text="{Binding NewPlayerWarning}" MaxLength="1000"/>
-                  <Button Content="{services:Tr ui.add_warning}" Command="{Binding AddPlayerWarningCommand}" Classes="apply"/>
-                  <ListBox AutomationProperties.Name="{services:Tr ui.notes_and_warnings}" ItemsSource="{Binding SelectedPlayerWarnings}" MaxHeight="130">
+                  <TextBlock Text="{services:TrText Players.PlayerMetadataState}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                  <TextBox PlaceholderText="{services:Tr ui.private_operator_notes}" Text="{Binding Players.SelectedPlayerNotes}" AcceptsReturn="True" MinHeight="78" MaxLength="4000" TextWrapping="Wrap"/>
+                  <Button Classes="apply" Content="{services:Tr ui.save_notes}" Command="{Binding Players.SavePlayerNotesCommand}"/>
+                  <TextBox PlaceholderText="{services:Tr ui.add_an_operator_warning}" Text="{Binding Players.NewPlayerWarning}" MaxLength="1000"/>
+                  <Button Content="{services:Tr ui.add_warning}" Command="{Binding Players.AddPlayerWarningCommand}" Classes="apply"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.notes_and_warnings}" ItemsSource="{Binding Players.SelectedPlayerWarnings}" MaxHeight="130">
                     <ListBox.ItemTemplate><DataTemplate x:DataType="models:PlayerWarningDto"><TextBlock Text="{services:TrText DisplayText}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate>
                   </ListBox>
                 </StackPanel>
@@ -1600,9 +1600,9 @@
               <TextBlock Text="{services:Tr ui.player_administration}" FontSize="17" FontWeight="SemiBold"/>
               <TextBlock Text="{services:Tr ui.kick_and_ban_route_through_the_palworld_rest_api_8c91fd}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
               <Grid ColumnDefinitions="2*,Auto,Auto" ColumnSpacing="10">
-                <TextBox PlaceholderText="{services:Tr ui.kick_ban_reason}" Text="{Binding PlayerActionMessage}"/>
-                <Button Grid.Column="1" Content="{services:Tr ui.kick}" Command="{Binding KickSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Classes="danger"/>
-                <Button Grid.Column="2" Content="{services:Tr ui.ban}" Command="{Binding BanSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Classes="danger"/>
+                <TextBox PlaceholderText="{services:Tr ui.kick_ban_reason}" Text="{Binding Players.PlayerActionMessage}"/>
+                <Button Grid.Column="1" Content="{services:Tr ui.kick}" Command="{Binding Players.KickSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Classes="danger"/>
+                <Button Grid.Column="2" Content="{services:Tr ui.ban}" Command="{Binding Players.BanSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Classes="danger"/>
               </Grid>
               <!-- v0.7.15.0: the "Whitelist" stub button was removed here (stale dead UI: the real
                    Whitelist feature already shipped in v0.7.10.0 with its own working card further
@@ -1612,23 +1612,23 @@
                    AdminPassword is a single server-wide credential, not a per-player flag), so this
                    stub had no real backend capability to ever point at. -->
               <WrapPanel Orientation="Horizontal">
-                <Button Classes="apply" Content="{services:Tr ui.unban}" Command="{Binding UnbanSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.removes_the_selected_player_s_steam_userid_from_a211e9}"/>
+                <Button Classes="apply" Content="{services:Tr ui.unban}" Command="{Binding Players.UnbanSelectedPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.removes_the_selected_player_s_steam_userid_from_a211e9}"/>
                 <Button Classes="apply" Content="{services:Tr ui.teleport_to_me}" Command="{Binding TeleportPlayerToMeCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.summons_the_selected_online_player_to_your_admin_2f6256}"/>
                 <Button Classes="apply" Content="{services:Tr ui.teleport_to_player}" Command="{Binding TeleportToPlayerCommand}" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,8" ToolTip.Tip="{services:Tr ui.moves_your_admin_character_to_the_selected_onlin_91d9e9}"/>
               </WrapPanel>
               <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="8">
                 <TextBlock VerticalAlignment="Center" Text="{services:Tr ui.temp_ban}" Classes="muted"/>
-                <NumericUpDown Grid.Column="1" Width="120" Minimum="0.1" Maximum="720" Increment="1" FormatString="F1" Value="{Binding NewTemporaryBanDurationHours}" ToolTip.Tip="{services:Tr ui.duration_in_hours_before_this_ban_is_automatical_527be4}"/>
-                <Button Grid.Column="2" Content="{services:Tr ui.temp_ban_560bdc}" Command="{Binding CreateTemporaryBanCommand}" Classes="danger" ToolTip.Tip="{services:Tr ui.bans_the_selected_online_player_immediately_same_0f5bde}"/>
+                <NumericUpDown Grid.Column="1" Width="120" Minimum="0.1" Maximum="720" Increment="1" FormatString="F1" Value="{Binding Players.NewTemporaryBanDurationHours}" ToolTip.Tip="{services:Tr ui.duration_in_hours_before_this_ban_is_automatical_527be4}"/>
+                <Button Grid.Column="2" Content="{services:Tr ui.temp_ban_560bdc}" Command="{Binding Players.CreateTemporaryBanCommand}" Classes="danger" ToolTip.Tip="{services:Tr ui.bans_the_selected_online_player_immediately_same_0f5bde}"/>
               </Grid>
               <!-- v0.7.112.0: Give Item. Vanilla Palworld has no give command; this goes through PalDefender's
-                   giveitems/givepal over RCON, the same provider Starter Kits use, and says so when it is
+                   giveitems/givepal over RCON, the same provider Starter Players.Kits use, and says so when it is
                    missing. Same line format as the kit editor. -->
               <TextBlock Text="{services:Tr ui.give_items_or_pals}" IsVisible="{Binding CanManageAdmin}" FontWeight="SemiBold" Margin="0,4,0,0"/>
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding CanManageAdmin}">
-                <TextBox Text="{Binding GiveItemsText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="140"
+                <TextBox Text="{Binding Players.GiveItemsText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="140"
                          PlaceholderText="{services:Tr ui.one_per_line_item_palsphere_10_pal_weaseldragon_9c778c}"/>
-                <Button Grid.Column="1" Content="{services:Tr ui.give}" VerticalAlignment="Top" Classes="apply" Command="{Binding GiveItemSelectedPlayerCommand}" ToolTip.Tip="{services:Tr ui.gives_these_to_the_selected_online_player_throug_2328b5}"/>
+                <Button Grid.Column="1" Content="{services:Tr ui.give}" VerticalAlignment="Top" Classes="apply" Command="{Binding Players.GiveItemSelectedPlayerCommand}" ToolTip.Tip="{services:Tr ui.gives_these_to_the_selected_online_player_throug_2328b5}"/>
               </Grid>
               <TextBlock IsVisible="{Binding CanManageAdmin}" Text="{services:Tr ui.lines_use_palworld_s_internal_ids_the_same_ones_e66c62}"
                          Classes="muted" FontSize="11" TextWrapping="Wrap"/>
@@ -1639,21 +1639,21 @@
                 <StackPanel Spacing="6">
                   <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                     <TextBlock Text="{services:Tr ui.find_an_item_or_pal}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Text="{Binding GameIdFilterText}" PlaceholderText="{services:Tr ui.search_names_or_ids_e_g_pal_sphere_lamball}"/>
-                    <Button Classes="info" Grid.Column="2" Content="{services:Tr ui.load_ids}" Command="{Binding LoadGameIdsCommand}" ToolTip.Tip="{services:Tr ui.reads_the_item_and_pal_ids_that_occur_in_this_se_8cee74}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Players.GameIdFilterText}" PlaceholderText="{services:Tr ui.search_names_or_ids_e_g_pal_sphere_lamball}"/>
+                    <Button Classes="info" Grid.Column="2" Content="{services:Tr ui.load_ids}" Command="{Binding Players.LoadGameIdsCommand}" ToolTip.Tip="{services:Tr ui.reads_the_item_and_pal_ids_that_occur_in_this_se_8cee74}"/>
                   </Grid>
-                  <ListBox AutomationProperties.Name="{services:Tr ui.find_an_item_or_pal}" x:Name="GameIdList" ItemsSource="{Binding FilteredGameIds}" SelectedItem="{Binding SelectedGameId}" MaxHeight="170">
+                  <ListBox AutomationProperties.Name="{services:Tr ui.find_an_item_or_pal}" x:Name="GameIdList" ItemsSource="{Binding Players.FilteredGameIds}" SelectedItem="{Binding Players.SelectedGameId}" MaxHeight="170">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="models:GameIdCatalogEntryDto"><TextBlock Text="{services:TrText DisplayText}" FontSize="12"/></DataTemplate>
                     </ListBox.ItemTemplate>
                   </ListBox>
                   <WrapPanel Orientation="Horizontal">
-                    <TextBlock Text="{services:TrText GameIdAmountLabel}" VerticalAlignment="Center" Classes="muted" Margin="0,0,8,6"/>
-                    <TextBox Text="{Binding GameIdAmountText}" Width="110" Margin="0,0,10,6" ToolTip.Tip="{services:Tr ui.items_how_many_1_to_1_000_000_pals_the_level_1_t_1c3680}"/>
-                    <Button IsEnabled="{Binding CanManageAdmin}" Content="{services:Tr ui.add_to_give}" Classes="apply" Command="{Binding AddGameIdToGiveCommand}" Margin="0,0,8,6" ToolTip.Tip="{services:Tr ui.adds_the_selected_id_as_a_new_line_in_the_give_b_8aa12d}"/>
-                    <Button Classes="apply" IsEnabled="{Binding CanManageAdmin}" Content="{services:Tr ui.add_to_selected_kit}" Command="{Binding AddGameIdToKitCommand}" Margin="0,0,8,6" ToolTip.Tip="{services:Tr ui.adds_the_selected_id_to_the_kit_selected_under_s_24f806}"/>
+                    <TextBlock Text="{services:TrText Players.GameIdAmountLabel}" VerticalAlignment="Center" Classes="muted" Margin="0,0,8,6"/>
+                    <TextBox Text="{Binding Players.GameIdAmountText}" Width="110" Margin="0,0,10,6" ToolTip.Tip="{services:Tr ui.items_how_many_1_to_1_000_000_pals_the_level_1_t_1c3680}"/>
+                    <Button IsEnabled="{Binding CanManageAdmin}" Content="{services:Tr ui.add_to_give}" Classes="apply" Command="{Binding Players.AddGameIdToGiveCommand}" Margin="0,0,8,6" ToolTip.Tip="{services:Tr ui.adds_the_selected_id_as_a_new_line_in_the_give_b_8aa12d}"/>
+                    <Button Classes="apply" IsEnabled="{Binding CanManageAdmin}" Content="{services:Tr ui.add_to_selected_kit}" Command="{Binding Players.AddGameIdToKitCommand}" Margin="0,0,8,6" ToolTip.Tip="{services:Tr ui.adds_the_selected_id_to_the_kit_selected_under_s_24f806}"/>
                   </WrapPanel>
-                  <TextBlock Text="{services:TrText GameIdCatalogStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Players.GameIdCatalogStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                 </StackPanel>
               </Border>
               <!-- v1.0.4.0 (roadmap S-1, S-2; owner decision D-2): the selected player's main inventory from the world save. One
@@ -1663,10 +1663,10 @@
                 <StackPanel Spacing="6">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                     <TextBlock Text="{services:Tr ui.inventory_saved}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.load_inventory}" Command="{Binding LoadInventoryCommand}"/>
+                    <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.load_inventory}" Command="{Binding Players.LoadInventoryCommand}"/>
                   </Grid>
                   <TextBlock Text="{services:Tr ui.inventory_saved_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                  <ListBox AutomationProperties.Name="{services:Tr ui.inventory_saved}" x:Name="InventoryList" ItemsSource="{Binding InventorySlots}" SelectedItem="{Binding SelectedInventorySlot}" MaxHeight="200">
+                  <ListBox AutomationProperties.Name="{services:Tr ui.inventory_saved}" x:Name="InventoryList" ItemsSource="{Binding Players.InventorySlots}" SelectedItem="{Binding Players.SelectedInventorySlot}" MaxHeight="200">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="models:InventorySlotDto">
                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -1680,7 +1680,7 @@
                     <Button Classes="danger" Content="{services:Tr ui.remove_selected_stack}" Click="RemoveInventoryStack_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
                     <Button Classes="apply" Content="{services:Tr ui.add_to_inventory}" Click="AddInventoryItem_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
                   </WrapPanel>
-                  <TextBlock Text="{services:TrText InventoryStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Players.InventoryStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                 </StackPanel>
               </Border>
               <!-- v1.0.6.0 (roadmap S-3): the selected player's Pal box from the world save; add a Pal (a copy of one of that
@@ -1689,10 +1689,10 @@
                 <StackPanel Spacing="6">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                     <TextBlock Text="{services:Tr ui.palbox_saved}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.load_palbox}" Command="{Binding LoadPalBoxCommand}"/>
+                    <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.load_palbox}" Command="{Binding Players.LoadPalBoxCommand}"/>
                   </Grid>
                   <TextBlock Text="{services:Tr ui.palbox_saved_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                  <ListBox AutomationProperties.Name="{services:Tr ui.palbox_saved}" x:Name="PalBoxList" ItemsSource="{Binding PalBoxPals}" SelectedItem="{Binding SelectedPalBoxPal}" MaxHeight="200">
+                  <ListBox AutomationProperties.Name="{services:Tr ui.palbox_saved}" x:Name="PalBoxList" ItemsSource="{Binding Players.PalBoxPals}" SelectedItem="{Binding Players.SelectedPalBoxPal}" MaxHeight="200">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="models:PalBoxPalDto">
                         <TextBlock Text="{Binding RowVerbatim}" FontFamily="Consolas, monospace" FontSize="12"/>
@@ -1701,14 +1701,14 @@
                   </ListBox>
                   <WrapPanel>
                     <Button Classes="danger" Content="{services:Tr ui.remove_selected_pal}" Click="RemovePalBoxPal_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
-                    <ComboBox AutomationProperties.Name="{services:Tr ui.pal_to_add}" ItemsSource="{Binding PalBoxSpecies}" SelectedItem="{Binding SelectedPalBoxSpecies}" MinWidth="180" Margin="0,0,8,6"/>
+                    <ComboBox AutomationProperties.Name="{services:Tr ui.pal_to_add}" ItemsSource="{Binding Players.PalBoxSpecies}" SelectedItem="{Binding Players.SelectedPalBoxSpecies}" MinWidth="180" Margin="0,0,8,6"/>
                     <Button Classes="apply" Content="{services:Tr ui.add_to_palbox}" Click="AddPalBoxPal_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
                   </WrapPanel>
-                  <TextBlock Text="{services:TrText PalBoxStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Players.PalBoxStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                 </StackPanel>
               </Border>
-              <TextBlock Text="{services:TrText PlayerAdminStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText ModerationProviderStatusText}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Players.PlayerAdminStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Players.ModerationProviderStatusText}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
 
@@ -1717,18 +1717,18 @@
           <Border Classes="card accentWorld">
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto">
-                <Button Classes="sectionToggle" Command="{Binding ToggleBanListCommand}">
+                <Button Classes="sectionToggle" Command="{Binding Players.ToggleBanListCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="▸" IsVisible="{Binding !IsBanListExpanded}" FontWeight="Bold"/>
-                    <TextBlock Text="▾" IsVisible="{Binding IsBanListExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▸" IsVisible="{Binding !Players.IsBanListExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▾" IsVisible="{Binding Players.IsBanListExpanded}" FontWeight="Bold"/>
                     <TextBlock Text="{services:Tr ui.ban_list}" FontSize="17" FontWeight="SemiBold"/>
                   </StackPanel>
                 </Button>
-                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding RefreshBanListCommand}" IsVisible="{Binding IsBanListExpanded}"/>
+                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding Players.RefreshBanListCommand}" IsVisible="{Binding Players.IsBanListExpanded}"/>
               </Grid>
-              <StackPanel Spacing="8" IsVisible="{Binding IsBanListExpanded}">
+              <StackPanel Spacing="8" IsVisible="{Binding Players.IsBanListExpanded}">
                 <TextBlock Text="{services:Tr ui.read_directly_from_the_server_via_rcon_banlist_b_527108}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                <TextBox AutomationProperties.Name="{services:Tr ui.ban_list}" Text="{Binding BanListText}" AcceptsReturn="True" IsReadOnly="True" MinHeight="90" MaxHeight="200" FontFamily="Consolas, monospace" FontSize="12"/>
+                <TextBox AutomationProperties.Name="{services:Tr ui.ban_list}" Text="{Binding Players.BanListText}" AcceptsReturn="True" IsReadOnly="True" MinHeight="90" MaxHeight="200" FontFamily="Consolas, monospace" FontSize="12"/>
               </StackPanel>
             </StackPanel>
           </Border>
@@ -1741,18 +1741,18 @@
           <Border Classes="card accentWorld">
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto">
-                <Button Classes="sectionToggle" Command="{Binding ToggleTemporaryBansCommand}">
+                <Button Classes="sectionToggle" Command="{Binding Players.ToggleTemporaryBansCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="▸" IsVisible="{Binding !IsTemporaryBansExpanded}" FontWeight="Bold"/>
-                    <TextBlock Text="▾" IsVisible="{Binding IsTemporaryBansExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▸" IsVisible="{Binding !Players.IsTemporaryBansExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▾" IsVisible="{Binding Players.IsTemporaryBansExpanded}" FontWeight="Bold"/>
                     <TextBlock Text="{services:Tr ui.temporary_bans}" FontSize="17" FontWeight="SemiBold"/>
                   </StackPanel>
                 </Button>
-                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding RefreshTemporaryBansCommand}" IsVisible="{Binding IsTemporaryBansExpanded}"/>
+                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding Players.RefreshTemporaryBansCommand}" IsVisible="{Binding Players.IsTemporaryBansExpanded}"/>
               </Grid>
-              <StackPanel Spacing="8" IsVisible="{Binding IsTemporaryBansExpanded}">
-                <TextBlock Text="{services:TrText TemporaryBanState}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                <ListBox AutomationProperties.Name="{services:Tr ui.temporary_bans}" ItemsSource="{Binding TemporaryBans}" MaxHeight="200">
+              <StackPanel Spacing="8" IsVisible="{Binding Players.IsTemporaryBansExpanded}">
+                <TextBlock Text="{services:TrText Players.TemporaryBanState}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                <ListBox AutomationProperties.Name="{services:Tr ui.temporary_bans}" ItemsSource="{Binding Players.TemporaryBans}" MaxHeight="200">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:TemporaryBanEntryDto">
                       <Grid ColumnDefinitions="*,Auto" Margin="0,2">
@@ -1762,7 +1762,7 @@
                           <TextBlock Classes="muted" FontSize="10" Text="{services:TrText RemainingText}"/>
                         </StackPanel>
                         <Button Classes="caution" Grid.Column="1" Content="{services:Tr ui.lift_now}" VerticalAlignment="Center"
-                                Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).CancelTemporaryBanCommand}"
+                                Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).Players.CancelTemporaryBanCommand}"
                                 CommandParameter="{Binding PlayerId}"/>
                       </Grid>
                     </DataTemplate>
@@ -1779,27 +1779,27 @@
           <Border Classes="card accentWorld" IsVisible="{Binding CanManageAdmin}" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto">
-                <Button Classes="sectionToggle" Command="{Binding ToggleWhitelistCommand}">
+                <Button Classes="sectionToggle" Command="{Binding Players.ToggleWhitelistCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="▸" IsVisible="{Binding !IsWhitelistExpanded}" FontWeight="Bold"/>
-                    <TextBlock Text="▾" IsVisible="{Binding IsWhitelistExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▸" IsVisible="{Binding !Players.IsWhitelistExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▾" IsVisible="{Binding Players.IsWhitelistExpanded}" FontWeight="Bold"/>
                     <TextBlock Text="{services:Tr ui.whitelist}" FontSize="17" FontWeight="SemiBold"/>
                   </StackPanel>
                 </Button>
-                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding RefreshWhitelistCommand}" IsVisible="{Binding IsWhitelistExpanded}"/>
+                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding Players.RefreshWhitelistCommand}" IsVisible="{Binding Players.IsWhitelistExpanded}"/>
               </Grid>
-              <StackPanel Spacing="10" IsVisible="{Binding IsWhitelistExpanded}">
-                <TextBlock Text="{services:TrText WhitelistState}" Classes="muted" TextWrapping="Wrap"/>
+              <StackPanel Spacing="10" IsVisible="{Binding Players.IsWhitelistExpanded}">
+                <TextBlock Text="{services:TrText Players.WhitelistState}" Classes="muted" TextWrapping="Wrap"/>
                 <Grid ColumnDefinitions="220,Auto" ColumnSpacing="10">
                   <TextBlock Text="{services:Tr ui.enabled_auto_kick_anyone_not_listed}" VerticalAlignment="Center" Classes="muted"/>
-                  <CheckBox AutomationProperties.Name="{services:Tr ui.enabled_auto_kick_anyone_not_listed}" Grid.Column="1" IsChecked="{Binding WhitelistConfig.Enabled}"/>
+                  <CheckBox AutomationProperties.Name="{services:Tr ui.enabled_auto_kick_anyone_not_listed}" Grid.Column="1" IsChecked="{Binding Players.WhitelistConfig.Enabled}"/>
                 </Grid>
                 <Grid ColumnDefinitions="*,180,Auto" ColumnSpacing="10">
-                  <TextBox Text="{Binding NewWhitelistPlayerId}" PlaceholderText="{services:Tr ui.steam_userid}"/>
-                  <TextBox Grid.Column="1" Text="{Binding NewWhitelistLabel}" PlaceholderText="{services:Tr ui.label_optional}"/>
-                  <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.add}" Command="{Binding AddWhitelistEntryCommand}"/>
+                  <TextBox Text="{Binding Players.NewWhitelistPlayerId}" PlaceholderText="{services:Tr ui.steam_userid}"/>
+                  <TextBox Grid.Column="1" Text="{Binding Players.NewWhitelistLabel}" PlaceholderText="{services:Tr ui.label_optional}"/>
+                  <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.add}" Command="{Binding Players.AddWhitelistEntryCommand}"/>
                 </Grid>
-                <ListBox AutomationProperties.Name="{services:Tr ui.whitelist}" ItemsSource="{Binding WhitelistEntries}" SelectedItem="{Binding SelectedWhitelistEntry}" MaxHeight="180">
+                <ListBox AutomationProperties.Name="{services:Tr ui.whitelist}" ItemsSource="{Binding Players.WhitelistEntries}" SelectedItem="{Binding Players.SelectedWhitelistEntry}" MaxHeight="180">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:WhitelistEntryDto">
                       <Grid ColumnDefinitions="*,180"><TextBlock Text="{Binding PlayerId}"/><TextBlock Grid.Column="1" Text="{services:TrText Label}" Classes="muted"/></Grid>
@@ -1807,8 +1807,8 @@
                   </ListBox.ItemTemplate>
                 </ListBox>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Button Classes="danger" Content="{services:Tr ui.remove_selected}" Command="{Binding RemoveWhitelistEntryCommand}"/>
-                  <Button Classes="apply" Content="{services:Tr ui.save_whitelist}" Command="{Binding SaveWhitelistCommand}"/>
+                  <Button Classes="danger" Content="{services:Tr ui.remove_selected}" Command="{Binding Players.RemoveWhitelistEntryCommand}"/>
+                  <Button Classes="apply" Content="{services:Tr ui.save_whitelist}" Command="{Binding Players.SaveWhitelistCommand}"/>
                 </StackPanel>
               </StackPanel>
             </StackPanel>
@@ -1820,26 +1820,26 @@
           <Border x:Name="UniqueNamesCard" Classes="card accentWorld" IsVisible="{Binding CanManageAdmin}" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto">
-                <Button Classes="sectionToggle" Command="{Binding ToggleNameGuardCommand}">
+                <Button Classes="sectionToggle" Command="{Binding Players.ToggleNameGuardCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="▸" IsVisible="{Binding !IsNameGuardExpanded}" FontWeight="Bold"/>
-                    <TextBlock Text="▾" IsVisible="{Binding IsNameGuardExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▸" IsVisible="{Binding !Players.IsNameGuardExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▾" IsVisible="{Binding Players.IsNameGuardExpanded}" FontWeight="Bold"/>
                     <TextBlock Text="{services:Tr ui.unique_names}" FontSize="17" FontWeight="SemiBold"/>
                   </StackPanel>
                 </Button>
-                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding RefreshNameGuardCommand}" IsVisible="{Binding IsNameGuardExpanded}"/>
+                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding Players.RefreshNameGuardCommand}" IsVisible="{Binding Players.IsNameGuardExpanded}"/>
               </Grid>
-              <StackPanel Spacing="10" IsVisible="{Binding IsNameGuardExpanded}">
+              <StackPanel Spacing="10" IsVisible="{Binding Players.IsNameGuardExpanded}">
                 <TextBlock Text="{services:Tr ui.unique_names_hint}" Classes="muted" TextWrapping="Wrap"/>
-                <TextBlock Text="{services:TrText NameGuardState}" TextWrapping="Wrap"/>
-                <CheckBox Content="{services:Tr ui.unique_names_enabled}" IsChecked="{Binding NameGuardConfig.Enabled}"/>
-                <CheckBox Content="{services:Tr ui.unique_names_kick}" IsChecked="{Binding NameGuardConfig.KickDuplicates}" IsEnabled="{Binding NameGuardConfig.Enabled}"/>
+                <TextBlock Text="{services:TrText Players.NameGuardState}" TextWrapping="Wrap"/>
+                <CheckBox Content="{services:Tr ui.unique_names_enabled}" IsChecked="{Binding Players.NameGuardConfig.Enabled}"/>
+                <CheckBox Content="{services:Tr ui.unique_names_kick}" IsChecked="{Binding Players.NameGuardConfig.KickDuplicates}" IsEnabled="{Binding Players.NameGuardConfig.Enabled}"/>
                 <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="10">
-                  <TextBox AutomationProperties.Name="{services:Tr ui.reserve_name}" Text="{Binding NewReservedName}" PlaceholderText="{services:Tr ui.reserve_name}"/>
-                  <TextBox Grid.Column="1" AutomationProperties.Name="{services:Tr ui.reserve_owner}" Text="{Binding NewReservedOwner}" PlaceholderText="{services:Tr ui.reserve_owner}"/>
-                  <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.reserve}" Command="{Binding ReserveNameCommand}"/>
+                  <TextBox AutomationProperties.Name="{services:Tr ui.reserve_name}" Text="{Binding Players.NewReservedName}" PlaceholderText="{services:Tr ui.reserve_name}"/>
+                  <TextBox Grid.Column="1" AutomationProperties.Name="{services:Tr ui.reserve_owner}" Text="{Binding Players.NewReservedOwner}" PlaceholderText="{services:Tr ui.reserve_owner}"/>
+                  <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.reserve}" Command="{Binding Players.ReserveNameCommand}"/>
                 </Grid>
-                <ListBox AutomationProperties.Name="{services:Tr ui.unique_names}" ItemsSource="{Binding NameClaims}" SelectedItem="{Binding SelectedNameClaim}" MaxHeight="220">
+                <ListBox AutomationProperties.Name="{services:Tr ui.unique_names}" ItemsSource="{Binding Players.NameClaims}" SelectedItem="{Binding Players.SelectedNameClaim}" MaxHeight="220">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:NameClaimDto">
                       <Grid ColumnDefinitions="*,*,160" ColumnSpacing="8">
@@ -1851,12 +1851,12 @@
                   </ListBox.ItemTemplate>
                 </ListBox>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Button Classes="caution" Content="{services:Tr ui.release_selected}" Command="{Binding ReleaseNameCommand}"/>
-                  <Button Classes="apply" Content="{services:Tr ui.save_unique_names}" Command="{Binding SaveNameGuardCommand}"/>
+                  <Button Classes="caution" Content="{services:Tr ui.release_selected}" Command="{Binding Players.ReleaseNameCommand}"/>
+                  <Button Classes="apply" Content="{services:Tr ui.save_unique_names}" Command="{Binding Players.SaveNameGuardCommand}"/>
                 </StackPanel>
-                <StackPanel Spacing="4" IsVisible="{Binding HasNameGuardEvents}">
+                <StackPanel Spacing="4" IsVisible="{Binding Players.HasNameGuardEvents}">
                   <TextBlock Text="{services:Tr ui.unique_names_turned_away}" FontWeight="SemiBold"/>
-                  <ItemsControl ItemsSource="{Binding NameGuardEvents}">
+                  <ItemsControl ItemsSource="{Binding Players.NameGuardEvents}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="models:NameGuardEventDto">
                         <Grid ColumnDefinitions="140,*,*,110" ColumnSpacing="8">
@@ -1879,36 +1879,36 @@
           <Border Classes="card accentWorld" IsVisible="{Binding CanManageAdmin}" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto">
-                <Button Classes="sectionToggle" Command="{Binding ToggleKitsCommand}">
+                <Button Classes="sectionToggle" Command="{Binding Players.ToggleKitsCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="▸" IsVisible="{Binding !IsKitsExpanded}" FontWeight="Bold"/>
-                    <TextBlock Text="▾" IsVisible="{Binding IsKitsExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▸" IsVisible="{Binding !Players.IsKitsExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▾" IsVisible="{Binding Players.IsKitsExpanded}" FontWeight="Bold"/>
                     <TextBlock Text="{services:Tr ui.starter_kits}" FontSize="17" FontWeight="SemiBold"/>
                   </StackPanel>
                 </Button>
-                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding RefreshKitsCommand}" IsVisible="{Binding IsKitsExpanded}"/>
+                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding Players.RefreshKitsCommand}" IsVisible="{Binding Players.IsKitsExpanded}"/>
               </Grid>
-              <StackPanel Spacing="10" IsVisible="{Binding IsKitsExpanded}">
-                <TextBlock Text="{services:TrText KitStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-                <TextBlock Text="{services:TrText KitProviderText}" Classes="muted" TextWrapping="Wrap"/>
-                <Button Classes="verify" Content="{services:Tr ui.test_paldefender}" Command="{Binding TestKitProviderCommand}" HorizontalAlignment="Left" ToolTip.Tip="{services:Tr ui.sends_the_version_command_over_rcon_and_shows_th_6319b4}"/>
+              <StackPanel Spacing="10" IsVisible="{Binding Players.IsKitsExpanded}">
+                <TextBlock Text="{services:TrText Players.KitStatusText}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Players.KitProviderText}" Classes="muted" TextWrapping="Wrap"/>
+                <Button Classes="verify" Content="{services:Tr ui.test_paldefender}" Command="{Binding Players.TestKitProviderCommand}" HorizontalAlignment="Left" ToolTip.Tip="{services:Tr ui.sends_the_version_command_over_rcon_and_shows_th_6319b4}"/>
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                   <StackPanel Spacing="6">
                     <TextBlock Text="{services:Tr ui.kits}" FontWeight="SemiBold"/>
-                    <ListBox AutomationProperties.Name="{services:Tr ui.kits}" ItemsSource="{Binding Kits}" SelectedItem="{Binding SelectedKit}" MaxHeight="180">
+                    <ListBox AutomationProperties.Name="{services:Tr ui.kits}" ItemsSource="{Binding Players.Kits}" SelectedItem="{Binding Players.SelectedKit}" MaxHeight="180">
                       <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="models:KitDefinitionDto"><TextBlock Text="{services:TrText DisplayText}"/></DataTemplate>
                       </ListBox.ItemTemplate>
                     </ListBox>
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                      <Button Classes="apply" Content="{services:Tr ui.new_kit}" Command="{Binding NewKitCommand}"/>
-                      <Button Classes="danger" Content="{services:Tr ui.delete_kit}" Command="{Binding DeleteKitCommand}"/>
+                      <Button Classes="apply" Content="{services:Tr ui.new_kit}" Command="{Binding Players.NewKitCommand}"/>
+                      <Button Classes="danger" Content="{services:Tr ui.delete_kit}" Command="{Binding Players.DeleteKitCommand}"/>
                     </StackPanel>
                   </StackPanel>
-                  <StackPanel Spacing="6" IsEnabled="{Binding HasSelectedKit}">
+                  <StackPanel Spacing="6" IsEnabled="{Binding Players.HasSelectedKit}">
                     <TextBlock Text="{services:Tr ui.selected_kit}" FontWeight="SemiBold"/>
-                    <TextBox Text="{Binding KitNameText, Mode=TwoWay}" PlaceholderText="{services:Tr ui.kit_name}" MaxLength="64"/>
-                    <TextBox Text="{Binding KitEntriesText, Mode=TwoWay}" AcceptsReturn="True" MinHeight="110" FontFamily="Consolas, monospace" FontSize="12"
+                    <TextBox Text="{Binding Players.KitNameText, Mode=TwoWay}" PlaceholderText="{services:Tr ui.kit_name}" MaxLength="64"/>
+                    <TextBox Text="{Binding Players.KitEntriesText, Mode=TwoWay}" AcceptsReturn="True" MinHeight="110" FontFamily="Consolas, monospace" FontSize="12"
                              PlaceholderText="{services:Tr ui.one_per_line_item_palsphere_10_pal_weaseldragon_9c778c}"/>
                     <TextBlock Text="{services:Tr ui.tip_find_an_item_or_pal_under_player_administrat_167e7f}"
                                Classes="muted" FontSize="11" TextWrapping="Wrap"/>
@@ -1916,22 +1916,22 @@
                 </Grid>
                 <Border Classes="statuscard accentWorld">
                   <StackPanel Spacing="6">
-                    <CheckBox Content="{services:Tr ui.auto_gift_the_chosen_kit_to_new_players}" IsChecked="{Binding KitAutoGiftEnabled}"/>
-                    <ComboBox ItemsSource="{Binding Kits}" SelectedItem="{Binding KitAutoGiftKit}" MinWidth="260" HorizontalAlignment="Left" PlaceholderText="{services:Tr ui.kit_to_auto_gift}">
+                    <CheckBox Content="{services:Tr ui.auto_gift_the_chosen_kit_to_new_players}" IsChecked="{Binding Players.KitAutoGiftEnabled}"/>
+                    <ComboBox ItemsSource="{Binding Players.Kits}" SelectedItem="{Binding Players.KitAutoGiftKit}" MinWidth="260" HorizontalAlignment="Left" PlaceholderText="{services:Tr ui.kit_to_auto_gift}">
                       <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="models:KitDefinitionDto"><TextBlock Text="{services:TrText DisplayText}"/></DataTemplate>
                       </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <TextBlock Text="{services:TrText KitAutoGiftNote}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                    <TextBlock Text="{services:TrText Players.KitAutoGiftNote}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                   </StackPanel>
                 </Border>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Button Classes="apply" Content="{services:Tr ui.save_kits}" Command="{Binding SaveKitsCommand}"/>
-                  <Button Classes="apply" Content="{services:Tr ui.give_kit_to_selected_player}" Command="{Binding GiveSelectedKitCommand}" ToolTip.Tip="{services:Tr ui.gives_the_selected_kit_to_the_player_selected_in_d833e0}"/>
-                  <Button Classes="caution" Content="{services:Tr ui.reset_player_s_claims}" Command="{Binding ResetKitClaimCommand}" ToolTip.Tip="{services:Tr ui.lets_auto_gift_give_this_player_the_kit_again_if_bf254d}"/>
+                  <Button Classes="apply" Content="{services:Tr ui.save_kits}" Command="{Binding Players.SaveKitsCommand}"/>
+                  <Button Classes="apply" Content="{services:Tr ui.give_kit_to_selected_player}" Command="{Binding Players.GiveSelectedKitCommand}" ToolTip.Tip="{services:Tr ui.gives_the_selected_kit_to_the_player_selected_in_d833e0}"/>
+                  <Button Classes="caution" Content="{services:Tr ui.reset_player_s_claims}" Command="{Binding Players.ResetKitClaimCommand}" ToolTip.Tip="{services:Tr ui.lets_auto_gift_give_this_player_the_kit_again_if_bf254d}"/>
                 </StackPanel>
                 <TextBlock Text="{services:Tr ui.recent_claims}" FontWeight="SemiBold"/>
-                <ListBox AutomationProperties.Name="{services:Tr ui.recent_claims}" ItemsSource="{Binding KitClaims}" MaxHeight="120">
+                <ListBox AutomationProperties.Name="{services:Tr ui.recent_claims}" ItemsSource="{Binding Players.KitClaims}" MaxHeight="120">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:KitClaimDto"><TextBlock Text="{services:TrText DisplayText}" FontSize="11"/></DataTemplate>
                   </ListBox.ItemTemplate>
@@ -1987,13 +1987,13 @@
               <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                 <StackPanel Spacing="4">
                   <TextBlock Text="{services:Tr ui.source_player}" Classes="muted"/>
-                  <ComboBox AutomationProperties.Name="{services:Tr ui.source_player}" ItemsSource="{Binding PlayerRecords}" SelectedItem="{Binding MigrationSourcePlayer}" HorizontalAlignment="Stretch">
+                  <ComboBox AutomationProperties.Name="{services:Tr ui.source_player}" ItemsSource="{Binding Players.PlayerRecords}" SelectedItem="{Binding MigrationSourcePlayer}" HorizontalAlignment="Stretch">
                     <ComboBox.ItemTemplate><DataTemplate x:DataType="models:PlayerExplorerItemDto"><TextBlock Text="{Binding PlayerName}"/></DataTemplate></ComboBox.ItemTemplate>
                   </ComboBox>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="4">
                   <TextBlock Text="{services:Tr ui.destination_player}" Classes="muted"/>
-                  <ComboBox AutomationProperties.Name="{services:Tr ui.destination_player}" ItemsSource="{Binding PlayerRecords}" SelectedItem="{Binding MigrationDestinationPlayer}" HorizontalAlignment="Stretch">
+                  <ComboBox AutomationProperties.Name="{services:Tr ui.destination_player}" ItemsSource="{Binding Players.PlayerRecords}" SelectedItem="{Binding MigrationDestinationPlayer}" HorizontalAlignment="Stretch">
                     <ComboBox.ItemTemplate><DataTemplate x:DataType="models:PlayerExplorerItemDto"><TextBlock Text="{Binding PlayerName}"/></DataTemplate></ComboBox.ItemTemplate>
                   </ComboBox>
                 </StackPanel>

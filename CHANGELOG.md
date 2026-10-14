@@ -1,4 +1,17 @@
-<!-- MystTiq v1.0.8.1: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.8.2: file reviewed for this release (2026-10-12). -->
+## v1.0.8.2 — The Players Page, Tidied
+
+- Roadmap C-2: the Players page (directory, filters, notes and warnings, moderation, temporary bans, ban list,
+  whitelist, unique names, kits, Give Item, inventory and Pal box) moved into `PlayersViewModel` (the NameGuard, PalBox
+  and Inventory partial files removed). The window keeps the page's refresh (part of the status refresh) and the map's
+  teleport buttons. The session gained `BuildProfile()`. The `MainWindowViewModel` files total 644,530 bytes (were
+  704,238). Nothing the owner sees changes.
+- Fixed while moving: after a busy spell the busy-state refresh re-evaluated only the window's own commands; it now
+  covers every page's (Save names and Save Whitelist stayed disabled without it).
+- Tests: the v1.0.8.2 gate regenerated from v1.0.8.1 (the carried contracts read the window's code wherever it now lives)
+  and the ArtworkHarness reading `vm.Players`.
+- Version advanced to 1.0.8.2.
+
 ## v1.0.8.1 — HOST and Dashboard, Tidied
 
 - Roadmap C-1: the HOST page (machine, priority and eco mode, history, network limits) moved into `HostPageViewModel`

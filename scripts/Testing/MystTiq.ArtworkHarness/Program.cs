@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.1: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.2: file reviewed for this release (2026-10-12).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -507,13 +507,13 @@ selectedPage.SetValue(vm, NavigationPage.Dashboard);
 Dispatcher.UIThread.RunJobs();
 var enDash = DashboardTexts();
 Check(new[] { "ACTIVE WORLD", "OVERALL HEALTH", "WORLD PULSE", "RESOURCE HISTORY", "LIVE SERVER / MANAGER LOG", "CURRENT OPERATION" }.All(enDash.Contains) &&
-      enDash.Contains($"Stored: {vm.BackupTotalSizeText}") && enDash.Contains($"{vm.OnlinePlayerCountText} online") && enDash.Contains($"{vm.PlayerRecordCountText} known player(s)"),
+      enDash.Contains($"Stored: {vm.BackupTotalSizeText}") && enDash.Contains($"{vm.OnlinePlayerCountText} online") && enDash.Contains($"{vm.Players.PlayerRecordCountText} known player(s)"),
     "en: the Dashboard reads exactly as before, templates included");
 Localizer.Instance.SetLanguage("de");
 Render("language-de-dashboard-labels");
 var deDash = DashboardTexts();
 Check(new[] { "AKTIVE WELT", "GESAMTZUSTAND", "WELT-PULS", "RESSOURCENVERLAUF", "AKTUELLER VORGANG" }.All(deDash.Contains) &&
-      deDash.Contains($"Größe: {vm.BackupTotalSizeText}") && deDash.Contains($"{vm.PlayerRecordCountText} bekannte(r) Spieler") && !deDash.Contains("ACTIVE WORLD"),
+      deDash.Contains($"Größe: {vm.BackupTotalSizeText}") && deDash.Contains($"{vm.Players.PlayerRecordCountText} bekannte(r) Spieler") && !deDash.Contains("ACTIVE WORLD"),
     "de: the Dashboard's labels and filled templates switch live");
 var openButtons = window.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible && b.Content as string == "ÖFFNEN").Count();
 Check(openButtons >= 5, $"de: the Dashboard's OPEN buttons read ÖFFNEN ({openButtons})");
@@ -1046,7 +1046,7 @@ var kick = window.GetLogicalDescendants().OfType<Button>().FirstOrDefault(b => b
 Check(kick is not null && !kick.IsEnabled, "an Operator's Kick button is disabled (kick and ban need Admin on the server)");
 applyPrincipal.Invoke(vm, [null]);
 Dispatcher.UIThread.RunJobs();
-Check(kick!.IsEnabled || !vm.KickSelectedPlayerCommand.CanExecute(null), "local use: Kick is enabled whenever its command can run");
+Check(kick!.IsEnabled || !vm.Players.KickSelectedPlayerCommand.CanExecute(null), "local use: Kick is enabled whenever its command can run");
 
 // v0.9.4.0: the role hint is in the chosen language, and goes away when the role allows the command.
 applyPrincipal.Invoke(vm, [new MystTiqPrincipalDto { Id = "p-viewer", Name = "Viewer user", Role = "Viewer" }]);
@@ -1154,10 +1154,10 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     // As at sign-in or connect: the role gates are re-evaluated while the app is busy, so every gated button reads disabled.
     typeof(MainWindowViewModel).GetMethod("RaiseCommandRoleGatesChanged", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(vm, null);
     Dispatcher.UIThread.RunJobs();
-    var blockedWhileBusy = !vm.SaveNameGuardCommand.CanExecute(null) && !vm.SaveWhitelistCommand.CanExecute(null);
+    var blockedWhileBusy = !vm.Players.SaveNameGuardCommand.CanExecute(null) && !vm.Players.SaveWhitelistCommand.CanExecute(null);
     isBusy.SetValue(vm, false);
     Dispatcher.UIThread.RunJobs();
-    var saveButtons = window.GetLogicalDescendants().OfType<Button>().Where(b => ReferenceEquals(b.Command, vm.SaveNameGuardCommand) || ReferenceEquals(b.Command, vm.SaveWhitelistCommand)).ToList();
+    var saveButtons = window.GetLogicalDescendants().OfType<Button>().Where(b => ReferenceEquals(b.Command, vm.Players.SaveNameGuardCommand) || ReferenceEquals(b.Command, vm.Players.SaveWhitelistCommand)).ToList();
     Check(blockedWhileBusy && saveButtons.Count == 2 && saveButtons.All(b => b.IsEffectivelyEnabled),
         $"Save names and Save Whitelist are disabled while busy and enabled again afterwards [{string.Join(", ", saveButtons.Select(b => b.IsEffectivelyEnabled))}]");
 }
@@ -1551,9 +1551,9 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
 // v1.0.4.0 (roadmap S-1, S-2): the Players page's inventory card lists the saved slots; Remove is red, Add an apply button,
 // and a stack with its own record says why it can't be removed.
 {
-    vm.InventorySlots.Clear();
-    vm.InventorySlots.Add(new InventorySlotDto { SlotIndex = 0, ItemId = "Money", Count = 757 });
-    vm.InventorySlots.Add(new InventorySlotDto { SlotIndex = 1, ItemId = "Axe_Tier_00", Count = 1, HasOwnRecord = true });
+    vm.Players.InventorySlots.Clear();
+    vm.Players.InventorySlots.Add(new InventorySlotDto { SlotIndex = 0, ItemId = "Money", Count = 757 });
+    vm.Players.InventorySlots.Add(new InventorySlotDto { SlotIndex = 1, ItemId = "Axe_Tier_00", Count = 1, HasOwnRecord = true });
     vm.NavigateCommand.Execute(NavigationPage.Players);
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var card = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "InventoryCard");
@@ -1562,9 +1562,9 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var classes = string.Join(", ", buttons.Select(b => string.Join("+", b.Classes.Where(c => !c.StartsWith(':')))));
     Check(card is { IsVisible: true } && list?.ItemCount == 2 &&
           buttons.Count(b => b.Classes.Contains("danger")) == 1 && buttons.Count(b => b.Classes.Contains("apply")) == 1 && buttons.Count(b => b.Classes.Contains("info")) == 1 &&
-          vm.InventorySlots[1].RecordText.Length > 0 && vm.InventorySlots[0].RecordText.Length == 0,
+          vm.Players.InventorySlots[1].RecordText.Length > 0 && vm.Players.InventorySlots[0].RecordText.Length == 0,
         $"The Players page's inventory card lists the saved slots, Remove red, Add and Load styled, a recorded item marked [{list?.ItemCount} rows; {classes}]");
-    vm.InventorySlots.Clear();
+    vm.Players.InventorySlots.Clear();
 }
 // v1.0.6.1 (reported 2026-10-06): an older local service is flagged on the Dashboard with Update Service To This Version;
 // a remote one is not; no Launcher preset adds -log, -stdout, -FullStdOutLogOutput or -abslog, and those options warn.
@@ -1601,11 +1601,11 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
 // v1.0.6.0 (roadmap S-3): the Players page's Pal box card lists the box, Remove is red, Add an apply button beside the
 // species picker, and both are Admin controls.
 {
-    vm.PalBoxPals.Clear(); vm.PalBoxSpecies.Clear();
-    vm.PalBoxPals.Add(new PalBoxPalDto { SlotIndex = 0, InstanceId = "aaaaaaaa-0000-0000-0000-000000000001", Species = "SheepBall", Level = 2, Nickname = "Fluffy" });
-    vm.PalBoxPals.Add(new PalBoxPalDto { SlotIndex = 2, InstanceId = "aaaaaaaa-0000-0000-0000-000000000002", Species = "Ganesha", Level = 6 });
-    foreach (var s in new[] { "Ganesha", "SheepBall" }) vm.PalBoxSpecies.Add(s);
-    vm.SelectedPalBoxSpecies = "SheepBall";
+    vm.Players.PalBoxPals.Clear(); vm.Players.PalBoxSpecies.Clear();
+    vm.Players.PalBoxPals.Add(new PalBoxPalDto { SlotIndex = 0, InstanceId = "aaaaaaaa-0000-0000-0000-000000000001", Species = "SheepBall", Level = 2, Nickname = "Fluffy" });
+    vm.Players.PalBoxPals.Add(new PalBoxPalDto { SlotIndex = 2, InstanceId = "aaaaaaaa-0000-0000-0000-000000000002", Species = "Ganesha", Level = 6 });
+    foreach (var s in new[] { "Ganesha", "SheepBall" }) vm.Players.PalBoxSpecies.Add(s);
+    vm.Players.SelectedPalBoxSpecies = "SheepBall";
     vm.NavigateCommand.Execute(NavigationPage.Players);
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var card = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "PalBoxCard");
@@ -1614,9 +1614,9 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var picker = card?.GetLogicalDescendants().OfType<ComboBox>().FirstOrDefault();
     Check(card is { IsVisible: true } && list?.ItemCount == 2 && picker?.ItemCount == 2 && picker.SelectedItem as string == "SheepBall" &&
           buttons.Count(b => b.Classes.Contains("danger")) == 1 && buttons.Count(b => b.Classes.Contains("apply")) == 1 && buttons.Count(b => b.Classes.Contains("info")) == 1 &&
-          vm.PalBoxPals[0].RowVerbatim.Contains("SheepBall") && vm.PalBoxPals[0].RowVerbatim.Contains("\"Fluffy\""),
+          vm.Players.PalBoxPals[0].RowVerbatim.Contains("SheepBall") && vm.Players.PalBoxPals[0].RowVerbatim.Contains("\"Fluffy\""),
         $"The Players page's Pal box card lists the box (place, species, level, name), with a species picker, Remove red and Add styled [{list?.ItemCount} rows]");
-    vm.PalBoxPals.Clear(); vm.PalBoxSpecies.Clear();
+    vm.Players.PalBoxPals.Clear(); vm.Players.PalBoxSpecies.Clear();
 }
 // v1.0.7.0 (roadmap Q-2): an error thrown from a command is recorded and shown on every page, and the app stays open.
 // (Q-1, D-10) A notification about a saved list MystTiq could not read has an Open Repair button that opens Server Doctor,
