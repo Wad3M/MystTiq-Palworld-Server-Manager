@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -4322,6 +4322,40 @@ try
         var broken = Path.Combine(root, "broken.zip"); File.WriteAllText(broken, "not a zip");
         Assert(ArchiveLimits.CheckFile(broken, root) is { } unreadable && unreadable.StartsWith("The archive could not be read", StringComparison.Ordinal), "a broken archive says so");
         Assert(ArchiveLimits.MaximumEntries == 20_000 && ArchiveLimits.MaximumExpandedBytes == 8L * 1024 * 1024 * 1024, "the limits match world import's (20,000 entries, 8 GiB)");
+    }, failures);
+
+    // v1.0.7.5 (roadmap Q-10): a half-finished install or update is never reported as installed.
+    RunScenario("Interrupted updates (Q-10): an update that did not finish (the marker left behind, or Steam's manifest not fully installed) is named, not called installed; a finished one, or a failure before SteamCMD touched anything, clears it", () =>
+    {
+        var serverRoot = Path.Combine(tempRoot, "q10-install-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(serverRoot, "steamapps"));
+        var exe = Path.Combine(serverRoot, "PalServer.exe");
+        File.WriteAllText(exe, "stand-in");
+        var manifest = Path.Combine(serverRoot, "steamapps", "appmanifest_2394010.acf");
+        void Flags(int flags) => File.WriteAllText(manifest, $"\"AppState\"\n{{\n\t\"appid\"\t\t\"2394010\"\n\t\"StateFlags\"\t\t\"{flags}\"\n}}\n");
+
+        Assert(ServerInstallIntegrity.Incomplete(serverRoot) is null && ServerInstallIntegrity.ManifestStateFlags(serverRoot) is null, "a server with no manifest and no marker is not called incomplete");
+        Flags(4);
+        ServerInstallIntegrity.BeginUpdate(serverRoot, validate: false);
+        Assert(File.Exists(ServerInstallIntegrity.MarkerPath(serverRoot)) && ServerInstallIntegrity.IsUpdateRunning(serverRoot) && ServerInstallIntegrity.Incomplete(serverRoot) is null,
+            "while the update runs the marker is there, and the install is not yet called incomplete");
+        Flags(1026);
+        ServerInstallIntegrity.EndUpdate(serverRoot, exe, succeeded: false);
+        Assert(File.Exists(ServerInstallIntegrity.MarkerPath(serverRoot)) && ServerInstallIntegrity.Incomplete(serverRoot) is { } stopped && stopped.Contains("did not finish", StringComparison.Ordinal),
+            "SteamCMD stopped half way (Steam says update running): the marker stays and the install is named as not finished");
+        ServerInstallIntegrity.BeginUpdate(serverRoot, validate: true);
+        Flags(4);
+        ServerInstallIntegrity.EndUpdate(serverRoot, exe, succeeded: true);
+        Assert(!File.Exists(ServerInstallIntegrity.MarkerPath(serverRoot)) && ServerInstallIntegrity.Incomplete(serverRoot) is null, "a finished update clears it");
+        ServerInstallIntegrity.BeginUpdate(serverRoot, validate: false);
+        ServerInstallIntegrity.EndUpdate(serverRoot, exe, succeeded: false);
+        Assert(ServerInstallIntegrity.Incomplete(serverRoot) is null, "a SteamCMD that failed before touching anything (Steam still says fully installed) leaves the install as it was");
+        Flags(6);
+        Assert(ServerInstallIntegrity.Incomplete(serverRoot) is { } steamSays && steamSays.Contains("state 6", StringComparison.Ordinal), "Steam's own manifest saying 'not finished' is named even without the marker");
+        Flags(4);
+        File.WriteAllText(ServerInstallIntegrity.MarkerPath(serverRoot), "started=2026-10-11T10:00:00Z\nvalidate=False\n");
+        Assert(ServerInstallIntegrity.Incomplete(serverRoot) is { } leftBehind && leftBehind.Contains("2026-10-11 10:00", StringComparison.Ordinal),
+            "a marker left by a MystTiq that stopped mid-update is named with when it started");
     }, failures);
 }
 finally

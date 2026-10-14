@@ -2181,7 +2181,7 @@
   "msg.starting_f4f23b": "STARTING",
   "msg.transitioning": "TRANSITIONING",
   "msg.unknown_25ba44": "UNKNOWN",
-  "msg.incomplete": "INCOMPLETE",
+  "msg.incomplete": "Incomplete",
   "msg.missing_040779": "MISSING",
   "msg.palworld_server": "Palworld server",
   "msg.palserver_stopped_unexpectedly_mysttiq_is_restar_7d4eff": "PalServer stopped unexpectedly. MystTiq is restarting it in {0}.",
@@ -4011,5 +4011,6 @@
   "msg.conn_cause_unreachable": "Nothing answers at {0}. Start the MystTiq service, or check the address and port.",
   "msg.conn_cause_rest": "Palworld is running, but its REST API is not answering, so players and live data are unavailable. ",
   "msg.delete_plain_copy": "Delete Plain Copy",
-  "msg.delete_plain_copy_confirm": "I understand this deletes the plain copy; the encrypted settings stay"
+  "msg.delete_plain_copy_confirm": "I understand this deletes the plain copy; the encrypted settings stay",
+  "msg.update_required": "Update required"
 }

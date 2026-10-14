@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -4884,8 +4884,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             var distribution = await _api.GetServerDistributionStatusAsync(profile, BearerToken);
             DistributionPlatform = distribution.Platform;
             SteamCmdState = distribution.SteamCmdExists ? "Installed" : "Missing";
-            ServerInstallState = distribution.ServerExecutableExists ? "Installed" : "Missing";
-            DistributionState = distribution.ServerExecutableExists ? "Ready" : "Setup required";
+            ServerInstallState = distribution.IncompleteReason is not null ? "Incomplete" : distribution.ServerExecutableExists ? "Installed" : "Missing";
+            DistributionState = distribution.IncompleteReason is not null ? "Update required" : distribution.ServerExecutableExists ? "Ready" : "Setup required";
             DistributionDetail = distribution.Detail;
 
             // v0.7.31.0: install-location identity, not host:port -- see TabSession.ServerRoot.
@@ -8999,8 +8999,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             var status = await _api.GetServerDistributionStatusAsync(profile, BearerToken);
             DistributionPlatform = status.Platform;
             SteamCmdState = status.SteamCmdExists ? "Installed" : "Missing";
-            ServerInstallState = status.ServerExecutableExists ? "Installed" : "Missing";
-            DistributionState = status.ServerExecutableExists ? "Ready" : "Setup required";
+            ServerInstallState = status.IncompleteReason is not null ? "Incomplete" : status.ServerExecutableExists ? "Installed" : "Missing";
+            DistributionState = status.IncompleteReason is not null ? "Update required" : status.ServerExecutableExists ? "Ready" : "Setup required";
             DistributionDetail = status.Detail;
         }
         catch (Exception ex)

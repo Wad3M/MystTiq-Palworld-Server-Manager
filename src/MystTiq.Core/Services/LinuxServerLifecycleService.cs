@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using MystTiq.Core.Models;
@@ -188,6 +188,9 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                 false,
                 $"Server entry point was not found: {paths.ServerExecutable}");
         }
+        // v1.0.7.5 (roadmap Q-10): a half-updated server is not started.
+        if (ServerInstallIntegrity.Incomplete(paths.ServerRoot) is { } incomplete)
+            return new ServerLifecycleOperationResult(HeadlessExitCode.ServerExecutableMissing, await GetStatusAsync(cancellationToken), false, incomplete);
 
         var existing = FindManagedServerProcesses();
         if (existing.Count > 0)

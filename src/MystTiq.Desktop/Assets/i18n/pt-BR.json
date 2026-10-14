@@ -2181,7 +2181,7 @@
   "msg.starting_f4f23b": "INICIANDO",
   "msg.transitioning": "EM TRANSIÇÃO",
   "msg.unknown_25ba44": "DESCONHECIDO",
-  "msg.incomplete": "INCOMPLETO",
+  "msg.incomplete": "Incompleto",
   "msg.missing_040779": "AUSENTE",
   "msg.palworld_server": "Servidor de Palworld",
   "msg.palserver_stopped_unexpectedly_mysttiq_is_restar_7d4eff": "O PalServer parou inesperadamente. O MystTiq vai reiniciá-lo em {0}.",
@@ -4011,5 +4011,6 @@
   "msg.conn_cause_unreachable": "Nada responde em {0}. Inicie o serviço do MystTiq ou verifique o endereço e a porta.",
   "msg.conn_cause_rest": "O Palworld está rodando, mas a API REST não responde, então jogadores e dados ao vivo estão indisponíveis. ",
   "msg.delete_plain_copy": "Excluir cópia sem criptografia",
-  "msg.delete_plain_copy_confirm": "Entendo que isto exclui a cópia sem criptografia; as configurações criptografadas permanecem"
+  "msg.delete_plain_copy_confirm": "Entendo que isto exclui a cópia sem criptografia; as configurações criptografadas permanecem",
+  "msg.update_required": "Atualização necessária"
 }

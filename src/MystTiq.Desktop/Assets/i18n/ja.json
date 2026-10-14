@@ -2181,7 +2181,7 @@
   "msg.starting_f4f23b": "起動中",
   "msg.transitioning": "切り替え中",
   "msg.unknown_25ba44": "不明",
-  "msg.incomplete": "不完全",
+  "msg.incomplete": "未完了",
   "msg.missing_040779": "なし",
   "msg.palworld_server": "Palworld サーバー",
   "msg.palserver_stopped_unexpectedly_mysttiq_is_restar_7d4eff": "PalServer が予期せず停止しました。MystTiq が {0} 後に再起動します。",
@@ -4011,5 +4011,6 @@
   "msg.conn_cause_unreachable": "{0} で応答がありません。MystTiq サービスを起動するか、アドレスとポートを確認してください。",
   "msg.conn_cause_rest": "Palworld は動いていますが REST API が応答しないため、プレイヤーとライブデータを取得できません。 ",
   "msg.delete_plain_copy": "平文のコピーを削除",
-  "msg.delete_plain_copy_confirm": "平文のコピーが削除されることを理解しました。暗号化された設定はそのまま残ります"
+  "msg.delete_plain_copy_confirm": "平文のコピーが削除されることを理解しました。暗号化された設定はそのまま残ります",
+  "msg.update_required": "更新が必要"
 }

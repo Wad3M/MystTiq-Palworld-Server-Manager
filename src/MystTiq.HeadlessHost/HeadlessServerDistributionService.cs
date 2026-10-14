@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 using System.Diagnostics;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
@@ -32,7 +32,9 @@ public sealed class HeadlessServerDistributionService
     {
         var steamCmdExists = File.Exists(paths.SteamCmdExecutable);
         var serverRootExists = Directory.Exists(paths.ServerRoot);
-        var serverExecutableExists = File.Exists(paths.ServerExecutable);
+        // v1.0.7.5 (roadmap Q-10): an update that did not finish is not "installed", even with PalServer in place.
+        var incomplete = File.Exists(paths.ServerExecutable) ? ServerInstallIntegrity.Incomplete(paths.ServerRoot) : null;
+        var serverExecutableExists = File.Exists(paths.ServerExecutable) && incomplete is null;
 
         return new HeadlessServerDistributionStatus(
             distribution.PlatformId,
@@ -44,9 +46,10 @@ public sealed class HeadlessServerDistributionService
             serverExecutableExists,
             distribution.SteamCmdPackageUri.ToString(),
             DateTimeOffset.UtcNow,
-            serverExecutableExists
+            incomplete ?? (serverExecutableExists
                 ? $"Palworld Dedicated Server is installed at {paths.ServerRoot}."
-                : "Palworld Dedicated Server is not fully installed.");
+                : "Palworld Dedicated Server is not fully installed."),
+            incomplete);
     }
 
     public HeadlessServerDistributionPlan GetPlan(bool validate)
@@ -135,6 +138,8 @@ public sealed class HeadlessServerDistributionService
         }
         using var serverHold = hold;
 
+        var markerWritten = false;
+        var succeeded = false;
         try
         {
             var status = await lifecycle.GetStatusAsync(cancellationToken);
@@ -152,6 +157,9 @@ public sealed class HeadlessServerDistributionService
             }
 
             Directory.CreateDirectory(paths.ServerRoot);
+            // v1.0.7.5 (roadmap Q-10): the marker stays if SteamCMD or MystTiq stops before Steam reports the install complete.
+            ServerInstallIntegrity.BeginUpdate(paths.ServerRoot, validate);
+            markerWritten = true;
 
             var workingDirectory = Path.GetDirectoryName(paths.SteamCmdExecutable)
                 ?? throw new InvalidOperationException("SteamCMD path has no parent directory.");
@@ -214,6 +222,7 @@ public sealed class HeadlessServerDistributionService
                     $"SteamCMD completed but PalServer was not found at {paths.ServerExecutable}.");
             }
 
+            succeeded = true;
             return new HeadlessServerDistributionOperationResult(
                 true,
                 run.ExitCode,
@@ -235,6 +244,7 @@ public sealed class HeadlessServerDistributionService
         }
         finally
         {
+            if (markerWritten) ServerInstallIntegrity.EndUpdate(paths.ServerRoot, paths.ServerExecutable, succeeded);
             operationGate.Release();
         }
     }
@@ -289,7 +299,8 @@ public sealed record HeadlessServerDistributionStatus(
     bool ServerExecutableExists,
     string SteamCmdPackageUri,
     DateTimeOffset ObservedAt,
-    string Detail);
+    string Detail,
+    string? IncompleteReason = null);
 
 public sealed record HeadlessServerDistributionPlan(
     string Platform,

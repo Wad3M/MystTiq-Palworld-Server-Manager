@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 namespace MystTiq.Core.Providers;
 
 // v0.6.5.0 "Provider Framework & Configuration Intelligence": decouples player-moderation actions

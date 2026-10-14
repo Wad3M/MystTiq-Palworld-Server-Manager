@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -687,6 +687,9 @@ public sealed class HeadlessBackupService
         File.Move(partial, classificationPath, true);
     }
 
+    public const int HeldSaveAttempts = 10;
+    private static readonly TimeSpan HeldSavePause = TimeSpan.FromSeconds(1);
+
     private async Task<HeadlessBackupOperationResult> CreateInternalAsync(
         string reason,
         BackupClass backupClass,
@@ -708,19 +711,36 @@ public sealed class HeadlessBackupService
 
         try
         {
-            await Task.Run(() =>
+            // v1.0.7.5 (roadmap Q-10): a save file held open (the server writing it, a scan, an editor) failed the backup at
+            // once. Now up to ten tries a second apart; if it is still held, the message names the file and what holds it.
+            for (var attempt = 1; ; attempt++)
             {
-                ZipFile.CreateFromDirectory(
-                    paths.SaveRoot,
-                    partialPath,
-                    CompressionLevel.Fastest,
-                    includeBaseDirectory: false);
+                try
+                {
+                    await Task.Run(() =>
+                    {
+                        ZipFile.CreateFromDirectory(
+                            paths.SaveRoot,
+                            partialPath,
+                            CompressionLevel.Fastest,
+                            includeBaseDirectory: false);
 
-                if (!IsArchiveReadable(partialPath))
-                    throw new InvalidDataException("New backup archive failed verification.");
+                        if (!IsArchiveReadable(partialPath))
+                            throw new InvalidDataException("New backup archive failed verification.");
 
-                File.Move(partialPath, finalPath, overwrite: false);
-            }, cancellationToken);
+                        File.Move(partialPath, finalPath, overwrite: false);
+                    }, cancellationToken);
+                    break;
+                }
+                catch (IOException ex) when (FileRetry.IsHeld(ex))
+                {
+                    if (File.Exists(partialPath)) File.Delete(partialPath);
+                    if (attempt < HeldSaveAttempts) { await Task.Delay(HeldSavePause, cancellationToken); continue; }
+                    var holders = FileLockers.UnderFolder(paths.SaveRoot);
+                    throw new IOException($"A save file stayed in use for {HeldSaveAttempts} seconds, so no backup was made. {ex.Message}" +
+                        (holders.Count > 0 ? $" Open in: {string.Join(", ", holders)}." : string.Empty) + " Try again in a moment.", ex);
+                }
+            }
 
             lock (classificationGate)
             {

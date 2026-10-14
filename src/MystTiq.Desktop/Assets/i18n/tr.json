@@ -2181,7 +2181,7 @@
   "msg.starting_f4f23b": "BAŞLATILIYOR",
   "msg.transitioning": "GEÇİŞTE",
   "msg.unknown_25ba44": "BİLİNMİYOR",
-  "msg.incomplete": "EKSİK",
+  "msg.incomplete": "Eksik",
   "msg.missing_040779": "YOK",
   "msg.palworld_server": "Palworld sunucusu",
   "msg.palserver_stopped_unexpectedly_mysttiq_is_restar_7d4eff": "PalServer beklenmedik şekilde durdu. MystTiq onu {0} sonra yeniden başlatacak.",
@@ -4011,5 +4011,6 @@
   "msg.conn_cause_unreachable": "{0} adresinde yanıt yok. MystTiq hizmetini başlatın veya adresi ve portu denetleyin.",
   "msg.conn_cause_rest": "Palworld çalışıyor ama REST API yanıt vermiyor; oyuncular ve canlı veriler kullanılamıyor. ",
   "msg.delete_plain_copy": "Şifrelenmemiş Kopyayı Sil",
-  "msg.delete_plain_copy_confirm": "Şifrelenmemiş kopyanın silineceğini anlıyorum; şifreli ayarlar kalır"
+  "msg.delete_plain_copy_confirm": "Şifrelenmemiş kopyanın silineceğini anlıyorum; şifreli ayarlar kalır",
+  "msg.update_required": "Güncelleme gerekli"
 }

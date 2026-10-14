@@ -2181,7 +2181,7 @@
   "msg.starting_f4f23b": "正在启动",
   "msg.transitioning": "状态切换中",
   "msg.unknown_25ba44": "未知",
-  "msg.incomplete": "不完整",
+  "msg.incomplete": "未完成",
   "msg.missing_040779": "缺失",
   "msg.palworld_server": "Palworld 服务器",
   "msg.palserver_stopped_unexpectedly_mysttiq_is_restar_7d4eff": "PalServer 意外停止。MystTiq 将在 {0} 后重启它。",
@@ -4011,5 +4011,6 @@
   "msg.conn_cause_unreachable": "{0} 没有响应。请启动 MystTiq 服务，或检查地址和端口。",
   "msg.conn_cause_rest": "Palworld 正在运行，但其 REST API 没有响应，因此无法获取玩家和实时数据。 ",
   "msg.delete_plain_copy": "删除明文副本",
-  "msg.delete_plain_copy_confirm": "我了解这会删除明文副本；加密的设置保持不变"
+  "msg.delete_plain_copy_confirm": "我了解这会删除明文副本；加密的设置保持不变",
+  "msg.update_required": "需要更新"
 }

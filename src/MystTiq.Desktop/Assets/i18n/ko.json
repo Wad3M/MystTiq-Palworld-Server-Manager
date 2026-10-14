@@ -2181,7 +2181,7 @@
   "msg.starting_f4f23b": "시작 중",
   "msg.transitioning": "전환 중",
   "msg.unknown_25ba44": "알 수 없음",
-  "msg.incomplete": "불완전",
+  "msg.incomplete": "미완료",
   "msg.missing_040779": "없음",
   "msg.palworld_server": "Palworld 서버",
   "msg.palserver_stopped_unexpectedly_mysttiq_is_restar_7d4eff": "PalServer가 예기치 않게 중지되었습니다. MystTiq가 {0} 후에 다시 시작합니다.",
@@ -4011,5 +4011,6 @@
   "msg.conn_cause_unreachable": "{0}에서 응답이 없습니다. MystTiq 서비스를 시작하거나 주소와 포트를 확인하세요.",
   "msg.conn_cause_rest": "Palworld는 실행 중이지만 REST API가 응답하지 않아 플레이어와 실시간 데이터를 사용할 수 없습니다. ",
   "msg.delete_plain_copy": "암호화되지 않은 사본 삭제",
-  "msg.delete_plain_copy_confirm": "암호화되지 않은 사본이 삭제된다는 것을 이해합니다. 암호화된 설정은 그대로 남습니다"
+  "msg.delete_plain_copy_confirm": "암호화되지 않은 사본이 삭제된다는 것을 이해합니다. 암호화된 설정은 그대로 남습니다",
+  "msg.update_required": "업데이트 필요"
 }

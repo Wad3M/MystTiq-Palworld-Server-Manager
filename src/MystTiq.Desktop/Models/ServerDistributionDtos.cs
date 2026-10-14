@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -15,6 +15,8 @@ public sealed class ServerDistributionStatusDto
     [JsonPropertyName("steamCmdPackageUri")] public string SteamCmdPackageUri { get; init; } = string.Empty;
     [JsonPropertyName("observedAt")] public DateTimeOffset ObservedAt { get; init; }
     [JsonPropertyName("detail")] public string Detail { get; init; } = string.Empty;
+    // v1.0.7.5 (roadmap Q-10): set when an update did not finish (serverExecutableExists is then false).
+    [JsonPropertyName("incompleteReason")] public string? IncompleteReason { get; init; }
 }
 
 public sealed class ServerDistributionPlanDto

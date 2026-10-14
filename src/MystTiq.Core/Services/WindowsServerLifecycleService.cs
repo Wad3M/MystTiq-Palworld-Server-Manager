@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -139,6 +139,9 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
         if (!File.Exists(executable))
             return new ServerLifecycleOperationResult(HeadlessExitCode.ServerExecutableMissing, await GetStatusAsync(cancellationToken), false,
                 $"Configured server entry point was not found: {executable}");
+        // v1.0.7.5 (roadmap Q-10): a half-updated server is not started.
+        if (ServerInstallIntegrity.Incomplete(paths.ServerRoot) is { } incomplete)
+            return new ServerLifecycleOperationResult(HeadlessExitCode.ServerExecutableMissing, await GetStatusAsync(cancellationToken), false, incomplete);
         if (!Directory.Exists(workingDirectory))
             return new ServerLifecycleOperationResult(HeadlessExitCode.LaunchFailed, await GetStatusAsync(cancellationToken), false,
                 $"Configured launcher working directory was not found: {workingDirectory}");

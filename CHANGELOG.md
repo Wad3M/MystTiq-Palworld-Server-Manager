@@ -1,4 +1,18 @@
-<!-- MystTiq v1.0.7.4: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.7.5: file reviewed for this release (2026-10-11). -->
+## v1.0.7.5 — Under Load, and Over Time
+
+- Fixed (roadmap Q-10): a half-finished install or update was reported as installed whenever PalServer.exe existed.
+  A marker around SteamCMD and Steam's manifest state (ServerInstallIntegrity) now report it as incomplete, and the
+  server is not started until Update runs again.
+- Fixed: a client disconnecting during an update (the desktop closed, the network dropped) cancelled SteamCMD half
+  way; the update routes now run to their end.
+- Fixed: a backup failed at once when a save file was held open; it now waits up to 10 s, then names the file and what
+  holds it.
+- Tests: the long set (`Test-v1.0.7.5-LongSet.ps1`, `-RunLong` in the gate): interrupted update, simultaneous
+  operations, held save file, 10,000 console lines, shutdown releasing everything, a 10-minute soak. Rapid tab switching
+  in the ArtworkHarness. A 24-hour idle soak script for Windows and the Linux VM (per-user systemd units).
+- Version advanced to 1.0.7.5.
+
 ## v1.0.7.4 — Secrets and Archives
 
 - Secrets encrypted at rest (roadmap Q-14): the SMTP password, webhook and Discord URLs and the Discord bot token use

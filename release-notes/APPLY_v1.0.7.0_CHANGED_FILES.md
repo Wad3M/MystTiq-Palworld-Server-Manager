@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.4: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.7.5: file reviewed for this release (2026-10-11). -->
 # v1.0.7.0 Changed Files
 
 - `src/MystTiq.HeadlessHost/SavedFiles.cs` (new): reading and saving MystTiq's lists (last good copy, unreadable copy

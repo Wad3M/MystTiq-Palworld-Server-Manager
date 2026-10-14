@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1829,6 +1829,54 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         "While the Console page is hidden its filtered view waits, and opening the page brings it up to date");
     vm.LogLines.CollectionChanged -= Count; vm.FilteredLogLines.CollectionChanged -= Count;
 }
+// v1.0.7.5 (roadmap Q-10): rapid tab switching. Three connected tabs whose status replies arrive late and out of order
+// (0-40 ms each); 300 switches with the replies landing in between. Afterwards the shown players and console lines are the
+// active tab's own, nothing was recorded as an unexpected error, and the window still lays out.
+{
+    var tabApi = TabProxy.Create();
+    var tabVm = new MainWindowViewModel(tabApi, new MemoryProfiles(),
+        OfflineProxy.Create<ILocalInstallationDiscoveryService>(), OfflineProxy.Create<IMystTiqServiceDiscoveryService>(),
+        OfflineProxy.Create<ILocalManagementBootstrapper>(), credentialStore: Isolate(new CredentialStore()), tabSessionStore: Isolate(new TabSessionStore()),
+        nexusClient: OfflineProxy.Create<INexusModsClient>(), displayPreferencesStore: Isolate(new LocalDisplayPreferencesStore()));
+    var tabWindow = new MainWindow { DataContext = tabVm };
+    tabWindow.Show();
+    Dispatcher.UIThread.RunJobs();
+    var createTab = typeof(MainWindowViewModel).GetMethod("CreateTab", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    var switchTabs = new List<TabSession>();
+    foreach (var port in new[] { 47101, 47102, 47103 })
+    {
+        var tab = tabVm.Tabs.Count > 0 && tabVm.Tabs[0].Profile is null && switchTabs.Count == 0 ? tabVm.Tabs[0] : (TabSession)createTab.Invoke(tabVm, null)!;
+        tab.Profile = new ConnectionProfile($"switch-{port}", $"Switch {port}", new Uri($"http://127.0.0.1:{port}/"));
+        tab.ProfileName = $"Switch {port}";
+        tab.ServerUrl = $"http://127.0.0.1:{port}/";
+        tab.ManagementApiConnected = true;
+        tab.ConnectionState = "Connected";
+        switchTabs.Add(tab);
+    }
+    var rng = new Random(75);
+    var switches = 0;
+    for (var i = 0; i < 300; i++)
+    {
+        tabVm.ActiveTab = switchTabs[rng.Next(switchTabs.Count)];
+        switches++;
+        if (rng.Next(3) == 0) Thread.Sleep(rng.Next(0, 15));
+        Dispatcher.UIThread.RunJobs();
+    }
+    var last = switchTabs[2];
+    if (ReferenceEquals(tabVm.ActiveTab, last)) tabVm.ActiveTab = switchTabs[0];
+    tabVm.ActiveTab = last;
+    var settle = Stopwatch.StartNew();
+    while (settle.ElapsedMilliseconds < 1500) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(20); }
+    tabWindow.UpdateLayout();
+    var lastPort = last.Profile!.BaseAddress.Port.ToString();
+    var playersOk = tabVm.OnlinePlayers.Count == 1 && tabVm.OnlinePlayers[0].Name == $"Player on {lastPort}";
+    var linesOk = tabVm.LogLines.Count > 0 && tabVm.LogLines.All(l => l.Contains($"from {lastPort}", StringComparison.Ordinal));
+    Check(playersOk && linesOk && !tabVm.HasUnexpectedError && TabProxy.Calls > 0,
+        $"After {switches} rapid tab switches with late, out-of-order replies ({TabProxy.Calls} status requests), the shown players and console lines are the active tab's own and no error was recorded " +
+        $"[players: {string.Join(", ", tabVm.OnlinePlayers.Select(p => p.Name))}; a line: {tabVm.LogLines.LastOrDefault()}; error: {tabVm.UnexpectedErrorText}]");
+    tabWindow.Close();
+    Dispatcher.UIThread.RunJobs();
+}
 // v1.0.5.0 (roadmap M-1): the MOD browser against stand-in repositories (Thunderstore, CurseForge, GitHub), a folder of
 // ZIPs, the download host checks, the nxm:// handoff and the card on the MOD Library page.
 {
@@ -2089,5 +2137,33 @@ sealed class StandInRepos : HttpMessageHandler
             : new HttpResponseMessage(HttpStatusCode.NotFound);
         response.RequestMessage = request;
         return Task.FromResult(response);
+    }
+}
+
+// v1.0.7.5 (roadmap Q-10): an API whose status replies name the server they came from (by port) and arrive late, in random
+// order (0-40 ms), for the rapid tab-switching check. Health answers as a compatible service; everything else is offline.
+public class TabProxy : DispatchProxy
+{
+    private static readonly Random Delays = new(1075);
+    public static int Calls;
+    public static IMystTiqApiClient Create() => DispatchProxy.Create<IMystTiqApiClient, TabProxy>();
+    protected override object? Invoke(MethodInfo? method, object?[]? args)
+    {
+        if (method!.Name == nameof(IMystTiqApiClient.GetHealthAsync))
+            return Task.FromResult(new ApiHealthDto { Status = "ok", Component = "mysttiq-headless", ApiVersion = 1, Version = "1.0.7.5" });
+        if (method.Name == nameof(IMystTiqApiClient.GetStatusPollingAsync) && args![0] is ConnectionProfile profile)
+        {
+            Interlocked.Increment(ref Calls);
+            int delay; lock (Delays) delay = Delays.Next(0, 40);
+            var port = profile.BaseAddress.Port;
+            return Task.Delay(delay).ContinueWith(_ => new StatusPollingDto
+            {
+                ObservedAt = DateTimeOffset.UtcNow,
+                Players = new PlayersSnapshotDto { Available = true, OnlineCount = 1, Players = [new PlayerSnapshotDto { Name = $"Player on {port}" }] },
+                LogTail = new LogTailSnapshotDto { Available = true, FileName = "Pal.log", Lines = [$"[2026-10-11 12:00:00.000] a line from {port}", $"[2026-10-11 12:00:01.000] another line from {port}"], ObservedAt = DateTimeOffset.UtcNow },
+            }, TaskScheduler.Default);
+        }
+        return typeof(OfflineProxy).GetMethod("Invoke", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(DispatchProxy.Create<IMystTiqApiClient, OfflineProxy>(), [method, args]);
     }
 }

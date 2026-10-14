@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+# MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 set -euo pipefail
 
 if [[ -x "$(pwd)/mysttiq-server" ]]; then

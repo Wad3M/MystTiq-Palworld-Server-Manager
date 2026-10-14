@@ -2181,7 +2181,7 @@
   "msg.starting_f4f23b": "ЗАПУСК",
   "msg.transitioning": "ПЕРЕХОД",
   "msg.unknown_25ba44": "НЕИЗВЕСТНО",
-  "msg.incomplete": "НЕПОЛНО",
+  "msg.incomplete": "Не завершено",
   "msg.missing_040779": "ОТСУТСТВУЕТ",
   "msg.palworld_server": "Сервер Palworld",
   "msg.palserver_stopped_unexpectedly_mysttiq_is_restar_7d4eff": "PalServer неожиданно остановился. MystTiq перезапустит его через {0}.",
@@ -4011,5 +4011,6 @@
   "msg.conn_cause_unreachable": "По адресу {0} никто не отвечает. Запустите службу MystTiq или проверьте адрес и порт.",
   "msg.conn_cause_rest": "Palworld работает, но его REST API не отвечает, поэтому игроки и живые данные недоступны. ",
   "msg.delete_plain_copy": "Удалить незашифрованную копию",
-  "msg.delete_plain_copy_confirm": "Я понимаю, что незашифрованная копия будет удалена; зашифрованные настройки останутся"
+  "msg.delete_plain_copy_confirm": "Я понимаю, что незашифрованная копия будет удалена; зашифрованные настройки останутся",
+  "msg.update_required": "Требуется обновление"
 }

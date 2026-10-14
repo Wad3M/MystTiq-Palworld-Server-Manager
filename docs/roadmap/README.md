@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.7.4: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.7.5: file reviewed for this release (2026-10-11). -->
 # Roadmaps
 
 - [Product roadmap](PRODUCT_ROADMAP.md) — current and accepted baseline v1.0.0.0, the v1.1 MOD browser, and what stays open after 1.0; the authoritative forward plan.

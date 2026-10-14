@@ -1,4 +1,4 @@
-// MystTiq v1.0.7.4: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.7.5: file reviewed for this release (2026-10-11).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -619,8 +619,9 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         app.MapPost("/api/v1/fleet/doctor-all", async (CancellationToken token) =>
             Results.Ok(await host.RunFleetActionAsync(configuration, async p => (object)await p.Doctor.RunAsync(token))))
             .RequireRole(MystTiqRole.Operator);
-        app.MapPost("/api/v1/fleet/update-all", async (bool? validate, CancellationToken token) =>
-            Results.Ok(await host.RunFleetActionAsync(configuration, async p => (object)await p.ServerDistribution.UpdateAsync(validate ?? true, token))))
+        // v1.0.7.5 (roadmap Q-10): not the request's token: a client that disconnects must not stop SteamCMD half way.
+        app.MapPost("/api/v1/fleet/update-all", async (bool? validate) =>
+            Results.Ok(await host.RunFleetActionAsync(configuration, async p => (object)await p.ServerDistribution.UpdateAsync(validate ?? true, BackgroundWork.Shared.Stopping))))
             .RequireRole(MystTiqRole.Operator);
 
         // Every profile's routes: mapped under /api/v1/servers/{profileId}/... for every profile
@@ -1431,11 +1432,12 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapGet("/server/distribution/plan", (bool? validate) =>
             Results.Ok(p.ServerDistribution.GetPlan(validate ?? true)));
 
+        // v1.0.7.5 (roadmap Q-10): the update runs to its end even if the client disconnects (the desktop closed, the network
+        // dropped): cancelling SteamCMD half way left a half-updated server. Only the service stopping cancels it.
         routes.MapPost("/server/distribution/update", async (
-            bool? validate,
-            CancellationToken token) =>
+            bool? validate) =>
         {
-            var result = await p.ServerDistribution.UpdateAsync(validate ?? true, token);
+            var result = await p.ServerDistribution.UpdateAsync(validate ?? true, BackgroundWork.Shared.Stopping);
             return result.Success ? Results.Ok(result) : Results.Conflict(result);
         }).RequireRole(MystTiqRole.Operator, p.Id);
 
