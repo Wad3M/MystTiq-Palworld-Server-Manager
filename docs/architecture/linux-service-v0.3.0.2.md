@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.1.0.1: file reviewed for this release (2026-10-13). -->
 # Linux Service & Automatic Recovery Architecture — v0.3.0.2
 
 ## Ownership model

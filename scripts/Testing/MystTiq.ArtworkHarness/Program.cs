@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.0: file reviewed for this release (2026-10-12).
+// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -2093,6 +2093,39 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         foreach (var p in new[] { slow, stuck }) { try { if (!p.HasExited) p.Kill(); } catch { } }
         try { Directory.Delete(helperRoot, true); } catch { }
     }
+}
+// v1.1.0.1: the start-up check for a port in use gave up on its connect after 750 ms and left it running; Windows takes about
+// 2 s to refuse a loopback connection, so the abandoned attempt failed later, unobserved, and the desktop showed "Something
+// went wrong (background task)" (four crash records on the owner's PC, v1.0.7.0 to v1.1.0.0). The check runs on a closed port,
+// waits past the refusal, collects, and counts the unobserved socket errors.
+{
+    var leaked = 0;
+    EventHandler<UnobservedTaskExceptionEventArgs> count = (_, e) =>
+    {
+        if (e.Exception.Flatten().InnerExceptions.Any(x => x is SocketException)) Interlocked.Increment(ref leaked);
+        e.SetObserved();
+    };
+    TaskScheduler.UnobservedTaskException += count;
+    try
+    {
+        var probe = typeof(LocalManagementBootstrapper).GetMethod("PortAcceptsConnectionsAsync", BindingFlags.Static | BindingFlags.NonPublic)!;
+        bool Accepts(int port) => Task.Run(() => (Task<bool>)probe.Invoke(null, [$"http://127.0.0.1:{port}", CancellationToken.None])!).GetAwaiter().GetResult();
+        var open = new TcpListener(IPAddress.Loopback, 0); open.Start();
+        var openPort = ((IPEndPoint)open.LocalEndpoint).Port;
+        var closedPort = FreeLoopbackPort();
+        var watch = Stopwatch.StartNew();
+        var closedAccepts = Accepts(closedPort);
+        var closedMs = watch.ElapsedMilliseconds;
+        var openAccepts = Accepts(openPort);
+        open.Stop();
+        Thread.Sleep(3000);
+        for (var i = 0; i < 3; i++) { GC.Collect(); GC.WaitForPendingFinalizers(); }
+        Check(!closedAccepts && closedMs < 1500 && openAccepts,
+            $"The start-up port check says a listening port is in use and a closed one is free, within its 750 ms limit ({closedMs} ms)");
+        Check(leaked == 0, $"The port check leaves no connect attempt to fail unobserved after it gives up ({leaked} unobserved socket errors)");
+    }
+    finally { TaskScheduler.UnobservedTaskException -= count; }
+    static int FreeLoopbackPort() { var l = new TcpListener(IPAddress.Loopback, 0); l.Start(); var p = ((IPEndPoint)l.LocalEndpoint).Port; l.Stop(); return p; }
 }
 
 Console.WriteLine($"PASS {checks} checks. Offline headless rendering only; no live server acceptance.");

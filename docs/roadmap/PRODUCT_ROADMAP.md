@@ -1,7 +1,7 @@
-<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.1.0.1: file reviewed for this release (2026-10-13). -->
 # Product roadmap
 
-Updated 2026-10-12. **Current version: v1.1.0.0. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the backlog is built; what stays open is the live evidence under "Carried").**
+Updated 2026-10-13. **Current version: v1.1.0.1. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the backlog is built; what stays open is the live evidence under "Carried").**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -190,6 +190,15 @@ Exit gate per release: the item is `Built` with its harness evidence; a live che
 | B-3 | v1.0.9.2 | MOD load order and profile export and import. The MOD library shows the order MODs load in (UE4SS MODs by `mods.txt`, top to bottom) and that order can be changed; PAKs are listed with why they have none to set (the game settles two PAKs replacing the same asset by the asset, not the file name). A profile (each MOD, on or off, its order, version, source and file hash) exports to a file; importing it sets order and on/off for the MODs present and lists the missing ones with their sources. Refused while the server runs; the previous `mods.txt` is kept. Evidence: a harness on a temporary MOD tree; live on the clone. Recorded (v1.0.9.2, 2026-10-12): `ModLoadOrder` and the service's load order, profile export and import; the MOD Library card with its text in 12 languages; three LogicHarness scenarios and the route smoke on an isolated service (a Viewer reads but cannot change). PAKs are listed, not ordered, following the research. | Built |
 | B-2 | v1.0.9.3 | Anti-cheat level-gap scans from save data. A player whose level is out of line with their recorded playtime, or who gained more levels between two world days than the playtime between them allows, is reported as a finding with the numbers behind it. Findings only, never an automatic kick or ban. The thresholds are per-band levels per hour of play at the server's experience rate, set generously (level 50 in about 12 hours of play); checked against the real world's 17 daily backups (2026-07-31 to 10-08, experience rate 1): the largest real gain, 6 levels in 17 hours, used 12% of what the bands allow, and only the same gain in under 15 minutes of play would be reported; the world's players reach level 15 at most, so a week of the owner's server with the rule on is carried as evidence (E-16). Evidence: a harness with made-up histories at and past each threshold, and the rule running in the anti-cheat service against a fake player list. Recorded (v1.0.9.3, 2026-10-12): `LevelGapScan` and the anti-cheat rule (flag only, history per player, the server's experience rate); two LogicHarness scenarios. Checked against the real world's 17 daily backups: the largest real gain (6 levels in 17 hours) used 12% of the allowance. A week of the owner's server is carried (E-16). | Built |
 | T-2 | v1.1.0.0 | Documentation pass and the new accepted baseline (asked 2026-10-12, after the backlog): every user and developer document read against the code and brought up to date, a full release packaged, and v1.1.0.0 named the accepted baseline in place of v1.0.0.0. Recorded (v1.1.0.0, 2026-10-12): The documentation pass (README, site, Linux pages, roadmap index, publishing guide, presentation note, checklist, docs index) and v1.1.0.0 named the accepted baseline (D-12). | Built |
+
+## v1.1.0.1 and after — Fixes after the baseline
+
+Each fix reproduces the fault first, then follows the release pipeline; a fix the owner must confirm live is listed under
+"Carried" until it is recorded.
+
+| ID | Release | Item | Status |
+| --- | --- | --- | --- |
+| F-1 | v1.1.0.1 | "Something went wrong (background task)" after the desktop started (reported 2026-10-13). Every crash record on the owner's PC (four, v1.0.7.0 to v1.1.0.0) is the start-up port check's abandoned connect: it waited 750 ms, Windows refuses a closed loopback port after about 2 s, and the disposed connect faulted unobserved. Recorded (v1.1.0.1, 2026-10-13): the check cancels its connect at the limit and awaits it; an ArtworkHarness check on a closed and a listening port counts unobserved socket errors after a collection (none); the v1.1.0.0 method, run the same way in a standalone program, left 3 from 3 closed-port checks. The owner's next starts are the live check. | Built |
 
 ## Backlog (not scheduled)
 

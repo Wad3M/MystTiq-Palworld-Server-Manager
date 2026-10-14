@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.0: file reviewed for this release (2026-10-12).
+// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
 namespace MystTiq.Desktop.Services;
 
 // v0.7.96.0: the one-line "what is on the map" summary under the World Map. Pure, so the logic

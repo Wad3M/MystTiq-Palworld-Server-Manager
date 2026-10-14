@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.0: file reviewed for this release (2026-10-12).
+// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
@@ -147,7 +147,7 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
             // A port that accepts connections is occupied even when the health probe got no answer from it: a service
             // with TLS on does not answer this plain-HTTP probe (the Linux VM's installed service). The helper could not
             // bind that port, so it would exit at once and leave a record naming a dead process.
-            endpoint = existing.Reachable || PortAcceptsConnections(requestedEndpoint)
+            endpoint = existing.Reachable || await PortAcceptsConnectionsAsync(requestedEndpoint, cancellationToken)
                 ? FindAvailableLoopbackEndpoint()
                 : NormalizePrivateLoopbackEndpoint(requestedEndpoint);
 
@@ -467,13 +467,20 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
         catch { return false; }
     }
 
-    private static bool PortAcceptsConnections(string endpoint)
+    // v1.1.0.1 (roadmap F-1): the connect is cancelled at the limit and awaited. It used to be waited on for 750 ms and then
+    // abandoned with its client disposed; Windows refuses a closed loopback port only after about 2 s, so on every start that
+    // launched the helper the abandoned connect faulted later, unobserved, and the desktop showed "Something went wrong
+    // (background task)".
+    private static async Task<bool> PortAcceptsConnectionsAsync(string endpoint, CancellationToken cancellationToken)
     {
         if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) || uri.Port is <= 0 or > 65535) return false;
+        using var client = new TcpClient();
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromMilliseconds(750));
         try
         {
-            using var client = new TcpClient();
-            return client.ConnectAsync(IPAddress.Loopback, uri.Port).Wait(TimeSpan.FromMilliseconds(750)) && client.Connected;
+            await client.ConnectAsync(IPAddress.Loopback, uri.Port, timeout.Token);
+            return client.Connected;
         }
         catch { return false; }
     }

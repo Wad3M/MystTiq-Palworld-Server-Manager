@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.1.0.1: file reviewed for this release (2026-10-13). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,9 +21,9 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.1.0.0 · Accepted baseline: v1.1.0.0**
+**Current version: v1.1.0.1 · Accepted baseline: v1.1.0.0**
 
-MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
+MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice that could appear when the desktop started ([release notes](release-notes/v1.1.0.1.md)). Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
 ## What's new in v1.1.0.0
 
@@ -128,7 +128,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v1.0.7.0 – v1.0.7.5 | Delivered | Damaged files never overwritten; one operation at a time; visible progress; the identity guard waits for a loading player; encrypted secrets and checked archives; tested under load and for 24 hours |
 | v1.0.8.0 – v1.0.8.9 | Delivered | The main window's code split into one piece per page (nothing looks different); Ctrl+C on a self-run service leaves the game running |
 | v1.0.9.0 – v1.0.9.3 | Delivered | Every command reachable; Discord commands that answer; MOD load order and profiles; level-gap scans |
-| v1.1.0.0 | Current | Accepted baseline: a documentation pass over every page, and everything since 1.0 as one release |
+| v1.1.0.0 | Accepted baseline | a documentation pass over every page, and everything since 1.0 as one release |
+| v1.1.0.1 | Current | Fixed: an error notice ("Something went wrong") that could appear when the desktop started |
 
 What comes next is in the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md). Release history lives in the [changelog](CHANGELOG.md).
 

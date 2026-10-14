@@ -1,4 +1,12 @@
-<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.1.0.1: file reviewed for this release (2026-10-13). -->
+## v1.1.0.1 — Start-up Notice Fix
+
+- Roadmap F-1 (reported 2026-10-13): fixed "Something went wrong (background task)" after the desktop started. The
+  start-up check for a port in use gave up on its connect after 750 ms and disposed the client under it; Windows refuses
+  a closed loopback port only after about 2 s, so the abandoned connect faulted unobserved and `CrashRecorder` reported
+  it. The check now cancels the connect at its limit and awaits it. All four crash records on the owner's PC were this.
+- Version advanced to 1.1.0.1.
+
 ## v1.1.0.0 — The New Accepted Baseline
 
 - Roadmap T-2 and owner decision D-12: v1.1.0.0 is the accepted baseline in place of v1.0.0.0.
