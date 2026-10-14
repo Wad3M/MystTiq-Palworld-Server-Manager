@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1514,7 +1514,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         ],
         Recent = [new() { AtUtc = DateTimeOffset.UtcNow, Channel = "Email", Title = "Clone: server stopped responding", Success = false, Detail = "Mailbox unavailable", Attempts = 2 }],
     };
-    typeof(MainWindowViewModel).GetProperty("DeliveryHealth")!.SetValue(vm, health);
+    typeof(AlertsViewModel).GetProperty("DeliveryHealth")!.SetValue(vm.Alerts, health);
     selectedPage.SetValue(vm, NavigationPage.Dashboard);
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var banner = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "DeliveryWarningBanner");
@@ -1529,7 +1529,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Check(vm.SelectedPage == NavigationPage.AlertCenter && card is { IsEffectivelyVisible: true } &&
           kinds.Contains("Delivered=ok") && kinds.Contains("Failing=fail") && kinds.Contains("Not proven=warn") && kinds.Contains("Failed=fail"),
         $"Open Alert Center lands on the Delivery card: Delivered green, Failing red, Not proven amber, and the failed send [{string.Join(", ", kinds)}]");
-    typeof(MainWindowViewModel).GetProperty("DeliveryHealth")!.SetValue(vm, new NotificationDeliveryHealthDto { Summary = "Every switched-on channel delivered in the last 7 days." });
+    typeof(AlertsViewModel).GetProperty("DeliveryHealth")!.SetValue(vm.Alerts, new NotificationDeliveryHealthDto { Summary = "Every switched-on channel delivered in the last 7 days." });
     selectedPage.SetValue(vm, NavigationPage.Dashboard);
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     Check(banner is { IsEffectivelyVisible: false }, "With every channel delivering, the Dashboard shows no warning");
@@ -1645,11 +1645,11 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     CrashRecorder.Recorded -= Show;
     try { Directory.Delete(crashFolder, true); } catch (IOException) { }
 
-    vm.Notifications.Clear();
+    vm.Alerts.Notifications.Clear();
     var alert = new NotificationItemDto { Id = "n1", Severity = "Critical", Title = "Saved user accounts could not be read", Message = "Changes to it are refused.", Pinned = true, Link = "diagnostics:saved-file-security-users", CreatedUtc = DateTimeOffset.UtcNow };
-    vm.Notifications.Add(alert);
-    vm.Notifications.Add(new NotificationItemDto { Id = "n2", Severity = "Information", Title = "Plain", Message = "No link.", CreatedUtc = DateTimeOffset.UtcNow });
-    typeof(MainWindowViewModel).GetMethod("ApplyNotificationFilters", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, []);
+    vm.Alerts.Notifications.Add(alert);
+    vm.Alerts.Notifications.Add(new NotificationItemDto { Id = "n2", Severity = "Information", Title = "Plain", Message = "No link.", CreatedUtc = DateTimeOffset.UtcNow });
+    typeof(AlertsViewModel).GetMethod("ApplyNotificationFilters", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm.Alerts, []);
     vm.NavigateCommand.Execute(nameof(NavigationPage.Notifications));
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var repairButtons = window.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible && b.DataContext is NotificationItemDto && b.Classes.Contains("open")).ToList();
@@ -1665,7 +1665,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var fix = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.IsEffectivelyVisible && b.DataContext is DiagnosticFindingDto && b.Classes.Contains("apply"));
     Check(focusedTag is not null && fix is not null && vm.DiagnosticFindings[0].FixButtonText == "Start This List Empty" && vm.DiagnosticFindings[0].FixConfirmText.Contains("unreadable file is kept"),
         "On Server Doctor the finding from the alert is marked, and its fix says it starts the list empty, keeping the unreadable file");
-    vm.DiagnosticFindings.Clear(); vm.Notifications.Clear(); vm.FilteredNotifications.Clear();
+    vm.DiagnosticFindings.Clear(); vm.Alerts.Notifications.Clear(); vm.Alerts.FilteredNotifications.Clear();
 }
 // v1.0.7.0 (roadmap Q-1): a change the service refuses because a saved list cannot be read comes back as HTTP 409 with
 // the reason; every call shows that reason instead of "409 (Conflict)", and other 409 answers are left to the caller.
@@ -1710,7 +1710,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         ExternalChannels = ["Webhook"],
         Queue = new NotificationSendQueueStateDto { Waiting = 3, OldestWaitingSinceUtc = DateTimeOffset.UtcNow.AddSeconds(-12), Capacity = 200, Senders = 2, Combined = 299, Dropped = 4, RepeatWindowMinutes = 10 }
     };
-    typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.NotificationDelivery))!.SetValue(vm, delivery);
+    typeof(AlertsViewModel).GetProperty(nameof(AlertsViewModel.NotificationDelivery))!.SetValue(vm.Alerts, delivery);
     vm.NavigateCommand.Execute(nameof(NavigationPage.AlertCenter));
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var queueText = window.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Name == "SendQueueText");
@@ -1718,10 +1718,10 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
           shown.Contains("299 repeats combined, 4 dropped"),
         $"Alert Center shows the send queue: waiting, the oldest's wait, combined and dropped [{queueText?.Text}]");
     delivery.Queue = new NotificationSendQueueStateDto { Waiting = 0, Combined = 0, Dropped = 0 };
-    typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.NotificationDelivery))!.SetValue(vm, new NotificationDeliveryStateDto { Queue = delivery.Queue });
+    typeof(AlertsViewModel).GetProperty(nameof(AlertsViewModel.NotificationDelivery))!.SetValue(vm.Alerts, new NotificationDeliveryStateDto { Queue = delivery.Queue });
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     Check(queueText?.Text?.StartsWith("Nothing is waiting to go out.", StringComparison.Ordinal) == true, "and says when nothing is waiting");
-    typeof(MainWindowViewModel).GetProperty(nameof(MainWindowViewModel.NotificationDelivery))!.SetValue(vm, new NotificationDeliveryStateDto());
+    typeof(AlertsViewModel).GetProperty(nameof(AlertsViewModel.NotificationDelivery))!.SetValue(vm.Alerts, new NotificationDeliveryStateDto());
 }
 // v1.0.7.2 (roadmap Q-8, Q-12, Q-13, Q-7): the start's step on the Dashboard, the backup scan card, a page opened while
 // busy saying what it waits for, and the connection line naming the cause.

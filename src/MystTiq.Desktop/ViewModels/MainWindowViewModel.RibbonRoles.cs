@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
 using System.Windows.Input;
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
@@ -19,8 +19,8 @@ public sealed partial class MainWindowViewModel
         var roles = new Dictionary<ICommand, string>(ReferenceEqualityComparer.Instance);
         void Need(string role, params ICommand?[] commands) { foreach (var c in commands) if (c is not null) roles[c] = role; }
         Need("Operator", StartCommand, StopCommand, RestartCommand, ForceStopServerCommand, Backups.CreateBackupCommand, RestartFromDiagnosticsCommand,
-            Mods.BeginModSafeStartCommand, AnalyzeCrashesCommand, Backups.RunSaveToolsSelfTestCommand, Backups.VerifyAllBackupsCommand, NotificationSelfTestCommand,
-            MarkAllNotificationsReadCommand, InstallMissingEnvironmentCommand);
+            Mods.BeginModSafeStartCommand, AnalyzeCrashesCommand, Backups.RunSaveToolsSelfTestCommand, Backups.VerifyAllBackupsCommand, Alerts.NotificationSelfTestCommand,
+            Alerts.MarkAllNotificationsReadCommand, InstallMissingEnvironmentCommand);
         Need("Admin", Configuration.SavePalworldConfigurationCommand, Mods.EnableAllModsCommand, Mods.DisableAllModsCommand, Mods.RepairModsCommand,
             Mods.ApplyUe4ssInstallCommand, Mods.PreviewUe4ssInstallCommand, Mods.RollbackUe4ssInstallCommand, RepairFirewallCommand);
         // v0.8.23.0: every other command the role table lists (MainWindowViewModel.CommandRoles.cs), so a Ribbon button

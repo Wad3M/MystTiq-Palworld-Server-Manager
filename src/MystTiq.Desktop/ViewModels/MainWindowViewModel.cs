@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -136,44 +136,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _discoveryExtraRanges = string.Empty;
     private DiscoveredMystTiqService? _selectedDiscoveredService;
     private string _lifecycleStatusText = "No lifecycle operation has been requested.";
-    private string _activityState = "Not loaded";
-    private string _activityFileText = "No activity log selected";
-    private string _activityDetail = "Open Activity & Audit to load persistent manager events.";
-    private readonly List<string> _allActivityLines = [];
-    private string _activitySearchText = string.Empty;
-    private string _activitySeverityFilter = "All";
-    private string _activityCategoryFilter = "All";
-    private string _notificationState = "Open Notifications to load persistent messages.";
-    private string _notificationSearchText = string.Empty;
-    private string _notificationSeverityFilter = "All";
-    private NotificationItemDto? _selectedNotification;
-    private string _automationState = "Open Automation to load scheduled rules.";
-    private AutomationRuleDto? _selectedAutomationRule;
-    private string _newAutomationRuleName = string.Empty;
-    private string _newAutomationTriggerKind = "DailyTime";
-    private string _newAutomationTimeOfDayUtc = "03:00";
-    private int _newAutomationIntervalMinutes = 60;
-    private int _newAutomationIdleThresholdMinutes = 30;
-    private string _newAutomationActionKind = "CreateBackup";
-    private string _newAutomationNotificationTitle = string.Empty;
-    private string _newAutomationNotificationMessage = string.Empty;
-    private string _newAutomationRconCommand = string.Empty;
     private string _securityState = "Open Security to load API principals.";
     private MystTiqPrincipalDto? _selectedPrincipal;
     private MystTiqPrincipalDto? _currentPrincipal;
     private string _newPrincipalName = string.Empty;
     private string _newPrincipalRole = "Operator";
     private string? _lastCreatedPrincipalToken;
-    private string _alertCenterState = "Open Alert Center to load threshold rules.";
-    private AlertRuleSetDto _alertRules = new();
-    private DiskSpacePredictionDto? _diskSpacePrediction;
-    private string _discordBotState = "Open Alert Center to load Discord bot configuration.";
-    private DiscordBotConfigurationDto _discordBotConfig = new();
-    private bool _discordBotTokenConfigured;
-    private string _discordBotConnectionState = "NotConfigured";
-    private string _newRoleMappingDiscordRoleId = string.Empty;
-    private string _newRoleMappingRole = "Viewer";
-    private DiscordRoleMappingDto? _selectedRoleMapping;
     private string _antiCheatState = "Open Alert Center to load anti-cheat rules.";
     private AntiCheatRuleSetDto _antiCheatRules = new();
     private string _fleetState = "Open Fleet to list configured server profiles.";
@@ -188,7 +156,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _crashAnalyzerState = "Run analysis to inspect bounded recent server-log evidence.";
     private bool _isWanDiagnosticsExpanded;
     private bool _isLocalDiagnosticsExpanded;
-    private bool _isDiscordBotExpanded;
     private bool _isAntiCheatExpanded;
     private string _environmentHealthText = "Checking…";
     private string _setupOperationState = "IDLE";
@@ -230,14 +197,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         Logs = new ConsoleLogViewModel(Session);
         Host = new HostPageViewModel(Session);
         Dashboard = new DashboardViewModel(Session);
-        Players = new PlayersViewModel(Session, RefreshActivityAsync, RefreshPlayersPageAsync);
+        Players = new PlayersViewModel(Session, () => Alerts!.RefreshActivityAsync(), RefreshPlayersPageAsync);
         Map = new MapViewModel(Session, Players);
         World = new WorldViewModel(Session, Map, Players, RefreshOperationsAsync, () => Workspace!.ValidateActiveWorldAsync(), RefreshPalsAsync, RefreshPlayersPageAsync, RefreshWorldExplorerAsync, RefreshPlayerGuildExplorerAsync, OpenSelectedGuildLeaderAsync);
         Configuration = new ConfigurationViewModel(Session, state => Workspace!.WorkspaceState = state);
         Workspace = new WorkspaceViewModel(Session, Configuration, EnvironmentItems);
         Backups = new BackupsViewModel(Session);
         Mods = new ModsViewModel(Session, _nexus, _credentialStore, Navigate);
-        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace, Backups, Mods];
+        Alerts = new AlertsViewModel(Session, Navigate);
+        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace, Backups, Mods, Alerts];
         // v1.0.8.6 (roadmap C-6): the Dashboard's stuck-start panel shows Safe Start while it runs and its result afterwards.
         Mods.SafeStartStatusChanged += () =>
         {
@@ -302,32 +270,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RconConnectCommand = new AsyncCommand(ConnectRconAsync, () => !IsBusy && ManagementApiConnected);
         RconDisconnectCommand = new RelayCommand(DisconnectRcon);
         RconSendCommand = new AsyncCommand(SendRconCommandAsync, () => !IsBusy && ManagementApiConnected && !string.IsNullOrWhiteSpace(RconCommandText));
-        RefreshActivityCommand = new AsyncCommand(RefreshActivityAsync, () => !IsBusy);
-        RefreshNotificationsCommand = new AsyncCommand(RefreshNotificationsAsync, () => !IsBusy);
-        NotificationSelfTestCommand = new AsyncCommand(RunNotificationSelfTestAsync, () => !IsBusy && ManagementApiConnected);
-        MarkAllNotificationsReadCommand = new AsyncCommand(MarkAllNotificationsReadAsync, () => !IsBusy && ManagementApiConnected);
-        ToggleNotificationReadCommand = new AsyncCommand(ToggleNotificationReadAsync, () => !IsBusy && SelectedNotification is not null);
-        ToggleNotificationPinCommand = new AsyncCommand(ToggleNotificationPinAsync, () => !IsBusy && SelectedNotification is not null);
-        DismissNotificationCommand = new AsyncCommand(DismissNotificationAsync, () => !IsBusy && SelectedNotification is not null);
-        RefreshAutomationCommand = new AsyncCommand(RefreshAutomationAsync, () => !IsBusy);
-        CreateAutomationRuleCommand = new AsyncCommand(CreateAutomationRuleAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(NewAutomationRuleName));
-        DeleteAutomationRuleCommand = new AsyncCommand(DeleteAutomationRuleAsync, () => !IsBusy && SelectedAutomationRule is not null);
-        ToggleAutomationRuleEnabledCommand = new AsyncCommand(ToggleAutomationRuleEnabledAsync, () => !IsBusy && SelectedAutomationRule is not null);
-        RunAutomationRuleNowCommand = new AsyncCommand(RunAutomationRuleNowAsync, () => !IsBusy && SelectedAutomationRule is not null);
         RefreshSecurityCommand = new AsyncCommand(RefreshSecurityAsync, () => !IsBusy);
         CreatePrincipalCommand = new AsyncCommand(CreatePrincipalAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(NewPrincipalName));
         RevokePrincipalCommand = new AsyncCommand(RevokePrincipalAsync, () => !IsBusy && SelectedPrincipal is not null);
-        RefreshAlertCenterCommand = new AsyncCommand(RefreshAlertCenterAsync, () => !IsBusy);
-        SaveAlertRulesCommand = new AsyncCommand(SaveAlertRulesAsync, () => !IsBusy);
         // v0.7.111.0: CommandParameter is the mute length in minutes as text ("60", "480", "1440", "0" = unmute).
-        MuteAlertsCommand = new RelayCommand<string>(m => { if (!IsBusy && int.TryParse(m, out var minutes)) RunUi(() => MuteAlertsAsync(minutes)); });
         // v0.8.4.0: same shape for pausing outside delivery ("0" resumes).
-        PauseDeliveryCommand = new RelayCommand<string>(m => { if (!IsBusy && int.TryParse(m, out var minutes)) RunUi(() => PauseDeliveryAsync(minutes)); });
-        SendTestNotificationCommand = new RelayCommand(() => { if (!IsBusy) RunUi(() => SendTestNotificationAsync()); });
-        RefreshDiscordBotConfigCommand = new AsyncCommand(RefreshDiscordBotConfigAsync, () => !IsBusy);
-        SaveDiscordBotConfigCommand = new AsyncCommand(SaveDiscordBotConfigAsync, () => !IsBusy);
-        AddDiscordRoleMappingCommand = new RelayCommand(AddDiscordRoleMapping);
-        RemoveDiscordRoleMappingCommand = new RelayCommand(RemoveDiscordRoleMapping);
         // v1.0.0.5: Bases and Guilds link to each other and to the map (MainWindowViewModel.WorldCards.cs).
         ShowSelectedBaseOnMapCommand = new RelayCommand(ShowSelectedBaseOnMap);
         OpenSelectedBaseGuildCommand = new RelayCommand(OpenSelectedBaseGuild);
@@ -380,7 +327,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RefreshPlayerGuildExplorerCommand = new AsyncCommand(RefreshPlayerGuildExplorerAsync, () => !IsBusy);
         RefreshPalsCommand = new AsyncCommand(RefreshPalsAsync, () => !IsBusy);
         // The "nothing is scheduled" hint follows the collection, so it disappears the moment a rule is created.
-        AutomationRules.CollectionChanged += (_, _) => RaisePropertyChanged(nameof(HasNoAutomationRules));
+        Alerts.AutomationRules.CollectionChanged += (_, _) => RaisePropertyChanged(nameof(Alerts.HasNoAutomationRules));
         Map.LoadMapBackgroundPreference();
         Configuration.RebuildConfigPresetList();
         // v1.0.0.1: the stuck-start protocol's test load, and clearing a finished test from the Dashboard.
@@ -426,7 +373,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OpenNotificationLinkCommand = new RelayCommand<NotificationItemDto>(OpenNotificationLink);
         ToggleWanDiagnosticsCommand = new RelayCommand(() => IsWanDiagnosticsExpanded = !IsWanDiagnosticsExpanded);
         ToggleLocalDiagnosticsCommand = new RelayCommand(() => IsLocalDiagnosticsExpanded = !IsLocalDiagnosticsExpanded);
-        ToggleDiscordBotCommand = new RelayCommand(() => IsDiscordBotExpanded = !IsDiscordBotExpanded);
         ToggleAntiCheatCommand = new RelayCommand(() => IsAntiCheatExpanded = !IsAntiCheatExpanded);
         // No generic async command primitive exists in this codebase for a per-row action bound via
         // CommandParameter -- following the same RunUi(...) pattern (v1.0.7.0: was a fire-and-forget post)
@@ -1030,19 +976,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<PlayerSnapshotDto> OnlinePlayers { get; } = [];
     public ObservableCollection<string> RconOutputLines { get; } = [];
     public IReadOnlyList<string> RconPresetOptions { get; } = ["Info", "ShowPlayers", "Save", "Broadcast Server maintenance message", "Shutdown 60 Server restarting"];
-    public ObservableCollection<string> ActivityLines { get; } = [];
-    public ObservableCollection<NotificationItemDto> Notifications { get; } = [];
-    public ObservableCollection<NotificationItemDto> FilteredNotifications { get; } = [];
-    public ObservableCollection<AutomationRuleDto> AutomationRules { get; } = [];
-    // v0.7.102.0: with no rules at all nothing is scheduled, including backups. The page says so and points at
-    // the New Rule form below, whose defaults are already a nightly 03:00 backup.
-    public bool HasNoAutomationRules => AutomationRules.Count == 0;
-    public ObservableCollection<AutomationRunRecordDto> AutomationRuns { get; } = [];
     public ObservableCollection<MystTiqPrincipalDto> Principals { get; } = [];
     public ObservableCollection<ServerProfileSummaryDto> FleetServers { get; } = [];
     public ObservableCollection<FleetActionResultDto> FleetActionResults { get; } = [];
-    public IReadOnlyList<string> AutomationTriggerKinds { get; } = ["DailyTime", "Interval", "IdleEmpty"];
-    public IReadOnlyList<string> AutomationActionKinds { get; } = ["CreateBackup", "StartServer", "StopServer", "RestartServer", "SendNotification", "SendRconCommand"];
     public IReadOnlyList<string> MystTiqRoles { get; } = ["Viewer", "Operator", "Admin", "Owner"];
     public ObservableCollection<CrashFindingDto> CrashFindings { get; } = [];
     // v0.7.97.0: the finding whose cause, fixes and evidence are shown beside the list.
@@ -1331,34 +1267,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
     }
     public string LifecycleStatusText { get => _lifecycleStatusText; private set => SetField(ref _lifecycleStatusText, value); }
-    public string ActivityState { get => _activityState; private set => SetField(ref _activityState, value); }
-    public IReadOnlyList<string> ActivitySeverityOptions { get; } = ["All", "Information", "Warning", "Error"];
-    public IReadOnlyList<string> ActivityCategoryOptions { get; } = ["All", "API", "Backups", "Players", "MODs", "World Transaction", "Notifications"];
-    public string ActivitySearchText { get => _activitySearchText; set { if (SetField(ref _activitySearchText, value ?? string.Empty)) ApplyActivityFilters(); } }
-    public string ActivitySeverityFilter { get => _activitySeverityFilter; set { if (SetField(ref _activitySeverityFilter, value ?? "All")) ApplyActivityFilters(); } }
-    public string ActivityCategoryFilter { get => _activityCategoryFilter; set { if (SetField(ref _activityCategoryFilter, value ?? "All")) ApplyActivityFilters(); } }
-    public string NotificationState { get => _notificationState; private set => SetField(ref _notificationState, value); }
-    public IReadOnlyList<string> NotificationSeverityOptions { get; } = ["All", "Information", "Success", "Warning", "Critical"];
-    public string NotificationSearchText { get => _notificationSearchText; set { if (SetField(ref _notificationSearchText, value ?? string.Empty)) ApplyNotificationFilters(); } }
-    public string NotificationSeverityFilter { get => _notificationSeverityFilter; set { if (SetField(ref _notificationSeverityFilter, value ?? "All")) ApplyNotificationFilters(); } }
-    public NotificationItemDto? SelectedNotification { get => _selectedNotification; set { if (SetField(ref _selectedNotification, value)) { (ToggleNotificationReadCommand as AsyncCommand)?.RaiseCanExecuteChanged(); (ToggleNotificationPinCommand as AsyncCommand)?.RaiseCanExecuteChanged(); (DismissNotificationCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } } }
-    public string NotificationBadgeText => Notifications.Count(x => !x.Read).ToString();
 
-    public string AutomationState { get => _automationState; private set => SetField(ref _automationState, value); }
-    public AutomationRuleDto? SelectedAutomationRule
-    {
-        get => _selectedAutomationRule;
-        set { if (SetField(ref _selectedAutomationRule, value)) { (DeleteAutomationRuleCommand as AsyncCommand)?.RaiseCanExecuteChanged(); (ToggleAutomationRuleEnabledCommand as AsyncCommand)?.RaiseCanExecuteChanged(); (RunAutomationRuleNowCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
-    }
-    public string NewAutomationRuleName { get => _newAutomationRuleName; set { if (SetField(ref _newAutomationRuleName, value ?? string.Empty)) (CreateAutomationRuleCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
-    public string NewAutomationTriggerKind { get => _newAutomationTriggerKind; set => SetField(ref _newAutomationTriggerKind, value ?? "DailyTime"); }
-    public string NewAutomationTimeOfDayUtc { get => _newAutomationTimeOfDayUtc; set => SetField(ref _newAutomationTimeOfDayUtc, value ?? "03:00"); }
-    public int NewAutomationIntervalMinutes { get => _newAutomationIntervalMinutes; set => SetField(ref _newAutomationIntervalMinutes, value); }
-    public int NewAutomationIdleThresholdMinutes { get => _newAutomationIdleThresholdMinutes; set => SetField(ref _newAutomationIdleThresholdMinutes, value); }
-    public string NewAutomationActionKind { get => _newAutomationActionKind; set => SetField(ref _newAutomationActionKind, value ?? "CreateBackup"); }
-    public string NewAutomationNotificationTitle { get => _newAutomationNotificationTitle; set => SetField(ref _newAutomationNotificationTitle, value ?? string.Empty); }
-    public string NewAutomationNotificationMessage { get => _newAutomationNotificationMessage; set => SetField(ref _newAutomationNotificationMessage, value ?? string.Empty); }
-    public string NewAutomationRconCommand { get => _newAutomationRconCommand; set => SetField(ref _newAutomationRconCommand, value ?? string.Empty); }
 
     public string SecurityState { get => _securityState; private set => SetField(ref _securityState, value); }
     public MystTiqPrincipalDto? SelectedPrincipal { get => _selectedPrincipal; set => SetField(ref _selectedPrincipal, value); }
@@ -1376,19 +1285,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string RoleHiddenNotice => RoleAccess.HiddenNotice(CurrentPrincipal is not null, CurrentPrincipal?.Role);
     public bool HasRoleHiddenNotice => RoleHiddenNotice.Length > 0;
 
-    public string AlertCenterState { get => _alertCenterState; private set => SetField(ref _alertCenterState, value); }
-    public AlertRuleSetDto AlertRules { get => _alertRules; set => SetField(ref _alertRules, value ?? new()); }
-    public DiskSpacePredictionDto? DiskSpacePrediction { get => _diskSpacePrediction; private set => SetField(ref _diskSpacePrediction, value); }
 
-    public string DiscordBotState { get => _discordBotState; private set => SetField(ref _discordBotState, value); }
-    public DiscordBotConfigurationDto DiscordBotConfig { get => _discordBotConfig; set => SetField(ref _discordBotConfig, value ?? new()); }
-    public bool DiscordBotTokenConfigured { get => _discordBotTokenConfigured; private set { if (SetField(ref _discordBotTokenConfigured, value)) RaisePropertyChanged(nameof(DiscordBotTokenWatermark)); } }
-    public string DiscordBotTokenWatermark => DiscordBotTokenConfigured ? "Token configured -- leave blank to keep it" : "Paste bot token from the Discord Developer Portal";
-    public string DiscordBotConnectionState { get => _discordBotConnectionState; private set => SetField(ref _discordBotConnectionState, value); }
-    public ObservableCollection<DiscordRoleMappingDto> DiscordRoleMappings { get; } = [];
-    public string NewRoleMappingDiscordRoleId { get => _newRoleMappingDiscordRoleId; set => SetField(ref _newRoleMappingDiscordRoleId, value ?? string.Empty); }
-    public string NewRoleMappingRole { get => _newRoleMappingRole; set => SetField(ref _newRoleMappingRole, value ?? "Viewer"); }
-    public DiscordRoleMappingDto? SelectedRoleMapping { get => _selectedRoleMapping; set => SetField(ref _selectedRoleMapping, value); }
 
 
     public string AntiCheatState { get => _antiCheatState; private set => SetField(ref _antiCheatState, value); }
@@ -1424,8 +1321,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public IReadOnlyList<int> CloneWorldPortOffsetOptions { get; } = [100, 200, 300, 400];
     public int CloneWorldPortOffset { get => _cloneWorldPortOffset; set => SetField(ref _cloneWorldPortOffset, value); }
     public bool CloneWorldConfirmed { get => _cloneWorldConfirmed; set { if (SetField(ref _cloneWorldConfirmed, value)) (CloneWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
-    public string ActivityFileText { get => _activityFileText; private set => SetField(ref _activityFileText, value); }
-    public string ActivityDetail { get => _activityDetail; private set => SetField(ref _activityDetail, value); }
 
     public string ConnectionState
     {
@@ -1647,13 +1542,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             (DiscoverServicesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RefreshMonitoringCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RefreshPlayersCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RefreshActivityCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RefreshNotificationsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (NotificationSelfTestCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (MarkAllNotificationsReadCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (ToggleNotificationReadCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (ToggleNotificationPinCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (DismissNotificationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Alerts.RefreshActivityCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Alerts.RefreshNotificationsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Alerts.NotificationSelfTestCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Alerts.MarkAllNotificationsReadCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Alerts.ToggleNotificationReadCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Alerts.ToggleNotificationPinCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Alerts.DismissNotificationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RefreshEnvironmentCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (VerifyEnvironmentCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (CreateDefaultServerSettingsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -1837,32 +1732,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand RconConnectCommand { get; }
     public ICommand RconDisconnectCommand { get; }
     public ICommand RconSendCommand { get; }
-    public ICommand RefreshActivityCommand { get; }
-    public ICommand RefreshNotificationsCommand { get; }
-    public ICommand NotificationSelfTestCommand { get; }
-    public ICommand MarkAllNotificationsReadCommand { get; }
-    public ICommand ToggleNotificationReadCommand { get; }
-    public ICommand ToggleNotificationPinCommand { get; }
-    public ICommand DismissNotificationCommand { get; }
-    public ICommand RefreshAutomationCommand { get; }
-    public ICommand CreateAutomationRuleCommand { get; }
-    public ICommand DeleteAutomationRuleCommand { get; }
-    public ICommand ToggleAutomationRuleEnabledCommand { get; }
-    public ICommand RunAutomationRuleNowCommand { get; }
     public ICommand RefreshSecurityCommand { get; }
     public ICommand CreatePrincipalCommand { get; }
     public ICommand RevokePrincipalCommand { get; }
-    public ICommand RefreshAlertCenterCommand { get; }
-    public ICommand SaveAlertRulesCommand { get; }
-    public ICommand MuteAlertsCommand { get; }
-    public ICommand PauseDeliveryCommand { get; }
-    public ICommand SendTestNotificationCommand { get; }
-    private NotificationDeliveryStateDto _notificationDelivery = new();
-    public NotificationDeliveryStateDto NotificationDelivery { get => _notificationDelivery; private set => SetField(ref _notificationDelivery, value); }
-    public ICommand RefreshDiscordBotConfigCommand { get; }
-    public ICommand SaveDiscordBotConfigCommand { get; }
-    public ICommand AddDiscordRoleMappingCommand { get; }
-    public ICommand RemoveDiscordRoleMappingCommand { get; }
     public ICommand RefreshAntiCheatCommand { get; }
     public ICommand SaveAntiCheatRulesCommand { get; }
     public ICommand RefreshFleetCommand { get; }
@@ -1931,12 +1803,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
     public ICommand ToggleWanDiagnosticsCommand { get; }
     public ICommand ToggleLocalDiagnosticsCommand { get; }
-    public ICommand ToggleDiscordBotCommand { get; }
     public ICommand ToggleAntiCheatCommand { get; }
 
     public bool IsWanDiagnosticsExpanded { get => _isWanDiagnosticsExpanded; private set => SetField(ref _isWanDiagnosticsExpanded, value); }
     public bool IsLocalDiagnosticsExpanded { get => _isLocalDiagnosticsExpanded; private set => SetField(ref _isLocalDiagnosticsExpanded, value); }
-    public bool IsDiscordBotExpanded { get => _isDiscordBotExpanded; private set => SetField(ref _isDiscordBotExpanded, value); }
     public bool IsAntiCheatExpanded { get => _isAntiCheatExpanded; private set => SetField(ref _isAntiCheatExpanded, value); }
 
     public string CrashAnalyzerState { get => _crashAnalyzerState; private set => SetField(ref _crashAnalyzerState, value); }
@@ -2370,20 +2240,20 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 await RefreshPlayersPageAsync();
                 break;
             case NavigationPage.ActivityAudit:
-                await RefreshActivityAsync();
+                await Alerts.RefreshActivityAsync();
                 break;
             case NavigationPage.Notifications:
-                await RefreshNotificationsAsync();
+                await Alerts.RefreshNotificationsAsync();
                 break;
             case NavigationPage.Automation:
-                await RefreshAutomationAsync();
+                await Alerts.RefreshAutomationAsync();
                 break;
             case NavigationPage.Security:
                 await RefreshSecurityAsync();
                 break;
             case NavigationPage.AlertCenter:
-                await RefreshAlertCenterAsync();
-                await RefreshDiscordBotConfigAsync();
+                await Alerts.RefreshAlertCenterAsync();
+                await Alerts.RefreshDiscordBotConfigAsync();
                 await RefreshAntiCheatAsync();
                 break;
             case NavigationPage.Fleet:
@@ -3239,9 +3109,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("Notifications",
             [
-                new("↻", "Refresh", "Refresh notifications", RefreshNotificationsCommand, null, RibbonIconColor.Amber),
-                new("✓", "Self-Test", "Notification self-test", NotificationSelfTestCommand, null, RibbonIconColor.Green),
-                new("👁", "Mark All Read", "Mark all notifications read", MarkAllNotificationsReadCommand, null, RibbonIconColor.Blue),
+                new("↻", "Refresh", "Refresh notifications", Alerts.RefreshNotificationsCommand, null, RibbonIconColor.Amber),
+                new("✓", "Self-Test", "Notification self-test", Alerts.NotificationSelfTestCommand, null, RibbonIconColor.Green),
+                new("👁", "Mark All Read", "Mark all notifications read", Alerts.MarkAllNotificationsReadCommand, null, RibbonIconColor.Blue),
                 new("⇩", "Export", "Export visible notifications", null, null, RibbonIconColor.Cyan, NativeDialogAction: "ExportNotifications"),
             ]));
         }
@@ -3249,14 +3119,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("Automation",
             [
-                new("↻", "Refresh", "Refresh automation", RefreshAutomationCommand, null, RibbonIconColor.Amber),
+                new("↻", "Refresh", "Refresh automation", Alerts.RefreshAutomationCommand, null, RibbonIconColor.Amber),
             ]));
         }
         else if (IsAlertCenterPage)
         {
             groups.Add(new("Alerts",
             [
-                new("↻", "Refresh", "Refresh alert center", RefreshAlertCenterCommand, null, RibbonIconColor.Amber),
+                new("↻", "Refresh", "Refresh alert center", Alerts.RefreshAlertCenterCommand, null, RibbonIconColor.Amber),
             ]));
         }
         else if (IsSecurityPage)
@@ -3839,7 +3709,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // v1.0.0.1: the addresses line (at most once a minute; the service keeps the public address for an hour).
             _ = Dashboard.RefreshHostAddressesAsync(profile, requestTab, force: false);
             // v1.0.2.0 (roadmap R-2): the Dashboard's warning when a switched-on channel has no proven delivery.
-            _ = RefreshDeliveryHealthAsync(profile, requestTab, force: false);
+            _ = Alerts.RefreshDeliveryHealthAsync(profile, requestTab, force: false);
             ApplyPlayers(snapshot.Players);
             ApplyMetrics(snapshot.Metrics);
             ApplyLogs(snapshot.LogTail);
@@ -4102,6 +3972,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public WorkspaceViewModel Workspace { get; }
     public BackupsViewModel Backups { get; }
     public ModsViewModel Mods { get; }
+    public AlertsViewModel Alerts { get; }
     private readonly IReadOnlyList<PageViewModel> _pages;
 
     // v1.0.8.2 (roadmap C-2): the Players page refresh is one part of the whole status refresh, so it stays here.
@@ -4441,194 +4312,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private static string FormatMemory(double mb) => mb >= 1024 ? $"{mb / 1024d:F2} GB" : $"{mb:F0} MB";
 
 
-    private async Task RefreshActivityAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { ActivityDetail = ex.Message; return; }
-        IsBusy = true;
-        ActivityState = "Loading…";
-        try
-        {
-            var snapshot = await _api.GetActivityLogTailAsync(profile, 250, BearerToken);
-            _allActivityLines.Clear();
-            _allActivityLines.AddRange(snapshot.Lines);
-            ApplyActivityFilters();
-            ActivityFileText = snapshot.FileName;
-            if (!snapshot.Available) ActivityState = "Unavailable";
-            ActivityDetail = snapshot.Detail;
-        }
-        catch (Exception ex)
-        {
-            ActivityState = "Unavailable";
-            ActivityDetail = ex.Message;
-        }
-        finally { IsBusy = false; }
-    }
 
-    private void ApplyActivityFilters()
-    {
-        var query = ActivitySearchText.Trim();
-        ActivityLines.Clear();
-        foreach (var line in _allActivityLines.Where(line =>
-                     (string.IsNullOrWhiteSpace(query) || line.Contains(query, StringComparison.OrdinalIgnoreCase)) &&
-                     (ActivitySeverityFilter == "All" || line.Contains($"[{ActivitySeverityFilter}]", StringComparison.OrdinalIgnoreCase) ||
-                      (ActivitySeverityFilter == "Error" && line.Contains("[ERROR]", StringComparison.OrdinalIgnoreCase))) &&
-                     (ActivityCategoryFilter == "All" || line.Contains($"[{ActivityCategoryFilter}]", StringComparison.OrdinalIgnoreCase))))
-            ActivityLines.Add(line);
-        ActivityState = $"{ActivityLines.Count} visible / {_allActivityLines.Count} event(s)";
-    }
 
-    private async Task RefreshNotificationsAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try { ApplyNotificationSnapshot(await _api.GetNotificationsAsync(SelectedProfile, BearerToken)); }
-        catch (Exception ex) { NotificationState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task RunNotificationSelfTestAsync() => await MutateNotificationsAsync(() => _api.RunNotificationSelfTestAsync(SelectedProfile!, BearerToken));
-    private async Task MarkAllNotificationsReadAsync() => await MutateNotificationsAsync(() => _api.MarkAllNotificationsReadAsync(SelectedProfile!, BearerToken));
-    private async Task ToggleNotificationReadAsync() { if (SelectedNotification is { } item) await MutateNotificationsAsync(() => _api.SetNotificationReadAsync(SelectedProfile!, item.Id, !item.Read, BearerToken)); }
-    private async Task ToggleNotificationPinAsync() { if (SelectedNotification is { } item) await MutateNotificationsAsync(() => _api.SetNotificationPinnedAsync(SelectedProfile!, item.Id, !item.Pinned, BearerToken)); }
-    private async Task DismissNotificationAsync() { if (SelectedNotification is { } item) await MutateNotificationsAsync(() => _api.DismissNotificationAsync(SelectedProfile!, item.Id, BearerToken)); }
 
-    private async Task MutateNotificationsAsync(Func<Task<NotificationSnapshotDto>> operation)
-    {
-        if (SelectedProfile is null) return; IsBusy = true;
-        try { ApplyNotificationSnapshot(await operation()); }
-        catch (Exception ex) { NotificationState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private void ApplyNotificationSnapshot(NotificationSnapshotDto snapshot)
-    {
-        var selectedId = SelectedNotification?.Id;
-        Notifications.Clear(); foreach (var item in snapshot.Items) Notifications.Add(item);
-        ApplyNotificationFilters();
-        SelectedNotification = FilteredNotifications.FirstOrDefault(x => x.Id == selectedId) ?? FilteredNotifications.FirstOrDefault();
-        NotificationState = snapshot.Detail;
-        RaisePropertyChanged(nameof(NotificationBadgeText));
-    }
 
-    private void ApplyNotificationFilters()
-    {
-        var query = NotificationSearchText.Trim(); var selectedId = SelectedNotification?.Id;
-        FilteredNotifications.Clear();
-        foreach (var item in Notifications.Where(x =>
-                     (NotificationSeverityFilter == "All" || x.Severity.Equals(NotificationSeverityFilter, StringComparison.OrdinalIgnoreCase)) &&
-                     (string.IsNullOrWhiteSpace(query) || x.Title.Contains(query, StringComparison.OrdinalIgnoreCase) || x.Message.Contains(query, StringComparison.OrdinalIgnoreCase))))
-            FilteredNotifications.Add(item);
-        SelectedNotification = FilteredNotifications.FirstOrDefault(x => x.Id == selectedId) ?? FilteredNotifications.FirstOrDefault();
-    }
 
-    public string ExportVisibleActivity() => string.Join(Environment.NewLine, ActivityLines);
-    public string ExportVisibleNotifications() => string.Join(Environment.NewLine, FilteredNotifications.Select(x => $"[{x.CreatedUtc:O}] [{x.Severity}] [{(x.Read ? "READ" : "UNREAD")}] [{(x.Pinned ? "PINNED" : "UNPINNED")}] {x.Title} — {x.Message}"));
 
-    private async Task RefreshAutomationAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var rules = await _api.GetAutomationRulesAsync(SelectedProfile, BearerToken);
-            var selectedId = SelectedAutomationRule?.Id;
-            AutomationRules.Clear(); foreach (var rule in rules) AutomationRules.Add(rule);
-            SelectedAutomationRule = AutomationRules.FirstOrDefault(x => x.Id == selectedId) ?? AutomationRules.FirstOrDefault();
 
-            var runs = await _api.GetAutomationRunsAsync(SelectedProfile, 100, BearerToken);
-            AutomationRuns.Clear(); foreach (var run in runs) AutomationRuns.Add(run);
-            AutomationState = $"{AutomationRules.Count} rule(s), {AutomationRuns.Count} recent run(s).";
-        }
-        catch (Exception ex) { AutomationState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task CreateAutomationRuleAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var request = BuildAutomationRuleRequest();
-            var rule = await _api.CreateAutomationRuleAsync(SelectedProfile, request, BearerToken);
-            AutomationRules.Add(rule);
-            SelectedAutomationRule = rule;
-            NewAutomationRuleName = string.Empty;
-            AutomationState = $"Created rule '{rule.Name}'.";
-        }
-        catch (Exception ex) { AutomationState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private AutomationRuleRequestDto BuildAutomationRuleRequest()
-    {
-        var trigger = new AutomationTriggerDto { Kind = NewAutomationTriggerKind };
-        if (NewAutomationTriggerKind == "Interval")
-            trigger.Interval = TimeSpan.FromMinutes(Math.Max(1, NewAutomationIntervalMinutes));
-        else if (NewAutomationTriggerKind == "IdleEmpty")
-            trigger.IdleThresholdMinutes = Math.Max(1, NewAutomationIdleThresholdMinutes);
-        else
-            trigger.TimeOfDayUtc = TimeOnly.TryParse(NewAutomationTimeOfDayUtc, out var time) ? time : new TimeOnly(3, 0);
 
-        var action = new AutomationActionDto { Kind = NewAutomationActionKind };
-        if (NewAutomationActionKind == "SendNotification")
-        {
-            action.NotificationTitle = string.IsNullOrWhiteSpace(NewAutomationNotificationTitle) ? NewAutomationRuleName : NewAutomationNotificationTitle;
-            action.NotificationMessage = NewAutomationNotificationMessage;
-        }
-        else if (NewAutomationActionKind == "SendRconCommand")
-        {
-            action.RconCommand = NewAutomationRconCommand;
-        }
 
-        return new AutomationRuleRequestDto(NewAutomationRuleName, trigger, new AutomationConditionDto(), action);
-    }
-
-    private async Task DeleteAutomationRuleAsync()
-    {
-        if (SelectedProfile is null || SelectedAutomationRule is not { } rule) return;
-        IsBusy = true;
-        try
-        {
-            await _api.DeleteAutomationRuleAsync(SelectedProfile, rule.Id, BearerToken);
-            AutomationRules.Remove(rule);
-            SelectedAutomationRule = AutomationRules.FirstOrDefault();
-            AutomationState = $"Deleted rule '{rule.Name}'.";
-        }
-        catch (Exception ex) { AutomationState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task ToggleAutomationRuleEnabledAsync()
-    {
-        if (SelectedProfile is null || SelectedAutomationRule is not { } rule) return;
-        IsBusy = true;
-        try
-        {
-            var updated = await _api.SetAutomationRuleEnabledAsync(SelectedProfile, rule.Id, !rule.Enabled, BearerToken);
-            var index = AutomationRules.IndexOf(rule);
-            if (index >= 0) AutomationRules[index] = updated;
-            SelectedAutomationRule = updated;
-            AutomationState = $"Rule '{updated.Name}' is now {(updated.Enabled ? "enabled" : "disabled")}.";
-        }
-        catch (Exception ex) { AutomationState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task RunAutomationRuleNowAsync()
-    {
-        if (SelectedProfile is null || SelectedAutomationRule is not { } rule) return;
-        IsBusy = true;
-        try
-        {
-            await _api.RunAutomationRuleNowAsync(SelectedProfile, rule.Id, BearerToken);
-            AutomationState = $"Rule '{rule.Name}' dispatched. Refresh runs shortly to see the result.";
-        }
-        catch (Exception ex) { AutomationState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
     // ---- v0.7.114.0: named user accounts --------------------------------------------------------------------
     // Signing in trades a username and password for a session token, which then goes in the tab's Bearer token
@@ -4840,148 +4536,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
-    private async Task RefreshAlertCenterAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            AlertRules = await _api.GetAlertRulesAsync(SelectedProfile, BearerToken);
-            DiskSpacePrediction = await _api.GetDiskSpacePredictionAsync(SelectedProfile, BearerToken);
-            NotificationDelivery = await _api.GetNotificationDeliveryAsync(SelectedProfile, BearerToken);
-            await RefreshDeliveryHealthAsync(SelectedProfile, null, force: true);
-            AlertCenterState = "Alert rules and disk-space prediction loaded.";
-        }
-        catch (Exception ex) { AlertCenterState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task SaveAlertRulesAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            AlertRules = await _api.SaveAlertRulesAsync(SelectedProfile, AlertRules, BearerToken);
-            AlertCenterState = "Alert rules saved.";
-        }
-        catch (Exception ex) { AlertCenterState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task MuteAlertsAsync(int minutes)
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            AlertRules = await _api.MuteAlertsAsync(SelectedProfile, minutes, BearerToken);
-            AlertCenterState = minutes <= 0 ? "Alerts unmuted." : AlertRules.MuteStatusText;
-        }
-        catch (Exception ex) { AlertCenterState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task PauseDeliveryAsync(int minutes)
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            NotificationDelivery = await _api.PauseNotificationDeliveryAsync(SelectedProfile, minutes, BearerToken);
-            AlertCenterState = minutes <= 0 ? "Outside delivery resumed." : "Outside delivery paused: " + NotificationDelivery.StatusText;
-        }
-        catch (Exception ex) { AlertCenterState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task SendTestNotificationAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var result = await _api.SendTestNotificationAsync(SelectedProfile, BearerToken);
-            NotificationDelivery = result.Delivery;
-            AlertCenterState = result.Message;
-        }
-        catch (Exception ex) { AlertCenterState = ex.Message; }
-        finally { IsBusy = false; }
-        // v1.0.2.0 (roadmap R-2): the sends run in the background (each tries twice, 10 s apiece); show their results.
-        if (SelectedProfile is { } profile)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(5));
-            await RefreshDeliveryHealthAsync(profile, null, force: true);
-        }
-    }
 
-    private async Task RefreshDiscordBotConfigAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var view = await _api.GetDiscordBotConfigAsync(SelectedProfile, BearerToken);
-            DiscordBotConfig = new DiscordBotConfigurationDto
-            {
-                Enabled = view.Enabled,
-                GuildId = view.GuildId,
-                OwnerDiscordUserId = view.OwnerDiscordUserId,
-                RoleMappings = view.RoleMappings,
-                StatusChannelId = view.StatusChannelId,
-                EventsChannelId = view.EventsChannelId,
-                ShowPresence = view.ShowPresence
-            };
-            DiscordBotTokenConfigured = view.TokenConfigured;
-            DiscordBotConnectionState = view.ConnectionState;
-            DiscordRoleMappings.Clear();
-            foreach (var mapping in view.RoleMappings) DiscordRoleMappings.Add(mapping);
-            DiscordBotState = $"Discord bot configuration loaded. Connection: {view.ConnectionState}.";
-        }
-        catch (Exception ex) { DiscordBotState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task SaveDiscordBotConfigAsync()
-    {
-        if (SelectedProfile is null) return;
-        // v0.7.95.0: catch a mistyped channel id here with a plain reason instead of sending it.
-        foreach (var (label, value) in new[] { ("Status channel", DiscordBotConfig.StatusChannelId), ("Events channel", DiscordBotConfig.EventsChannelId) })
-        {
-            if (!string.IsNullOrWhiteSpace(value) && !MystTiq.Core.Models.DiscordSnowflake.TryParse(value, out _))
-            {
-                DiscordBotState = $"{label} ID must be the 17-20 digit number Discord shows (enable Developer Mode, right-click the channel, Copy Channel ID), or leave it blank to turn that feature off.";
-                return;
-            }
-        }
 
-        IsBusy = true;
-        try
-        {
-            DiscordBotConfig.RoleMappings = [.. DiscordRoleMappings];
-            var view = await _api.SaveDiscordBotConfigAsync(SelectedProfile, DiscordBotConfig, BearerToken);
-            DiscordBotTokenConfigured = view.TokenConfigured;
-            DiscordBotConnectionState = view.ConnectionState;
-            DiscordBotConfig.BotToken = null;
-            DiscordBotState = "Discord bot configuration saved.";
-        }
-        catch (Exception ex) { DiscordBotState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private void AddDiscordRoleMapping()
-    {
-        if (string.IsNullOrWhiteSpace(NewRoleMappingDiscordRoleId)) return;
-        DiscordRoleMappings.Add(new DiscordRoleMappingDto { DiscordRoleId = NewRoleMappingDiscordRoleId.Trim(), Role = NewRoleMappingRole });
-        NewRoleMappingDiscordRoleId = string.Empty;
-    }
-
-    private void RemoveDiscordRoleMapping()
-    {
-        if (SelectedRoleMapping is null) return;
-        DiscordRoleMappings.Remove(SelectedRoleMapping);
-        SelectedRoleMapping = null;
-    }
 
     private async Task RefreshAntiCheatAsync()
     {
@@ -5239,7 +4801,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             var result = await _api.ApplyPlayerCopyAsync(profile, previewToken, true, BearerToken);
             Players.PlayerAdminStatusText = result.Message;
             await RefreshPlayersPageAsync();
-            await RefreshActivityAsync();
+            await Alerts.RefreshActivityAsync();
             return result.Success;
         }
         catch (Exception ex) { Players.PlayerAdminStatusText = ex.Message; return false; }

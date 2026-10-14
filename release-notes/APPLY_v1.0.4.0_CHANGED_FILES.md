@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.6: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.7: file reviewed for this release (2026-10-12). -->
 # v1.0.4.0 Changed Files
 
 - `src/MystTiq.HeadlessHost/InventoryEdits.cs` (new): reading a player's main inventory from the decoded world, and

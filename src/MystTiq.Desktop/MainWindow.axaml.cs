@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -903,10 +903,10 @@ public sealed partial class MainWindow : Window
     }
 
     private async void ExportActivity_Click(object? sender, RoutedEventArgs e) =>
-        await ExportTextAsync("MystTiq-Activity", "Export visible MystTiq activity", vm => vm.ExportVisibleActivity());
+        await ExportTextAsync("MystTiq-Activity", "Export visible MystTiq activity", vm => vm.Alerts.ExportVisibleActivity());
 
     private async void ExportNotifications_Click(object? sender, RoutedEventArgs e) =>
-        await ExportTextAsync("MystTiq-Notifications", "Export visible MystTiq notifications", vm => vm.ExportVisibleNotifications());
+        await ExportTextAsync("MystTiq-Notifications", "Export visible MystTiq notifications", vm => vm.Alerts.ExportVisibleNotifications());
 
     private async Task ExportTextAsync(string prefix, string title, Func<MainWindowViewModel, string> content)
     {

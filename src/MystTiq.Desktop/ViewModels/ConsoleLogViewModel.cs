@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.7: file reviewed for this release (2026-10-12).
 using System.Text.RegularExpressions;
 using System.Windows.Input;
 using MystTiq.Desktop.Models;

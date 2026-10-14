@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.6: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.7: file reviewed for this release (2026-10-12). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -366,9 +366,9 @@
               <Button Grid.Column="1" Classes="apply" Content="{services:Tr dashboard.updateLocalService}" Click="UpdateLocalService_OnClick"/>
             </Grid>
           </Border>
-          <Border x:Name="DeliveryWarningBanner" Classes="statuscard" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" Padding="10,7" IsVisible="{Binding DeliveryHealth.AnyFlagged}">
+          <Border x:Name="DeliveryWarningBanner" Classes="statuscard" BorderBrush="{DynamicResource AmberBrush}" BorderThickness="1" Padding="10,7" IsVisible="{Binding Alerts.DeliveryHealth.AnyFlagged}">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-              <TextBlock Text="{services:TrText DeliveryHealth.Summary}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"/>
+              <TextBlock Text="{services:TrText Alerts.DeliveryHealth.Summary}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"/>
               <Button Grid.Column="1" Classes="open" Content="{services:Tr dashboard.openAlertCenter}" Command="{Binding NavigateCommand}" CommandParameter="AlertCenter"/>
             </Grid>
           </Border>
@@ -2059,13 +2059,13 @@
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel>
                   <TextBlock Text="{services:Tr ui.mysttiq_activity_audit_log}" FontSize="18" FontWeight="SemiBold"/>
-                  <TextBlock Text="{services:TrText ActivityFileText}" Foreground="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="{services:TrText Alerts.ActivityFileText}" Foreground="{DynamicResource MutedBrush}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Classes="info" Content="{services:Tr ui.refresh_audit}" Command="{Binding RefreshActivityCommand}" ToolTip.Tip="{services:Tr ui.reload_persistent_mysttiq_management_and_api_act_03d42b}"/><Button Classes="info" Content="{services:Tr ui.export_visible}" Click="ExportActivity_Click"/><Button Classes="danger" Content="{services:Tr ui.clear_persistent_audit_policy_locked}" IsEnabled="False"/></StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Classes="info" Content="{services:Tr ui.refresh_audit}" Command="{Binding Alerts.RefreshActivityCommand}" ToolTip.Tip="{services:Tr ui.reload_persistent_mysttiq_management_and_api_act_03d42b}"/><Button Classes="info" Content="{services:Tr ui.export_visible}" Click="ExportActivity_Click"/><Button Classes="danger" Content="{services:Tr ui.clear_persistent_audit_policy_locked}" IsEnabled="False"/></StackPanel>
               </Grid>
-              <Grid Grid.Row="1" ColumnDefinitions="2*,*,*" ColumnSpacing="8"><TextBox Text="{Binding ActivitySearchText}" PlaceholderText="{services:Tr ui.search_activity}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_severity_filter}" Grid.Column="1" ItemsSource="{Binding ActivitySeverityOptions}" SelectedItem="{Binding ActivitySeverityFilter}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_category_filter}" Grid.Column="2" ItemsSource="{Binding ActivityCategoryOptions}" SelectedItem="{Binding ActivityCategoryFilter}"/></Grid>
-              <TextBlock Grid.Row="2" Text="{services:TrText ActivityDetail}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-              <ListBox Grid.Row="3" ItemsSource="{Binding ActivityLines}" MaxHeight="360" ToolTip.Tip="{services:Tr ui.persistent_management_events_written_by_the_head_d21c48}">
+              <Grid Grid.Row="1" ColumnDefinitions="2*,*,*" ColumnSpacing="8"><TextBox Text="{Binding Alerts.ActivitySearchText}" PlaceholderText="{services:Tr ui.search_activity}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_severity_filter}" Grid.Column="1" ItemsSource="{Binding Alerts.ActivitySeverityOptions}" SelectedItem="{Binding Alerts.ActivitySeverityFilter}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_category_filter}" Grid.Column="2" ItemsSource="{Binding Alerts.ActivityCategoryOptions}" SelectedItem="{Binding Alerts.ActivityCategoryFilter}"/></Grid>
+              <TextBlock Grid.Row="2" Text="{services:TrText Alerts.ActivityDetail}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+              <ListBox Grid.Row="3" ItemsSource="{Binding Alerts.ActivityLines}" MaxHeight="360" ToolTip.Tip="{services:Tr ui.persistent_management_events_written_by_the_head_d21c48}">
                 <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontFamily="Consolas, monospace" FontSize="11" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate>
               </ListBox>
             </Grid>
@@ -3301,11 +3301,11 @@
         <!-- NOTIFICATIONS -->
         <StackPanel IsVisible="{Binding IsNotificationsPage}" Spacing="12">
           <!-- v0.7.42.0: Refresh/Self-Test/Mark All Read/Export Visible moved to the ribbon. -->
-          <Border Classes="card accentSystem"><Grid ColumnDefinitions="*"><StackPanel><TextBlock Text="{services:TrText NotificationState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Grid></Border>
-          <Border Classes="card accentSystem"><StackPanel Spacing="10"><Grid ColumnDefinitions="2*,*" ColumnSpacing="8"><TextBox Text="{Binding NotificationSearchText}" PlaceholderText="{services:Tr ui.search_notifications}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_severity_filter}" Grid.Column="1" ItemsSource="{Binding NotificationSeverityOptions}" SelectedItem="{Binding NotificationSeverityFilter}"/></Grid>
+          <Border Classes="card accentSystem"><Grid ColumnDefinitions="*"><StackPanel><TextBlock Text="{services:TrText Alerts.NotificationState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Grid></Border>
+          <Border Classes="card accentSystem"><StackPanel Spacing="10"><Grid ColumnDefinitions="2*,*" ColumnSpacing="8"><TextBox Text="{Binding Alerts.NotificationSearchText}" PlaceholderText="{services:Tr ui.search_notifications}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_severity_filter}" Grid.Column="1" ItemsSource="{Binding Alerts.NotificationSeverityOptions}" SelectedItem="{Binding Alerts.NotificationSeverityFilter}"/></Grid>
             <Grid ColumnDefinitions="2*,*" ColumnSpacing="12">
-              <ListBox AutomationProperties.Name="{services:Tr nav.Notifications}" ItemsSource="{Binding FilteredNotifications}" SelectedItem="{Binding SelectedNotification}" MaxHeight="470"><ListBox.ItemTemplate><DataTemplate x:DataType="models:NotificationItemDto"><Border Classes="statuscard accentSystem" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{services:TrText Title}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Message}" TextWrapping="Wrap"/><TextBlock Text="{services:TrText Severity}" Foreground="{DynamicResource VioletBrush}"/><TextBlock Text="{services:TrText StateText}" Classes="muted" FontSize="10"/><Button Classes="open" HorizontalAlignment="Left" Content="{services:Tr ui.open_repair}" IsVisible="{Binding HasLink}" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).OpenNotificationLinkCommand}" CommandParameter="{Binding}"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
-              <Border Grid.Column="1" Classes="statuscard accentSystem"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.selected_notification}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:TrText SelectedNotification.Title}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText SelectedNotification.Message}" TextWrapping="Wrap"/><TextBlock Text="{services:TrText SelectedNotification.StateText}" Classes="muted"/><Button Classes="caution" Content="{services:Tr ui.toggle_read_unread}" Command="{Binding ToggleNotificationReadCommand}"/><Button Classes="caution" Content="{services:Tr ui.pin_unpin}" Command="{Binding ToggleNotificationPinCommand}"/><Button Classes="plain" Content="{services:Tr ui.dismiss}" Command="{Binding DismissNotificationCommand}"/></StackPanel></Border>
+              <ListBox AutomationProperties.Name="{services:Tr nav.Notifications}" ItemsSource="{Binding Alerts.FilteredNotifications}" SelectedItem="{Binding Alerts.SelectedNotification}" MaxHeight="470"><ListBox.ItemTemplate><DataTemplate x:DataType="models:NotificationItemDto"><Border Classes="statuscard accentSystem" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{services:TrText Title}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Message}" TextWrapping="Wrap"/><TextBlock Text="{services:TrText Severity}" Foreground="{DynamicResource VioletBrush}"/><TextBlock Text="{services:TrText StateText}" Classes="muted" FontSize="10"/><Button Classes="open" HorizontalAlignment="Left" Content="{services:Tr ui.open_repair}" IsVisible="{Binding HasLink}" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).OpenNotificationLinkCommand}" CommandParameter="{Binding}"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+              <Border Grid.Column="1" Classes="statuscard accentSystem"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.selected_notification}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Alerts.SelectedNotification.Title}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Alerts.SelectedNotification.Message}" TextWrapping="Wrap"/><TextBlock Text="{services:TrText Alerts.SelectedNotification.StateText}" Classes="muted"/><Button Classes="caution" Content="{services:Tr ui.toggle_read_unread}" Command="{Binding Alerts.ToggleNotificationReadCommand}"/><Button Classes="caution" Content="{services:Tr ui.pin_unpin}" Command="{Binding Alerts.ToggleNotificationPinCommand}"/><Button Classes="plain" Content="{services:Tr ui.dismiss}" Command="{Binding Alerts.DismissNotificationCommand}"/></StackPanel></Border>
             </Grid>
           </StackPanel></Border>
         </StackPanel>
@@ -3313,38 +3313,38 @@
         <!-- AUTOMATION -->
         <StackPanel IsVisible="{Binding IsAutomationPage}" Spacing="12">
           <!-- v0.7.102.0: shown only while there are no rules, since then nothing is scheduled, backups included. -->
-          <Border Classes="card accentSystem" IsVisible="{Binding HasNoAutomationRules}">
+          <Border Classes="card accentSystem" IsVisible="{Binding Alerts.HasNoAutomationRules}">
             <StackPanel Spacing="4">
               <TextBlock Text="{services:Tr ui.nothing_is_scheduled_yet}" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource AmberBrush}"/>
               <TextBlock Text="{services:Tr ui.there_are_no_automation_rules_so_no_backup_runs_162377}" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
           <!-- v0.7.42.0: Refresh moved to the ribbon. -->
-          <Border Classes="card accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.scheduled_automation}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText AutomationState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+          <Border Classes="card accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.scheduled_automation}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Alerts.AutomationState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
           <Grid ColumnDefinitions="2*,*" ColumnSpacing="12">
             <Border Classes="card accentSystem"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.rules}" FontSize="17" FontWeight="SemiBold"/>
-              <ListBox AutomationProperties.Name="{services:Tr ui.rules}" ItemsSource="{Binding AutomationRules}" SelectedItem="{Binding SelectedAutomationRule}" MaxHeight="420"><ListBox.ItemTemplate><DataTemplate x:DataType="models:AutomationRuleDto"><Border Classes="statuscard accentSystem" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText ScheduleText}" Classes="muted"/><TextBlock Text="{services:TrText Action.Kind}" Foreground="{DynamicResource VioletBrush}"/><TextBlock><Run Text="{services:Tr ui.enabled}"/><Run Text="{services:TrText Enabled}"/></TextBlock></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+              <ListBox AutomationProperties.Name="{services:Tr ui.rules}" ItemsSource="{Binding Alerts.AutomationRules}" SelectedItem="{Binding Alerts.SelectedAutomationRule}" MaxHeight="420"><ListBox.ItemTemplate><DataTemplate x:DataType="models:AutomationRuleDto"><Border Classes="statuscard accentSystem" Margin="0,3"><StackPanel Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText ScheduleText}" Classes="muted"/><TextBlock Text="{services:TrText Action.Kind}" Foreground="{DynamicResource VioletBrush}"/><TextBlock><Run Text="{services:Tr ui.enabled}"/><Run Text="{services:TrText Enabled}"/></TextBlock></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
             </StackPanel></Border>
-            <Border Grid.Column="1" Classes="statuscard accentSystem" IsEnabled="{Binding CanManageAdmin}"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.selected_rule}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedAutomationRule.Name}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText SelectedAutomationRule.ScheduleText}" Classes="muted" TextWrapping="Wrap"/><Button Classes="apply" Content="{services:Tr ui.run_now}" Command="{Binding RunAutomationRuleNowCommand}"/><Button Classes="caution" Content="{services:Tr ui.enable_disable}" Command="{Binding ToggleAutomationRuleEnabledCommand}"/><Button Classes="danger" Content="{services:Tr ui.delete}" Command="{Binding DeleteAutomationRuleCommand}"/></StackPanel></Border>
+            <Border Grid.Column="1" Classes="statuscard accentSystem" IsEnabled="{Binding CanManageAdmin}"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.selected_rule}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding Alerts.SelectedAutomationRule.Name}" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Alerts.SelectedAutomationRule.ScheduleText}" Classes="muted" TextWrapping="Wrap"/><Button Classes="apply" Content="{services:Tr ui.run_now}" Command="{Binding Alerts.RunAutomationRuleNowCommand}"/><Button Classes="caution" Content="{services:Tr ui.enable_disable}" Command="{Binding Alerts.ToggleAutomationRuleEnabledCommand}"/><Button Classes="danger" Content="{services:Tr ui.delete}" Command="{Binding Alerts.DeleteAutomationRuleCommand}"/></StackPanel></Border>
           </Grid>
           <Border Classes="card accentSystem" IsVisible="{Binding CanManageAdmin}" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="10">
               <TextBlock Text="{services:Tr ui.new_rule}" FontSize="17" FontWeight="SemiBold"/>
               <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
-                <TextBlock Text="{services:Tr ui.name}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Column="1" Text="{Binding NewAutomationRuleName}" PlaceholderText="{services:Tr ui.nightly_backup}"/>
-                <TextBlock Grid.Row="1" Text="{services:Tr ui.trigger}" VerticalAlignment="Center" Classes="muted"/><ComboBox AutomationProperties.Name="{services:Tr ui.trigger}" Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AutomationTriggerKinds}" SelectedItem="{Binding NewAutomationTriggerKind}"/>
+                <TextBlock Text="{services:Tr ui.name}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Column="1" Text="{Binding Alerts.NewAutomationRuleName}" PlaceholderText="{services:Tr ui.nightly_backup}"/>
+                <TextBlock Grid.Row="1" Text="{services:Tr ui.trigger}" VerticalAlignment="Center" Classes="muted"/><ComboBox AutomationProperties.Name="{services:Tr ui.trigger}" Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Alerts.AutomationTriggerKinds}" SelectedItem="{Binding Alerts.NewAutomationTriggerKind}"/>
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.time_utc_hh_mm_interval_min_idle_threshold_min}" VerticalAlignment="Center" Classes="muted"/>
-                <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,*,*" ColumnSpacing="10"><TextBox Text="{Binding NewAutomationTimeOfDayUtc}" PlaceholderText="03:00"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.time_utc_hh_mm_interval_min_idle_threshold_min}" Grid.Column="1" Value="{Binding NewAutomationIntervalMinutes}" Minimum="1"/><NumericUpDown Grid.Column="2" Value="{Binding NewAutomationIdleThresholdMinutes}" Minimum="1" ToolTip.Tip="{services:Tr ui.used_only_when_trigger_is_idleempty_stop_after_t_8c30de}"/></Grid>
-                <TextBlock Grid.Row="3" Text="{services:Tr ui.action}" VerticalAlignment="Center" Classes="muted"/><ComboBox AutomationProperties.Name="{services:Tr ui.action}" Grid.Row="3" Grid.Column="1" ItemsSource="{Binding AutomationActionKinds}" SelectedItem="{Binding NewAutomationActionKind}"/>
+                <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,*,*" ColumnSpacing="10"><TextBox Text="{Binding Alerts.NewAutomationTimeOfDayUtc}" PlaceholderText="03:00"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.time_utc_hh_mm_interval_min_idle_threshold_min}" Grid.Column="1" Value="{Binding Alerts.NewAutomationIntervalMinutes}" Minimum="1"/><NumericUpDown Grid.Column="2" Value="{Binding Alerts.NewAutomationIdleThresholdMinutes}" Minimum="1" ToolTip.Tip="{services:Tr ui.used_only_when_trigger_is_idleempty_stop_after_t_8c30de}"/></Grid>
+                <TextBlock Grid.Row="3" Text="{services:Tr ui.action}" VerticalAlignment="Center" Classes="muted"/><ComboBox AutomationProperties.Name="{services:Tr ui.action}" Grid.Row="3" Grid.Column="1" ItemsSource="{Binding Alerts.AutomationActionKinds}" SelectedItem="{Binding Alerts.NewAutomationActionKind}"/>
                 <TextBlock Grid.Row="4" Text="{services:Tr ui.notification_title_message}" VerticalAlignment="Center" Classes="muted"/>
-                <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="*,*" ColumnSpacing="10"><TextBox Text="{Binding NewAutomationNotificationTitle}" PlaceholderText="{services:Tr ui.title}"/><TextBox Grid.Column="1" Text="{Binding NewAutomationNotificationMessage}" PlaceholderText="{services:Tr ui.message}"/></Grid>
-                <TextBlock Grid.Row="5" Text="{services:Tr ui.rcon_command}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="5" Grid.Column="1" Text="{Binding NewAutomationRconCommand}" PlaceholderText="{services:Tr ui.broadcast_hello}"/>
+                <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="*,*" ColumnSpacing="10"><TextBox Text="{Binding Alerts.NewAutomationNotificationTitle}" PlaceholderText="{services:Tr ui.title}"/><TextBox Grid.Column="1" Text="{Binding Alerts.NewAutomationNotificationMessage}" PlaceholderText="{services:Tr ui.message}"/></Grid>
+                <TextBlock Grid.Row="5" Text="{services:Tr ui.rcon_command}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Alerts.NewAutomationRconCommand}" PlaceholderText="{services:Tr ui.broadcast_hello}"/>
               </Grid>
-              <Button Classes="apply" Content="{services:Tr ui.create_rule}" HorizontalAlignment="Left" Command="{Binding CreateAutomationRuleCommand}"/>
+              <Button Classes="apply" Content="{services:Tr ui.create_rule}" HorizontalAlignment="Left" Command="{Binding Alerts.CreateAutomationRuleCommand}"/>
             </StackPanel>
           </Border>
           <Border Classes="card accentSystem"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.recent_runs}" FontSize="17" FontWeight="SemiBold"/>
-            <ItemsControl ItemsSource="{Binding AutomationRuns}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:AutomationRunRecordDto"><Border Classes="statuscard accentSystem" Margin="0,3"><Grid ColumnDefinitions="150,100,*" ColumnSpacing="10"><TextBlock Text="{Binding RuleName}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{services:TrText State}"/><TextBlock Grid.Column="2" Text="{services:TrText Detail}" Classes="muted" TextWrapping="Wrap"/></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+            <ItemsControl ItemsSource="{Binding Alerts.AutomationRuns}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:AutomationRunRecordDto"><Border Classes="statuscard accentSystem" Margin="0,3"><Grid ColumnDefinitions="150,100,*" ColumnSpacing="10"><TextBlock Text="{Binding RuleName}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{services:TrText State}"/><TextBlock Grid.Column="2" Text="{services:TrText Detail}" Classes="muted" TextWrapping="Wrap"/></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
           </StackPanel></Border>
         </StackPanel>
 
@@ -3352,31 +3352,31 @@
         <StackPanel IsVisible="{Binding IsAlertCenterPage}" Spacing="12">
           <!-- v0.7.42.0: Refresh moved to the ribbon (Discord Bot/Anti-Cheat's own per-section
                refresh buttons below stay in-page, tied to their own collapsible sections). -->
-          <Border Classes="card accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.alert_center}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText AlertCenterState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
-          <Border Classes="statuscard accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.disk_space_prediction}" Classes="muted"/><TextBlock Text="{services:TrText DiskSpacePrediction.FreeGb}" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource BlueBrush}"/><TextBlock Text="{services:TrText DiskSpacePrediction.Detail}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+          <Border Classes="card accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.alert_center}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Alerts.AlertCenterState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+          <Border Classes="statuscard accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.disk_space_prediction}" Classes="muted"/><TextBlock Text="{services:TrText Alerts.DiskSpacePrediction.FreeGb}" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource BlueBrush}"/><TextBlock Text="{services:TrText Alerts.DiskSpacePrediction.Detail}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
           <Border Classes="card accentSystem" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="10">
               <TextBlock Text="{services:Tr ui.threshold_rules}" FontSize="17" FontWeight="SemiBold"/>
               <Grid ColumnDefinitions="220,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
-                <TextBlock Text="{services:Tr ui.sustained_high_cpu}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.sustained_high_cpu}" Grid.Column="1" IsChecked="{Binding AlertRules.HighCpuSustained.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.sustained_high_cpu}" Grid.Column="2" Value="{Binding AlertRules.HighCpuSustained.ThresholdPercent}" Minimum="1" Maximum="100"/>
-                <TextBlock Grid.Row="1" Text="{services:Tr ui.sustained_high_memory_mb}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.sustained_high_memory_mb}" Grid.Row="1" Grid.Column="1" IsChecked="{Binding AlertRules.HighMemorySustained.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.sustained_high_memory_mb}" Grid.Row="1" Grid.Column="2" Value="{Binding AlertRules.HighMemorySustained.ThresholdMb}" Minimum="1"/>
-                <TextBlock Grid.Row="2" Text="{services:Tr ui.low_disk_space}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.low_disk_space}" Grid.Row="2" Grid.Column="1" IsChecked="{Binding AlertRules.LowDiskSpace.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.low_disk_space}" Grid.Row="2" Grid.Column="2" Value="{Binding AlertRules.LowDiskSpace.ThresholdPercent}" Minimum="1" Maximum="100"/>
-                <TextBlock Grid.Row="3" Text="{services:Tr ui.disk_exhaustion_predicted_within_days}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.disk_exhaustion_predicted_within_days}" Grid.Row="3" Grid.Column="1" IsChecked="{Binding AlertRules.DiskSpaceExhaustionPredicted.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.disk_exhaustion_predicted_within_days}" Grid.Row="3" Grid.Column="2" Value="{Binding AlertRules.DiskSpaceExhaustionPredicted.ThresholdDays}" Minimum="1"/>
-                <TextBlock Grid.Row="4" Text="{services:Tr ui.mod_ue4ss_health_needs_attention}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.mod_ue4ss_health_needs_attention}" Grid.Row="4" Grid.Column="1" IsChecked="{Binding AlertRules.ModHealthDegraded.Enabled}"/><TextBlock Grid.Row="4" Grid.Column="2" Text="{services:Tr ui.fires_when_an_enabled_mod_reports_failed_missing_d454e6}" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+                <TextBlock Text="{services:Tr ui.sustained_high_cpu}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.sustained_high_cpu}" Grid.Column="1" IsChecked="{Binding Alerts.AlertRules.HighCpuSustained.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.sustained_high_cpu}" Grid.Column="2" Value="{Binding Alerts.AlertRules.HighCpuSustained.ThresholdPercent}" Minimum="1" Maximum="100"/>
+                <TextBlock Grid.Row="1" Text="{services:Tr ui.sustained_high_memory_mb}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.sustained_high_memory_mb}" Grid.Row="1" Grid.Column="1" IsChecked="{Binding Alerts.AlertRules.HighMemorySustained.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.sustained_high_memory_mb}" Grid.Row="1" Grid.Column="2" Value="{Binding Alerts.AlertRules.HighMemorySustained.ThresholdMb}" Minimum="1"/>
+                <TextBlock Grid.Row="2" Text="{services:Tr ui.low_disk_space}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.low_disk_space}" Grid.Row="2" Grid.Column="1" IsChecked="{Binding Alerts.AlertRules.LowDiskSpace.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.low_disk_space}" Grid.Row="2" Grid.Column="2" Value="{Binding Alerts.AlertRules.LowDiskSpace.ThresholdPercent}" Minimum="1" Maximum="100"/>
+                <TextBlock Grid.Row="3" Text="{services:Tr ui.disk_exhaustion_predicted_within_days}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.disk_exhaustion_predicted_within_days}" Grid.Row="3" Grid.Column="1" IsChecked="{Binding Alerts.AlertRules.DiskSpaceExhaustionPredicted.Enabled}"/><NumericUpDown AutomationProperties.Name="{services:Tr ui.disk_exhaustion_predicted_within_days}" Grid.Row="3" Grid.Column="2" Value="{Binding Alerts.AlertRules.DiskSpaceExhaustionPredicted.ThresholdDays}" Minimum="1"/>
+                <TextBlock Grid.Row="4" Text="{services:Tr ui.mod_ue4ss_health_needs_attention}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.mod_ue4ss_health_needs_attention}" Grid.Row="4" Grid.Column="1" IsChecked="{Binding Alerts.AlertRules.ModHealthDegraded.Enabled}"/><TextBlock Grid.Row="4" Grid.Column="2" Text="{services:Tr ui.fires_when_an_enabled_mod_reports_failed_missing_d454e6}" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
                 <!-- v0.9.8.0: the game server behind Steam's public build, or PalDefender not updated for the game. -->
-                <TextBlock Grid.Row="5" Text="{services:Tr ui.component_out_of_date}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.component_out_of_date}" Grid.Row="5" Grid.Column="1" IsChecked="{Binding AlertRules.ComponentOutdated.Enabled}"/><TextBlock Grid.Row="5" Grid.Column="2" Text="{services:Tr ui.component_out_of_date_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <TextBlock Grid.Row="5" Text="{services:Tr ui.component_out_of_date}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.component_out_of_date}" Grid.Row="5" Grid.Column="1" IsChecked="{Binding Alerts.AlertRules.ComponentOutdated.Enabled}"/><TextBlock Grid.Row="5" Grid.Column="2" Text="{services:Tr ui.component_out_of_date_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
                 <!-- v0.7.108.0: was an env-var-only live-testing knob (MYSTTIQ_ALERT_REMINDER_MINUTES) in
                      v0.7.107.0; now a real setting here too, applying to every rule above. 0 turns the
                      "Still active: ..." follow-up off entirely. -->
                 <TextBlock Grid.Row="6" Text="{services:Tr ui.reminder_every_minutes_0_off}" VerticalAlignment="Center" Classes="muted" ToolTip.Tip="{services:Tr ui.how_often_a_still_active_condition_sends_a_still_24ec91}"/>
-                <NumericUpDown AutomationProperties.Name="{services:Tr ui.reminder_every_minutes_0_off}" Grid.Row="6" Grid.Column="2" Value="{Binding AlertRules.ReminderMinutes}" Minimum="0" Maximum="10080" FormatString="0"/>
+                <NumericUpDown AutomationProperties.Name="{services:Tr ui.reminder_every_minutes_0_off}" Grid.Row="6" Grid.Column="2" Value="{Binding Alerts.AlertRules.ReminderMinutes}" Minimum="0" Maximum="10080" FormatString="0"/>
               </Grid>
               <!-- v0.7.111.0: crash-recovery alerts had no settings at all. Stored in this profile's own
                    rules, so each server tab has its own, and saved with Save Rules like everything above. -->
               <TextBlock Text="{services:Tr ui.crash_alerts}" FontSize="15" FontWeight="SemiBold" Margin="0,6,0,0"/>
-              <CheckBox Content="{services:Tr ui.send_crash_recovery_alerts_crashed_restart_faile_12e88a}" IsChecked="{Binding AlertRules.CrashAlerts.Enabled}"/>
-              <CheckBox Content="{services:Tr ui.also_send_server_is_back_up_notices}" IsChecked="{Binding AlertRules.CrashAlerts.RecoveryNotices}" IsEnabled="{Binding AlertRules.CrashAlerts.Enabled}"/>
-              <Button Classes="apply" Content="{services:Tr ui.save_rules}" HorizontalAlignment="Left" Command="{Binding SaveAlertRulesCommand}"/>
+              <CheckBox Content="{services:Tr ui.send_crash_recovery_alerts_crashed_restart_faile_12e88a}" IsChecked="{Binding Alerts.AlertRules.CrashAlerts.Enabled}"/>
+              <CheckBox Content="{services:Tr ui.also_send_server_is_back_up_notices}" IsChecked="{Binding Alerts.AlertRules.CrashAlerts.RecoveryNotices}" IsEnabled="{Binding Alerts.AlertRules.CrashAlerts.Enabled}"/>
+              <Button Classes="apply" Content="{services:Tr ui.save_rules}" HorizontalAlignment="Left" Command="{Binding Alerts.SaveAlertRulesCommand}"/>
             </StackPanel>
           </Border>
           <!-- v0.7.111.0: a timed mute for every alert on this server, for maintenance. Applies at once,
@@ -3384,31 +3384,31 @@
           <Border Classes="card accentSystem" IsVisible="{Binding CanManageAdmin}" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.mute_alerts}" FontSize="17" FontWeight="SemiBold"/>
-              <TextBlock Text="{services:TrText AlertRules.MuteStatusText}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Alerts.AlertRules.MuteStatusText}" Classes="muted" TextWrapping="Wrap"/>
               <WrapPanel>
-                <Button Classes="caution" Content="{services:Tr ui.mute_1_hour}" Command="{Binding MuteAlertsCommand}" CommandParameter="60" Margin="0,0,8,8"/>
-                <Button Classes="caution" Content="{services:Tr ui.mute_8_hours}" Command="{Binding MuteAlertsCommand}" CommandParameter="480" Margin="0,0,8,8"/>
-                <Button Classes="caution" Content="{services:Tr ui.mute_24_hours}" Command="{Binding MuteAlertsCommand}" CommandParameter="1440" Margin="0,0,8,8"/>
-                <Button Classes="caution" Content="{services:Tr ui.mute_7_days}" Command="{Binding MuteAlertsCommand}" CommandParameter="10080" Margin="0,0,8,8"/>
-                <Button Classes="apply" Content="{services:Tr ui.unmute}" Command="{Binding MuteAlertsCommand}" CommandParameter="0" IsVisible="{Binding AlertRules.IsMuted}" Margin="0,0,8,8"/>
+                <Button Classes="caution" Content="{services:Tr ui.mute_1_hour}" Command="{Binding Alerts.MuteAlertsCommand}" CommandParameter="60" Margin="0,0,8,8"/>
+                <Button Classes="caution" Content="{services:Tr ui.mute_8_hours}" Command="{Binding Alerts.MuteAlertsCommand}" CommandParameter="480" Margin="0,0,8,8"/>
+                <Button Classes="caution" Content="{services:Tr ui.mute_24_hours}" Command="{Binding Alerts.MuteAlertsCommand}" CommandParameter="1440" Margin="0,0,8,8"/>
+                <Button Classes="caution" Content="{services:Tr ui.mute_7_days}" Command="{Binding Alerts.MuteAlertsCommand}" CommandParameter="10080" Margin="0,0,8,8"/>
+                <Button Classes="apply" Content="{services:Tr ui.unmute}" Command="{Binding Alerts.MuteAlertsCommand}" CommandParameter="0" IsVisible="{Binding Alerts.AlertRules.IsMuted}" Margin="0,0,8,8"/>
               </WrapPanel>
               <TextBlock Text="{services:Tr ui.muted_alerts_are_not_queued_crash_alerts_skipped_cb5362}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
-          <!-- v0.8.4.0: the lighter option: keep every notification on the Notifications page, stop sending them to
+          <!-- v0.8.4.0: the lighter option: keep every notification on the Alerts.Notifications page, stop sending them to
                Discord, email and webhooks for a while. Applies at once; the end time is set by the host's clock. -->
           <Border x:Name="PauseDeliveryCard" Classes="card accentSystem" IsVisible="{Binding CanManageAdmin}" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.pause_discord_email_and_webhooks}" FontSize="17" FontWeight="SemiBold"/>
-              <TextBlock Text="{services:TrText NotificationDelivery.StatusText}" Classes="muted" TextWrapping="Wrap"/>
-              <TextBlock x:Name="SendQueueText" Text="{services:TrText NotificationDelivery.QueueText}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding NotificationDelivery.HasQueue}"/>
+              <TextBlock Text="{services:TrText Alerts.NotificationDelivery.StatusText}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock x:Name="SendQueueText" Text="{services:TrText Alerts.NotificationDelivery.QueueText}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding Alerts.NotificationDelivery.HasQueue}"/>
               <WrapPanel>
-                <Button Classes="caution" Content="{services:Tr ui.pause_1_hour}" Command="{Binding PauseDeliveryCommand}" CommandParameter="60" Margin="0,0,8,8"/>
-                <Button Classes="caution" Content="{services:Tr ui.pause_8_hours}" Command="{Binding PauseDeliveryCommand}" CommandParameter="480" Margin="0,0,8,8"/>
-                <Button Classes="caution" Content="{services:Tr ui.pause_24_hours}" Command="{Binding PauseDeliveryCommand}" CommandParameter="1440" Margin="0,0,8,8"/>
-                <Button Classes="caution" Content="{services:Tr ui.pause_7_days}" Command="{Binding PauseDeliveryCommand}" CommandParameter="10080" Margin="0,0,8,8"/>
-                <Button Classes="apply" Content="{services:Tr ui.resume}" Command="{Binding PauseDeliveryCommand}" CommandParameter="0" IsVisible="{Binding NotificationDelivery.IsPaused}" Margin="0,0,8,8"/>
-                <Button Classes="apply" Content="{services:Tr ui.send_test_notification}" Command="{Binding SendTestNotificationCommand}" Margin="0,0,8,8"
+                <Button Classes="caution" Content="{services:Tr ui.pause_1_hour}" Command="{Binding Alerts.PauseDeliveryCommand}" CommandParameter="60" Margin="0,0,8,8"/>
+                <Button Classes="caution" Content="{services:Tr ui.pause_8_hours}" Command="{Binding Alerts.PauseDeliveryCommand}" CommandParameter="480" Margin="0,0,8,8"/>
+                <Button Classes="caution" Content="{services:Tr ui.pause_24_hours}" Command="{Binding Alerts.PauseDeliveryCommand}" CommandParameter="1440" Margin="0,0,8,8"/>
+                <Button Classes="caution" Content="{services:Tr ui.pause_7_days}" Command="{Binding Alerts.PauseDeliveryCommand}" CommandParameter="10080" Margin="0,0,8,8"/>
+                <Button Classes="apply" Content="{services:Tr ui.resume}" Command="{Binding Alerts.PauseDeliveryCommand}" CommandParameter="0" IsVisible="{Binding Alerts.NotificationDelivery.IsPaused}" Margin="0,0,8,8"/>
+                <Button Classes="apply" Content="{services:Tr ui.send_test_notification}" Command="{Binding Alerts.SendTestNotificationCommand}" Margin="0,0,8,8"
                         ToolTip.Tip="{services:Tr ui.creates_a_test_notification_through_the_normal_p_b060d4}"/>
               </WrapPanel>
               <TextBlock Text="{services:Tr ui.unlike_mute_alerts_nothing_is_silenced_in_mystti_3218bd}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
@@ -3419,8 +3419,8 @@
           <Border x:Name="DeliveryHealthCard" Classes="card accentSystem">
             <StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.delivery}" FontSize="17" FontWeight="SemiBold"/>
-              <TextBlock Text="{services:TrText DeliveryHealth.Summary}" TextWrapping="Wrap"/>
-              <ItemsControl ItemsSource="{Binding DeliveryHealth.Channels}">
+              <TextBlock Text="{services:TrText Alerts.DeliveryHealth.Summary}" TextWrapping="Wrap"/>
+              <ItemsControl ItemsSource="{Binding Alerts.DeliveryHealth.Channels}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:NotificationChannelHealthDto">
                     <Grid ColumnDefinitions="110,110,*" ColumnSpacing="10" Margin="0,2">
@@ -3431,8 +3431,8 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Text="{services:Tr ui.recent_sends}" FontWeight="SemiBold" IsVisible="{Binding DeliveryHealth.HasRecent}"/>
-              <ItemsControl ItemsSource="{Binding DeliveryHealth.Recent}">
+              <TextBlock Text="{services:Tr ui.recent_sends}" FontWeight="SemiBold" IsVisible="{Binding Alerts.DeliveryHealth.HasRecent}"/>
+              <ItemsControl ItemsSource="{Binding Alerts.DeliveryHealth.Recent}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:NotificationDeliveryRecordDto">
                     <Grid ColumnDefinitions="140,90,90,*" ColumnSpacing="10" Margin="0,1">
@@ -3451,34 +3451,34 @@
           <Border Classes="card accentSystem" IsVisible="{Binding CanManageAdmin}" IsEnabled="{Binding CanManageAdmin}">
             <StackPanel Spacing="10">
               <Grid ColumnDefinitions="*,Auto">
-                <Button Classes="sectionToggle" Command="{Binding ToggleDiscordBotCommand}" VerticalAlignment="Top">
-                  <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="▸" IsVisible="{Binding !IsDiscordBotExpanded}" FontWeight="Bold"/><TextBlock Text="▾" IsVisible="{Binding IsDiscordBotExpanded}" FontWeight="Bold"/><TextBlock Text="{services:Tr ui.discord_bot}" FontSize="17" FontWeight="SemiBold"/></StackPanel>
+                <Button Classes="sectionToggle" Command="{Binding Alerts.ToggleDiscordBotCommand}" VerticalAlignment="Top">
+                  <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="▸" IsVisible="{Binding !Alerts.IsDiscordBotExpanded}" FontWeight="Bold"/><TextBlock Text="▾" IsVisible="{Binding Alerts.IsDiscordBotExpanded}" FontWeight="Bold"/><TextBlock Text="{services:Tr ui.discord_bot}" FontSize="17" FontWeight="SemiBold"/></StackPanel>
                 </Button>
-                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding RefreshDiscordBotConfigCommand}" VerticalAlignment="Top" IsVisible="{Binding IsDiscordBotExpanded}"/>
+                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding Alerts.RefreshDiscordBotConfigCommand}" VerticalAlignment="Top" IsVisible="{Binding Alerts.IsDiscordBotExpanded}"/>
               </Grid>
-              <StackPanel Spacing="10" IsVisible="{Binding IsDiscordBotExpanded}">
-              <TextBlock Text="{services:TrText DiscordBotState}" Classes="muted" TextWrapping="Wrap"/>
+              <StackPanel Spacing="10" IsVisible="{Binding Alerts.IsDiscordBotExpanded}">
+              <TextBlock Text="{services:TrText Alerts.DiscordBotState}" Classes="muted" TextWrapping="Wrap"/>
               <TextBlock Text="{services:Tr ui.guild_scoped_slash_commands_mysttiq_status_playe_0306a0}" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
               <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
-                <TextBlock Text="{services:Tr ui.enabled_92c1cd}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.enabled_92c1cd}" Grid.Column="1" IsChecked="{Binding DiscordBotConfig.Enabled}"/>
+                <TextBlock Text="{services:Tr ui.enabled_92c1cd}" VerticalAlignment="Center" Classes="muted"/><CheckBox AutomationProperties.Name="{services:Tr ui.enabled_92c1cd}" Grid.Column="1" IsChecked="{Binding Alerts.DiscordBotConfig.Enabled}"/>
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.bot_token}" VerticalAlignment="Center" Classes="muted"/>
-                <TextBox Grid.Row="1" Grid.Column="1" Width="320" HorizontalAlignment="Left" Text="{Binding DiscordBotConfig.BotToken}" PasswordChar="•" PlaceholderText="{Binding DiscordBotTokenWatermark}"/>
-                <TextBlock Grid.Row="2" Text="{services:Tr ui.guild_server_id}" VerticalAlignment="Center" Classes="muted"/><TextBox AutomationProperties.Name="{services:Tr ui.guild_server_id}" Grid.Row="2" Grid.Column="1" Text="{Binding DiscordBotConfig.GuildId}"/>
-                <TextBlock Grid.Row="3" Text="{services:Tr ui.owner_discord_user_id_optional}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="3" Grid.Column="1" Text="{Binding DiscordBotConfig.OwnerDiscordUserId}" PlaceholderText="{services:Tr ui.always_granted_the_owner_role_bypassing_role_map_48220c}"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Width="320" HorizontalAlignment="Left" Text="{Binding Alerts.DiscordBotConfig.BotToken}" PasswordChar="•" PlaceholderText="{Binding Alerts.DiscordBotTokenWatermark}"/>
+                <TextBlock Grid.Row="2" Text="{services:Tr ui.guild_server_id}" VerticalAlignment="Center" Classes="muted"/><TextBox AutomationProperties.Name="{services:Tr ui.guild_server_id}" Grid.Row="2" Grid.Column="1" Text="{Binding Alerts.DiscordBotConfig.GuildId}"/>
+                <TextBlock Grid.Row="3" Text="{services:Tr ui.owner_discord_user_id_optional}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Alerts.DiscordBotConfig.OwnerDiscordUserId}" PlaceholderText="{services:Tr ui.always_granted_the_owner_role_bypassing_role_map_48220c}"/>
                 <!-- v0.7.95.0: live features. The bot keeps ONE status message up to date in this channel and
                      posts join, leave and server start or stop lines to the events channel. Needs the bot to
                      have View Channel, Send Messages and Embed Links there. Blank turns each off. -->
-                <TextBlock Grid.Row="4" Text="{services:Tr ui.live_status_channel_id}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="4" Grid.Column="1" Text="{Binding DiscordBotConfig.StatusChannelId}" PlaceholderText="{services:Tr ui.optional_one_self_updating_status_message_is_kep_aadc8d}"/>
-                <TextBlock Grid.Row="5" Text="{services:Tr ui.events_channel_id}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="5" Grid.Column="1" Text="{Binding DiscordBotConfig.EventsChannelId}" PlaceholderText="{services:Tr ui.optional_players_joining_or_leaving_server_start_ed21b8}"/>
-                <TextBlock Grid.Row="6" Text="{services:Tr ui.show_status_in_bot_presence}" VerticalAlignment="Center" Classes="muted"/><CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding DiscordBotConfig.ShowPresence}" Content="{services:Tr ui.bot_shows_watching_n_players_online}"/>
+                <TextBlock Grid.Row="4" Text="{services:Tr ui.live_status_channel_id}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Alerts.DiscordBotConfig.StatusChannelId}" PlaceholderText="{services:Tr ui.optional_one_self_updating_status_message_is_kep_aadc8d}"/>
+                <TextBlock Grid.Row="5" Text="{services:Tr ui.events_channel_id}" VerticalAlignment="Center" Classes="muted"/><TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Alerts.DiscordBotConfig.EventsChannelId}" PlaceholderText="{services:Tr ui.optional_players_joining_or_leaving_server_start_ed21b8}"/>
+                <TextBlock Grid.Row="6" Text="{services:Tr ui.show_status_in_bot_presence}" VerticalAlignment="Center" Classes="muted"/><CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding Alerts.DiscordBotConfig.ShowPresence}" Content="{services:Tr ui.bot_shows_watching_n_players_online}"/>
               </Grid>
               <TextBlock Text="{services:Tr ui.role_mapping_discord_role_id_mysttiq_role}" FontWeight="SemiBold"/>
               <Grid ColumnDefinitions="*,140,Auto" ColumnSpacing="10">
-                <TextBox Text="{Binding NewRoleMappingDiscordRoleId}" PlaceholderText="{services:Tr ui.discord_role_id}"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="1" ItemsSource="{Binding MystTiqRoles}" SelectedItem="{Binding NewRoleMappingRole}"/>
-                <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.add}" Command="{Binding AddDiscordRoleMappingCommand}"/>
+                <TextBox Text="{Binding Alerts.NewRoleMappingDiscordRoleId}" PlaceholderText="{services:Tr ui.discord_role_id}"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="1" ItemsSource="{Binding MystTiqRoles}" SelectedItem="{Binding Alerts.NewRoleMappingRole}"/>
+                <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.add}" Command="{Binding Alerts.AddDiscordRoleMappingCommand}"/>
               </Grid>
-              <ListBox AutomationProperties.Name="{services:Tr ui.role_mapping_discord_role_id_mysttiq_role}" ItemsSource="{Binding DiscordRoleMappings}" SelectedItem="{Binding SelectedRoleMapping}" MaxHeight="180">
+              <ListBox AutomationProperties.Name="{services:Tr ui.role_mapping_discord_role_id_mysttiq_role}" ItemsSource="{Binding Alerts.DiscordRoleMappings}" SelectedItem="{Binding Alerts.SelectedRoleMapping}" MaxHeight="180">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="models:DiscordRoleMappingDto">
                     <Grid ColumnDefinitions="*,140"><TextBlock Text="{Binding DiscordRoleId}"/><TextBlock Grid.Column="1" Text="{services:TrText Role}"/></Grid>
@@ -3486,8 +3486,8 @@
                 </ListBox.ItemTemplate>
               </ListBox>
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="danger" Content="{services:Tr ui.remove_selected_mapping}" Command="{Binding RemoveDiscordRoleMappingCommand}"/>
-                <Button Classes="apply" Content="{services:Tr ui.save_discord_bot_config}" Command="{Binding SaveDiscordBotConfigCommand}"/>
+                <Button Classes="danger" Content="{services:Tr ui.remove_selected_mapping}" Command="{Binding Alerts.RemoveDiscordRoleMappingCommand}"/>
+                <Button Classes="apply" Content="{services:Tr ui.save_discord_bot_config}" Command="{Binding Alerts.SaveDiscordBotConfigCommand}"/>
               </StackPanel>
               </StackPanel>
             </StackPanel>

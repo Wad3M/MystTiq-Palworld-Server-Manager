@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.6: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.7: file reviewed for this release (2026-10-12). -->
 # v1.0.7.2 Changed Files
 
 - `src/MystTiq.Core/Services/StartupProgress.cs` (new), `Models/ServerLifecycleModels.cs` (the start's step on the status),

@@ -1,4 +1,13 @@
-<!-- MystTiq v1.0.8.6: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.7: file reviewed for this release (2026-10-12). -->
+## v1.0.8.7 — Notifications, Alerts, Automation and Activity, Tidied
+
+- Roadmap C-7: the Notifications, Alert Center, Automation and Activity pages, outside delivery and the Discord bot moved
+  into `AlertsViewModel` (the Delivery partial file removed). A notification's repair link stays with the window. The
+  `MainWindowViewModel` files total 375,111 bytes (were 404,700). Nothing the owner sees changes.
+- Fixed while moving: the mover rewrote a name inside a string (the "Notifications" Ribbon group title); it now leaves
+  string literals alone, and an audit found no other case.
+- Version advanced to 1.0.8.7.
+
 ## v1.0.8.6 — The MOD Pages, Tidied
 
 - Roadmap C-6: the MOD pages (dashboard and library, UE4SS and its releases, Safe Start, the Workshop scan, Nexus Mods
