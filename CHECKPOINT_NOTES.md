@@ -1,38 +1,38 @@
-<!-- MystTiq v1.0.9.2: file reviewed for this release (2026-10-12). -->
-# MystTiq v1.0.9.2 Checkpoint: MOD Load Order and Profiles
+<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
+# MystTiq v1.0.9.3 Checkpoint: Level-Gap Scans
 
 ## What changed
 
-The MOD Library has a new **Load Order and MOD Profiles** card.
+**A new anti-cheat rule: level gain against playtime.** If a player gains far more levels than their time on your
+server allows (for example, level 10 to 45 in nine minutes), MystTiq tells you, with the numbers.
 
-- **UE4SS load order.** Your UE4SS MODs, in the order they load (top to bottom). Use the arrows to move one, then **Save
-  Load Order**. It takes effect at the next server start, and MystTiq keeps the previous order file as a backup.
-- **PAK MODs** are listed with a short explanation of why they have no order to set. When two PAKs change the same thing
-  in the game, the game decides, and renaming files does not help.
-- **MOD profiles.** **Export Profile…** saves a small file listing every MOD: whether it is on, the UE4SS order, the
-  version, where it came from, and a check of its files. It never contains the MOD files themselves. **Import
-  Profile…** first shows what would change. **Apply Profile** then switches MODs and sets the order for the MODs this
-  server has, and lists any it is missing with where to get them.
+- **It only reports.** It never kicks or bans; you check the player and decide.
+- **It is generous on purpose.** An honest player levelling fast stays well inside it, and it takes your server's
+  experience rate into account.
+- **It compares from when MystTiq first saw a player.** A veteran who was already high-level is not flagged.
+- **It is on by default.** Switch it off on the Anti-Cheat card (Diagnostics Center) with the other rules.
 
-The server must be stopped to change the order or import a profile. The new text is in all 12 languages.
+**Checked against your real world.** I decoded copies of your 17 daily backups (July 31 to October 8). The biggest real
+gain, 6 levels in 17 hours, used 12% of what the rule allows. Nobody in your world is above level 15 yet, so I'll
+confirm the higher levels once the rule has watched your server for a while.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.0.9.2-Logic.ps1 -RunBuild -RunLong`: 402 / 402 passed, 1 skipped (the v1.0.2.0
-  system-unit test: no passwordless sudo on the VM). Every earlier check is carried, the frozen v1.0.9.1 gate passes,
+- **Full gate** `scripts\Test-v1.0.9.3-Logic.ps1 -RunBuild -RunLong`: 404 / 404 passed, 1 skipped (the v1.0.2.0
+  system-unit test: no passwordless sudo on the VM). Every earlier check is carried, the frozen v1.0.9.2 gate passes,
   the long set passes, and the Linux VM checks ran and passed.
-- **Static gate:** 337 / 337. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-- **B-3 route smoke** on a real isolated service (4 / 4): the load order read with the PAK listed; a new order moves only
-  the MOD lines and keeps mods.txt.previous; a stale list and a Viewer are refused with nothing changed; a profile
-  exports with hashes, previews, applies, lists the missing MOD; a file that is not a profile is refused in words.
-- **LogicHarness** (the three new B-3 scenarios included) and **ArtworkHarness** (12 languages, the new card) pass.
+- **Static gate:** 339 / 339. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **B-2:** the two LogicHarness scenarios pass (the bands, the gap check, the history rules and reading ExpRate; the rule in
+  the anti-cheat service: recorded across a restart, reported with its numbers and a notice, no kick, nothing once off).
+- **Calibration:** copies of the real world's 17 daily backups (2026-07-31 to 2026-10-08) decoded with the app's own
+  converter; at experience rate 1 the largest real gain (6 levels in 17 hours) used 12% of the allowance.
+- **ArtworkHarness** (12 languages, the rule's row) and **LogicHarness** pass.
 
 ## For you
 
-1. **The join problem** you reported is not in this release. I'm waiting on the double-click test I described (stop
-   the server, double-click PalServer.exe, join) to know whether it is MystTiq's launch or the game's account
-   handling.
-2. **To try the new card:** stop the server, open MOD Library, expand Load Order and MOD Profiles, then move a UE4SS MOD
-   and save, or export a profile.
-3. **Next:** v1.0.9.3, level-gap scans (B-2).
-4. **Push:** v1.0.7.0 to v1.0.9.2 are ready to push and tag when you say so.
+1. **The join problem:** the backups show wrong-ID characters back to the world's first day (Melly's account has three
+   characters: 84544311 from July 31, A3835C7B from August 25 and 1467C601 from August 11). That points at the game or
+   account side rather than MystTiq. The double-click test will still settle it.
+2. **The 24-hour runs** (v1.0.7.5) finish around 03:00 UTC on 2026-10-13; I'll collect them then.
+3. **Next:** v1.1.0.0, the documentation pass and the new accepted baseline.
+4. **Push:** v1.0.7.0 to v1.0.9.3 are ready to push and tag when you say so.

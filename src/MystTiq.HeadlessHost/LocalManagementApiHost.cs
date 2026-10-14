@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.3: file reviewed for this release (2026-10-12).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -256,7 +256,10 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds),
                 backups, modManagement.LogPreStartDiagnosticsAsync);
             var environmentChecklist = new HeadlessEnvironmentChecklistService(paths);
-            var antiCheat = new HeadlessAntiCheatService(paths, notifications, activity, playerModeration, palEdit);
+            // v1.0.9.3 (roadmap B-2): level-gap scans read the registry's playtime and the server's experience rate.
+            var antiCheat = new HeadlessAntiCheatService(paths, notifications, activity, playerModeration, palEdit,
+                id => playerRegistry.Snapshot().FirstOrDefault(r => string.Equals(r.PlayerId, id.Trim(), StringComparison.OrdinalIgnoreCase))?.TotalPlaytimeMinutes,
+                () => LevelGapScan.ReadExpRate(Path.Combine(paths.ConfigRoot, "PalWorldSettings.ini")));
             // v0.8.9.0: watches Pal\Saved\Crashes for new Unreal crash reports (see HeadlessCrashReportWatcher).
             var crashReports = new HeadlessCrashReportWatcher(paths, string.IsNullOrWhiteSpace(serverConfig.Name) ? serverConfig.Id : serverConfig.Name,
                 crashAndSaveTools, notifications,

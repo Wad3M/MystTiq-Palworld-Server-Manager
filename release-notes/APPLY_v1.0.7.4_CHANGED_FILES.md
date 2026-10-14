@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.9.2: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
 # v1.0.7.4 Changed Files
 
 - `src/MystTiq.HeadlessHost/SecretProtector.cs` (new): DPAPI (machine scope) for saved secrets on Windows, owner-only

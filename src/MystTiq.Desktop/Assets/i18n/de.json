@@ -4053,5 +4053,11 @@
   "msg.profile_switch_off_c3d8a0": "{0} ausschalten",
   "msg.profile_set_ue4ss_order_95f1be": "Die UE4SS-Ladereihenfolge auf die des Profils setzen",
   "msg.profile_files_differ_2d6c94": "{0} ist installiert, aber seine Dateien weichen vom Profil ab (eine andere Version?).",
-  "msg.empty_load_order_d47a10": "MystTiq hat eine leere Ladereihenfolge geliefert."
+  "msg.empty_load_order_d47a10": "MystTiq hat eine leere Ladereihenfolge geliefert.",
+  "ui.level_gain_against_playtime": "Levelanstieg vs. Spielzeit",
+  "ui.level_gain_against_playtime_hint": "Meldet einen Spieler, der weit mehr Level gewinnt, als seine Spielzeit seit MystTiq ihn zuerst sah bei der Erfahrungsrate dieses Servers erlaubt. Wirft nie hinaus und sperrt nie.",
+  "ui.reports_only": "Nur Meldung",
+  "msg.level_gap_finding_6a1f3e": "Spieler „{0}“ stieg mit {3} Minute(n) Spielzeit {4} von Level {1} auf {2}; zu erwarten wären höchstens {5} Level. Prüfen Sie den Spieler, bevor Sie handeln: Diese Regel meldet nur.",
+  "msg.level_gap_since_first_seen_0b47d2": "seit MystTiq ihn zuerst sah",
+  "msg.level_gap_since_level_before_e83c51": "seit dem Level davor"
 }

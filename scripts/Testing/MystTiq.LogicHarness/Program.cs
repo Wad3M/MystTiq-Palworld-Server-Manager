@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.3: file reviewed for this release (2026-10-12).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -1029,6 +1029,66 @@ try
         Assert(DiscordBotFormatting.RequiredRole("mysttiq-something-new") == MystTiqRole.Owner, "an unrecognised command must default to the strictest role");
         Assert(DiscordBotFormatting.SupportedCommands.All(c => DiscordBotFormatting.RequiredRole(c) != MystTiqRole.Owner), "every supported command must have an explicit role");
     }, failures);
+    // v1.0.9.3 (roadmap B-2): level-gap scans.
+    RunScenario("Level gaps: an honest pace stays inside the bands at any level and rate; an edited jump is reported; a player high when first seen, slack levels and resets are not", () =>
+    {
+        var rule = new LevelGapRule(true, 3);
+        LevelSample S(int level, double minutes) => new(DateTimeOffset.UtcNow, level, minutes);
+        Assert(Math.Abs(LevelGapScan.AllowedGain(1, 9.0 / 20, 1) - 9) < 0.01, "level 1 to 10 takes 27 minutes at the fastest band");
+        Assert(Math.Abs(LevelGapScan.AllowedGain(50, 1, 1) - 1) < 0.01 && Math.Abs(LevelGapScan.AllowedGain(50, 1, 2) - 2) < 0.01, "one level an hour at 50, two at double experience");
+        Assert(LevelGapScan.AllowedGain(1, 12.5, 1) >= 49, "level 50 within about 12 hours of play: generous on purpose");
+        Assert(LevelGapScan.AllowedGain(1, 1, 1000) == LevelGapScan.AllowedGain(1, 1, 20), "the experience rate is capped at 20");
+
+        Assert(LevelGapScan.Evaluate([S(1, 0), S(10, 40), S(20, 160), S(30, 400)], rule, 1) is null, "an honest climb is not reported");
+        Assert(LevelGapScan.Evaluate([S(5, 0), S(8, 1)], rule, 1) is null, "a gain within the slack never counts");
+        Assert(LevelGapScan.Evaluate([S(60, 0), S(61, 120)], rule, 1) is null, "a player already high when first seen is judged only on what they gain since");
+        var edit = LevelGapScan.Evaluate([S(10, 100), S(12, 104), S(45, 109)], rule, 1);
+        Assert(edit is { FromLevel: 10, ToLevel: 45 } && edit.Window == "since MystTiq first saw them" && edit.PlaytimeMinutes == 9,
+            $"ten to forty-five in nine minutes is reported: {edit}");
+        var jump = LevelGapScan.Evaluate([S(1, 0), S(30, 3000), S(55, 3010)], rule, 1);
+        Assert(jump is { FromLevel: 30, ToLevel: 55, Window: "since the level before" }, $"a sudden jump after honest play is reported: {jump}");
+        Assert(LevelGapScan.Evaluate([S(10, 100), S(30, 109)], rule, 20) is null && LevelGapScan.Evaluate([S(10, 100), S(30, 109)], rule, 1) is not null,
+            "ten to thirty in nine minutes is possible at twenty times experience, not at one");
+
+        IReadOnlyList<LevelSample> history = [];
+        history = LevelGapScan.Add(history, S(10, 0));
+        Assert(ReferenceEquals(LevelGapScan.Add(history, S(10, 5)), history), "the same level adds nothing");
+        history = LevelGapScan.Add(history, S(11, 6));
+        Assert(LevelGapScan.Add(history, S(3, 7)) is [{ Level: 3 }], "a lower level (a reset) starts the history again");
+        for (var level = 12; level < 120; level++) history = LevelGapScan.Add(history, S(level, level));
+        Assert(history.Count == LevelGapScan.MaximumSamplesPerPlayer && history[0].Level == 10 && history[^1].Level == 119, "kept short, the first sighting always");
+        var ini = Path.Combine(tempRoot, "b2-" + Guid.NewGuid().ToString("N") + ".ini");
+        File.WriteAllText(ini, "[/Script/Pal.PalGameWorldSettings]\nOptionSettings=(Difficulty=None,DayTimeSpeedRate=1.000000,ExpRate=2.500000,PalCaptureRate=1.000000)");
+        Assert(LevelGapScan.ReadExpRate(ini) == 2.5 && LevelGapScan.ReadExpRate(ini + ".missing") == 1, "the experience rate is read from PalWorldSettings.ini, 1 without it");
+    }, failures);
+
+    RunScenarioAsync("Level gaps in the anti-cheat service: each level change is recorded with the registry's playtime and kept; an out-of-line gain is a finding and a notice, never a kick", async () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "b2-service-" + Guid.NewGuid().ToString("N")));
+        var activity = new HeadlessActivityLogService(paths);
+        var notifications = new HeadlessNotificationService(paths, activity);
+        var moderation = new FakeModerationProvider();
+        var playtime = 100.0;
+        HeadlessAntiCheatService Open() => new(paths, notifications, activity, new PlayerModerationCoordinator([moderation]), null, _ => playtime, () => 1);
+        HeadlessPlayersSnapshot At(string level) => new(true, 1, [new HeadlessPlayerSnapshot("Mallory", "steam_1", "76561197960265729", "p-mallory", "", "", "Steam", level, "0")], DateTimeOffset.UtcNow, "test");
+
+        var service = Open();
+        await service.EvaluateLivePlayersAsync(At("10"), CancellationToken.None);
+        playtime = 103; await service.EvaluateLivePlayersAsync(At("11"), CancellationToken.None);
+        Assert(service.RecentFindings().All(f => f.RuleKey != "level-gap"), "honest gains are not reported");
+        Assert(Open().LevelHistory("p-mallory").Select(s => s.Level).SequenceEqual([10, 11]), "the history survives a restart");
+
+        playtime = 109; await service.EvaluateLivePlayersAsync(At("45"), CancellationToken.None);
+        var finding = service.RecentFindings().SingleOrDefault(f => f.RuleKey == "level-gap");
+        Assert(finding is { ResponseTaken: AntiCheatResponse.Flag, PlayerId: "p-mallory" } && finding.Detail.Contains("from level 10 to 45 with 9 minute(s)"), $"reported with the numbers: {finding?.Detail}");
+        Assert(moderation.Calls.Count == 0, "the rule never kicks or bans");
+        Assert(notifications.GetSnapshot().Items.Any(n => n.Message.Contains("Mallory") && n.Message.Contains("only reports")), "the owner is told");
+
+        service.SaveRules(service.GetRules() with { LevelGap = new LevelGapRule(false, 3) });
+        playtime = 110; await service.EvaluateLivePlayersAsync(At("80"), CancellationToken.None);
+        Assert(service.RecentFindings().Count(f => f.RuleKey == "level-gap") == 1, "switched off, nothing more is recorded");
+    }, failures);
+
     // v1.0.9.2 (roadmap B-3): UE4SS's load order and MOD profiles.
     RunScenario("MOD load order: a new order moves only the MOD lines (comments, blank lines and each line's own text stay); a stale list is refused, a profile's unknown names are skipped", () =>
     {

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.9.2: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
 # Contributing
 
 Thank you for helping improve MystTiq Palworld Server Manager.

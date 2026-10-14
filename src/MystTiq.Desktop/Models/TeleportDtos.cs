@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.3: file reviewed for this release (2026-10-12).
 namespace MystTiq.Desktop.Models;
 
 // v0.7.113.0: mirrors of HeadlessTeleportService's records (Teleport Points on the Map page).

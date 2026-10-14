@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.9.2: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -3560,7 +3560,7 @@
               <StackPanel Spacing="10" IsVisible="{Binding Diagnostics.IsAntiCheatExpanded}">
               <TextBlock Text="{services:TrText Diagnostics.AntiCheatState}" Classes="muted" TextWrapping="Wrap"/>
               <TextBlock Text="{services:Tr ui.every_rule_defaults_to_flag_notify_log_only_swit_66192b}" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
-              <Grid ColumnDefinitions="220,120,140" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+              <Grid ColumnDefinitions="220,120,140" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
                 <TextBlock Text="{services:Tr ui.invalid_steam_id_on_join}" VerticalAlignment="Center" Classes="muted"/>
                 <CheckBox AutomationProperties.Name="{services:Tr ui.invalid_steam_id_on_join}" Grid.Column="1" IsChecked="{Binding Diagnostics.AntiCheatRules.InvalidSteamId.Enabled}"/>
                 <ComboBox AutomationProperties.Name="{services:Tr ui.invalid_steam_id_on_join}" Grid.Column="2" ItemsSource="{Binding Diagnostics.AntiCheatResponses}" SelectedItem="{Binding Diagnostics.AntiCheatRules.InvalidSteamId.Response}"/>
@@ -3570,6 +3570,10 @@
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.pal_stat_anomaly_periodic_scan}" VerticalAlignment="Center" Classes="muted"/>
                 <CheckBox AutomationProperties.Name="{services:Tr ui.pal_stat_anomaly_periodic_scan}" Grid.Row="2" Grid.Column="1" IsChecked="{Binding Diagnostics.AntiCheatRules.PalStatAnomaly.Enabled}"/>
                 <ComboBox AutomationProperties.Name="{services:Tr ui.pal_stat_anomaly_periodic_scan}" Grid.Row="2" Grid.Column="2" ItemsSource="{Binding Diagnostics.AntiCheatResponses}" SelectedItem="{Binding Diagnostics.AntiCheatRules.PalStatAnomaly.Response}"/>
+                <!-- v1.0.9.3 (roadmap B-2): level gained against playtime; it only reports, so there is no response to pick. -->
+                <TextBlock Grid.Row="3" Text="{services:Tr ui.level_gain_against_playtime}" VerticalAlignment="Center" Classes="muted" ToolTip.Tip="{services:Tr ui.level_gain_against_playtime_hint}"/>
+                <CheckBox AutomationProperties.Name="{services:Tr ui.level_gain_against_playtime}" Grid.Row="3" Grid.Column="1" IsChecked="{Binding Diagnostics.AntiCheatRules.LevelGap.Enabled}"/>
+                <TextBlock Grid.Row="3" Grid.Column="2" Text="{services:Tr ui.reports_only}" VerticalAlignment="Center" Classes="muted"/>
               </Grid>
               <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock Text="{services:Tr ui.max_allowed_level}" VerticalAlignment="Center" Classes="muted"/>

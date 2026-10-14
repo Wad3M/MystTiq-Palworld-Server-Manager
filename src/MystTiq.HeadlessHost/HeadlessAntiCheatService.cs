@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.3: file reviewed for this release (2026-10-12).
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using MystTiq.Core.Models;
@@ -30,7 +30,13 @@ public sealed class HeadlessAntiCheatService
     private readonly HeadlessNotificationService notifications;
     private readonly HeadlessActivityLogService activity;
     private readonly PlayerModerationCoordinator playerModeration;
-    private readonly HeadlessPalEditService palEdit;
+    private readonly HeadlessPalEditService? palEdit;
+    // v1.0.9.3 (roadmap B-2): each player's level history, their playtime as the player registry records it, and the
+    // server's experience rate.
+    private readonly string levelHistoryPath;
+    private readonly Dictionary<string, IReadOnlyList<LevelSample>> levelHistory;
+    private readonly Func<string, double?>? playtimeMinutes;
+    private readonly Func<double>? expRate;
     private readonly object gate = new();
     private readonly string rulesPath;
     private readonly string findingsPath;
@@ -44,8 +50,12 @@ public sealed class HeadlessAntiCheatService
         HeadlessNotificationService notifications,
         HeadlessActivityLogService activity,
         PlayerModerationCoordinator playerModeration,
-        HeadlessPalEditService palEdit)
+        HeadlessPalEditService? palEdit,
+        Func<string, double?>? playtimeMinutes = null,
+        Func<double>? expRate = null)
     {
+        this.playtimeMinutes = playtimeMinutes;
+        this.expRate = expRate;
         this.notifications = notifications;
         this.activity = activity;
         this.playerModeration = playerModeration;
@@ -55,8 +65,12 @@ public sealed class HeadlessAntiCheatService
         Directory.CreateDirectory(root);
         rulesPath = Path.Combine(root, "rules.json");
         findingsPath = Path.Combine(root, "findings.json");
+        levelHistoryPath = Path.Combine(root, "level-history.json");
         rules = LoadRules();
         findings = LoadFindings();
+        levelHistory = new Dictionary<string, IReadOnlyList<LevelSample>>(
+            SavedFiles.Load(levelHistoryPath, "anti-cheat level history", () => new Dictionary<string, IReadOnlyList<LevelSample>>(), ownerData: false),
+            StringComparer.OrdinalIgnoreCase);
     }
 
     public AntiCheatRuleSet GetRules() { lock (gate) return rules; }
@@ -95,13 +109,40 @@ public sealed class HeadlessAntiCheatService
                 await RecordAsync("impossible-player-level", set.ImpossibleLevel.Response, "Warning", player.PlayerId, player.Name,
                     $"Player '{player.Name}' reports level {level}, above the configured maximum of {set.ImpossibleLevel.MaxAllowedLevel}.", cancellationToken);
             }
+
+            // v1.0.9.3 (roadmap B-2): the level gained since MystTiq first saw the player, against their playtime since.
+            if (set.LevelGap.Enabled && playtimeMinutes is not null && int.TryParse(player.Level, out var seenLevel) && seenLevel > 0 &&
+                !string.IsNullOrWhiteSpace(player.PlayerId) && playtimeMinutes(player.PlayerId) is { } minutes)
+            {
+                LevelGap? gap = null;
+                lock (gate)
+                {
+                    var history = levelHistory.TryGetValue(player.PlayerId, out var known) ? known : [];
+                    var updated = LevelGapScan.Add(history, new LevelSample(DateTimeOffset.UtcNow, seenLevel, minutes));
+                    if (!ReferenceEquals(updated, history))
+                    {
+                        levelHistory[player.PlayerId] = updated;
+                        Persist(levelHistoryPath, levelHistory);
+                        gap = LevelGapScan.Evaluate(updated, set.LevelGap, expRate?.Invoke() ?? 1);
+                    }
+                }
+                if (gap is not null)
+                    await RecordAsync("level-gap", AntiCheatResponse.Flag, "Warning", player.PlayerId, player.Name, LevelGapScan.Describe(player.Name, gap),
+                        cancellationToken, cooldownIdentity: $"{player.PlayerId}:{gap.ToLevel}");
+            }
         }
+    }
+
+    /// <summary>v1.0.9.3: the level history MystTiq keeps for one player (empty when it has seen no level yet).</summary>
+    public IReadOnlyList<LevelSample> LevelHistory(string playerId)
+    {
+        lock (gate) return levelHistory.TryGetValue(playerId, out var history) ? history : [];
     }
 
     public async Task EvaluateThrottledAsync(CancellationToken cancellationToken)
     {
         var set = GetRules();
-        if (!set.PalStatAnomaly.Enabled) return;
+        if (!set.PalStatAnomaly.Enabled || palEdit is null) return;
 
         var now = DateTimeOffset.UtcNow;
         lock (gate)

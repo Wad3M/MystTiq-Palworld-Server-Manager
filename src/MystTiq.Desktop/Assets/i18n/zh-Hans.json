@@ -4053,5 +4053,11 @@
   "msg.profile_switch_off_c3d8a0": "停用 {0}",
   "msg.profile_set_ue4ss_order_95f1be": "将 UE4SS 加载顺序设为配置中的顺序",
   "msg.profile_files_differ_2d6c94": "{0} 已安装，但其文件与配置中的不同（可能是其他版本？）。",
-  "msg.empty_load_order_d47a10": "MystTiq 返回了空的加载顺序。"
+  "msg.empty_load_order_d47a10": "MystTiq 返回了空的加载顺序。",
+  "ui.level_gain_against_playtime": "等级增长与游戏时长",
+  "ui.level_gain_against_playtime_hint": "当玩家自 MystTiq 首次看到以来获得的等级远超其游戏时长（按本服务器经验倍率）所允许时报告。从不踢出或封禁。",
+  "ui.reports_only": "仅报告",
+  "msg.level_gap_finding_6a1f3e": "玩家“{0}”{4}在 {3} 分钟的游戏时间内从 {1} 级升到 {2} 级；预计最多 {5} 级。请先核实该玩家再采取行动：此规则只报告。",
+  "msg.level_gap_since_first_seen_0b47d2": "（自 MystTiq 首次看到以来）",
+  "msg.level_gap_since_level_before_e83c51": "（自上一个等级以来）"
 }

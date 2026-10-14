@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.3: file reviewed for this release (2026-10-12).
 namespace MystTiq.Desktop.Models;
 
 public sealed class InvalidSteamIdRuleDto
@@ -20,11 +20,19 @@ public sealed class PalStatAnomalyRuleDto
     public string Response { get; set; } = "Flag";
 }
 
+// v1.0.9.3 (roadmap B-2): reports only, so there is no response to choose.
+public sealed class LevelGapRuleDto
+{
+    public bool Enabled { get; set; } = true;
+    public int SlackLevels { get; set; } = 3;
+}
+
 public sealed class AntiCheatRuleSetDto
 {
     public InvalidSteamIdRuleDto InvalidSteamId { get; set; } = new();
     public ImpossibleLevelRuleDto ImpossibleLevel { get; set; } = new();
     public PalStatAnomalyRuleDto PalStatAnomaly { get; set; } = new();
+    public LevelGapRuleDto LevelGap { get; set; } = new();
 }
 
 public sealed class AntiCheatFindingDto

@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.3: file reviewed for this release (2026-10-12).
 namespace MystTiq.HeadlessHost;
 
 // In-memory, single-instance only (per the milestone's deferred list -- persisted/distributed

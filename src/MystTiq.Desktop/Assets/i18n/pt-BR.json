@@ -4053,5 +4053,11 @@
   "msg.profile_switch_off_c3d8a0": "Desligar {0}",
   "msg.profile_set_ue4ss_order_95f1be": "Definir a ordem de carregamento do UE4SS como a do perfil",
   "msg.profile_files_differ_2d6c94": "{0} está instalado, mas seus arquivos diferem dos do perfil (outra versão?).",
-  "msg.empty_load_order_d47a10": "O MystTiq retornou uma ordem de carregamento vazia."
+  "msg.empty_load_order_d47a10": "O MystTiq retornou uma ordem de carregamento vazia.",
+  "ui.level_gain_against_playtime": "Ganho de nível x tempo de jogo",
+  "ui.level_gain_against_playtime_hint": "Avisa sobre um jogador que ganha muito mais níveis do que o tempo de jogo desde que o MystTiq o viu pela primeira vez permite, com a taxa de experiência deste servidor. Nunca expulsa nem bane.",
+  "ui.reports_only": "Só avisa",
+  "msg.level_gap_finding_6a1f3e": "O jogador '{0}' foi do nível {1} ao {2} com {3} minuto(s) de jogo {4}; seriam esperados no máximo {5} nível(is). Verifique o jogador antes de agir: esta regra só avisa.",
+  "msg.level_gap_since_first_seen_0b47d2": "desde que o MystTiq o viu pela primeira vez",
+  "msg.level_gap_since_level_before_e83c51": "desde o nível anterior"
 }

@@ -4053,5 +4053,11 @@
   "msg.profile_switch_off_c3d8a0": "Switch off {0}",
   "msg.profile_set_ue4ss_order_95f1be": "Set the UE4SS load order to the profile's",
   "msg.profile_files_differ_2d6c94": "{0} is installed, but its files differ from the profile's (another version?).",
-  "msg.empty_load_order_d47a10": "MystTiq returned an empty load order."
+  "msg.empty_load_order_d47a10": "MystTiq returned an empty load order.",
+  "ui.level_gain_against_playtime": "Level gain vs playtime",
+  "ui.level_gain_against_playtime_hint": "Reports a player who gains far more levels than their playtime since MystTiq first saw them allows, at this server's experience rate. It never kicks or bans.",
+  "ui.reports_only": "Reports only",
+  "msg.level_gap_finding_6a1f3e": "Player '{0}' went from level {1} to {2} with {3} minute(s) of play {4}; at most {5} level(s) would be expected. Check the player before acting: this rule only reports.",
+  "msg.level_gap_since_first_seen_0b47d2": "since MystTiq first saw them",
+  "msg.level_gap_since_level_before_e83c51": "since the level before"
 }

@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.2: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.3: file reviewed for this release (2026-10-12).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Core.Models;
@@ -23,11 +23,16 @@ public sealed record ImpossibleLevelRule(bool Enabled, int MaxAllowedLevel, Anti
 // redefined here.
 public sealed record PalStatAnomalyRule(bool Enabled, AntiCheatResponse Response);
 
+// v1.0.9.3 (roadmap B-2): a level gain out of line with the playtime behind it (LevelGapScan). Never a kick or a ban, so
+// it has no response; SlackLevels is the gain that never counts (a quest reward, a rounding of playtime).
+public sealed record LevelGapRule(bool Enabled, int SlackLevels);
+
 public sealed record AntiCheatRuleSet
 {
     public InvalidSteamIdRule InvalidSteamId { get; init; } = new(true, AntiCheatResponse.Flag);
     public ImpossibleLevelRule ImpossibleLevel { get; init; } = new(true, 80, AntiCheatResponse.Flag);
     public PalStatAnomalyRule PalStatAnomaly { get; init; } = new(true, AntiCheatResponse.Flag);
+    public LevelGapRule LevelGap { get; init; } = new(true, 3);
 }
 
 public sealed record AntiCheatFinding(

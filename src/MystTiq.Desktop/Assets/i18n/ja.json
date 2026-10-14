@@ -4053,5 +4053,11 @@
   "msg.profile_switch_off_c3d8a0": "{0} を無効にする",
   "msg.profile_set_ue4ss_order_95f1be": "UE4SS の読み込み順をプロファイルのとおりにする",
   "msg.profile_files_differ_2d6c94": "{0} はインストール済みですが、ファイルがプロファイルと異なります（別のバージョン？）。",
-  "msg.empty_load_order_d47a10": "MystTiq から空の読み込み順が返されました。"
+  "msg.empty_load_order_d47a10": "MystTiq から空の読み込み順が返されました。",
+  "ui.level_gain_against_playtime": "レベル上昇とプレイ時間",
+  "ui.level_gain_against_playtime_hint": "MystTiq が最初に確認してからのプレイ時間（このサーバーの経験値倍率）で見込めるより、はるかに多くレベルが上がったプレイヤーを報告します。キックや BAN は行いません。",
+  "ui.reports_only": "報告のみ",
+  "msg.level_gap_finding_6a1f3e": "プレイヤー「{0}」は {4}{3} 分のプレイでレベル {1} から {2} になりました。見込みは最大 {5} レベルです。対応の前にプレイヤーを確認してください。このルールは報告のみです。",
+  "msg.level_gap_since_first_seen_0b47d2": "MystTiq が最初に確認してから",
+  "msg.level_gap_since_level_before_e83c51": "直前のレベルから"
 }

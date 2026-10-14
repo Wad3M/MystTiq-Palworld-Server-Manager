@@ -1,4 +1,12 @@
-<!-- MystTiq v1.0.9.2: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
+## v1.0.9.3 — Level-Gap Scans
+
+- Roadmap B-2: level-gap scans. A player whose level gain since MystTiq first saw them (or since their previous level)
+  exceeds generous per-band rates at the server's experience rate is reported with the numbers, as a flag-only finding
+  and notification. Level history per player in `anticheat/level-history.json`; the rule is on by default and has a row
+  on the Anti-Cheat card. Checked against the real world's 17 daily backups (the largest real gain used 12% of the allowance); a week of the owner's server is carried as evidence (E-16).
+- Version advanced to 1.0.9.3.
+
 ## v1.0.9.2 — MOD Load Order and Profiles
 
 - Roadmap B-3: the MOD Library's Load Order and MOD Profiles card. UE4SS's order (`mods.txt`, top to bottom) can be changed

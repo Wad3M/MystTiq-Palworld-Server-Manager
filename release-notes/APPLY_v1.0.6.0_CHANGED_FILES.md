@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.9.2: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
 # v1.0.6.0 Changed Files
 
 - `src/MystTiq.HeadlessHost/PalBoxEdits.cs` (new): reading a player's Pal box from the decoded world; adding a copy of a

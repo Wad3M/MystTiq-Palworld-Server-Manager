@@ -4053,5 +4053,11 @@
   "msg.profile_switch_off_c3d8a0": "Wyłącz {0}",
   "msg.profile_set_ue4ss_order_95f1be": "Ustawić kolejność ładowania UE4SS z profilu",
   "msg.profile_files_differ_2d6c94": "{0} jest zainstalowany, ale jego pliki różnią się od tych w profilu (inna wersja?).",
-  "msg.empty_load_order_d47a10": "MystTiq zwrócił pustą kolejność ładowania."
+  "msg.empty_load_order_d47a10": "MystTiq zwrócił pustą kolejność ładowania.",
+  "ui.level_gain_against_playtime": "Wzrost poziomu a czas gry",
+  "ui.level_gain_against_playtime_hint": "Zgłasza gracza, który zdobył znacznie więcej poziomów, niż pozwala jego czas gry od chwili, gdy MystTiq pierwszy raz go zobaczył, przy mnożniku doświadczenia tego serwera. Nigdy nie wyrzuca ani nie banuje.",
+  "ui.reports_only": "Tylko zgłasza",
+  "msg.level_gap_finding_6a1f3e": "Gracz „{0}” przeszedł z poziomu {1} na {2} w {3} min gry {4}; należałoby oczekiwać najwyżej {5} poz. Sprawdź gracza, zanim cokolwiek zrobisz: ta reguła tylko zgłasza.",
+  "msg.level_gap_since_first_seen_0b47d2": "od chwili, gdy MystTiq pierwszy raz go zobaczył",
+  "msg.level_gap_since_level_before_e83c51": "od poprzedniego poziomu"
 }

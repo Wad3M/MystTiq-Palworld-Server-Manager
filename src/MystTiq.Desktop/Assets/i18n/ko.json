@@ -4053,5 +4053,11 @@
   "msg.profile_switch_off_c3d8a0": "{0} 끄기",
   "msg.profile_set_ue4ss_order_95f1be": "UE4SS 로드 순서를 프로필의 순서로 설정",
   "msg.profile_files_differ_2d6c94": "{0}은(는) 설치되어 있지만 파일이 프로필과 다릅니다(다른 버전일까요?).",
-  "msg.empty_load_order_d47a10": "MystTiq가 빈 로드 순서를 반환했습니다."
+  "msg.empty_load_order_d47a10": "MystTiq가 빈 로드 순서를 반환했습니다.",
+  "ui.level_gain_against_playtime": "레벨 상승 대비 플레이 시간",
+  "ui.level_gain_against_playtime_hint": "MystTiq가 처음 본 이후의 플레이 시간(이 서버의 경험치 배율 기준)으로 가능한 것보다 훨씬 많이 레벨이 오른 플레이어를 알립니다. 추방하거나 차단하지 않습니다.",
+  "ui.reports_only": "알림만",
+  "msg.level_gap_finding_6a1f3e": "플레이어 '{0}'이(가) {4} {3}분 플레이로 레벨 {1}에서 {2}(으)로 올랐습니다. 예상치는 최대 {5}레벨입니다. 조치 전에 플레이어를 확인하세요. 이 규칙은 알리기만 합니다.",
+  "msg.level_gap_since_first_seen_0b47d2": "MystTiq가 처음 본 이후",
+  "msg.level_gap_since_level_before_e83c51": "직전 레벨 이후"
 }
