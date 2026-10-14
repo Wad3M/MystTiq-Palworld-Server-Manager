@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.1: file reviewed for this release (2026-10-11).
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 
@@ -13,6 +13,8 @@ namespace MystTiq.Desktop.ViewModels;
 public sealed class SessionContext
 {
     private readonly Func<ConnectionProfile?> _profile;
+    private readonly Func<ConnectionProfile?> _selectedProfile;
+    private readonly Func<object?> _activeTab;
     private readonly Func<string?> _bearerToken;
     private readonly Func<bool> _isBusy;
     private readonly Action<bool> _setBusy;
@@ -20,8 +22,10 @@ public sealed class SessionContext
     private readonly Action<Func<Task>, string> _runUi;
 
     public SessionContext(IMystTiqApiClient api, Func<ConnectionProfile?> profile, Func<string?> bearerToken,
-        Func<bool> isBusy, Action<bool> setBusy, Func<NavigationPage> page, Action<Func<Task>, string> runUi)
+        Func<bool> isBusy, Action<bool> setBusy, Func<NavigationPage> page, Action<Func<Task>, string> runUi, Func<ConnectionProfile?> selectedProfile, Func<object?> activeTab)
     {
+        _selectedProfile = selectedProfile;
+        _activeTab = activeTab;
         Api = api;
         _profile = profile;
         _bearerToken = bearerToken;
@@ -35,6 +39,10 @@ public sealed class SessionContext
 
     /// <summary>The active tab's connection, or null when it has none (a wizard tab, an incomplete profile).</summary>
     public ConnectionProfile? Profile => _profile();
+    /// <summary>The active tab's saved profile (what most commands send with), or null.</summary>
+    public ConnectionProfile? SelectedProfile => _selectedProfile();
+    /// <summary>The tab now shown: a reply that arrives after the user switched tabs is dropped by comparing with it.</summary>
+    public object? ActiveTab => _activeTab();
     public string? BearerToken => _bearerToken();
     public bool IsBusy { get => _isBusy(); set => _setBusy(value); }
     public NavigationPage Page => _page();

@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.1: file reviewed for this release (2026-10-11).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -40,8 +40,8 @@ public sealed partial class MainWindowViewModel
             PreviewUe4ssInstallCommand, PromoteSelectedPlayerCommand, RconSendCommand, RefreshDiscordBotConfigCommand,
             RepairFirewallCommand, RepairModsCommand, RepairSelectedModCommand, RollbackSelectedModCommand,
             RollbackUe4ssInstallCommand, SaveAlertRulesCommand, SaveAntiCheatRulesCommand, SaveConfigurationCommand,
-            SaveDiscordBotConfigCommand, SaveNetworkPolicyCommand, SavePalworldConfigurationCommand,
-            SaveResourcePolicyCommand, SaveNameGuardCommand, SaveTeleportCommand, SaveWhitelistCommand, SendPlayerToTeleportPointCommand,
+            SaveDiscordBotConfigCommand, Host.SaveNetworkPolicyCommand, SavePalworldConfigurationCommand,
+            Host.SaveResourcePolicyCommand, SaveNameGuardCommand, SaveTeleportCommand, SaveWhitelistCommand, SendPlayerToTeleportPointCommand,
             SendTestNotificationCommand, SetSelectedModDescriptionSourceCommand, TeleportPlayerToMeCommand,
             TeleportToPlayerCommand, ToggleAutomationRuleEnabledCommand, UnbanSelectedPlayerCommand, UpdateComponentCommand,
             UpdateSelectedModCommand, WhisperSelectedPlayerCommand);

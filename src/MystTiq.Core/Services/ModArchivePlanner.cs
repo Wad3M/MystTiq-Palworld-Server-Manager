@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.1: file reviewed for this release (2026-10-11).
 namespace MystTiq.Core.Services;
 
 // v1.0.5.0 (roadmap M-1): what a MOD archive holds and whether MystTiq can install it where the game loads it. The MOD

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.0: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.8.1: file reviewed for this release (2026-10-11). -->
 # Ribbon image icons (batches 1-3)
 
 The user supplied these on 2026-09-24 as `palworld_ribbon_icons_batch_1.zip`, `_batch_2.zip` and `_batch_3.zip`. There

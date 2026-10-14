@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.1: file reviewed for this release (2026-10-11).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -256,27 +256,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _localConfigPathText = "Not discovered";
     private string _localDiscoverySource = "Not run";
     private string _localDiscoveryDetail = "Local installation discovery has not run.";
-    private string _dashboardWorldText = "—";
-    private string _dashboardBackupText = "—";
-    private string _dashboardGuildText = "—";
-    private string _dashboardModText = "—";
     private string _dashboardHealthText = "IDLE";
-    private string _dashboardHealthDetail = "Waiting for a server sample.";
-    private string _dashboardWorldPulseText = "World data not sampled";
-    private string _dashboardWorldNicknameText = "World —";
-    private string _dashboardWorldClockText = "Day — • --:--";
-    private string _dashboardWorldClockDetailText = "Waiting for authoritative saved-world clock";
-    private string _dashboardPulseSaveText = "Save: —";
-    private string _dashboardPulseBackupText = "Backup: —";
-    private string _dashboardRestText = "REST: Checking";
-    private string _dashboardRconText = "RCON: Checking";
-    private string _dashboardModsStripText = "Mods: —";
-    private string _dashboardBackupStripText = "Backup: —";
-    private string _dashboardServerNameText = "—";
-    private string _dashboardServerDescriptionText = "—";
-    private string _dashboardSessionText = "No active session";
-    private string _dashboardPlayersSessionText = "0 online";
-    private string _dashboardLastActivityText = "Manager started";
     private double _cpuPercentValue;
     private double _memoryMbValue;
     private double _memoryScaleValue;
@@ -410,9 +390,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         _api = api;
         // v1.0.8.0 (roadmap C-0): the shared session the page ViewModels use, and the pages moved out of this file so far.
-        Session = new SessionContext(api, ActiveProfileOrNull, () => BearerToken, () => IsBusy, busy => IsBusy = busy, () => SelectedPage, RunUi);
+        Session = new SessionContext(api, ActiveProfileOrNull, () => BearerToken, () => IsBusy, busy => IsBusy = busy, () => SelectedPage, RunUi, () => SelectedProfile, () => ActiveTab);
         Logs = new ConsoleLogViewModel(Session);
-        _pages = [Logs];
+        Host = new HostPageViewModel(Session);
+        Dashboard = new DashboardViewModel(Session);
+        _pages = [Logs, Host, Dashboard];
         _nexus = nexusClient ?? new NexusModsClient();
         _profileStore = profileStore;
         _localDiscovery = localDiscovery;
@@ -435,7 +417,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         InitializeKits();
         InitializeGameIdPicker();
         InitializeTeleportCommands();
-        InitializeHostCommands();
         InitializeUserAccountCommands();
         _tabSessionStore = tabSessionStore ?? new TabSessionStore();
         Tabs.CollectionChanged += (_, _) => RecomputeTabLayout();
@@ -1349,7 +1330,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<MetricHistoryPoint> MetricHistory { get; } = [];
     public ObservableCollection<HistoricalMetricPointDto> ResourceHistory { get; } = [];
     public IReadOnlyList<string> HistoryRanges { get; } = ["1 Hour", "6 Hours", "24 Hours", "7 Days", "30 Days"];
-    public BulkObservableCollection<string> DashboardActivityLines { get; } = [];
     public ObservableCollection<EnvironmentChecklistItemDto> EnvironmentItems { get; } = [];
     public ObservableCollection<BackupItemDto> BackupItems { get; } = [];
     public ObservableCollection<BackupRetentionItemDto> BackupRetentionItems { get; } = [];
@@ -1632,10 +1612,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string LocalConfigPathText { get => _localConfigPathText; private set => SetField(ref _localConfigPathText, value); }
     public string LocalDiscoverySource { get => _localDiscoverySource; private set => SetField(ref _localDiscoverySource, value); }
     public string LocalDiscoveryDetail { get => _localDiscoveryDetail; private set => SetField(ref _localDiscoveryDetail, value); }
-    public string DashboardWorldText { get => _dashboardWorldText; private set => SetField(ref _dashboardWorldText, value); }
-    public string DashboardBackupText { get => _dashboardBackupText; private set => SetField(ref _dashboardBackupText, value); }
-    public string DashboardGuildText { get => _dashboardGuildText; private set => SetField(ref _dashboardGuildText, value); }
-    public string DashboardModText { get => _dashboardModText; private set => SetField(ref _dashboardModText, value); }
     public string DashboardHealthText
     {
         get => _dashboardHealthText;
@@ -1649,7 +1625,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             RaisePropertyChanged(nameof(HealthStateColorKey));
         }
     }
-    public string DashboardHealthDetail { get => _dashboardHealthDetail; private set => SetField(ref _dashboardHealthDetail, value); }
     public bool IsHealthGlowAmber => IsServerTransitioning || (!IsServerTransitioning && DashboardHealthText is "DEGRADED" or "STARTING");
     public bool IsHealthGlowRed => !IsServerTransitioning && DashboardHealthText == "ATTENTION";
     public bool IsHealthGlowGreen => !IsServerTransitioning && !IsHealthGlowRed && DashboardHealthText == "READY";
@@ -1661,21 +1636,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     // raises this must also re-raise it after ThemeApplier.Apply, since the key itself doesn't
     // change on a theme switch but the brush it resolves to does -- see SelectedAccentTheme/IsLightMode).
     public string HealthStateColorKey => IsHealthGlowRed ? "Red" : IsHealthGlowAmber ? "Amber" : IsHealthGlowGreen ? "Green" : "Muted";
-    public string DashboardWorldPulseText { get => _dashboardWorldPulseText; private set => SetField(ref _dashboardWorldPulseText, value); }
-    public string DashboardWorldNicknameText { get => _dashboardWorldNicknameText; private set => SetField(ref _dashboardWorldNicknameText, value); }
-    public string DashboardWorldClockText { get => _dashboardWorldClockText; private set => SetField(ref _dashboardWorldClockText, value); }
-    public string DashboardWorldClockDetailText { get => _dashboardWorldClockDetailText; private set => SetField(ref _dashboardWorldClockDetailText, value); }
-    public string DashboardPulseSaveText { get => _dashboardPulseSaveText; private set => SetField(ref _dashboardPulseSaveText, value); }
-    public string DashboardPulseBackupText { get => _dashboardPulseBackupText; private set => SetField(ref _dashboardPulseBackupText, value); }
-    public string DashboardRestText { get => _dashboardRestText; private set => SetField(ref _dashboardRestText, value); }
-    public string DashboardRconText { get => _dashboardRconText; private set => SetField(ref _dashboardRconText, value); }
-    public string DashboardModsStripText { get => _dashboardModsStripText; private set => SetField(ref _dashboardModsStripText, value); }
-    public string DashboardBackupStripText { get => _dashboardBackupStripText; private set => SetField(ref _dashboardBackupStripText, value); }
-    public string DashboardServerName { get => _dashboardServerNameText; private set => SetField(ref _dashboardServerNameText, value); }
-    public string DashboardServerDescriptionVerbatim { get => _dashboardServerDescriptionText; private set => SetField(ref _dashboardServerDescriptionText, value); }
-    public string DashboardSessionText { get => _dashboardSessionText; private set => SetField(ref _dashboardSessionText, value); }
-    public string DashboardPlayersSessionText { get => _dashboardPlayersSessionText; private set => SetField(ref _dashboardPlayersSessionText, value); }
-    public string DashboardLastActivityText { get => _dashboardLastActivityText; private set => SetField(ref _dashboardLastActivityText, value); }
     public double CpuPercentValue { get => _cpuPercentValue; private set => SetField(ref _cpuPercentValue, value); }
     public double MemoryMbValue { get => _memoryMbValue; private set => SetField(ref _memoryMbValue, value); }
     public double MemoryScaleValue { get => _memoryScaleValue; private set => SetField(ref _memoryScaleValue, value); }
@@ -2534,7 +2494,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             RaiseAllAsyncCommandStates();
             RaiseNexusCommandStates();
             RaiseKitCommandStates();
-            RaiseHostCommandStates();
+            Host.RaiseHostCommandStates();
             _loadGameIdsCommand?.RaiseCanExecuteChanged();
             (ConnectCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (DetectLocalServiceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -3520,7 +3480,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 await RefreshFleetAsync();
                 break;
             case NavigationPage.Host:
-                await RefreshHostAsync(silent: false);
+                await Host.RefreshHostAsync(silent: false);
                 break;
             case NavigationPage.Inspector:
                 await RefreshWorldExplorerAsync();
@@ -4407,7 +4367,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("Host",
             [
-                new("↻", "Refresh", "Read the machine again", RefreshHostCommand, null, RibbonIconColor.Amber),
+                new("↻", "Refresh", "Read the machine again", Host.RefreshHostCommand, null, RibbonIconColor.Amber),
             ]));
         }
         else if (IsCrashAnalyzerPage)
@@ -4559,7 +4519,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         await RefreshStatusPollingAsync();
         // v0.8.17.0: the HOST tab's readings follow the same 5-second tick while the page is open.
-        if (IsHostPage) await RefreshHostAsync(silent: true);
+        if (IsHostPage) await Host.RefreshHostAsync(silent: true);
         _refreshTick++;
     }
 
@@ -4888,8 +4848,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             SelectedBackup = BackupItems.FirstOrDefault();
             BackupState = $"{backups.Count} backup(s)";
             BackupTotalSizeText = $"{backups.TotalSizeBytes / 1024d / 1024d:F2} MB";
-            DashboardBackupText = backups.Count == 0 ? "No backups" : $"{backups.Count} available";
-            DashboardBackupStripText = backups.Count == 0 ? "Backup: none" : $"Backup: {backups.Count} available";
+            Dashboard.BackupText = backups.Count == 0 ? "No backups" : $"{backups.Count} available";
+            Dashboard.BackupStripText = backups.Count == 0 ? "Backup: none" : $"Backup: {backups.Count} available";
         }
         catch (Exception ex) { BackupDetail = $"Dashboard backup load: {ex.Message}"; }
 
@@ -4900,9 +4860,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             WorldCountText = world.WorldCount.ToString();
             WorldPlayerSaveCountText = world.PlayerSaveCount.ToString();
             WorldSizeText = $"{world.TotalSizeBytes / 1024d / 1024d:F2} MB";
-            DashboardWorldNicknameText = BuildWorldNickname(world.ActiveWorldId);
-            DashboardWorldText = world.Available ? ActiveWorldIdText : "Unavailable";
-            DashboardWorldPulseText = world.Available ? $"{WorldPlayerSaveCountText} player saves · {WorldSizeText}" : "World data unavailable";
+            Dashboard.WorldNicknameText = BuildWorldNickname(world.ActiveWorldId);
+            Dashboard.WorldText = world.Available ? ActiveWorldIdText : "Unavailable";
+            Dashboard.WorldPulseText = world.Available ? $"{WorldPlayerSaveCountText} player saves · {WorldSizeText}" : "World data unavailable";
         }
         catch (Exception ex) { WorldExplorerDetail = $"Dashboard world load: {ex.Message}"; }
 
@@ -4911,7 +4871,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             var identities = await _api.GetPlayerGuildExplorerAsync(profile, BearerToken);
             PlayerRecordCountText = identities.Players.Count.ToString();
             GuildRecordCountText = identities.Guilds.Count.ToString();
-            DashboardGuildText = $"{identities.Guilds.Count} guild(s) · {identities.Players.Count} known player(s)";
+            Dashboard.GuildText = $"{identities.Guilds.Count} guild(s) · {identities.Players.Count} known player(s)";
         }
         catch (Exception ex) { PlayerGuildDetail = $"Dashboard identity load: {ex.Message}"; }
 
@@ -4927,12 +4887,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             if (LatestDiagnosticsReport.Failures > 0)
             {
                 DashboardHealthText = "ATTENTION";
-                DashboardHealthDetail = $"{LatestDiagnosticsReport.Failures} Doctor finding(s) need attention. Open Doctor.";
+                Dashboard.HealthDetail = $"{LatestDiagnosticsReport.Failures} Doctor finding(s) need attention. Open Doctor.";
             }
             else if (LatestDiagnosticsReport.Warnings > 0 && DashboardHealthText == "READY")
             {
                 DashboardHealthText = "DEGRADED";
-                DashboardHealthDetail = $"{LatestDiagnosticsReport.Warnings} Doctor finding(s) are warnings. Open Doctor.";
+                Dashboard.HealthDetail = $"{LatestDiagnosticsReport.Warnings} Doctor finding(s) are warnings. Open Doctor.";
             }
         }
         catch (Exception ex) { DiagnosticsReportDetail = $"Dashboard diagnostics load: {ex.Message}"; }
@@ -4941,7 +4901,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             var mods = await _api.GetModsAsync(profile, BearerToken);
             ApplyModInventory(mods);
-            DashboardModText = $"{mods.Installed} installed · {mods.ConfirmedIssues} confirmed issue(s)";
+            Dashboard.ModText = $"{mods.Installed} installed · {mods.ConfirmedIssues} confirmed issue(s)";
         }
         catch (Exception ex) { ModSummary = $"Dashboard MOD load: {ex.Message}"; }
     }
@@ -4967,7 +4927,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ApplyStatus(snapshot.Status);
             ApplyServiceStatus(snapshot.Service);
             // v1.0.0.1: the addresses line (at most once a minute; the service keeps the public address for an hour).
-            _ = RefreshHostAddressesAsync(profile, requestTab, force: false);
+            _ = Dashboard.RefreshHostAddressesAsync(profile, requestTab, force: false);
             // v1.0.2.0 (roadmap R-2): the Dashboard's warning when a switched-on channel has no proven delivery.
             _ = RefreshDeliveryHealthAsync(profile, requestTab, force: false);
             ApplyPlayers(snapshot.Players);
@@ -5459,7 +5419,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             OnlinePlayers.Add(player);
 
         OnlinePlayerCountText = snapshot.OnlineCount.ToString();
-        DashboardPlayersSessionText = $"{snapshot.OnlineCount} online";
+        Dashboard.PlayersSessionText = $"{snapshot.OnlineCount} online";
         PlayersState = snapshot.Available
             ? snapshot.OnlineCount == 0 ? "REST available / 0 online" : $"{snapshot.OnlineCount} online"
             : "REST unavailable";
@@ -5832,6 +5792,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     // theirs). The Console page and its log lines live in ConsoleLogViewModel; the Dashboard's part stays here until C-1.
     public SessionContext Session { get; }
     public ConsoleLogViewModel Logs { get; }
+    public HostPageViewModel Host { get; }
+    public DashboardViewModel Dashboard { get; }
+    // The HOST page's navigation flags (the nav pane and the category bar bind them).
+    public bool IsHostPage => SelectedPage == NavigationPage.Host;
+    public bool IsV5HostCategory => SelectedPage == NavigationPage.Host;
     private readonly IReadOnlyList<PageViewModel> _pages;
 
     private ConnectionProfile? ActiveProfileOrNull()
@@ -5850,8 +5815,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         // v1.0.7.3 (roadmap Q-6): a poll with no new lines changes nothing.
         if (!Logs.Apply(snapshot)) return;
-        DashboardActivityLines.ReplaceAll(Logs.LogLines.Where(x => !string.IsNullOrWhiteSpace(x)).TakeLast(8));
-        DashboardLastActivityText = DashboardActivityLines.Count > 0 ? DashboardActivityLines[^1] : "No recent console activity";
+        Dashboard.ActivityLines.ReplaceAll(Logs.LogLines.Where(x => !string.IsNullOrWhiteSpace(x)).TakeLast(8));
+        Dashboard.LastActivityText = Dashboard.ActivityLines.Count > 0 ? Dashboard.ActivityLines[^1] : "No recent console activity";
     }
 
     private async Task RunRconDoctorAsync()
@@ -5904,22 +5869,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (world.Available)
         {
             ActiveWorldIdText = world.ActiveWorldId ?? "Not resolved";
-            DashboardWorldNicknameText = BuildWorldNickname(world.ActiveWorldId);
-            DashboardWorldText = ActiveWorldIdText;
+            Dashboard.WorldNicknameText = BuildWorldNickname(world.ActiveWorldId);
+            Dashboard.WorldText = ActiveWorldIdText;
             WorldPlayerSaveCountText = world.PlayerSaveCount.ToString();
             WorldSizeText = $"{world.TotalSizeBytes / 1024d / 1024d:F2} MB";
-            DashboardWorldPulseText = $"{world.PlayerSaveCount} player save(s) · {WorldSizeText}";
-            DashboardWorldClockText = world.WorldDayNumber.HasValue
+            Dashboard.WorldPulseText = $"{world.PlayerSaveCount} player save(s) · {WorldSizeText}";
+            Dashboard.WorldClockText = world.WorldDayNumber.HasValue
                 ? $"Day {world.WorldDayNumber.Value:N0} • {world.WorldTimeText ?? "--:--"}"
                 : "Day — • --:--";
             // v1.0.0.4: the day is read from a decoded copy of Level.sav; when the world was saved after that decode, say so
             // (live, the Dashboard showed Day 210 for three days while the world was at Day 248).
-            DashboardWorldClockDetailText = !world.WorldDayNumber.HasValue
+            Dashboard.WorldClockDetailText = !world.WorldDayNumber.HasValue
                 ? "Decoded Level.sav JSON unavailable — MystTiq will not estimate the day"
                 : world.WorldClockCurrent || world.WorldClockAsOfUtc is null
                     ? "Exact saved world clock from GameTimeSaveData.GameDateTimeTicks"
                     : $"From the save as of {world.WorldClockAsOfUtc.Value.ToLocalTime():g}; the world has been saved since and is being read again.";
-            DashboardPulseSaveText = world.LastWorldSaveUtc.HasValue
+            Dashboard.PulseSaveText = world.LastWorldSaveUtc.HasValue
                 ? $"World save: {FormatAge(DateTimeOffset.Now - world.LastWorldSaveUtc.Value.ToLocalTime())} ago"
                 : "World save: —";
         }
@@ -5929,37 +5894,37 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // same "Active World" card (ID, player-save count, size) as a completely different,
             // already-running server, with no clone involved. Root cause: these fields are plain
             // top-level ViewModel properties (not per-tab), and this branch only ever reset the
-            // clock/save-age text -- ActiveWorldIdText/DashboardWorldNicknameText/DashboardWorldText/
-            // WorldPlayerSaveCountText/WorldSizeText/DashboardWorldPulseText kept whatever the
+            // clock/save-age text -- ActiveWorldIdText/Dashboard.WorldNicknameText/Dashboard.WorldText/
+            // WorldPlayerSaveCountText/WorldSizeText/Dashboard.WorldPulseText kept whatever the
             // previously active tab's last successful poll had set, since a genuinely fresh server
             // (world.Available == false, e.g. still starting and hasn't generated Level.sav yet)
             // never got a chance to overwrite them with its own -- or lack of -- data.
             ActiveWorldIdText = "Not resolved";
-            DashboardWorldNicknameText = string.Empty;
-            DashboardWorldText = "Unavailable";
+            Dashboard.WorldNicknameText = string.Empty;
+            Dashboard.WorldText = "Unavailable";
             WorldPlayerSaveCountText = "0";
             WorldSizeText = "0.00 MB";
-            DashboardWorldPulseText = "World telemetry unavailable";
-            DashboardWorldClockText = "Day — • --:--";
-            DashboardWorldClockDetailText = "World telemetry unavailable";
-            DashboardPulseSaveText = "World save: —";
+            Dashboard.WorldPulseText = "World telemetry unavailable";
+            Dashboard.WorldClockText = "Day — • --:--";
+            Dashboard.WorldClockDetailText = "World telemetry unavailable";
+            Dashboard.PulseSaveText = "World save: —";
         }
 
         var latestBackup = snapshot.BackupInventory.Items.OrderByDescending(x => x.CreatedAt).FirstOrDefault();
-        DashboardBackupText = snapshot.BackupInventory.Count == 0 ? "No backups" : $"{snapshot.BackupInventory.Count} available";
-        DashboardBackupStripText = snapshot.BackupInventory.Count == 0 ? "Backup: none" : $"Backup: {snapshot.BackupInventory.Count} available";
+        Dashboard.BackupText = snapshot.BackupInventory.Count == 0 ? "No backups" : $"{snapshot.BackupInventory.Count} available";
+        Dashboard.BackupStripText = snapshot.BackupInventory.Count == 0 ? "Backup: none" : $"Backup: {snapshot.BackupInventory.Count} available";
         BackupTotalSizeText = $"{snapshot.BackupInventory.TotalSizeBytes / 1024d / 1024d:F2} MB";
-        DashboardPulseBackupText = latestBackup is null
+        Dashboard.PulseBackupText = latestBackup is null
             ? "Backup: none detected"
             : $"Backup: {FormatAge(DateTimeOffset.Now - latestBackup.CreatedAt.ToLocalTime())} ago{(latestBackup.Verified ? " · Verified" : string.Empty)}";
 
         var serverName = snapshot.PalworldSettings.Settings.FirstOrDefault(x => x.Name.Equals("ServerName", StringComparison.OrdinalIgnoreCase))?.Value;
         var description = snapshot.PalworldSettings.Settings.FirstOrDefault(x => x.Name.Equals("ServerDescription", StringComparison.OrdinalIgnoreCase))?.Value;
-        DashboardServerName = string.IsNullOrWhiteSpace(serverName) ? "—" : serverName;
-        DashboardServerDescriptionVerbatim = string.IsNullOrWhiteSpace(description) ? "—" : description;
+        Dashboard.ServerName = string.IsNullOrWhiteSpace(serverName) ? "—" : serverName;
+        Dashboard.ServerDescriptionVerbatim = string.IsNullOrWhiteSpace(description) ? "—" : description;
         var rconEnabled = snapshot.PalworldSettings.Settings.FirstOrDefault(x => x.Name.Equals("RCONEnabled", StringComparison.OrdinalIgnoreCase))?.Value;
         var rconPort = snapshot.PalworldSettings.Settings.FirstOrDefault(x => x.Name.Equals("RCONPort", StringComparison.OrdinalIgnoreCase))?.Value?.Trim('"');
-        DashboardRconText = string.Equals(rconEnabled?.Trim('"'), "True", StringComparison.OrdinalIgnoreCase)
+        Dashboard.RconText = string.Equals(rconEnabled?.Trim('"'), "True", StringComparison.OrdinalIgnoreCase)
             ? $"RCON: Enabled{(string.IsNullOrWhiteSpace(rconPort) ? string.Empty : $" : {rconPort}")}"
             : "RCON: Disabled";
     }
@@ -10437,10 +10402,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // started distinguishing "genuinely not running" from "running at an unexpected path" (see
         // WindowsServerLifecycleService), the Dashboard's SERVER/OVERALL HEALTH cards never showed
         // the difference. Now they surface the backend's actual explanation.
-        DashboardHealthDetail = status.Ready
+        Dashboard.HealthDetail = status.Ready
             ? $"PalServer healthy · {ListenerText}"
             : status.CrashDetected ? "Crash evidence detected; open Doctor." : (status.Detail ?? "Stopped intentionally or awaiting start.");
-        DashboardSessionText = status.Ready ? $"Session {UptimeText}" : (status.Detail ?? "No active PalServer session");
+        Dashboard.SessionText = status.Ready ? $"Session {UptimeText}" : (status.Detail ?? "No active PalServer session");
     }
 
     private void ApplyServiceStatus(ServiceStatusDto status)

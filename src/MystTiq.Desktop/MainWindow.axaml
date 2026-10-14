@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.0: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.8.1: file reviewed for this release (2026-10-11). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -403,7 +403,7 @@
               <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
                 <TextBlock Text="{services:Tr dashboard.server}" Classes="muted"/>
                 <TextBlock Grid.Row="1" Text="{services:TrText ServerState}" FontSize="15" FontWeight="SemiBold"/>
-                <TextBlock Grid.Row="2" Text="{services:TrText DashboardSessionText}" Classes="muted"/>
+                <TextBlock Grid.Row="2" Text="{services:TrText Dashboard.SessionText}" Classes="muted"/>
                 <!-- v1.0.7.2 (roadmap Q-8): the step a running start is at, and for how long. -->
                 <TextBlock x:Name="StartupStageText" Grid.Row="3" Text="{services:TrText StartupStageText}" Foreground="{DynamicResource AmberBrush}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasStartupStage}"/>
                 <Border Grid.Column="1" Grid.RowSpan="4" Background="{DynamicResource CardStrongBrush}" BorderBrush="{DynamicResource BlueAccentBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="8,3" VerticalAlignment="Center"><TextBlock Text="{services:TrText UptimeText}" Foreground="{DynamicResource BlueBrush}" FontWeight="Bold" FontSize="12"/></Border>
@@ -413,10 +413,10 @@
               <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
                 <TextBlock Text="{services:Tr dashboard.activeWorld}" Classes="muted"/>
                 <Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="8,3" Command="{Binding NavigateCommand}" CommandParameter="Inspector"/>
-                <TextBlock Grid.Row="1" Text="{services:TrText DashboardWorldNicknameText}" FontSize="13" FontWeight="SemiBold"/>
-                <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{services:TrText DashboardWorldText}" FontSize="9" FontFamily="Consolas, monospace" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
+                <TextBlock Grid.Row="1" Text="{services:TrText Dashboard.WorldNicknameText}" FontSize="13" FontWeight="SemiBold"/>
+                <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{services:TrText Dashboard.WorldText}" FontSize="9" FontFamily="Consolas, monospace" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
                 <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="6">
-                  <TextBlock Text="{services:TrText DashboardWorldPulseText}" Classes="muted" VerticalAlignment="Center"/>
+                  <TextBlock Text="{services:TrText Dashboard.WorldPulseText}" Classes="muted" VerticalAlignment="Center"/>
                   <Button Classes="info" Content="{services:Tr dashboard.copyId}" Padding="6,2" Click="CopyActiveWorldId_Click" ToolTip.Tip="{services:Tr dashboard.copyId.tip}"/>
                 </StackPanel>
               </Grid>
@@ -425,7 +425,7 @@
               <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
                 <TextBlock Text="{services:Tr dashboard.backup}" Classes="muted"/>
                 <Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="8,3" Command="{Binding NavigateCommand}" CommandParameter="Backups"/>
-                <TextBlock Grid.Row="1" Text="{services:TrText DashboardBackupText}" FontSize="15" FontWeight="SemiBold"/>
+                <TextBlock Grid.Row="1" Text="{services:TrText Dashboard.BackupText}" FontSize="15" FontWeight="SemiBold"/>
                 <TextBlock Grid.Row="2" Text="{services:TrFormat dashboard.format.stored, Path=BackupTotalSizeText}" Classes="muted"/>
               </Grid>
             </Border>
@@ -433,15 +433,15 @@
               <Grid RowDefinitions="Auto,Auto,Auto">
                 <TextBlock Text="{services:Tr dashboard.overallHealth}" Classes="muted"/>
                 <TextBlock Grid.Row="1" Text="{services:TrText DashboardHealthText}" FontSize="15" FontWeight="SemiBold" Foreground="{Binding HealthStateColorKey, Converter={x:Static converters:SemanticStatusColorConverter.Instance}}"/>
-                <TextBlock Grid.Row="2" Text="{services:TrText DashboardHealthDetail}" Classes="muted" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Grid.Row="2" Text="{services:TrText Dashboard.HealthDetail}" Classes="muted" TextTrimming="CharacterEllipsis"/>
               </Grid>
             </Border>
           </Grid>
 
           <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
             <Border Classes="card glowPurple" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.players}" Classes="muted"/><TextBlock Text="{services:TrFormat dashboard.format.online, Path=OnlinePlayerCountText}" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.known, Path=PlayerRecordCountText}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="Players"/></Grid></Border>
-            <Border Grid.Column="1" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.guildsBases}" Classes="muted"/><TextBlock Text="{services:TrText DashboardGuildText}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{services:TrText SemanticStateText}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="Guilds"/></Grid></Border>
-            <Border Grid.Column="2" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.modPlatform}" Classes="muted"/><TextBlock Text="{services:TrText DashboardModText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.health, Path=ModHealth}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="ModDashboard"/></Grid></Border>
+            <Border Grid.Column="1" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.guildsBases}" Classes="muted"/><TextBlock Text="{services:TrText Dashboard.GuildText}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{services:TrText SemanticStateText}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="Guilds"/></Grid></Border>
+            <Border Grid.Column="2" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.modPlatform}" Classes="muted"/><TextBlock Text="{services:TrText Dashboard.ModText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.health, Path=ModHealth}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="ModDashboard"/></Grid></Border>
             <Border Grid.Column="3" Classes="card accentHome" Padding="8,6" ClipToBounds="True">
               <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="6" ClipToBounds="True">
                 <StackPanel MinWidth="0"><TextBlock Text="{services:Tr dashboard.cpu}" Classes="muted"/><TextBlock Text="{services:TrText CpuText}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/></StackPanel>
@@ -458,21 +458,21 @@
 
           <Border Background="{DynamicResource CardStrongBrush}" BorderBrush="{DynamicResource BlueAccentBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6">
             <Grid ColumnDefinitions="1.25*,1*,1*,1.25*,1.4*" ColumnSpacing="12">
-              <StackPanel><TextBlock Text="{services:Tr dashboard.worldPulse}" Foreground="{DynamicResource BlueBrush}" FontSize="9" FontWeight="Bold"/><TextBlock Text="{services:TrText DashboardWorldClockText}" FontSize="15" FontWeight="Bold"/><TextBlock Text="{services:TrText DashboardWorldClockDetailText}" Classes="muted" FontSize="9" TextTrimming="CharacterEllipsis"/></StackPanel>
-              <StackPanel Grid.Column="1"><TextBlock Text="{services:Tr dashboard.serverSession}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText UptimeText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrText DashboardSessionText}" Classes="muted" FontSize="9"/></StackPanel>
-              <StackPanel Grid.Column="2"><TextBlock Text="{services:Tr dashboard.playersThisSession}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText DashboardPlayersSessionText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.knownPlayers, Path=PlayerRecordCountText}" Classes="muted" FontSize="9"/></StackPanel>
-              <StackPanel Grid.Column="3"><TextBlock Text="{services:Tr dashboard.worldSave}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText DashboardPulseSaveText}" FontSize="12" FontWeight="SemiBold"/><TextBlock Text="{services:TrText DashboardPulseBackupText}" Classes="muted" FontSize="9"/></StackPanel>
-              <StackPanel Grid.Column="4"><TextBlock Text="{services:Tr dashboard.lastActivity}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText DashboardLastActivityText}" TextWrapping="Wrap" MaxHeight="40" FontSize="9" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
+              <StackPanel><TextBlock Text="{services:Tr dashboard.worldPulse}" Foreground="{DynamicResource BlueBrush}" FontSize="9" FontWeight="Bold"/><TextBlock Text="{services:TrText Dashboard.WorldClockText}" FontSize="15" FontWeight="Bold"/><TextBlock Text="{services:TrText Dashboard.WorldClockDetailText}" Classes="muted" FontSize="9" TextTrimming="CharacterEllipsis"/></StackPanel>
+              <StackPanel Grid.Column="1"><TextBlock Text="{services:Tr dashboard.serverSession}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText UptimeText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Dashboard.SessionText}" Classes="muted" FontSize="9"/></StackPanel>
+              <StackPanel Grid.Column="2"><TextBlock Text="{services:Tr dashboard.playersThisSession}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText Dashboard.PlayersSessionText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.knownPlayers, Path=PlayerRecordCountText}" Classes="muted" FontSize="9"/></StackPanel>
+              <StackPanel Grid.Column="3"><TextBlock Text="{services:Tr dashboard.worldSave}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText Dashboard.PulseSaveText}" FontSize="12" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Dashboard.PulseBackupText}" Classes="muted" FontSize="9"/></StackPanel>
+              <StackPanel Grid.Column="4"><TextBlock Text="{services:Tr dashboard.lastActivity}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText Dashboard.LastActivityText}" TextWrapping="Wrap" MaxHeight="40" FontSize="9" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
             </Grid>
           </Border>
 
           <Border Classes="card accentHome" Padding="8">
             <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="12">
               <TextBlock Text="{services:Tr dashboard.health}" Classes="muted" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{services:TrText DashboardHealthText}" FontWeight="Bold" Foreground="{Binding HealthStateColorKey, Converter={x:Static converters:SemanticStatusColorConverter.Instance}}" VerticalAlignment="Center"/>
-              <TextBlock Grid.Column="2" Text="{services:TrText DashboardRestText}" VerticalAlignment="Center"/>
-              <TextBlock Grid.Column="3" Text="{services:TrText DashboardRconText}" Foreground="{DynamicResource AmberBrush}" VerticalAlignment="Center" ToolTip.Tip="{services:Tr dashboard.rcon.tip}"/>
-              <TextBlock Grid.Column="4" Text="{services:TrText DashboardModsStripText}" VerticalAlignment="Center"/>
-              <TextBlock Grid.Column="5" Text="{services:TrText DashboardBackupStripText}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="2" Text="{services:TrText Dashboard.RestText}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="3" Text="{services:TrText Dashboard.RconText}" Foreground="{DynamicResource AmberBrush}" VerticalAlignment="Center" ToolTip.Tip="{services:Tr dashboard.rcon.tip}"/>
+              <TextBlock Grid.Column="4" Text="{services:TrText Dashboard.ModsStripText}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="5" Text="{services:TrText Dashboard.BackupStripText}" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="7">
                 <Button Classes="verify" Content="{services:Tr dashboard.scan}" Padding="10,3" Command="{Binding RunDoctorCommand}" ToolTip.Tip="{services:Tr dashboard.scan.tip}"/>
                 <Button Classes="apply" Content="{services:Tr dashboard.save}" Padding="10,3" Command="{Binding SaveWorldNowCommand}" IsEnabled="{Binding CanOperate}" ToolTip.Tip="{services:Tr dashboard.save.tip}"/>
@@ -508,7 +508,7 @@
             <Border Grid.Column="1" Classes="card accentHome" Padding="10">
               <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr dashboard.liveActivity}" FontSize="15" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{services:TrText LastObservedText}" Classes="muted"/></Grid>
-                <ItemsControl ItemsSource="{Binding DashboardActivityLines}" MaxHeight="105"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="10" Foreground="{DynamicResource MutedBrush}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                <ItemsControl ItemsSource="{Binding Dashboard.ActivityLines}" MaxHeight="105"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="10" Foreground="{DynamicResource MutedBrush}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
               </StackPanel>
             </Border>
           </Grid>
@@ -532,9 +532,9 @@
 
           <Border Classes="card accentHome" Padding="8">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="10">
-              <StackPanel><TextBlock Text="{services:Tr dashboard.serverName}" Classes="muted" FontSize="9"/><TextBlock Text="{Binding DashboardServerName}" FontSize="13" FontWeight="Bold"/></StackPanel>
+              <StackPanel><TextBlock Text="{services:Tr dashboard.serverName}" Classes="muted" FontSize="9"/><TextBlock Text="{Binding Dashboard.ServerName}" FontSize="13" FontWeight="Bold"/></StackPanel>
               <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderSoftBrush}" Margin="4,0"/>
-              <StackPanel Grid.Column="2"><TextBlock Text="{services:Tr dashboard.description}" Classes="muted" FontSize="9"/><TextBlock Text="{Binding DashboardServerDescriptionVerbatim}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding DashboardServerDescriptionVerbatim}"/></StackPanel>
+              <StackPanel Grid.Column="2"><TextBlock Text="{services:Tr dashboard.description}" Classes="muted" FontSize="9"/><TextBlock Text="{Binding Dashboard.ServerDescriptionVerbatim}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Dashboard.ServerDescriptionVerbatim}"/></StackPanel>
               <Border Grid.Column="3" Width="1" Background="{DynamicResource BorderSoftBrush}" Margin="4,0"/>
               <StackPanel Grid.Column="4"><TextBlock Text="{services:Tr dashboard.currentOperation}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText LifecycleStatusText}" FontSize="10" Foreground="{DynamicResource BlueBrush}" MaxWidth="300" TextTrimming="CharacterEllipsis"/></StackPanel>
             </Grid>
@@ -545,11 +545,11 @@
           <Border x:Name="DashboardAddresses" Classes="card accentHome" Padding="8">
             <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="10">
               <TextBlock Text="{services:Tr dashboard.localAddresses}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
-              <SelectableTextBlock Grid.Column="1" Text="{Binding LocalAddressesVerbatim}" FontFamily="Consolas, monospace" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"/>
+              <SelectableTextBlock Grid.Column="1" Text="{Binding Dashboard.LocalAddressesVerbatim}" FontFamily="Consolas, monospace" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"/>
               <TextBlock Grid.Column="2" Text="{services:Tr dashboard.publicAddress}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <SelectableTextBlock Text="{Binding PublicAddressVerbatim}" FontFamily="Consolas, monospace" FontSize="12"/>
-                <TextBlock Text="{services:TrText PublicAddressNote}" Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <SelectableTextBlock Text="{Binding Dashboard.PublicAddressVerbatim}" FontFamily="Consolas, monospace" FontSize="12"/>
+                <TextBlock Text="{services:TrText Dashboard.PublicAddressNote}" Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
               </StackPanel>
             </Grid>
           </Border>
@@ -779,7 +779,7 @@
 
           <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="12">
             <Border Classes="card accentWorld">
-              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.active_world}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText DashboardWorldNicknameText}" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{services:TrText ActiveWorldIdText}" FontSize="11" TextWrapping="Wrap" FontFamily="Consolas, monospace" ToolTip.Tip="{services:Tr ui.full_canonical_active_world_id}"/><Button Classes="info" Content="{services:Tr ui.copy_world_id}" HorizontalAlignment="Left" Padding="8,3" Click="CopyActiveWorldId_Click"/></StackPanel>
+              <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.active_world}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Dashboard.WorldNicknameText}" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{services:TrText ActiveWorldIdText}" FontSize="11" TextWrapping="Wrap" FontFamily="Consolas, monospace" ToolTip.Tip="{services:Tr ui.full_canonical_active_world_id}"/><Button Classes="info" Content="{services:Tr ui.copy_world_id}" HorizontalAlignment="Left" Padding="8,3" Click="CopyActiveWorldId_Click"/></StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="card accentWorld">
               <StackPanel Spacing="5"><TextBlock Text="{services:Tr ui.worlds}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText WorldCountText}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
@@ -3685,26 +3685,26 @@
           <Border x:Name="HostMachineCard" Classes="card accentSystem">
             <StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.this_machine}" FontSize="18" FontWeight="SemiBold"/>
-              <TextBlock Text="{services:TrText HostMachineText}" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText HostProcessorText}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.HostMachineText}" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.HostProcessorText}" Classes="muted" TextWrapping="Wrap"/>
               <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="20">
                 <StackPanel Spacing="4">
                   <TextBlock Text="{services:Tr ui.processor}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText HostCpuText}" FontSize="17" FontWeight="SemiBold"/>
-                  <ProgressBar Value="{Binding HostCpuPercent}" Maximum="100" Height="6" MinHeight="6"/>
+                  <TextBlock Text="{services:TrText Host.HostCpuText}" FontSize="17" FontWeight="SemiBold"/>
+                  <ProgressBar Value="{Binding Host.HostCpuPercent}" Maximum="100" Height="6" MinHeight="6"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="4">
                   <TextBlock Text="{services:Tr ui.memory}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText HostMemoryText}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                  <ProgressBar Value="{Binding HostMemoryPercent}" Maximum="100" Height="6" MinHeight="6"/>
+                  <TextBlock Text="{services:TrText Host.HostMemoryText}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                  <ProgressBar Value="{Binding Host.HostMemoryPercent}" Maximum="100" Height="6" MinHeight="6"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="4" MinWidth="120">
                   <TextBlock Text="{services:Tr ui.uptime}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText HostUptimeText}" FontSize="17" FontWeight="SemiBold"/>
+                  <TextBlock Text="{services:TrText Host.HostUptimeText}" FontSize="17" FontWeight="SemiBold"/>
                 </StackPanel>
               </Grid>
               <TextBlock Text="{services:Tr ui.for_a_remote_server_this_is_the_server_s_own_mac_9c32c0}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText HostStatusText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.HostStatusText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
           <!-- v0.8.20.0: the machine's history (one reading a minute, 7 days). -->
@@ -3712,12 +3712,12 @@
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="{services:Tr ui.history}" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.history}" x:Name="HostHistoryRange" Grid.Column="1" ItemsSource="{Binding HostHistoryRangeOptions}" SelectedIndex="{Binding HostHistoryRangeIndex}" MinWidth="170"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.history}" x:Name="HostHistoryRange" Grid.Column="1" ItemsSource="{Binding Host.HostHistoryRangeOptions}" SelectedIndex="{Binding Host.HostHistoryRangeIndex}" MinWidth="170"/>
               </Grid>
-              <controls:HostHistoryChart x:Name="HostHistoryChart" Samples="{Binding HostHistorySamples}" Height="120" MinWidth="0" ClipToBounds="True"/>
-              <TextBlock Text="{services:TrText HostHistorySummaryText}" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText HostHistoryCoverageText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText HostHistoryStatusText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding HostHistoryStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              <controls:HostHistoryChart x:Name="HostHistoryChart" Samples="{Binding Host.HostHistorySamples}" Height="120" MinWidth="0" ClipToBounds="True"/>
+              <TextBlock Text="{services:TrText Host.HostHistorySummaryText}" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.HostHistoryCoverageText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.HostHistoryStatusText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding Host.HostHistoryStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
           </Border>
           <!-- Everyone signed in can read it; changing it is Admin, as on the server (v0.8.14.0 pattern: read-only). -->
@@ -3727,30 +3727,30 @@
               <TextBlock Text="{services:Tr ui.applies_to_this_server_s_own_processes_on_window_66598f}" Classes="muted" TextWrapping="Wrap"/>
               <WrapPanel Orientation="Horizontal">
                 <TextBlock Text="{services:Tr ui.priority}" VerticalAlignment="Center" Margin="0,0,12,6"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.priority}" x:Name="HostPriorityCombo" ItemsSource="{Binding PriorityOptions}" SelectedIndex="{Binding SelectedPriorityIndex}" MinWidth="210" Margin="0,0,24,6"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.priority}" x:Name="HostPriorityCombo" ItemsSource="{Binding Host.PriorityOptions}" SelectedIndex="{Binding Host.SelectedPriorityIndex}" MinWidth="210" Margin="0,0,24,6"/>
                 <TextBlock Text="{services:Tr ui.eco_mode}" VerticalAlignment="Center" Margin="0,0,12,6"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.eco_mode}" x:Name="HostEcoCombo" ItemsSource="{Binding EcoModeOptions}" SelectedIndex="{Binding SelectedEcoModeIndex}" MinWidth="210" Margin="0,0,24,6"/>
-                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsEcoWhenEmpty}" Margin="0,0,0,6">
+                <ComboBox AutomationProperties.Name="{services:Tr ui.eco_mode}" x:Name="HostEcoCombo" ItemsSource="{Binding Host.EcoModeOptions}" SelectedIndex="{Binding Host.SelectedEcoModeIndex}" MinWidth="210" Margin="0,0,24,6"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding Host.IsEcoWhenEmpty}" Margin="0,0,0,6">
                   <TextBlock Text="{services:Tr ui.after}" VerticalAlignment="Center"/>
-                  <TextBox AutomationProperties.Name="{services:Tr ui.a11y_minutes_before_eco_mode}" x:Name="HostEcoMinutes" Text="{Binding EcoAfterEmptyMinutesText}" Width="64"/>
+                  <TextBox AutomationProperties.Name="{services:Tr ui.a11y_minutes_before_eco_mode}" x:Name="HostEcoMinutes" Text="{Binding Host.EcoAfterEmptyMinutesText}" Width="64"/>
                   <TextBlock Text="{services:Tr ui.minutes_with_no_one_online}" VerticalAlignment="Center"/>
                 </StackPanel>
               </WrapPanel>
               <!-- v0.8.24.0: processor cores (affinity). -->
               <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="{services:Tr ui.processor_cores}" VerticalAlignment="Center"/>
-                <TextBox x:Name="HostCoresBox" Text="{Binding CoresText}" PlaceholderText="{services:Tr ui.every_core}" Width="180"/>
+                <TextBox x:Name="HostCoresBox" Text="{Binding Host.CoresText}" PlaceholderText="{services:Tr ui.every_core}" Width="180"/>
               </StackPanel>
-              <TextBlock Text="{services:TrText CoresHintText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText PriorityWarningText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding HasPriorityWarning}"/>
-              <TextBlock Text="{services:TrText EfficiencyNoteText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.CoresHintText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.PriorityWarningText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding Host.HasPriorityWarning}"/>
+              <TextBlock Text="{services:TrText Host.EfficiencyNoteText}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
               <StackPanel Orientation="Horizontal" Spacing="12">
-                <Button Classes="apply" Content="{services:Tr ui.save_and_apply}" Command="{Binding SaveResourcePolicyCommand}"/>
-                <TextBlock Text="{services:TrText ResourcePolicyStatusText}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <Button Classes="apply" Content="{services:Tr ui.save_and_apply}" Command="{Binding Host.SaveResourcePolicyCommand}"/>
+                <TextBlock Text="{services:TrText Host.ResourcePolicyStatusText}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
               </StackPanel>
-              <TextBlock Text="{services:TrText EcoStateText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText ResourceErrorText}" Foreground="{DynamicResource RedBrush}" TextWrapping="Wrap" IsVisible="{Binding HasResourceError}"/>
-              <ItemsControl ItemsSource="{Binding HostProcesses}">
+              <TextBlock Text="{services:TrText Host.EcoStateText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.ResourceErrorText}" Foreground="{DynamicResource RedBrush}" TextWrapping="Wrap" IsVisible="{Binding Host.HasResourceError}"/>
+              <ItemsControl ItemsSource="{Binding Host.HostProcesses}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:ProcessResourceStateDto">
                     <Border Classes="statuscard" Margin="0,3">
@@ -3770,44 +3770,44 @@
             <StackPanel Spacing="10">
               <TextBlock Text="{services:Tr ui.bandwidth_limits}" FontSize="17" FontWeight="SemiBold"/>
               <TextBlock Text="{services:Tr ui.how_much_the_server_may_send_to_each_player_and_7bff90}" Classes="muted" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText BandwidthDefaultsText}" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText BandwidthNowText}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.BandwidthDefaultsText}" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.BandwidthNowText}" Classes="muted" TextWrapping="Wrap"/>
               <WrapPanel Orientation="Horizontal">
                 <TextBlock Text="{services:Tr ui.limits}" VerticalAlignment="Center" Margin="0,0,12,6"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.limits}" x:Name="BandwidthModeCombo" ItemsSource="{Binding BandwidthModeOptions}" SelectedIndex="{Binding BandwidthModeIndex}" MinWidth="240" Margin="0,0,24,6"/>
-                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsBandwidthCustom}" Margin="0,0,24,6">
-                  <TextBox AutomationProperties.Name="{services:Tr ui.mbit_s_per_player}" x:Name="BandwidthPerPlayer" Text="{Binding PerPlayerMbpsText}" Width="72"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.limits}" x:Name="BandwidthModeCombo" ItemsSource="{Binding Host.BandwidthModeOptions}" SelectedIndex="{Binding Host.BandwidthModeIndex}" MinWidth="240" Margin="0,0,24,6"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding Host.IsBandwidthCustom}" Margin="0,0,24,6">
+                  <TextBox AutomationProperties.Name="{services:Tr ui.mbit_s_per_player}" x:Name="BandwidthPerPlayer" Text="{Binding Host.PerPlayerMbpsText}" Width="72"/>
                   <TextBlock Text="{services:Tr ui.mbit_s_per_player}" VerticalAlignment="Center"/>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsBandwidthCustom}" Margin="0,0,0,6">
-                  <TextBox AutomationProperties.Name="{services:Tr ui.network_updates_per_second}" x:Name="BandwidthTickRate" Text="{Binding TickRateText}" Width="60"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding Host.IsBandwidthCustom}" Margin="0,0,0,6">
+                  <TextBox AutomationProperties.Name="{services:Tr ui.network_updates_per_second}" x:Name="BandwidthTickRate" Text="{Binding Host.TickRateText}" Width="60"/>
                   <TextBlock Text="{services:Tr ui.network_updates_per_second}" VerticalAlignment="Center"/>
                 </StackPanel>
               </WrapPanel>
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{services:Tr ui.your_upload_speed_optional}" VerticalAlignment="Center"/>
-                <TextBox AutomationProperties.Name="{services:Tr ui.your_upload_speed_optional}" x:Name="BandwidthUpload" Text="{Binding UploadBudgetMbpsText}" Width="80"/>
+                <TextBox AutomationProperties.Name="{services:Tr ui.your_upload_speed_optional}" x:Name="BandwidthUpload" Text="{Binding Host.UploadBudgetMbpsText}" Width="80"/>
                 <TextBlock Text="{services:Tr ui.mbit_s_for_the_estimate_below}" Classes="muted" VerticalAlignment="Center"/>
               </StackPanel>
-              <TextBlock Text="{services:TrText BandwidthWorstCaseText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText BandwidthOverBudgetText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding BandwidthOverBudget}"/>
-              <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding HasBandwidthSuggestion}">
-                <TextBlock Text="{services:TrText BandwidthSuggestionText}" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                <Button Classes="apply" Content="{services:Tr ui.use_it}" Command="{Binding ApplyBandwidthSuggestionCommand}"/>
+              <TextBlock Text="{services:TrText Host.BandwidthWorstCaseText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Host.BandwidthOverBudgetText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding Host.BandwidthOverBudget}"/>
+              <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding Host.HasBandwidthSuggestion}">
+                <TextBlock Text="{services:TrText Host.BandwidthSuggestionText}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <Button Classes="apply" Content="{services:Tr ui.use_it}" Command="{Binding Host.ApplyBandwidthSuggestionCommand}"/>
               </StackPanel>
               <TextBlock Text="{services:Tr ui.fewer_network_updates_per_second_use_less_upload_e95bc8}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
               <StackPanel Orientation="Horizontal" Spacing="12">
-                <Button Classes="apply" Content="{services:Tr ui.save}" Command="{Binding SaveNetworkPolicyCommand}"/>
-                <TextBlock Text="{services:TrText BandwidthStatusText}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <Button Classes="apply" Content="{services:Tr ui.save}" Command="{Binding Host.SaveNetworkPolicyCommand}"/>
+                <TextBlock Text="{services:TrText Host.BandwidthStatusText}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
               </StackPanel>
-              <TextBlock Text="{services:TrText BandwidthRestartText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding BandwidthRestartNeeded}"/>
+              <TextBlock Text="{services:TrText Host.BandwidthRestartText}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap" IsVisible="{Binding Host.BandwidthRestartNeeded}"/>
             </StackPanel>
           </Border>
           <Border x:Name="HostNetworkCard" Classes="card accentSystem">
             <StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.network}" FontSize="17" FontWeight="SemiBold"/>
               <TextBlock Text="{services:Tr ui.traffic_of_the_whole_machine_through_each_adapte_26cfa8}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-              <ItemsControl ItemsSource="{Binding HostNetwork}">
+              <ItemsControl ItemsSource="{Binding Host.HostNetwork}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:HostNetworkAdapterDto">
                     <StackPanel Spacing="2" Margin="0,0,0,10">
@@ -3824,7 +3824,7 @@
             <StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.disks}" FontSize="17" FontWeight="SemiBold"/>
               <TextBlock Text="{services:Tr ui.the_disks_holding_something_of_this_server_come_e67132}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-              <ItemsControl ItemsSource="{Binding HostDisks}">
+              <ItemsControl ItemsSource="{Binding Host.HostDisks}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:HostDiskDto">
                     <StackPanel Spacing="3" Margin="0,0,0,10">

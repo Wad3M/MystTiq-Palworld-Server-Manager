@@ -1,4 +1,14 @@
-<!-- MystTiq v1.0.8.0: file reviewed for this release (2026-10-11). -->
+<!-- MystTiq v1.0.8.1: file reviewed for this release (2026-10-11). -->
+## v1.0.8.1 — HOST and Dashboard, Tidied
+
+- Roadmap C-1: the HOST page (machine, priority and eco mode, history, network limits) moved into `HostPageViewModel`
+  (the three HOST partial files removed), and the Dashboard's card texts, recent activity and addresses line into
+  `DashboardViewModel`. The session gained `SelectedProfile` and `ActiveTab`. The `MainWindowViewModel` files total
+  704,238 bytes (were 732,039). Nothing the owner sees changes.
+- Tests: the v1.0.8.1 gate regenerated from v1.0.8.0 (the HOST and Dashboard contracts read the new files) and the
+  ArtworkHarness reading `vm.Host`.
+- Version advanced to 1.0.8.1.
+
 ## v1.0.8.0 — A Cleaner Inside, and Ctrl+C Fixed
 
 - Fixed: with the default launch, PalServer shared the service's console, so a Ctrl+C on `mysttiq-server api-run` in a

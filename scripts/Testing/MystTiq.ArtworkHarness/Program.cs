@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.0: file reviewed for this release (2026-10-11).
+// MystTiq v1.0.8.1: file reviewed for this release (2026-10-11).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -913,11 +913,11 @@ var hostSample = new HostPageSnapshotDto
         MaxPlayers = 16, WorstCaseUploadMbps = 32, OverUploadBudget = true, SuggestedPerPlayerMbps = 1.5,
     },
 };
-var applyHost = typeof(MainWindowViewModel).GetMethod("ApplyHostSnapshot", BindingFlags.Instance | BindingFlags.NonPublic)!;
+var applyHost = typeof(HostPageViewModel).GetMethod("ApplyHostSnapshot", BindingFlags.Instance | BindingFlags.NonPublic)!;
 applyPrincipal.Invoke(vm, [null]);
 selectedPage.SetValue(vm, NavigationPage.Host);
 Dispatcher.UIThread.RunJobs();
-applyHost.Invoke(vm, [hostSample]);
+applyHost.Invoke(vm.Host, [hostSample]);
 Dispatcher.UIThread.RunJobs();
 Render("host-dark");
 var hostTexts = VisibleTexts();
@@ -930,45 +930,45 @@ Check(hostTexts.Contains("Holds this server's install, saves and backups") && ho
 Check(hostTexts.Contains("↓ 2.1 Mbit/s   ↑ 10.5 Mbit/s") && hostTexts.Contains("Ethernet · link 2.5 Gbit/s"), "the network card shows each adapter's traffic and link speed");
 Check(hostTexts.Any(t => t.StartsWith("PalServer-Win64-Shipping-Cmd (PID 4830)")) && hostTexts.Any(t => t.Contains("Priority above normal · efficiency mode system default")),
     "the server's processes are listed with their actual priority and efficiency mode");
-Check(vm.EcoStateText == "3 players online: full speed.", $"the eco state reads once, without repeating itself ({vm.EcoStateText})");
-Check(vm.SelectedPriorityIndex == 3 && vm.SelectedEcoModeIndex == 2 && vm.EcoAfterEmptyMinutesText == "15" && vm.IsEcoWhenEmpty,
+Check(vm.Host.EcoStateText == "3 players online: full speed.", $"the eco state reads once, without repeating itself ({vm.Host.EcoStateText})");
+Check(vm.Host.SelectedPriorityIndex == 3 && vm.Host.SelectedEcoModeIndex == 2 && vm.Host.EcoAfterEmptyMinutesText == "15" && vm.Host.IsEcoWhenEmpty,
     "the saved policy fills the pickers (above normal, eco when empty after 15 min)");
-vm.SelectedPriorityIndex = 4;
-applyHost.Invoke(vm, [hostSample]);
-Check(vm.SelectedPriorityIndex == 4 && vm.HasPriorityWarning, "an unsaved choice is not overwritten by the next reading, and High shows its warning");
-vm.EcoAfterEmptyMinutesText = "0";
-vm.SaveResourcePolicyCommand.Execute(null);
+vm.Host.SelectedPriorityIndex = 4;
+applyHost.Invoke(vm.Host, [hostSample]);
+Check(vm.Host.SelectedPriorityIndex == 4 && vm.Host.HasPriorityWarning, "an unsaved choice is not overwritten by the next reading, and High shows its warning");
+vm.Host.EcoAfterEmptyMinutesText = "0";
+vm.Host.SaveResourcePolicyCommand.Execute(null);
 Dispatcher.UIThread.RunJobs();
-Check(vm.ResourcePolicyStatusText.Contains("1 to 240"), "minutes outside 1..240 are refused before anything is sent");
-vm.EcoAfterEmptyMinutesText = "15";
+Check(vm.Host.ResourcePolicyStatusText.Contains("1 to 240"), "minutes outside 1..240 are refused before anything is sent");
+vm.Host.EcoAfterEmptyMinutesText = "15";
 Render("host-priority-high");
 
 // v0.8.18.0: the bandwidth card, from the same sample.
-Check(vm.BandwidthDefaultsText == "The game's own limits on this Windows server: 64 Mbit/s per player and 60 network updates per second." &&
-      vm.BandwidthNowText == "Engine.ini now: 2 Mbit/s per player and 30 network updates per second (MystTiq's limits).",
+Check(vm.Host.BandwidthDefaultsText == "The game's own limits on this Windows server: 64 Mbit/s per player and 60 network updates per second." &&
+      vm.Host.BandwidthNowText == "Engine.ini now: 2 Mbit/s per player and 30 network updates per second (MystTiq's limits).",
     "the bandwidth card shows the game's own limits and what Engine.ini sets now");
-Check(vm.BandwidthModeIndex == 1 && vm.IsBandwidthCustom && vm.PerPlayerMbpsText == "2" && vm.TickRateText == "30" && vm.UploadBudgetMbpsText == "30",
+Check(vm.Host.BandwidthModeIndex == 1 && vm.Host.IsBandwidthCustom && vm.Host.PerPlayerMbpsText == "2" && vm.Host.TickRateText == "30" && vm.Host.UploadBudgetMbpsText == "30",
     "the saved policy fills the bandwidth fields");
-Check(vm.BandwidthWorstCaseText == "With all 16 players at 2 Mbit/s each, the server could send up to 32 Mbit/s. Your upload: 30 Mbit/s." && vm.BandwidthOverBudget &&
-      vm.BandwidthSuggestionText == "To fit 16 players into 80 % of your upload: 1.5 Mbit/s per player.",
+Check(vm.Host.BandwidthWorstCaseText == "With all 16 players at 2 Mbit/s each, the server could send up to 32 Mbit/s. Your upload: 30 Mbit/s." && vm.Host.BandwidthOverBudget &&
+      vm.Host.BandwidthSuggestionText == "To fit 16 players into 80 % of your upload: 1.5 Mbit/s per player.",
     "the worst case, the over-upload warning and a suggestion that fits");
-vm.ApplyBandwidthSuggestionCommand.Execute(null);
-Check(vm.PerPlayerMbpsText == "1.5" && vm.IsBandwidthCustom, "Use It fills in the suggested limit");
-applyHost.Invoke(vm, [hostSample]);
-Check(vm.PerPlayerMbpsText == "1.5", "an unsaved bandwidth edit is not overwritten by the next reading");
-vm.TickRateText = "5";
-vm.SaveNetworkPolicyCommand.Execute(null);
+vm.Host.ApplyBandwidthSuggestionCommand.Execute(null);
+Check(vm.Host.PerPlayerMbpsText == "1.5" && vm.Host.IsBandwidthCustom, "Use It fills in the suggested limit");
+applyHost.Invoke(vm.Host, [hostSample]);
+Check(vm.Host.PerPlayerMbpsText == "1.5", "an unsaved bandwidth edit is not overwritten by the next reading");
+vm.Host.TickRateText = "5";
+vm.Host.SaveNetworkPolicyCommand.Execute(null);
 Dispatcher.UIThread.RunJobs();
-Check(vm.BandwidthStatusText.Contains("10 to 120"), "an update rate out of range is refused before anything is sent");
-vm.TickRateText = "30";
-Check(MainWindowViewModel.TryReadNumber("2.5", out var dot) && dot == 2.5 && !MainWindowViewModel.TryReadNumber("fast", out _), "limits are read as numbers, a word is refused");
+Check(vm.Host.BandwidthStatusText.Contains("10 to 120"), "an update rate out of range is refused before anything is sent");
+vm.Host.TickRateText = "30";
+Check(HostPageViewModel.TryReadNumber("2.5", out var dot) && dot == 2.5 && !HostPageViewModel.TryReadNumber("fast", out _), "limits are read as numbers, a word is refused");
 var bandwidthCard = window.FindControl<Border>("HostBandwidthCard")!;
 bandwidthCard.BringIntoView();
 Render("host-bandwidth");
-Check(!vm.BandwidthRestartNeeded, "no restart note while the limits in Engine.ini are the saved ones");
+Check(!vm.Host.BandwidthRestartNeeded, "no restart note while the limits in Engine.ini are the saved ones");
 
 // v0.8.20.0: the history card, from a sample day (a processor peak in the afternoon, one reading without a value).
-var applyHistory = typeof(MainWindowViewModel).GetMethod("ApplyHostHistory", BindingFlags.Instance | BindingFlags.NonPublic)!;
+var applyHistory = typeof(HostPageViewModel).GetMethod("ApplyHostHistory", BindingFlags.Instance | BindingFlags.NonPublic)!;
 var historyStart = DateTimeOffset.UtcNow.AddHours(-24);
 var historySamples = Enumerable.Range(0, 288).Select(i => new HostHistorySampleDto
 {
@@ -977,21 +977,21 @@ var historySamples = Enumerable.Range(0, 288).Select(i => new HostHistorySampleD
     MemoryUsedPercent = 60 + 10 * Math.Sin(i / 30d),
     SentBytesPerSecond = 200_000 + 1_000_000 * Math.Exp(-Math.Pow((i - 200) / 15d, 2)),
 }).ToArray();
-applyHistory.Invoke(vm, [new HostHistoryDto
+applyHistory.Invoke(vm.Host, [new HostHistoryDto
 {
     Samples = historySamples, RangeHours = 24, ReadingsInRange = 1440, AverageCpuPercent = 27.4, PeakCpuPercent = 80.2,
     AverageMemoryUsedPercent = 61, PeakMemoryUsedPercent = 70, PeakSentBytesPerSecond = 1_200_000, FirstReadingAt = historyStart,
 }]);
 Dispatcher.UIThread.RunJobs();
-Check(vm.HostHistorySummaryText == "Processor 27 % on average, peak 80 % · memory 61 % used on average, peak 70 % · busiest upload 9.6 Mbit/s",
-    $"the history summary reads plainly ({vm.HostHistorySummaryText})");
-Check(vm.HostHistoryCoverageText.StartsWith("1440 readings since") && window.FindControl<MystTiq.Desktop.Controls.HostHistoryChart>("HostHistoryChart")!.Samples!.Count == 288,
+Check(vm.Host.HostHistorySummaryText == "Processor 27 % on average, peak 80 % · memory 61 % used on average, peak 70 % · busiest upload 9.6 Mbit/s",
+    $"the history summary reads plainly ({vm.Host.HostHistorySummaryText})");
+Check(vm.Host.HostHistoryCoverageText.StartsWith("1440 readings since") && window.FindControl<MystTiq.Desktop.Controls.HostHistoryChart>("HostHistoryChart")!.Samples!.Count == 288,
     "the chart gets the points and the coverage line counts the readings");
 window.FindControl<Border>("HostHistoryCard")!.BringIntoView();
 Render("host-history");
-applyHistory.Invoke(vm, [new HostHistoryDto()]);
-Check(vm.HostHistorySummaryText.StartsWith("No readings yet") && vm.HostHistoryCoverageText == string.Empty, "no readings yet says so instead of showing zeros");
-Check(vm.HostHistoryRangeOptions.Count == 3 && vm.HostHistoryRangeIndex == 1, "the history offers an hour, a day and a week, a day first");
+applyHistory.Invoke(vm.Host, [new HostHistoryDto()]);
+Check(vm.Host.HostHistorySummaryText.StartsWith("No readings yet") && vm.Host.HostHistoryCoverageText == string.Empty, "no readings yet says so instead of showing zeros");
+Check(vm.Host.HostHistoryRangeOptions.Count == 3 && vm.Host.HostHistoryRangeIndex == 1, "the history offers an hour, a day and a week, a day first");
 var hostCard = window.FindControl<Border>("HostPriorityCard")!;
 Check(hostCard.IsEnabled, "local use can change the priority");
 applyPrincipal.Invoke(vm, [new MystTiqPrincipalDto { Id = "p-op", Name = "Operator user", Role = "Operator" }]);
