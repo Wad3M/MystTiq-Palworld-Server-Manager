@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -195,6 +195,8 @@ public interface IMystTiqApiClient
     Task<PlayerIdLedgerDto> GetPlayerIdsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<PlayerIdLedgerDto> SavePlayerIdSettingsAsync(ConnectionProfile profile, bool autoMove, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<PlayerIdMoveResultDto> MovePlayerIdAsync(ConnectionProfile profile, string userId, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v1.1.1.0: links an account to its character by hand.
+    Task<PlayerIdMoveResultDto> LinkPlayerIdAsync(ConnectionProfile profile, string userId, string playerId, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<NameGuardConfigDto> SaveNameGuardAsync(ConnectionProfile profile, NameGuardConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
     // v0.8.17.0: the HOST tab, and this server's process priority and eco mode.
     Task<HostPageSnapshotDto> GetHostAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);

@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Providers;
@@ -75,6 +75,7 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required HeadlessNameGuardService NameGuard { get; init; }
     // v1.1.0.2 (roadmap F-2): the join check, learned player IDs and the automatic character move.
     public required HeadlessPlayerIdService PlayerIds { get; init; }
+    public required HeadlessPlayerWatchService PlayerWatch { get; init; }
     public required HeadlessWorldClockService WorldClock { get; init; }
     public required HeadlessKitService Kits { get; init; }
     public required HeadlessGameIdCatalogService GameIds { get; init; }
@@ -92,6 +93,7 @@ public sealed class ServerProfileHost : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        await PlayerWatch.DisposeAsync();
         await Automation.DisposeAsync();
         await CrashRecovery.DisposeAsync();
         await DiscordBot.DisposeAsync();

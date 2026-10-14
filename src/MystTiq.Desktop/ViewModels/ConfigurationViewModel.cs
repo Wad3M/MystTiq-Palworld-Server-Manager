@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -916,23 +916,9 @@ public sealed class ConfigurationViewModel : PageViewModel
             ConfigLauncherLogFormatText = false;
             ConfigLauncherCustomArguments = string.Empty;
 
-            if (mode.Equals("DoubleClick", StringComparison.OrdinalIgnoreCase))
-            {
-                // v1.0.0.1 (2026-10-04): exactly what double-clicking PalServer.exe in the server folder does, the start the
-                // owner found keeps players' characters: started through the Windows shell, a normal window, no arguments
-                // (only -port= for a server not on 8211), nothing hidden afterwards.
-                ConfigLauncherUseShellExecute = true;
-                ConfigLauncherPortEnabled = ConfigLauncherPort != 8211;
-                ConfigLauncherLog = false;
-                ConfigLauncherStdout = false;
-                ConfigLauncherFullStdOutLogOutput = false;
-                ConfigLauncherAbsLog = false;
-                ConfigLauncherNoMods = false;
-                ConfigLauncherWindowStyle = "Normal";
-                ConfigLauncherHideManagedWindows = false;
-                ConfigLauncherPresetStatus = "Like double-click preset applied: PalServer.exe started through Windows, as a double-click in its folder does, with a normal window and no arguments. Click Save Launcher Settings before testing.";
-            }
-            else if (mode.Equals("NoMods", StringComparison.OrdinalIgnoreCase))
+            // v1.1.1.0: the Like double-click preset (v1.0.0.1) is gone. It existed because starting PalServer that way seemed to
+            // keep players' characters; roadmap F-2 showed on 2026-10-13 that the game itself had given the accounts new IDs.
+            if (mode.Equals("NoMods", StringComparison.OrdinalIgnoreCase))
             {
                 ConfigLauncherNoMods = true;
                 ConfigLauncherWindowStyle = "Hidden";

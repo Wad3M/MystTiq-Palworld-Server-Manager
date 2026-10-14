@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,9 +21,9 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.1.0.3 · Accepted baseline: v1.1.0.0**
+**Current version: v1.1.1.0 · Accepted baseline: v1.1.0.0**
 
-MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind ([release notes](release-notes/v1.1.0.3.md)). Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
+MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind; v1.1.1.0 adds MOD Sources, runs the player checks without the desktop and adds the Linux and Docker downloads ([release notes](release-notes/v1.1.1.0.md)). Downloads are on the Releases page: Windows, Linux and a Docker image of the service.
 
 ## What's new in v1.1.0.0
 
@@ -36,7 +36,7 @@ Everything added since 1.0, in one place. Each version's own notes are in [relea
 - **Level-gap scans.** A new anti-cheat rule reports a player who gains far more levels than their time on your server allows, with the numbers. It only reports, and it accounts for your experience rate.
 
 **Your MODs**
-- **A MOD browser.** Search your Downloads folder, Thunderstore, CurseForge, GitHub releases or Nexus Mods and install a MOD's file in one step; each archive is checked before anything is written.
+- **A MOD browser.** Search your Downloads folder, Thunderstore, CurseForge, GitHub releases or Nexus Mods and install a MOD's file in one step; each archive is checked before anything is written. Since v1.1.1.0 it is on **MODs > MOD Sources** with Steam Workshop and the Nexus Mods catalog.
 - **Load order and profiles.** Set the order UE4SS loads your MODs in, and export your MOD setup to a file you can import on this or another server. The import shows what will change first, and the file never contains the MOD files.
 - **PalDefender and the UE4SS loader** show on the MODs page with their version and an on/off switch.
 
@@ -104,8 +104,10 @@ Nexus download options depend on the account and provider. Game-level bandwidth 
 | Download | Who it's for |
 | --- | --- |
 | `Windows-x64.zip` | Windows users who want to run the app |
+| `Linux-x64.zip` | Linux x64: the desktop and the service (after extracting, `chmod +x MystTiq.Desktop headless/mysttiq-server`) |
+| `Docker-linux-x64.tar.gz` | The headless service as a Docker image: `docker load -i` the file, then run `mysttiq-headless:<version>` with a `/data` volume |
 | `FullSource.zip` / GitHub source archives | Developers who want to build or inspect the source |
-| `SHA256SUMS.txt` | Checking that downloaded ZIPs match the release |
+| `SHA256SUMS.txt` | Checking that downloaded files match the release |
 
 Upgrading? Back up your server data, extract the new app into a fresh folder and follow that release's upgrade notes. Keep your existing configuration/data locations and verify the connection before resuming administration. If the Dashboard says the MystTiq service on your PC is older than the app, let it replace it.
 
@@ -131,7 +133,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v1.1.0.0 | Accepted baseline | a documentation pass over every page, and everything since 1.0 as one release |
 | v1.1.0.1 | Delivered | Fixed: an error notice ("Something went wrong") that could appear when the desktop started |
 | v1.1.0.2 | Delivered | Every join checked; a character the game moved to a new player ID is moved back to its owner automatically, with a safety backup |
-| v1.1.0.3 | Current | A character move leaves nothing behind: old files removed (the safety backup keeps them) and the player list tidied |
+| v1.1.0.3 | Delivered | A character move leaves nothing behind: old files removed (the safety backup keeps them) and the player list tidied |
+| v1.1.1.0 | Current | MOD Sources under MODs; player checks run without the desktop; players on the new-character screen told what to do; Xbox accounts covered; link an account to its character; faster tab switching; Linux and Docker downloads |
 
 What comes next is in the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md). Release history lives in the [changelog](CHANGELOG.md).
 

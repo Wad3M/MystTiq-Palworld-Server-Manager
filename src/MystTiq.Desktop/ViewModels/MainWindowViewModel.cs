@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1496,7 +1496,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // auto-refreshes on navigation (see ActiveTab's own setter). Only fires once per tab
             // (Mods.WorkshopItems.Count == 0 guards it) rather than re-scanning every single time the
             // page is revisited, since Explorer's own Refresh button already exists for that.
-            if (value == NavigationPage.ModLibrary && Mods.WorkshopItems.Count == 0)
+            // v1.1.1.0: the Workshop card moved to MOD Sources, and the scan with it.
+            if (value == NavigationPage.ModSources && Mods.WorkshopItems.Count == 0)
                 _ = Mods.ScanWorkshopModsAsync();
         }
     }
@@ -1554,9 +1555,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool IsBackupsPage => SelectedPage == NavigationPage.Backups;
     public bool IsWorkspacePage => SelectedPage == NavigationPage.Workspace;
     public bool IsLauncherPage => SelectedPage == NavigationPage.Launcher;
-    public bool IsModsPage => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.Ue4ss;
+    public bool IsModsPage => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.ModSources or NavigationPage.Ue4ss;
     public bool IsModDashboardPage => SelectedPage == NavigationPage.ModDashboard;
     public bool IsModLibraryPage => SelectedPage == NavigationPage.ModLibrary;
+    // v1.1.1.0 (owner 2026-10-14: "move the MOD Browser, Nexus Mods Catalog, and whatnot to its own item under MODs called
+    // MOD Sources"): where MODs come from; MOD Library keeps what is installed.
+    public bool IsModSourcesPage => SelectedPage == NavigationPage.ModSources;
     public bool IsUe4ssPage => SelectedPage == NavigationPage.Ue4ss;
     public bool IsModInventoryPage => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary;
     public bool IsDoctorPage => SelectedPage == NavigationPage.Doctor;
@@ -1568,7 +1572,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool IsHomeGroupSelected => SelectedPage == NavigationPage.Dashboard;
     public bool IsServerGroupSelected => SelectedPage is NavigationPage.ServerSetup or NavigationPage.Configuration or NavigationPage.Backups or NavigationPage.Console or NavigationPage.Workspace or NavigationPage.Launcher;
     public bool IsWorldGroupSelected => SelectedPage is NavigationPage.Inspector or NavigationPage.WorldTransactions or NavigationPage.Players or NavigationPage.Bases or NavigationPage.Guilds or NavigationPage.Map;
-    public bool IsModsGroupSelected => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.Ue4ss;
+    public bool IsModsGroupSelected => SelectedPage is NavigationPage.ModDashboard or NavigationPage.ModLibrary or NavigationPage.ModSources or NavigationPage.Ue4ss;
     public bool IsToolsGroupSelected => SelectedPage is NavigationPage.UpdateCenter or NavigationPage.Doctor or NavigationPage.CrashAnalyzer or NavigationPage.SaveTools or NavigationPage.DiagnosticsCenter;
     public bool IsSystemGroupSelected => SelectedPage is NavigationPage.Settings or NavigationPage.Notifications or NavigationPage.ActivityAudit or NavigationPage.Automation or NavigationPage.Security or NavigationPage.AlertCenter or NavigationPage.Fleet;
     public bool IsV5HomeCategory => SelectedPage == NavigationPage.Dashboard;
@@ -1960,6 +1964,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             case NavigationPage.ModLibrary:
             case NavigationPage.Ue4ss:
                 await Mods.RefreshModsAsync();
+                break;
+            case NavigationPage.ModSources:
+                await Mods.ScanWorkshopModsAsync();
                 break;
             case NavigationPage.Doctor:
                 await Diagnostics.RunDoctorAsync();
@@ -2695,6 +2702,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                     new("⚠", "Safe-Start", "Diagnose which MOD is crashing or hanging startup", Mods.BeginModSafeStartCommand, null, RibbonIconColor.Red, IsDangerButton: true),
                 ]));
             }
+        }
+        else if (IsModSourcesPage)
+        {
+            groups.Add(new("MOD Sources",
+            [
+                new("↻", "Refresh", "Scan this PC's Steam Workshop MODs again", Mods.ScanWorkshopModsCommand, null, RibbonIconColor.Amber),
+            ]));
         }
         else if (IsUe4ssPage)
         {
@@ -5315,6 +5329,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(IsV5HostCategory));
         RaisePropertyChanged(nameof(IsModDashboardPage));
         RaisePropertyChanged(nameof(IsModLibraryPage));
+        RaisePropertyChanged(nameof(IsModSourcesPage));
         RaisePropertyChanged(nameof(IsUe4ssPage));
         RaisePropertyChanged(nameof(IsModInventoryPage));
         RaisePropertyChanged(nameof(IsPlaceholderPage));

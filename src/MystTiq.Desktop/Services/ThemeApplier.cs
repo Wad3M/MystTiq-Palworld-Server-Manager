@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -24,6 +24,11 @@ public static class ThemeApplier
     public static Func<SystemContrastPalette?> SystemContrast { get; set; } = SystemContrastPalette.ReadFromSystem;
     public static SystemContrastPalette? CurrentContrast { get; private set; }
 
+    // v1.1.1.0: what the last Apply wrote (the application, accent, mode, palette and contrast theme). Applying the same
+    // again rewrote every theme resource and re-resolved every DynamicResource in every open window for nothing: a tab
+    // switch between servers with the same theme took about 2 s per open window (measured 2026-10-14, 99.8% of the switch).
+    private static (Application App, string Accent, string Mode, string Variant, SystemContrastPalette? Contrast)? lastApplied;
+
     // The palette a mode is shown with (Light or Dark), a Windows contrast theme included: the art and the Light check
     // follow it too, so a light contrast theme (Desert) gets the day art.
     public static string ResolveVariant(string? mode)
@@ -47,6 +52,9 @@ public static class ThemeApplier
         if (contrast is not null) mode = "HighContrast";
         CurrentContrast = contrast;
         variant = contrast is not null ? (contrast.IsLight ? "Light" : "Dark") : ThemeCatalog.BaseVariant(mode, SystemPrefersLight());
+        var applying = (app, accentTheme, mode, variant, contrast);
+        if (lastApplied is { } last && ReferenceEquals(last.App, app) && last.Accent == accentTheme && last.Mode == mode && last.Variant == variant && Equals(last.Contrast, contrast))
+            return;
         var highContrast = mode == "HighContrast";
         var midnight = mode == "Midnight";
         // High contrast's own surfaces: black and dark greys, or the contrast theme's window colour stepped toward its text.
@@ -267,6 +275,7 @@ public static class ThemeApplier
         app.Resources["SuccessButtonForegroundBrush"] = new SolidColorBrush(variant == "Light" ? contrast?.ButtonText ?? S("Text") : Colors.White);
 
         app.RequestedThemeVariant = variant == "Light" ? ThemeVariant.Light : ThemeVariant.Dark;
+        lastApplied = applying;
     }
 
     // v0.8.16.0: Midnight takes the chrome surfaces (command bar, sidebar, status bar, cards, tabs, buttons) toward black,

@@ -1,4 +1,4 @@
-# MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 name: Release
 
 on:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag (for example v1.1.0.3)
+        description: Existing release tag (for example v1.1.1.0)
         required: true
         type: string
 
@@ -21,7 +21,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # v1.1.1.0 (owner 2026-10-14: "our package should include a linux build and a docker build"): the headless service's
+  # Docker image, built on a Linux runner (the Windows runner cannot build Linux containers) and attached to the release.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Build and save the Docker image
+        shell: pwsh
+        run: ./scripts/Build-DockerImage.ps1 -Save
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docker-image
+          path: artifacts/MystTiqPalworldServer_*_Docker-linux-x64.tar.gz
+          if-no-files-found: error
+
   release:
+    needs: docker
     runs-on: windows-latest
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
@@ -90,13 +111,22 @@ jobs:
             if ($signature.Status -ne 'Valid') { throw "$file is not signed: $($signature.Status) $($signature.StatusMessage)" }
           }
           ./scripts/Package-GitHubRelease.ps1 -Runtime win-x64 -FromFolder $signed
+      # v1.1.1.0: the Linux download (desktop and service), built from the same tag.
+      - name: Package the Linux download
+        shell: pwsh
+        run: ./scripts/Package-GitHubRelease.ps1 -Runtime linux-x64
+      - name: Fetch the Docker image archive
+        uses: actions/download-artifact@v7
+        with:
+          name: docker-image
+          path: artifacts
       - name: Archive tagged source and hash all assets
         shell: pwsh
         run: |
           $version = ./scripts/Get-ProjectVersion.ps1
           git archive --format=zip --output="artifacts/MystTiqPalworldServer_v${version}_FullSource.zip" $env:RELEASE_TAG
           if ($LASTEXITCODE -ne 0) { throw 'Source archive failed.' }
-          Get-ChildItem artifacts -Filter *.zip | Sort-Object Name | ForEach-Object {
+          Get-ChildItem artifacts -File | Where-Object { $_.Name -like '*.zip' -or $_.Name -like '*.tar.gz' } | Sort-Object Name | ForEach-Object {
             "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)"
           } | Set-Content artifacts/SHA256SUMS.txt -Encoding utf8
       - name: Prepare draft release
@@ -112,4 +142,5 @@ jobs:
           body_path: release-notes/${{ env.RELEASE_TAG }}.md
           files: |
             artifacts/MystTiqPalworldServer_*.zip
+            artifacts/MystTiqPalworldServer_*.tar.gz
             artifacts/SHA256SUMS.txt

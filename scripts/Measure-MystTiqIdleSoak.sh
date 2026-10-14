@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 # v1.0.7.5 (roadmap Q-10): the Linux half of the idle soak, copied to the test VM by Measure-MystTiqIdleSoak.ps1.
 #   start: an isolated MystTiq (own folder, config, FleetRoot, a loopback port; no Palworld) as a per-user systemd unit,
 #          a poller asking for the status every few seconds as a connected desktop does, and a sampler recording the

@@ -1,4 +1,4 @@
-# MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -27,7 +27,7 @@ $accounts = @(
     [pscustomobject]@{ Role = 'Admin'; Number = 2; Username = 'rs-admin'; Password = (New-Password) },
     [pscustomobject]@{ Role = 'Owner'; Number = 3; Username = 'rs-owner'; Password = (New-Password) }
 )
-$sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10')
+$sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=4')
 $remote = "$LinuxUser@$LinuxHost"
 $dir = '/tmp/mysttiq-v0822-remote'
 $harnessProject = Join-Path $root 'scripts\Testing\MystTiq.RemoteSignInHarness'

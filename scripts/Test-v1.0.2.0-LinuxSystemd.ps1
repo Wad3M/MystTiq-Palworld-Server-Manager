@@ -1,4 +1,4 @@
-# MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -20,7 +20,7 @@ if ($LASTEXITCODE -ne 0) { throw 'linux-x64 publish failed' }
 $tgz = Join-Path $work 'linux-systemd.tgz'
 Push-Location $work; tar -czf $tgz app check.sh; Pop-Location
 
-$sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10')
+$sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=4')
 $remote = "$LinuxUser@$LinuxHost"
 $dir = '/tmp/mysttiq-v1020-systemd'
 function Phase([string]$name) {

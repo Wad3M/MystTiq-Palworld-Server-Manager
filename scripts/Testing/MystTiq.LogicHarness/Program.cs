@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -1995,17 +1995,15 @@ try
     }, failures);
 
     // ---- v1.0.6.1 (reported 2026-10-06: a player got the wrong character again) ----
-    RunScenario("Identity alert advice: a server started with -log, -stdout, -FullStdOutLogOutput or -abslog is told to start like a double-click; MystTiq's own options are not shown; a plain start gets the old advice", () =>
+    // v1.1.1.0: start options were disproven as the cause (roadmap F-2), so the alert advises moving the character instead.
+    RunScenario("Identity alert advice (v1.1.1.0): the alert advises moving the character to the game's new ID, never a way of starting the server", () =>
     {
-        // The owner's saved arguments for the main server on 2026-10-06.
-        string[] saved = ["@mysttiq:launcherVersion=1", "@mysttiq:executable=PalServer.exe", "@mysttiq:windowStyle=Normal", "-port=8211", "-log", "-stdout", "-FullStdOutLogOutput",
-            @"-abslog=C:\GameServers\Palworld\Server\Pal\Saved\Logs\Identity-Diagnostic.log"];
-        var advice = IdentityGuard.LaunchAdvice(saved);
-        Assert(IdentityGuard.HasSuspectArguments(saved) && advice.Contains("Like double-click") && advice.Contains("-port=8211 -log -stdout -FullStdOutLogOutput") && !advice.Contains("@mysttiq"),
-            $"the saved set is named and Like double-click advised: {advice}");
-        Assert(IdentityGuard.HasSuspectArguments([@"-abslog=C:\x.log"]) && IdentityGuard.HasSuspectArguments(["-STDOUT"]), "-abslog and any case count");
-        Assert(!IdentityGuard.HasSuspectArguments(["-port=8311", "-useperfthreads"]) && !IdentityGuard.HasSuspectArguments([]), "other options and no options do not");
-        Assert(IdentityGuard.LaunchAdvice([]).StartsWith("Restart the server and have them join again.", StringComparison.Ordinal), "a plain start keeps the old advice");
+        var auto = IdentityGuard.MoveAdvice(true);
+        var manual = IdentityGuard.MoveAdvice(false);
+        Assert(auto.Contains("new player ID") && auto.Contains("safety backup") && auto.Contains("when nobody is online"), $"automatic moves on: {auto}");
+        Assert(manual.Contains("Players > Player IDs") && manual.Contains("safety backup"), $"automatic moves off: {manual}");
+        Assert(!auto.Contains("double-click") && !manual.Contains("double-click") && !auto.Contains("Launcher") && !manual.Contains("Launcher"), "no start-option advice");
+        Assert(typeof(IdentityGuard).GetMethod("LaunchAdvice") is null, "the start-option advice is gone");
     }, failures);
 
     // ---- v1.0.6.0 (roadmap M-2): MODs laid out as the game folder ----
@@ -4587,7 +4585,7 @@ try
         Assert(PlayerIdMove.Verify(Level(), player, oldId, newId, 8, 3, 2) is not null, "an unmoved world fails the verification");
     }, failures);
 
-    RunScenarioAsync("Player ID check (F-2): each Steam join is checked once per session; a known character under the old ID with a new ID from the game queues a move and the guard turns the player away with the move message; after the move the learned ID is expected and nobody is kicked; a new player is first seen, then correct; with automatic moves on, the new-character screen is not kicked; the setting is kept", async () =>
+    RunScenarioAsync("Player ID check (F-2): each Steam join is checked once per session; a known character under the old ID with a new ID from the game queues a move and the guard turns the player away with the move message; after the move the learned ID is expected and nobody is kicked; a new player is first seen, then correct; with automatic moves on, a player on the new-character screen is told what to do once (v1.1.1.0), then let through; the setting is kept", async () =>
     {
         var paths = new FakePathProfile(Path.Combine(tempRoot, "player-ids-" + Guid.NewGuid().ToString("N")));
         var world = Path.Combine(paths.SaveRoot, "SaveGames", "0", "World");
@@ -4635,13 +4633,28 @@ try
         Assert(ids.Observe(Online(newcomer, "0BADF00D000000000000000000000000", "New")) is [{ Result: PlayerIdResult.FirstSeen }], "a brand-new player with no character anywhere is first seen, never queued");
 
         // With automatic moves on, the new-character screen is let through (the character it makes is the move's target).
+        // v1.1.1.0: the first time (again after 30 minutes) the player is disconnected with the steps, so they know what to do.
         const string melly = "steam_76561198653223616";
         File.WriteAllText(Path.Combine(playersDir, "A3835C7B000000000000000000000000.sav"), "x");
         var calls = fake.Calls.Count;
         await guard.EnforceAsync(Online(melly, "None", "Melly"), CancellationToken.None);
+        Assert(fake.Calls.Count == calls, "still loading: nobody is disconnected within the loading grace");
         now = now.AddSeconds(IdentityGuard.LoadingGrace.TotalSeconds + 5);
         await guard.EnforceAsync(Online(melly, "None", "Melly"), CancellationToken.None);
-        Assert(fake.Calls.Count == calls, "with automatic moves on, a player on the new-character screen is not kicked after the loading grace");
+        Assert(fake.Calls.Count == calls + 1 && fake.Calls[^1] == ("kick", melly) && IdentityGuard.NewCharacterNotice.Contains("make a character with any name", StringComparison.Ordinal) &&
+               IdentityGuard.NewCharacterNotice.Contains("your character is safe", StringComparison.Ordinal),
+            "on the new-character screen after the loading grace, the player is disconnected once with the steps (their character is safe; make one with any name; MystTiq moves theirs onto it)");
+        await guard.EnforceAsync(Nobody(), CancellationToken.None);
+        await guard.EnforceAsync(Online(melly, "None", "Melly"), CancellationToken.None);
+        now = now.AddSeconds(IdentityGuard.LoadingGrace.TotalSeconds + 5);
+        await guard.EnforceAsync(Online(melly, "None", "Melly"), CancellationToken.None);
+        Assert(fake.Calls.Count == calls + 1, "on their next join they are let through to make the character the move replaces");
+        await guard.EnforceAsync(Nobody(), CancellationToken.None);
+        now = now.Add(IdentityGuard.NewCharacterNoticeInterval);
+        await guard.EnforceAsync(Online(melly, "None", "Melly"), CancellationToken.None);
+        now = now.AddSeconds(IdentityGuard.LoadingGrace.TotalSeconds + 5);
+        await guard.EnforceAsync(Online(melly, "None", "Melly"), CancellationToken.None);
+        Assert(fake.Calls.Count == calls + 2, "after 30 minutes they are told again");
 
         ids.SaveSettings(false);
         Assert(!Build().AutoMove && Build().KickReason(wade).Contains("did not load your character", StringComparison.Ordinal), "the setting is kept across a restart, and with it off the kick says to wait for the administrator");
@@ -4711,6 +4724,120 @@ try
             token => lifecycle.StartAsync([], TimeSpan.FromSeconds(5), token), token => lifecycle.StopAsync(TimeSpan.FromSeconds(5), token), null, reloaded);
         Assert(ids.CleanUpOldEntries() == 1 && !File.Exists(Path.Combine(archive, oldId + "-moved-to-E290DA9A-20261013-114550.sav")) && File.Exists(Path.Combine(archive, "0BADF00D000000000000000000000000-replaced-20261013-114550.sav")),
             "an archived character file a backup holds is removed; one no backup holds is kept");
+    }, failures);
+
+    // ---- v1.1.1.0: the player checks without a desktop, every account (not only Steam), a link by hand ----
+    RunScenarioAsync("Player checks without a desktop (v1.1.1.0): with no desktop polling, the service runs the player checks itself; while a desktop polls it holds back; the two never run at once; a failing check is logged once; the loop starts and stops", async () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "player-watch-" + Guid.NewGuid().ToString("N")));
+        var activity = new HeadlessActivityLogService(paths);
+        var now = new DateTimeOffset(2026, 10, 14, 9, 0, 0, TimeSpan.Zero);
+        var snapshot = new HeadlessPlayersSnapshot(true, 0, [], now, "test");
+        var runs = 0; var inside = 0; var most = 0; var reads = 0;
+        Func<Task>? during = null;
+        async Task Checks(HeadlessPlayersSnapshot players, CancellationToken token)
+        {
+            var depth = Interlocked.Increment(ref inside);
+            most = Math.Max(most, depth);
+            try { if (during is not null) await during(); Interlocked.Increment(ref runs); }
+            finally { Interlocked.Decrement(ref inside); }
+        }
+        var watch = new HeadlessPlayerWatchService(_ => { Interlocked.Increment(ref reads); return Task.FromResult(snapshot); }, Checks, activity, () => now);
+
+        Assert(await watch.TickAsync(CancellationToken.None) && runs == 1 && reads == 1 && watch.LastRunBy == "service", "no desktop has polled: the service reads the players and runs the checks itself");
+        await watch.RunFromPollAsync(snapshot, CancellationToken.None);
+        Assert(runs == 2 && watch.LastRunBy == "desktop", "a desktop's poll runs them on the players it read");
+        now = now.AddSeconds(10);
+        Assert(!await watch.TickAsync(CancellationToken.None) && runs == 2 && reads == 1, "while a desktop polls, the service holds back");
+        now = now.Add(HeadlessPlayerWatchService.DesktopQuiet);
+        Assert(await watch.TickAsync(CancellationToken.None) && runs == 3 && watch.LastRunBy == "service", "once the desktop has been quiet for 30 s, the service runs them again");
+
+        var gate = new TaskCompletionSource();
+        during = () => gate.Task;
+        now = now.Add(HeadlessPlayerWatchService.DesktopQuiet);
+        var first = watch.TickAsync(CancellationToken.None);
+        var second = watch.RunFromPollAsync(snapshot, CancellationToken.None);
+        await Task.Delay(100);
+        Assert(inside == 1, "a desktop's poll waits while the service's run is under way");
+        gate.SetResult();
+        await Task.WhenAll(first, second);
+        during = null;
+        Assert(most == 1 && runs == 5, $"the two never ran at once [most at once: {most}]");
+
+        var failing = new HeadlessPlayerWatchService(_ => throw new InvalidOperationException("REST API not answering"), Checks, activity, () => now);
+        var interval = HeadlessPlayerWatchService.Interval;
+        HeadlessPlayerWatchService.Interval = TimeSpan.FromMilliseconds(40);
+        try
+        {
+            await failing.StartAsync(CancellationToken.None);
+            await Task.Delay(400);
+            await failing.StopAsync(CancellationToken.None);
+        }
+        finally { HeadlessPlayerWatchService.Interval = interval; }
+        var logged = activity.GetTail(200).Lines.Count(l => l.Contains("REST API not answering", StringComparison.Ordinal));
+        Assert(logged == 1, $"a failing read is logged once, not on every tick, and the loop keeps going and stops [{logged}]");
+
+        HeadlessPlayerWatchService.Interval = TimeSpan.FromMilliseconds(40);
+        try
+        {
+            var looping = new HeadlessPlayerWatchService(_ => Task.FromResult(snapshot), Checks, activity, () => now.AddHours(1));
+            var before = runs;
+            await looping.StartAsync(CancellationToken.None);
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            while (runs == before && clock.ElapsedMilliseconds < 3000) await Task.Delay(20);
+            await looping.DisposeAsync();
+            Assert(runs > before, "started, the loop runs the checks on its own");
+        }
+        finally { HeadlessPlayerWatchService.Interval = interval; }
+    }, failures);
+
+    RunScenario("Player IDs for every account (v1.1.1.0): a non-Steam (gdk_) account's character is found from the player list, so a new ID from the game queues the move; an account can be linked to its character by hand (bad input refused; when the game last gave another ID with a character, a move is queued; otherwise the next join is checked against it)", () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "player-ids-all-" + Guid.NewGuid().ToString("N")));
+        var playersDir = Path.Combine(paths.SaveRoot, "SaveGames", "0", "World", "Players");
+        Directory.CreateDirectory(playersDir);
+        const string xbox = "gdk_2535412345678901", xboxOld = "84544311000000000000000000000000", xboxNew = "5EED0000000000000000000000000001";
+        File.WriteAllText(Path.Combine(playersDir, xboxOld + ".sav"), "x");
+        var registry = new HeadlessPlayerRegistryService(paths);
+        var t0 = new DateTimeOffset(2026, 9, 20, 18, 0, 0, TimeSpan.Zero);
+        HeadlessPlayersSnapshot One(string user, string id, string name, string platform = "Xbox") => new(true, 1, [new HeadlessPlayerSnapshot(name, user, "", id, "", "", platform, "1", "0")], t0, "test");
+        HeadlessPlayersSnapshot Nobody() => new(true, 0, [], t0, "test");
+        registry.Observe(One(xbox, xboxOld, "Melly"), t0); registry.Observe(Nobody(), t0.AddMinutes(30));
+        var lifecycle = new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped };
+        var activity = new HeadlessActivityLogService(paths);
+        var operations = new MystTiq.Core.Operations.OperationCoordinator(paths);
+        var profile = new MystTiq.Core.Operations.ServerProfileId("default");
+        var ids = new HeadlessPlayerIdService(paths, lifecycle, new HeadlessBackupService(paths, lifecycle, activity, operations, profile), activity, new HeadlessNotificationService(paths, activity),
+            new HeadlessSaveCodecService(new HeadlessCrashAndSaveToolsService(paths, activity)), operations, profile,
+            token => lifecycle.StartAsync([], TimeSpan.FromSeconds(5), token), token => lifecycle.StopAsync(TimeSpan.FromSeconds(5), token), null, registry);
+
+        Assert(SteamPlayerUid.FromUserId(xbox) is null && ids.ExpectedFor(xbox) == xboxOld, "an Xbox account has no Steam formula; its character is found from the player list");
+        File.WriteAllText(Path.Combine(playersDir, xboxNew + ".sav"), "x");
+        registry.Observe(One(xbox, xboxNew, "Melly"), t0.AddDays(20));
+        var check = ids.Observe(One(xbox, xboxNew, "Melly"));
+        Assert(check is [{ Result: PlayerIdResult.NewIdFromGame }] && ids.Snapshot().Pending is [{ UserId: xbox, FromPlayerId: xboxOld, ToPlayerId: xboxNew }],
+            "a new ID from the game for an Xbox account queues the move from the character it already had (the earliest-seen one)");
+
+        Assert(!ids.Link("", xboxOld).Success && !ids.Link(xbox, "not-an-id").Success && ids.Link(xbox, "0BADF00D000000000000000000000000").Message.Contains("No world has", StringComparison.Ordinal),
+            "a link with no account, a malformed player ID or a player ID with no character is refused");
+
+        // A Steam account the game moved before MystTiq saw it: its own character is not where the formula says.
+        const string steam = "steam_76561198000000002", own = "C0FFEE00000000000000000000000000", given = "DEADBEEF000000000000000000000000";
+        File.WriteAllText(Path.Combine(playersDir, own + ".sav"), "x");
+        File.WriteAllText(Path.Combine(playersDir, given + ".sav"), "x");
+        Assert(ids.Observe(One(steam, given, "Spiral", "Steam")) is [{ Result: PlayerIdResult.FirstSeen }], "with nothing to go on, the game's ID is first seen");
+        var linked = ids.Link(steam, own);
+        Assert(linked.Success && ids.ExpectedFor(steam) == own && ids.Snapshot().Pending.Any(p => p.UserId == steam && p.FromPlayerId == own && p.ToPlayerId == given) && linked.Message.Contains("replaced by this one", StringComparison.Ordinal),
+            $"linked by hand: the character is expected from then on, and the one under the game's ID is queued to be replaced by it [{linked.Message}]");
+
+        const string never = "steam_76561198000000003", theirs = "FACE0000000000000000000000000000";
+        File.WriteAllText(Path.Combine(playersDir, theirs + ".sav"), "x");
+        var ahead = ids.Link(never, theirs);
+        Assert(ahead.Success && ahead.Message.Contains("next join is checked", StringComparison.Ordinal) && ids.Snapshot().Pending.All(p => p.UserId != never) && ids.ExpectedFor(never) == theirs,
+            "an account not seen yet is linked ahead of its next join, with nothing queued");
+        ids.Observe(Nobody());
+        Assert(ids.Observe(One(never, "ABCD0000000000000000000000000000", "Later", "Steam")) is [{ Result: PlayerIdResult.NewIdFromGame }] && ids.Snapshot().Pending.Any(p => p.UserId == never && p.FromPlayerId == theirs),
+            "and when it joins with another ID, the move from the linked character is queued");
     }, failures);
 
     // The owner's real world, copied: the service moves the character with the real converter (when both are on this computer).

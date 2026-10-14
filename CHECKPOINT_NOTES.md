@@ -1,28 +1,40 @@
-<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
-# MystTiq v1.1.0.3 Checkpoint: Player ID Clean-up
+<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
+# MystTiq v1.1.1.0 Checkpoint: MOD Sources, Player Checks Without the Desktop, Linux and Docker Downloads
 
 ## What changed
 
-**A character move now leaves nothing behind**, as you asked.
-- The old character file is removed once the move is checked (the safety backup taken first keeps it), instead of
-  being kept in an archive folder.
-- The four files v1.1.0.2 archived are removed when MystTiq starts, because its two pre-move safety backups hold them.
-- MystTiq's player list is tidied: your and Melly's histories follow you to your new IDs, old entries are folded in,
-  and nobody is listed under "None" any more.
-- The world file needed nothing: the empty characters' storage was never kept by the game.
+**MOD Sources**, as you asked: a new item under MODs with the Steam Workshop card, the MOD browser and the Nexus Mods
+catalog. MOD Library keeps the ZIP install, the load order and the installed MODs. Nexus links open MOD Sources.
+
+**The nine fixes**
+1. The player checks (join check, identity guard, moves, player list, whitelist, names, kits, temporary bans) run in the
+   service every 15 seconds when no desktop is open.
+2. A player on the new-character screen is disconnected once with the steps: their character is safe, make one with any
+   name, MystTiq moves theirs onto it.
+3. Xbox and other non-Steam accounts are covered (their character is found from the player list).
+4. Players > Player IDs can link an account to its character by hand.
+5. The Dashboard tells a player on this PC to join with a local address, not 127.0.0.1.
+6. The Linux checks' SSH calls keep the session alive (no more two-hour hangs).
+7. The checkpoint script is part of the project: `scripts\New-MystTiqCheckpoint.ps1`.
+8. The checkpoint README mismatch goes with it.
+9. The Like double-click preset is gone from Server > Launcher.
+
+**Faster tab switching** (the task you asked me to do here): switching server tabs re-applied the colour theme every time
+and froze the desktop for about 2 seconds per open window. An unchanged theme is now left alone: 3.7 s to under 0.1 s.
+
+**Linux and Docker downloads**, as you asked: every release now carries the Linux ZIP and the headless service's Docker
+image (`...Docker-linux-x64.tar.gz`), built by the release workflow; this checkpoint holds both.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.1.0.3-Logic.ps1 -RunBuild -RunLong`: 416 / 416 passed, 1 skipped (the v1.0.2.0
-  system-unit test: no passwordless sudo on the VM). Every earlier check is carried (the v1.1.0.2 move check pinned from
-  the archive to the removal), the frozen v1.1.0.2 gate passes, the long set passes, the ArtworkHarness passes, and the
-  Linux VM checks ran and passed.
-- **F-3:** the LogicHarness clean-up scenario passes (no "None" record, a move's merge, stale records folded into the
-  current ID, an unknown account's "None" removed, an archived file a backup holds removed and one it does not kept),
-  and the real-world move leaves no archive folder and merges the player list record.
-- **Static gate:** passed. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-
-## For you
-
-1. **Connect:** the server runs through MystTiq with its window hidden; join at `192.168.1.5:8211`.
-2. **Pushes:** v1.0.7.0 to v1.1.0.3 are committed locally only; they need your yes to push and tag.
+- **Full gate** `scripts\Test-v1.1.1.0-Logic.ps1 -RunBuild -RunLong`: 419 / 419 passed, 6 skipped. The skips are the
+  Linux VM checks: the VM (192.168.1.122) was off the network all afternoon (no ping, no SSH), so the SSH keep-alive
+  (fix 6) is checked in the scripts but not yet live. Every earlier check is carried (pinned where code moved), the frozen
+  v1.1.0.3 gate passes, the long set passes, and the ArtworkHarness passes.
+- **LogicHarness:** player checks without a desktop, every account (Xbox from the player list, links by hand), the
+  new-character notice (once, let through, again after 30 minutes), the identity alert's advice; all scenarios pass.
+- **ArtworkHarness:** MOD Sources and MOD Library cards, the Nexus link opening MOD Sources, no Like double-click preset,
+  and the tab switch: an unchanged theme is left alone (measured on a copy: 3,658 ms to 14 ms per switch).
+- **Packages:** Windows ZIP, Linux ZIP and the Docker image archive (run here: `/healthz` answered v1.1.1.0 with TLS and
+  sign-in on), all in `SHA256SUMS.txt`. **Static gate:** passed. **Validate-Release -Strict:** 0 errors, 0 warnings.
+  **Distribution check:** passed.

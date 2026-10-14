@@ -1,4 +1,4 @@
-# MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 [CmdletBinding()]
 param(
     [ValidateSet('Windows', 'Linux')][string]$Target = 'Windows',
@@ -32,7 +32,7 @@ $root = (Resolve-Path $ProjectRoot).Path
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 if (-not $OutputDir) { $OutputDir = Join-Path $root "artifacts\soak\$($Target.ToLowerInvariant())-$stamp" }
 New-Item $OutputDir -ItemType Directory -Force | Out-Null
-$sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10')
+$sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=4')
 $remote = "$LinuxUser@$LinuxHost"
 
 function Write-SoakReport([string]$Dir, [string]$TargetName) {

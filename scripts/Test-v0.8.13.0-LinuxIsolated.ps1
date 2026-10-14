@@ -1,4 +1,4 @@
-# MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -73,7 +73,7 @@ Copy-Item (Join-Path $root 'scripts\Testing\make_test_pak.py') (Join-Path $work 
 $tgz = Join-Path $work 'linux-isolated.tgz'
 Push-Location $work; tar -czf $tgz app fixture check.sh make_test_pak.py; Pop-Location
 
-$sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10')
+$sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=4')
 $remote = "$LinuxUser@$LinuxHost"
 $dir = '/tmp/mysttiq-v0813-isolated'
 ssh @sshArgs $remote "rm -rf $dir; mkdir -p $dir"

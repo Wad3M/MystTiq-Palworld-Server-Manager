@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
 namespace MystTiq.Desktop.Models;
 
 public enum NavigationPage
@@ -16,5 +16,8 @@ public enum NavigationPage
     // v0.8.17.0: the HOST tab, appended for the same reason.
     Host,
     // v1.0.0.1: launcher diagnostics page; appended so saved numeric page values remain compatible.
-    Launcher
+    Launcher,
+    // v1.1.1.0: MOD Sources (Steam Workshop, the MOD browser, the Nexus Mods catalog), split out of MOD Library; appended
+    // for the same reason.
+    ModSources
 }
