@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
 using System.Diagnostics;
 using System.Windows.Input;
 using Avalonia.Threading;
@@ -47,7 +47,7 @@ public sealed partial class MainWindowViewModel
                 break;
             case ComponentUpdateMethod.Ue4ssInstall:
                 Navigate(nameof(NavigationPage.Ue4ss));
-                await SelectAndPreviewLatestUe4ssAsync();
+                await Mods.SelectAndPreviewLatestUe4ssAsync();
                 break;
             case ComponentUpdateMethod.Pip:
                 await UpdatePipAsync();
@@ -111,23 +111,4 @@ public sealed partial class MainWindowViewModel
         finally { IsBusy = false; }
     }
 
-    // The UE4SS page with the newest release selected and its install previewed; the user applies it there.
-    private async Task<bool> SelectAndPreviewLatestUe4ssAsync()
-    {
-        if (Ue4ssPalworldForkReleases.Count == 0)
-            await RefreshUe4ssReleaseCatalogAsync();
-
-        var latest = Ue4ssPalworldForkReleases.Where(r => !r.Prerelease).OrderByDescending(r => r.PublishedAt).FirstOrDefault()
-            ?? Ue4ssPalworldForkReleases.OrderByDescending(r => r.PublishedAt).FirstOrDefault();
-        if (latest is null)
-        {
-            Ue4ssInstallState = "No UE4SS release catalog data was available to auto-install from.";
-            return false;
-        }
-
-        SelectedUe4ssFork = "Palworld Fork";
-        SelectedUe4ssRelease = latest;
-        await PreviewUe4ssInstallAsync();
-        return true;
-    }
 }

@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -94,31 +94,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _semanticStateText = "—";
     private string _semanticSourceText = "—";
     private PlayerSnapshotDto? _selectedOnlinePlayer;
-    private string _modState = "Not loaded";
-    private string _modSummary = "Connect to scan MODs.";
-    private string _modHealth = "—";
-    private string _modInstalledText = "—";
-    private string _modConfirmedText = "—";
-    private string _modUnverifiedText = "—";
-    private string _modDisabledText = "—";
-    private string _modIssuesText = "—";
-    private string _ue4ssHealth = "—";
-    private string _ue4ssDetection = "—";
-    private string _ue4ssActiveRoot = "—";
-    private string _ue4ssRuntimeRoot = "—";
-    private string _ue4ssWarning = string.Empty;
-    private string _ue4ssInstalledVersion = "Not detected";
-    private string _selectedUe4ssFork = "Palworld Fork";
-    private string _ue4ssReleaseCatalogStatusText = "Refresh Runtime also checks the release catalog.";
-    private Ue4ssReleaseDto? _selectedUe4ssRelease;
-    private string _ue4ssInstallToken = string.Empty;
-    private string _ue4ssInstallState = "Select a release, then Preview Install.";
-    private bool _ue4ssRollbackAvailable;
-    private ModItemDto? _selectedMod;
     private ServerInstanceDto? _selectedInstance;
     private string _instanceTerminationResultText = string.Empty;
-    private WorkshopItemDto? _selectedWorkshopItem;
-    private string _workshopScanState = "Refresh to scan local Steam Workshop content.";
     private string _networkHealth = "Not run";
     private string _localDiagnosticsState = "Diagnose a connection profile to see staged DNS/TCP/TLS/HTTP results.";
     private string _networkRuntime = "Unknown";
@@ -243,6 +220,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // v1.0.8.0 (roadmap C-0): the shared session the page ViewModels use, and the pages moved out of this file so far.
         Session = new SessionContext(api, ActiveProfileOrNull, () => BearerToken, () => IsBusy, busy => IsBusy = busy, () => SelectedPage, RunUi, () => SelectedProfile, () => ActiveTab, () => BuildProfileFromEditor(SelectedProfile?.Id), () => ManagementApiConnected,
             () => BusyReason, reason => BusyReason = reason);
+        // v1.0.8.6: the window's services first: a page may be handed one.
+        _nexus = nexusClient ?? new NexusModsClient();
+        _profileStore = profileStore;
+        _localDiscovery = localDiscovery;
+        _serviceDiscovery = serviceDiscovery;
+        _localBootstrapper = localBootstrapper ?? new LocalManagementBootstrapper();
+        _credentialStore = credentialStore ?? new CredentialStore();
         Logs = new ConsoleLogViewModel(Session);
         Host = new HostPageViewModel(Session);
         Dashboard = new DashboardViewModel(Session);
@@ -252,7 +236,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         Configuration = new ConfigurationViewModel(Session, state => Workspace!.WorkspaceState = state);
         Workspace = new WorkspaceViewModel(Session, Configuration, EnvironmentItems);
         Backups = new BackupsViewModel(Session);
-        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace, Backups];
+        Mods = new ModsViewModel(Session, _nexus, _credentialStore, Navigate);
+        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace, Backups, Mods];
+        // v1.0.8.6 (roadmap C-6): the Dashboard's stuck-start panel shows Safe Start while it runs and its result afterwards.
+        Mods.SafeStartStatusChanged += () =>
+        {
+            RaisePropertyChanged(nameof(ShowStuckStartPanel));
+            RaisePropertyChanged(nameof(IsModSafeStartRunning));
+            RaisePropertyChanged(nameof(StuckStartStatusText));
+            (BeginStuckTestLoadCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        };
         // v1.0.8.4 (roadmap C-4): the Workspace page and the wizard follow the Configuration page.
         Configuration.ConfigurationLoaded += () => { Workspace.ValidateWorkspacePaths(); Workspace.RaiseWorkspaceSummaryProperties(); };
         Configuration.PropertyChanged += (_, e) =>
@@ -267,20 +260,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             (Map.TeleportPlayerToMeCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (Map.TeleportToPlayerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         };
-        _nexus = nexusClient ?? new NexusModsClient();
-        _profileStore = profileStore;
-        _localDiscovery = localDiscovery;
-        _serviceDiscovery = serviceDiscovery;
-        _localBootstrapper = localBootstrapper ?? new LocalManagementBootstrapper();
-        _credentialStore = credentialStore ?? new CredentialStore();
         _displayPreferences = displayPreferencesStore ?? new LocalDisplayPreferencesStore();
         ThemeApplier.ApplyDensity(_displayPreferences.LoadDensity());
         // v0.8.16.0: a tab set to follow the system changes with it (Windows' app mode, the Linux desktop's color scheme).
         if (Avalonia.Application.Current?.PlatformSettings is { } platformSettings)
             platformSettings.ColorValuesChanged += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(OnSystemThemeChanged);
-        InitializeNexusMods();
         // v1.0.5.0 (roadmap M-1): the MOD browser.
-        InitializeModBrowser();
         // v1.0.6.0 (roadmap S-3): the Players page's Pal box.
         // v0.8.5.0: the saved display language, before anything is shown.
         Localizer.Instance.SetLanguage(_languageStore.Load());
@@ -398,30 +383,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         AutomationRules.CollectionChanged += (_, _) => RaisePropertyChanged(nameof(HasNoAutomationRules));
         Map.LoadMapBackgroundPreference();
         Configuration.RebuildConfigPresetList();
-        RefreshModsCommand = new AsyncCommand(RefreshModsAsync, () => !IsBusy);
-        VerifyModsCommand = new AsyncCommand(VerifyModsAsync, () => !IsBusy);
-        EnableSelectedModCommand = new AsyncCommand(() => SetSelectedModEnabledAsync(true), () => !IsBusy);
-        DisableSelectedModCommand = new AsyncCommand(() => SetSelectedModEnabledAsync(false), () => !IsBusy);
-        DeleteSelectedModCommand = new AsyncCommand(DeleteSelectedModAsync, () => !IsBusy && SelectedMod is not null);
-        RollbackSelectedModCommand = new AsyncCommand(RollbackSelectedModAsync, () => !IsBusy && SelectedMod is not null);
-        RepairSelectedModCommand = new AsyncCommand(RepairSelectedModAsync, () => !IsBusy && SelectedMod is not null);
-        EnableAllModsCommand = new AsyncCommand(() => SetAllModsEnabledAsync(true), () => !IsBusy);
-        DisableAllModsCommand = new AsyncCommand(() => SetAllModsEnabledAsync(false), () => !IsBusy);
-        RepairModsCommand = new AsyncCommand(RepairModsAsync, () => !IsBusy);
-        ScanWorkshopModsCommand = new AsyncCommand(ScanWorkshopModsAsync, () => !IsBusy);
-        ImportSelectedWorkshopModCommand = new AsyncCommand(ImportSelectedWorkshopModAsync, () => !IsBusy && SelectedWorkshopItem is not null && !SelectedWorkshopItem.AlreadyInstalled);
-        CheckSelectedModUpdateCommand = new AsyncCommand(CheckSelectedModUpdateAsync, () => !IsBusy && SelectedMod is not null);
-        PreviewUe4ssInstallCommand = new AsyncCommand(PreviewUe4ssInstallAsync, () => !IsBusy && SelectedUe4ssRelease is not null);
-        ApplyUe4ssInstallCommand = new AsyncCommand(ApplyUe4ssInstallAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(Ue4ssInstallToken));
-        RollbackUe4ssInstallCommand = new AsyncCommand(RollbackUe4ssInstallAsync, () => !IsBusy && Ue4ssRollbackAvailable);
-        UpdateSelectedModCommand = new AsyncCommand(UpdateSelectedModAsync, () => !IsBusy && _selectedModUpdateWorkshopId is not null);
-        FetchSelectedModDescriptionCommand = new AsyncCommand(FetchSelectedModDescriptionAsync, () => !IsBusy && SelectedMod is not null);
-        SetSelectedModDescriptionSourceCommand = new AsyncCommand(SetSelectedModDescriptionSourceAsync, () => !IsBusy && SelectedMod is not null);
-        BeginModSafeStartCommand = new AsyncCommand(BeginModSafeStartAsync, () => !IsBusy && ModSafeStartStatus is not { IsRunning: true });
-        CancelModSafeStartCommand = new AsyncCommand(CancelModSafeStartAsync, () => ModSafeStartStatus is { IsRunning: true });
         // v1.0.0.1: the stuck-start protocol's test load, and clearing a finished test from the Dashboard.
-        BeginStuckTestLoadCommand = new AsyncCommand(() => BeginModSafeStartAsync(testLoad: true), () => !IsBusy && ModSafeStartStatus is not { IsRunning: true });
-        DismissModSafeStartCommand = new RelayCommand(() => ModSafeStartStatus = null, () => ModSafeStartStatus is { IsRunning: false });
+        BeginStuckTestLoadCommand = new AsyncCommand(() => Mods.BeginModSafeStartAsync(testLoad: true), () => !IsBusy && Mods.ModSafeStartStatus is not { IsRunning: true });
         ExportDoctorCommand = new RelayCommand(ExportDoctorReport, () => DoctorChecks.Count > 0);
         StartCommand = new AsyncCommand(StartServerAsync, () => !IsBusy && (ManagementApiConnected || LocalPalServerStatus == "Found") && !ServerIsRunning);
         StopCommand = new AsyncCommand(StopServerAsync, () => !IsBusy && ManagementApiConnected && ServerIsRunning);
@@ -545,7 +508,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool IsWizardStepInstall => IsCreatingNewProfile && IsNewServerSetupFlow && !IsWorldSourceClone && NewServerWizardStep == 6;
     // v0.7.86.0: MODs step, install-wizard only, New World/Import only (Clone already has whatever
     // MODs the source server had, copied over as part of the clone itself). Reuses the exact same
-    // Workshop-scan machinery (ScanWorkshopModsCommand/WorkshopItems/ImportSelectedWorkshopModCommand)
+    // Workshop-scan machinery (Mods.ScanWorkshopModsCommand/Mods.WorkshopItems/Mods.ImportSelectedWorkshopModCommand)
     // already built for the MOD Library page -- both already correctly use
     // BuildProfileFromEditor(SelectedProfile?.Id) rather than requiring SelectedProfile directly, so
     // (unlike a couple of other reused commands found this session) no wizard-usability bug to fix
@@ -802,7 +765,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             SelectedOnlinePlayer = null;
             Players.SelectedPlayerRecord = null;
             Backups.SelectedBackup = null;
-            SelectedMod = null;
+            Mods.SelectedMod = null;
             World.SelectedExplorerPal = null;
             World.SelectedExplorerBase = null;
             // v0.7.92.0: base marker coordinates are per-server world data, same stale-carryover
@@ -1097,10 +1060,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public IReadOnlyList<string> HistoryRanges { get; } = ["1 Hour", "6 Hours", "24 Hours", "7 Days", "30 Days"];
     public ObservableCollection<EnvironmentChecklistItemDto> EnvironmentItems { get; } = [];
     public ObservableCollection<OperationRecordDto> RecentOperations { get; } = [];
-    public ObservableCollection<ModItemDto> ModItems { get; } = [];
-    public IEnumerable<ModItemDto> ModsNeedingAttention => ModItems.Where(m => m.Health is not ("Healthy" or "Disabled" or "Active / Unverified"));
-    public bool HasModsNeedingAttention => ModsNeedingAttention.Any();
-    public ObservableCollection<WorkshopItemDto> WorkshopItems { get; } = [];
     public ObservableCollection<DoctorCheckDto> DoctorChecks { get; } = [];
     public ObservableCollection<DiagnosticFindingDto> DiagnosticFindings { get; } = [];
     public ObservableCollection<NetworkDiagnosticCheckDto> NetworkDiagnosticChecks { get; } = [];
@@ -1615,148 +1574,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string SemanticStateText { get => _semanticStateText; private set => SetField(ref _semanticStateText, value); }
     public string SemanticSourceText { get => _semanticSourceText; private set => SetField(ref _semanticSourceText, value); }
     public IReadOnlyList<string> PalGenderOptions { get; } = ["Male", "Female"];
-    public string ModState { get => _modState; private set => SetField(ref _modState, value); }
-    public string ModSummary { get => _modSummary; private set => SetField(ref _modSummary, value); }
-    public string ModHealth { get => _modHealth; private set => SetField(ref _modHealth, value); }
-    // v0.7.78.0: drives the MOD Dashboard hero health banner's color (direct request to make
-    // Dashboard feel distinct from MOD Library rather than a near-duplicate layout).
-    public bool IsModHealthGood => ModHealth == "Healthy";
-    public bool IsModHealthDegraded => ModHealth == "Degraded";
-    public string ModInstalledText { get => _modInstalledText; private set => SetField(ref _modInstalledText, value); }
-    public string ModConfirmedText { get => _modConfirmedText; private set => SetField(ref _modConfirmedText, value); }
-    public string ModUnverifiedText { get => _modUnverifiedText; private set => SetField(ref _modUnverifiedText, value); }
-    public string ModDisabledText { get => _modDisabledText; private set => SetField(ref _modDisabledText, value); }
-    public string ModIssuesText { get => _modIssuesText; private set => SetField(ref _modIssuesText, value); }
-    public string Ue4ssHealth { get => _ue4ssHealth; private set => SetField(ref _ue4ssHealth, value); }
-    public string Ue4ssDetection { get => _ue4ssDetection; private set => SetField(ref _ue4ssDetection, value); }
-    public string Ue4ssActiveRoot { get => _ue4ssActiveRoot; private set => SetField(ref _ue4ssActiveRoot, value); }
-    public string Ue4ssRuntimeRoot { get => _ue4ssRuntimeRoot; private set => SetField(ref _ue4ssRuntimeRoot, value); }
-    public string Ue4ssWarning { get => _ue4ssWarning; private set => SetField(ref _ue4ssWarning, value); }
-    public string Ue4ssInstalledVersion { get => _ue4ssInstalledVersion; private set => SetField(ref _ue4ssInstalledVersion, value); }
-    public IReadOnlyList<string> Ue4ssForkOptions { get; } = ["Palworld Fork", "Official Upstream"];
-    public string SelectedUe4ssFork
-    {
-        get => _selectedUe4ssFork;
-        set
-        {
-            if (SetField(ref _selectedUe4ssFork, value ?? "Palworld Fork"))
-            {
-                RaisePropertyChanged(nameof(Ue4ssVisibleReleases));
-                RaisePropertyChanged(nameof(HasUe4ssReleases));
-            }
-        }
-    }
 
-    // v0.7.48.0: UE4SS Release Catalog -- real data for the "Release source" picker, replacing the
-    // former client-side-only stub. Two source collections (one per GitHub repo), with a single
-    // computed property the XAML binds to that switches based on SelectedUe4ssFork.
-    public ObservableCollection<Ue4ssReleaseDto> Ue4ssPalworldForkReleases { get; } = [];
-    public ObservableCollection<Ue4ssReleaseDto> Ue4ssOfficialUpstreamReleases { get; } = [];
-    public IReadOnlyList<Ue4ssReleaseDto> Ue4ssVisibleReleases =>
-        SelectedUe4ssFork == "Official Upstream" ? Ue4ssOfficialUpstreamReleases : Ue4ssPalworldForkReleases;
-    public bool HasUe4ssReleases => Ue4ssVisibleReleases.Count > 0;
-    public string Ue4ssReleaseCatalogStatusText { get => _ue4ssReleaseCatalogStatusText; private set => SetField(ref _ue4ssReleaseCatalogStatusText, value); }
 
-    // v0.7.49.0: UE4SS Install/Rollback -- same Preview-then-Apply shape as backup retention cleanup
-    // (Backups.BackupRetentionToken above): selecting a release or changing it invalidates any outstanding
-    // preview token, so Apply can never fire against a preview that no longer matches the selection.
-    public Ue4ssReleaseDto? SelectedUe4ssRelease
-    {
-        get => _selectedUe4ssRelease;
-        set
-        {
-            if (SetField(ref _selectedUe4ssRelease, value))
-            {
-                var hadToken = !string.IsNullOrWhiteSpace(Ue4ssInstallToken);
-                InvalidateUe4ssInstallPreview();
-                if (hadToken) Ue4ssInstallState = "Selection changed. Preview Install again before confirming.";
-                (PreviewUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            }
-        }
-    }
-    public string Ue4ssInstallToken { get => _ue4ssInstallToken; private set { if (SetField(ref _ue4ssInstallToken, value)) (ApplyUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
-    public string Ue4ssInstallState { get => _ue4ssInstallState; private set => SetField(ref _ue4ssInstallState, value); }
-    public bool Ue4ssRollbackAvailable { get => _ue4ssRollbackAvailable; private set { if (SetField(ref _ue4ssRollbackAvailable, value)) (RollbackUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
-    public ModItemDto? SelectedMod
-    {
-        get => _selectedMod;
-        set
-        {
-            if (SetField(ref _selectedMod, value))
-            {
-                RaisePropertyChanged(nameof(HasSelectedMod));
-                // v0.7.41.0: an update check result is only valid for the MOD it was run against;
-                // switching selection must not leave a stale "update available" claim on screen.
-                SelectedModUpdateText = string.Empty;
-                _selectedModUpdateWorkshopId = null;
-                (DeleteSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-                (RollbackSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-                (CheckSelectedModUpdateCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-                (UpdateSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-                // v0.7.55.0: a fetched description is only valid for the MOD it was fetched for.
-                SelectedModDescription = null;
-                SelectedModDescriptionSourceInput = string.Empty;
-                (FetchSelectedModDescriptionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-                (SetSelectedModDescriptionSourceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            }
-        }
-    }
-    // v0.7.40.0: MOD Library's new per-selection details panel (item 40) gates its whole content
-    // on a selection existing, showing a placeholder otherwise.
-    public bool HasSelectedMod => SelectedMod is not null;
-    private string _selectedModUpdateText = string.Empty;
-    private string? _selectedModUpdateWorkshopId;
-    // v0.7.41.0: MOD update detection (item 52) result text for the currently selected MOD.
-    public string SelectedModUpdateText { get => _selectedModUpdateText; private set => SetField(ref _selectedModUpdateText, value); }
-    private ModDescriptionResultDto? _selectedModDescription;
-    // v0.7.55.0: website-sourced MOD descriptions (item 40's deferred half). Null until the user
-    // explicitly clicks Fetch/Refresh for the current selection -- never populated automatically.
-    public ModDescriptionResultDto? SelectedModDescription
-    {
-        get => _selectedModDescription;
-        private set
-        {
-            if (SetField(ref _selectedModDescription, value))
-            {
-                RaisePropertyChanged(nameof(HasSelectedModDescription));
-                RaisePropertyChanged(nameof(HasModDescriptionResult));
-                RaisePropertyChanged(nameof(ShowNoModDescriptionMatchMessage));
-            }
-        }
-    }
-    public bool HasSelectedModDescription => SelectedModDescription is { Available: true };
-    public bool HasModDescriptionResult => SelectedModDescription is not null;
-    // v0.7.55.0 polish: distinct from HasModDescriptionResult (true for both a match and a miss) --
-    // this is only true after an actual fetch came back with no match, so the "set a Source URL"
-    // guidance doesn't show preemptively before Fetch has ever been clicked for this selection.
-    public bool ShowNoModDescriptionMatchMessage => HasModDescriptionResult && !HasSelectedModDescription;
 
-    // v0.7.59.0: Safe-Start MOD Diagnostic. Polled independently of IsBusy -- the diagnostic itself
-    // runs server-side over many minutes (a start/stop cycle per candidate MOD), so holding IsBusy
-    // for its whole duration would disable unrelated UI the entire time. Only the initial Begin/
-    // Cancel POST calls go through IsBusy; the poll loop runs on its own DispatcherTimer.
-    private SafeStartStatusDto? _modSafeStartStatus;
-    public SafeStartStatusDto? ModSafeStartStatus
-    {
-        get => _modSafeStartStatus;
-        private set
-        {
-            if (!SetField(ref _modSafeStartStatus, value)) return;
-            RaisePropertyChanged(nameof(HasModSafeStartStatus));
-            // v1.0.0.1: the Dashboard's stuck-start panel shows the test while it runs and its result afterwards.
-            RaisePropertyChanged(nameof(ShowStuckStartPanel));
-            RaisePropertyChanged(nameof(IsModSafeStartRunning));
-            RaisePropertyChanged(nameof(StuckStartStatusText));
-            (BeginStuckTestLoadCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (DismissModSafeStartCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        }
-    }
-    public bool HasModSafeStartStatus => ModSafeStartStatus is not null;
-    private DispatcherTimer? _modSafeStartPollTimer;
-    private string _selectedModDescriptionSourceInput = string.Empty;
-    public string SelectedModDescriptionSourceInput { get => _selectedModDescriptionSourceInput; set => SetField(ref _selectedModDescriptionSourceInput, value ?? string.Empty); }
-    public WorkshopItemDto? SelectedWorkshopItem { get => _selectedWorkshopItem; set { if (SetField(ref _selectedWorkshopItem, value)) (ImportSelectedWorkshopModCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
-    public string WorkshopScanState { get => _workshopScanState; private set => SetField(ref _workshopScanState, value); }
 
     public string StatusBarText { get => _statusBarText; private set => SetField(ref _statusBarText, value); }
     public string StatusBarObservedText { get => _statusBarObservedText; private set => SetField(ref _statusBarObservedText, value); }
@@ -1818,7 +1638,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             StatusBarText = value ? reasonWithServer : (ConnectionState == "Connected" ? $"Connected — {ServerState}" : ConnectionState);
 
             RaiseAllAsyncCommandStates();
-            RaiseNexusCommandStates();
+            Mods.RaiseNexusCommandStates();
             Players.RaiseKitCommandStates();
             Host.RaiseHostCommandStates();
             Players._loadGameIdsCommand?.RaiseCanExecuteChanged();
@@ -1861,14 +1681,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             (Backups.VerifyAllBackupsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (Backups.PreviewBackupRetentionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (Backups.ApplyBackupRetentionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (DeleteSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RollbackSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (EnableAllModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (DisableAllModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RepairModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (PreviewUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (ApplyUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (RollbackUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Mods.DeleteSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Mods.RollbackSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Mods.EnableAllModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Mods.DisableAllModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Mods.RepairModsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Mods.PreviewUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Mods.ApplyUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Mods.RollbackUe4ssInstallCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (Workspace.ValidateActiveWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (World.ApplyWorldTransactionCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (Configuration.LoadConfigurationCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -1920,10 +1740,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // "Refresh" click every time the page was opened, even on a fresh navigation -- direct
             // report that it should just load automatically, matching how the Players page already
             // auto-refreshes on navigation (see ActiveTab's own setter). Only fires once per tab
-            // (WorkshopItems.Count == 0 guards it) rather than re-scanning every single time the
+            // (Mods.WorkshopItems.Count == 0 guards it) rather than re-scanning every single time the
             // page is revisited, since Explorer's own Refresh button already exists for that.
-            if (value == NavigationPage.ModLibrary && WorkshopItems.Count == 0)
-                _ = ScanWorkshopModsAsync();
+            if (value == NavigationPage.ModLibrary && Mods.WorkshopItems.Count == 0)
+                _ = Mods.ScanWorkshopModsAsync();
         }
     }
 
@@ -2075,29 +1895,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand RefreshOperationsCommand { get; }
     public ICommand RefreshPlayerGuildExplorerCommand { get; }
     public ICommand RefreshPalsCommand { get; }
-    public ICommand RefreshModsCommand { get; }
-    public ICommand VerifyModsCommand { get; }
-    public ICommand EnableSelectedModCommand { get; }
-    public ICommand DisableSelectedModCommand { get; }
-    public ICommand DeleteSelectedModCommand { get; }
-    public ICommand RollbackSelectedModCommand { get; }
-    public ICommand RepairSelectedModCommand { get; }
-    public ICommand EnableAllModsCommand { get; }
-    public ICommand DisableAllModsCommand { get; }
-    public ICommand RepairModsCommand { get; }
-    public ICommand ScanWorkshopModsCommand { get; }
-    public ICommand ImportSelectedWorkshopModCommand { get; }
-    public ICommand CheckSelectedModUpdateCommand { get; }
-    public ICommand PreviewUe4ssInstallCommand { get; }
-    public ICommand ApplyUe4ssInstallCommand { get; }
-    public ICommand RollbackUe4ssInstallCommand { get; }
-    public ICommand UpdateSelectedModCommand { get; }
-    public ICommand FetchSelectedModDescriptionCommand { get; }
-    public ICommand SetSelectedModDescriptionSourceCommand { get; }
-    public ICommand BeginModSafeStartCommand { get; }
-    public ICommand CancelModSafeStartCommand { get; }
     public ICommand BeginStuckTestLoadCommand { get; }
-    public ICommand DismissModSafeStartCommand { get; }
     public ICommand ExportDoctorCommand { get; }
     public ICommand StartCommand { get; }
     public ICommand StopCommand { get; }
@@ -2612,7 +2410,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             case NavigationPage.ModDashboard:
             case NavigationPage.ModLibrary:
             case NavigationPage.Ue4ss:
-                await RefreshModsAsync();
+                await Mods.RefreshModsAsync();
                 break;
             case NavigationPage.Doctor:
                 await RunDoctorAsync();
@@ -2969,9 +2767,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // v0.7.89.0: direct live feedback -- "step 7 should automatically search for workshop
         // mods," instead of requiring a manual "Scan Workshop Mods" click on arrival. Mirrors the
         // MOD Library page's own v0.7.78.0 auto-scan-on-arrival behavior verbatim (same
-        // WorkshopItems.Count == 0 guard, so it only fires once per tab).
-        if (IsWizardStepMods && WorkshopItems.Count == 0)
-            _ = ScanWorkshopModsAsync();
+        // Mods.WorkshopItems.Count == 0 guard, so it only fires once per tab).
+        if (IsWizardStepMods && Mods.WorkshopItems.Count == 0)
+            _ = Mods.ScanWorkshopModsAsync();
     }
 
     // v0.7.85.0: "Import a World" Phase 2 -- starts the freshly-installed server once so PalServer.exe
@@ -3326,8 +3124,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("MODs",
             [
-                new("↻", "Refresh MODs", "Refresh MODs", RefreshModsCommand, null, RibbonIconColor.Amber),
-                new("✓", "Verify & Scan", "Verify and scan MODs", VerifyModsCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("↻", "Refresh MODs", "Refresh MODs", Mods.RefreshModsCommand, null, RibbonIconColor.Amber),
+                new("✓", "Verify & Scan", "Verify and scan MODs", Mods.VerifyModsCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
             ]));
 
             // v0.7.78.0: page-level (no-selection-required) MOD mutation actions relocated from an
@@ -3342,10 +3140,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             {
                 groups.Add(new("MOD Maintenance",
                 [
-                    new("✓", "Enable All", "Enable all MODs", EnableAllModsCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
-                    new("✕", "Disable All", "Disable all MODs", DisableAllModsCommand, null, RibbonIconColor.Amber),
-                    new("⚑", "Repair", "Neutralize legacy MOD overrides", RepairModsCommand, null, RibbonIconColor.Blue),
-                    new("⚠", "Safe-Start", "Diagnose which MOD is crashing or hanging startup", BeginModSafeStartCommand, null, RibbonIconColor.Red, IsDangerButton: true),
+                    new("✓", "Enable All", "Enable all MODs", Mods.EnableAllModsCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                    new("✕", "Disable All", "Disable all MODs", Mods.DisableAllModsCommand, null, RibbonIconColor.Amber),
+                    new("⚑", "Repair", "Neutralize legacy MOD overrides", Mods.RepairModsCommand, null, RibbonIconColor.Blue),
+                    new("⚠", "Safe-Start", "Diagnose which MOD is crashing or hanging startup", Mods.BeginModSafeStartCommand, null, RibbonIconColor.Red, IsDangerButton: true),
                 ]));
             }
         }
@@ -3353,10 +3151,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("UE4SS",
             [
-                new("↻", "Refresh Runtime", "Refresh UE4SS runtime", RefreshModsCommand, null, RibbonIconColor.Amber),
-                new("👁", "Preview Install", "Preview installing the selected UE4SS release", PreviewUe4ssInstallCommand, null, RibbonIconColor.Blue),
-                new("⬇", "Confirm Install", "Install the previewed UE4SS release", ApplyUe4ssInstallCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
-                new("↩", "Rollback", "Undo the last UE4SS install", RollbackUe4ssInstallCommand, null, RibbonIconColor.Red, IsDangerButton: true),
+                new("↻", "Refresh Runtime", "Refresh UE4SS runtime", Mods.RefreshModsCommand, null, RibbonIconColor.Amber),
+                new("👁", "Preview Install", "Preview installing the selected UE4SS release", Mods.PreviewUe4ssInstallCommand, null, RibbonIconColor.Blue),
+                new("⬇", "Confirm Install", "Install the previewed UE4SS release", Mods.ApplyUe4ssInstallCommand, null, RibbonIconColor.Green, IsSuccessButton: true),
+                new("↩", "Rollback", "Undo the last UE4SS install", Mods.RollbackUe4ssInstallCommand, null, RibbonIconColor.Red, IsDangerButton: true),
             ]));
         }
         else if (IsDoctorPage)
@@ -4012,10 +3810,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         try
         {
             var mods = await _api.GetModsAsync(profile, BearerToken);
-            ApplyModInventory(mods);
+            Mods.ApplyModInventory(mods);
             Dashboard.ModText = $"{mods.Installed} installed · {mods.ConfirmedIssues} confirmed issue(s)";
         }
-        catch (Exception ex) { ModSummary = $"Dashboard MOD load: {ex.Message}"; }
+        catch (Exception ex) { Mods.ModSummary = $"Dashboard MOD load: {ex.Message}"; }
     }
 
     private async Task RefreshStatusPollingAsync()
@@ -4303,6 +4101,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ConfigurationViewModel Configuration { get; }
     public WorkspaceViewModel Workspace { get; }
     public BackupsViewModel Backups { get; }
+    public ModsViewModel Mods { get; }
     private readonly IReadOnlyList<PageViewModel> _pages;
 
     // v1.0.8.2 (roadmap C-2): the Players page refresh is one part of the whole status refresh, so it stays here.
@@ -6034,16 +5833,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         await UpdatePalworldServerAsync();
         if (DistributionState != "Complete") return;
-        await InstallLatestUe4ssStableAsync();
+        await Mods.InstallLatestUe4ssStableAsync();
         await RefreshEnvironmentAsync();
     }
 
-    private async Task InstallLatestUe4ssStableAsync()
-    {
-        if (!await SelectAndPreviewLatestUe4ssAsync()) return;
-        if (!string.IsNullOrWhiteSpace(Ue4ssInstallToken))
-            await ApplyUe4ssInstallAsync();
-    }
 
 
     private async Task RefreshOperationsAsync()
@@ -6247,685 +6040,49 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
 
 
-    private async Task RefreshModsAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { ModSummary = ex.Message; return; }
-        IsBusy = true;
-        try { ApplyModInventory(await _api.GetModsAsync(profile, BearerToken)); }
-        catch (Exception ex) { ModState = "Unavailable"; ModSummary = ex.Message; }
-        finally { IsBusy = false; }
-        // v0.7.48.0: "Refresh Runtime" (this command's own ribbon label on the UE4SS page) is the
-        // natural place to also pull the release catalog -- same page, same "what's available for
-        // this runtime" concern. Gated to the UE4SS page specifically since this same command also
-        // serves MOD Dashboard/Library's plain "Refresh MODs", which has no reason to hit GitHub.
-        if (IsUe4ssPage) await RefreshUe4ssReleaseCatalogAsync();
-    }
 
-    private async Task RefreshUe4ssReleaseCatalogAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch { return; }
-        Ue4ssReleaseCatalogStatusText = "Checking GitHub for release data…";
-        try
-        {
-            var catalog = await _api.GetUe4ssReleaseCatalogAsync(profile, BearerToken);
-            Ue4ssPalworldForkReleases.Clear();
-            foreach (var release in catalog.PalworldForkReleases) Ue4ssPalworldForkReleases.Add(release);
-            Ue4ssOfficialUpstreamReleases.Clear();
-            foreach (var release in catalog.OfficialUpstreamReleases) Ue4ssOfficialUpstreamReleases.Add(release);
-            RaisePropertyChanged(nameof(Ue4ssVisibleReleases));
-            RaisePropertyChanged(nameof(HasUe4ssReleases));
-            Ue4ssReleaseCatalogStatusText = $"Checked {FormatTime(catalog.ObservedAt)}.";
-            var status = await _api.GetUe4ssInstallStatusAsync(profile, BearerToken);
-            Ue4ssRollbackAvailable = status.RollbackAvailable;
-        }
-        catch (Exception ex) { Ue4ssReleaseCatalogStatusText = $"Could not reach GitHub: {ex.Message}"; }
-    }
 
-    // v0.7.49.0: UE4SS Install/Rollback -- same Preview-then-Apply shape as backup retention
-    // cleanup (Backups.PreviewBackupRetentionAsync/Backups.ApplyBackupRetentionAsync above): Preview resolves the
-    // selected release against the live catalog server-side (the client never sends a raw download
-    // URL) and returns a short-lived token; Apply only proceeds against that exact token.
-    private async Task PreviewUe4ssInstallAsync()
-    {
-        if (SelectedUe4ssRelease is null) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { Ue4ssInstallState = ex.Message; return; }
-        IsBusy = true;
-        try
-        {
-            var preview = await _api.PreviewUe4ssInstallAsync(profile, SelectedUe4ssRelease.Source, SelectedUe4ssRelease.TagName, BearerToken);
-            if (preview is null)
-            {
-                InvalidateUe4ssInstallPreview();
-                Ue4ssInstallState = "This release no longer has a clear primary download asset -- open the release page and install it manually instead.";
-                return;
-            }
-            Ue4ssInstallToken = preview.Token;
-            Ue4ssInstallState = $"{preview.Summary} Current layout: {preview.CurrentLayout}. Preview expires {preview.ExpiresAt.ToLocalTime():HH:mm:ss}.";
-        }
-        catch (Exception ex) { InvalidateUe4ssInstallPreview(); Ue4ssInstallState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task ApplyUe4ssInstallAsync()
-    {
-        if (string.IsNullOrWhiteSpace(Ue4ssInstallToken)) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { Ue4ssInstallState = ex.Message; return; }
-        var token = Ue4ssInstallToken;
-        IsBusy = true;
-        try
-        {
-            var result = await _api.ApplyUe4ssInstallAsync(profile, token, BearerToken);
-            Ue4ssInstallState = result.Message;
-            InvalidateUe4ssInstallPreview();
-            if (result.Success)
-            {
-                Ue4ssRollbackAvailable = true;
-                await RefreshModsAsync();
-            }
-        }
-        catch (Exception ex) { InvalidateUe4ssInstallPreview(); Ue4ssInstallState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task RollbackUe4ssInstallAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { Ue4ssInstallState = ex.Message; return; }
-        IsBusy = true;
-        try
-        {
-            var result = await _api.RollbackUe4ssInstallAsync(profile, BearerToken);
-            Ue4ssInstallState = result.Message;
-            if (result.Success) await RefreshModsAsync();
-        }
-        catch (Exception ex) { Ue4ssInstallState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    // Only clears the token -- callers that need to explain *why* (selection changed vs. a
-    // finished install/rollback result) set Ue4ssInstallState themselves, since this is also called
-    // after a real result message has already been set and must never clobber it.
-    private void InvalidateUe4ssInstallPreview() => Ue4ssInstallToken = string.Empty;
 
-    private async Task VerifyModsAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { ModSummary = ex.Message; return; }
-        IsBusy = true;
-        ModState = "Verifying…";
-        try
-        {
-            var result = await _api.VerifyModsAsync(profile, BearerToken);
-            ModItems.Clear(); foreach (var mod in result.Mods) ModItems.Add(mod);
-            SelectedMod = ModItems.FirstOrDefault();
-            RaisePropertyChanged(nameof(ModsNeedingAttention)); RaisePropertyChanged(nameof(HasModsNeedingAttention));
-            ModHealth = result.OverallHealth; ModInstalledText = result.Installed.ToString();
-            ModConfirmedText = result.RuntimeConfirmed.ToString(); ModUnverifiedText = result.ActiveUnverified.ToString();
-            ModDisabledText = result.Disabled.ToString(); ModIssuesText = result.Attention.ToString();
-            ModState = "Verified"; ModSummary = result.Summary;
-            RaisePropertyChanged(nameof(IsModHealthGood)); RaisePropertyChanged(nameof(IsModHealthDegraded));
-        }
-        catch (Exception ex) { ModState = "Verification failed"; ModSummary = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task SetSelectedModEnabledAsync(bool enabled)
-    {
-        if (SelectedMod is null) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { ModSummary = ex.Message; return; }
-        var selected = SelectedMod;
-        IsBusy = true;
-        try
-        {
-            var result = await _api.SetModEnabledAsync(profile, selected.Type, selected.Package, enabled, BearerToken);
-            ModSummary = result.Message;
-            ApplyModInventory(await _api.GetModsAsync(profile, BearerToken));
-        }
-        catch (Exception ex) { ModState = "State change failed"; ModSummary = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    public async Task InstallModZipAsync(Stream archive, string suggestedPackage)
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { ModSummary = ex.Message; return; }
-        // v0.7.78.0: the manual "Package name (optional)" override box was removed (direct
-        // feedback: "i dont think we need a type box here") -- the package name always comes from
-        // the ZIP's own filename now, matching how PAK vs. UE4SS type detection already works from
-        // the archive's own contents (v0.7.39.0) rather than a manual field.
-        var package = Path.GetFileNameWithoutExtension(suggestedPackage);
-        IsBusy = true; ModState = "Installing…";
-        // v0.7.39.0: the headless service now detects PAK vs. UE4SS from the archive's own
-        // contents (HeadlessModManagementService.InstallZipAsync), no longer trusting this value
-        // for the actual install -- it stays a plain "PAK" hint purely for CaptureSnapshot's
-        // pre-existing-package-of-this-type lookup, unchanged from today's prior default.
-        try { var result = await _api.InstallModZipAsync(profile, "PAK", package, archive, BearerToken); ModSummary = result.Message; ApplyModInventory(await _api.GetModsAsync(profile, BearerToken)); }
-        catch (Exception ex) { ModState = "Install failed"; ModSummary = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    // ---- v0.7.93.0: Nexus Mods catalog -----------------------------------------------------------
-    // Browse trending / latest added / latest updated Palworld mods, look one up by id or page URL,
-    // list its files, and install one. The user's own API key stays on this machine (memory only
-    // unless they explicitly press Save, then DPAPI-encrypted via CredentialStore) and is never sent
-    // to the MystTiq management server. Direct download links are Premium-only on Nexus, so free
-    // accounts get Open on Nexus plus a paste-an-nxm://-link path. Every download still goes through
-    // the existing validated ZIP install (InstallModZipAsync), never straight into the server folder.
-    private const string NexusKeyCredentialId = "nexusmods-api-key";
-    private const long NexusMaxDownloadBytes = 750L * 1024 * 1024;
     private readonly INexusModsClient _nexus;
-    private string _nexusApiKey = string.Empty;
-    private string _nexusApiKeyInput = string.Empty;
-    private string _nexusAccountText = "Not connected.";
-    private bool _nexusIsPremium;
-    private string _nexusStatusText = string.Empty;
-    private string _nexusRateText = string.Empty;
-    private string _nexusNxmLinkText = string.Empty;
-    private string _nexusLookupText = string.Empty;
-    private NexusModDto? _selectedNexusMod;
-    private NexusFileDto? _selectedNexusFile;
-    private AsyncCommand[] _nexusCommands = [];
-    private RelayCommand<string>? _nexusListCommand;
 
-    public ObservableCollection<NexusModDto> NexusMods { get; } = [];
-    public ObservableCollection<NexusFileDto> NexusFiles { get; } = [];
-    public string NexusApiKeyInput { get => _nexusApiKeyInput; set => SetField(ref _nexusApiKeyInput, value); }
-    public string NexusAccountText { get => _nexusAccountText; private set => SetField(ref _nexusAccountText, value); }
-    public bool NexusIsPremium { get => _nexusIsPremium; private set => SetField(ref _nexusIsPremium, value); }
-    public string NexusStatusText { get => _nexusStatusText; private set => SetField(ref _nexusStatusText, value); }
-    public string NexusRateText { get => _nexusRateText; private set => SetField(ref _nexusRateText, value); }
-    public string NexusNxmLinkText { get => _nexusNxmLinkText; set => SetField(ref _nexusNxmLinkText, value); }
-    public string NexusLookupText { get => _nexusLookupText; set => SetField(ref _nexusLookupText, value); }
-    public NexusModDto? SelectedNexusMod
-    {
-        get => _selectedNexusMod;
-        set { if (SetField(ref _selectedNexusMod, value)) { NexusFiles.Clear(); SelectedNexusFile = null; } }
-    }
-    public NexusFileDto? SelectedNexusFile
-    {
-        get => _selectedNexusFile;
-        set { if (SetField(ref _selectedNexusFile, value)) RaiseNexusCommandStates(); }
-    }
-    public ICommand NexusConnectCommand { get; private set; } = null!;
-    public ICommand NexusSaveKeyCommand { get; private set; } = null!;
-    public ICommand NexusForgetKeyCommand { get; private set; } = null!;
-    public ICommand NexusLoadListCommand { get; private set; } = null!;
-    public ICommand NexusLookupCommand { get; private set; } = null!;
-    public ICommand NexusShowFilesCommand { get; private set; } = null!;
-    public ICommand NexusInstallFileCommand { get; private set; } = null!;
-    public ICommand NexusInstallFromNxmCommand { get; private set; } = null!;
-    public ICommand NexusOpenPageCommand { get; private set; } = null!;
 
-    private void InitializeNexusMods()
-    {
-        _nexusApiKey = _credentialStore.TryLoad(NexusKeyCredentialId) ?? string.Empty;
-        if (_nexusApiKey.Length > 0) NexusAccountText = "A saved key was found. Press Connect to verify it.";
 
-        var connect = new AsyncCommand(NexusConnectAsync, () => !IsBusy);
-        var list = new RelayCommand<string>(kind => _ = NexusLoadListAsync(kind), _ => !IsBusy);
-        _nexusListCommand = list;
-        var lookup = new AsyncCommand(NexusLookupAsync, () => !IsBusy);
-        var files = new AsyncCommand(NexusShowFilesAsync, () => !IsBusy && SelectedNexusMod is not null);
-        var install = new AsyncCommand(NexusInstallSelectedFileAsync, () => !IsBusy && SelectedNexusMod is not null && SelectedNexusFile is not null);
-        var nxm = new AsyncCommand(NexusInstallFromNxmAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(NexusNxmLinkText));
-        NexusConnectCommand = connect;
-        NexusLoadListCommand = list;
-        NexusLookupCommand = lookup;
-        NexusShowFilesCommand = files;
-        NexusInstallFileCommand = install;
-        NexusInstallFromNxmCommand = nxm;
-        NexusSaveKeyCommand = new RelayCommand(NexusSaveKey);
-        NexusForgetKeyCommand = new RelayCommand(NexusForgetKey);
-        NexusOpenPageCommand = new RelayCommand(NexusOpenPage);
-        _nexusCommands = [connect, files, install, nxm, lookup];
-    }
 
-    private void RaiseNexusCommandStates()
-    {
-        foreach (var command in _nexusCommands) command.RaiseCanExecuteChanged();
-        _nexusListCommand?.RaiseCanExecuteChanged();
-    }
 
-    // Uses the key typed into the box if there is one, otherwise the one already held in memory
-    // (loaded from the encrypted store, or verified earlier this session).
-    private string CurrentNexusKey() => string.IsNullOrWhiteSpace(NexusApiKeyInput) ? _nexusApiKey : NexusApiKeyInput.Trim();
 
-    private void ReportNexusRate<T>(NexusCallResult<T> result)
-    {
-        if (result.HourlyRemaining is null && result.DailyRemaining is null) return;
-        NexusRateText = $"Nexus requests left: {result.HourlyRemaining?.ToString() ?? "?"} this hour, {result.DailyRemaining?.ToString() ?? "?"} today.";
-    }
 
-    private async Task NexusConnectAsync()
-    {
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Paste your Nexus Mods API key first (nexusmods.com > your account > API keys)."; return; }
-        IsBusy = true; NexusStatusText = "Checking the key with Nexus Mods…";
-        try
-        {
-            var result = await _nexus.ValidateAsync(key);
-            ReportNexusRate(result);
-            if (!result.Ok || result.Value is null) { NexusStatusText = result.Error ?? "Nexus did not confirm the key."; return; }
-            _nexusApiKey = key;
-            NexusApiKeyInput = string.Empty;
-            NexusIsPremium = result.Value.IsPremium;
-            NexusAccountText = $"Connected as {result.Value.Name}{(result.Value.IsPremium ? " (Premium: direct downloads available)" : " (free account: use Open on Nexus or an nxm:// link to download)")}.";
-            NexusStatusText = "Connected. Load a list below, or look up a mod by id or page URL.";
-        }
-        finally { IsBusy = false; }
-    }
 
-    private void NexusSaveKey()
-    {
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "There is no key to save yet."; return; }
-        if (!OperatingSystem.IsWindows()) { NexusStatusText = "Saving the key is only supported on Windows; it stays in memory for this session."; _nexusApiKey = key; return; }
-        _credentialStore.Save(NexusKeyCredentialId, key);
-        _nexusApiKey = key;
-        NexusApiKeyInput = string.Empty;
-        NexusStatusText = "Key saved on this PC, encrypted for your Windows account only. It is never sent to the MystTiq server.";
-    }
 
-    private void NexusForgetKey()
-    {
-        _credentialStore.Delete(NexusKeyCredentialId);
-        _nexusApiKey = string.Empty;
-        NexusApiKeyInput = string.Empty;
-        NexusIsPremium = false;
-        NexusAccountText = "Not connected.";
-        NexusMods.Clear(); NexusFiles.Clear(); SelectedNexusMod = null;
-        NexusStatusText = "The saved key was removed and this session's copy cleared.";
-    }
 
-    private async Task NexusLoadListAsync(string? kind)
-    {
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
-        IsBusy = true; NexusStatusText = "Loading from Nexus Mods…";
-        try
-        {
-            var result = await _nexus.GetListAsync(key, kind ?? "trending");
-            ReportNexusRate(result);
-            if (!result.Ok || result.Value is null) { NexusStatusText = result.Error ?? "Nexus returned nothing."; return; }
-            NexusMods.Clear();
-            foreach (var mod in result.Value) NexusMods.Add(mod);
-            SelectedNexusMod = null;
-            NexusStatusText = $"{result.Value.Count} mod(s). Nexus's public API only lists 10 per category and has no catalog search; use the lookup box for any other mod.";
-        }
-        finally { IsBusy = false; }
-    }
 
-    private async Task NexusLookupAsync()
-    {
-        if (!NexusModsLinks.TryParseModReference(NexusLookupText, out var modId))
-        { NexusStatusText = "Enter a mod id or a nexusmods.com/palworld/mods/... page URL."; return; }
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
-        IsBusy = true; NexusStatusText = $"Looking up mod {modId}…";
-        try
-        {
-            var result = await _nexus.GetModAsync(key, modId);
-            ReportNexusRate(result);
-            if (!result.Ok || result.Value is null) { NexusStatusText = result.Error ?? "Nexus returned nothing."; return; }
-            NexusMods.Clear();
-            NexusMods.Add(result.Value);
-            SelectedNexusMod = result.Value;
-            NexusStatusText = $"Found {result.Value.DisplayName}. Press Show Files to see what can be installed.";
-        }
-        finally { IsBusy = false; }
-    }
 
-    private async Task NexusShowFilesAsync()
-    {
-        if (SelectedNexusMod is not { } mod) return;
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
-        IsBusy = true; NexusStatusText = $"Loading files for {mod.DisplayName}…";
-        try
-        {
-            var result = await _nexus.GetFilesAsync(key, mod.ModId);
-            ReportNexusRate(result);
-            if (!result.Ok || result.Value is null) { NexusStatusText = result.Error ?? "Nexus returned nothing."; return; }
-            NexusFiles.Clear();
-            foreach (var file in result.Value.Where(f => !string.Equals(f.CategoryName, "OLD_VERSION", StringComparison.OrdinalIgnoreCase)))
-                NexusFiles.Add(file);
-            SelectedNexusFile = NexusFiles.FirstOrDefault(f => f.IsPrimary) ?? NexusFiles.FirstOrDefault();
-            NexusStatusText = NexusFiles.Count == 0 ? "That mod has no current files." : $"{NexusFiles.Count} file(s). Only .zip archives can be installed by MystTiq.";
-        }
-        finally { IsBusy = false; }
-    }
 
-    private Task NexusInstallSelectedFileAsync() =>
-        SelectedNexusMod is { } mod && SelectedNexusFile is { } file
-            ? NexusDownloadAndInstallAsync(mod.ModId, file.FileId, file.FileName ?? $"nexus-{mod.ModId}-{file.FileId}.zip", null, null)
-            : Task.CompletedTask;
 
-    private Task NexusInstallFromNxmAsync()
-    {
-        if (!NexusModsLinks.TryParseNxm(NexusNxmLinkText, out var link, out var error) || link is null)
-        { NexusStatusText = error; return Task.CompletedTask; }
-        return NexusDownloadAndInstallAsync(link.ModId, link.FileId, $"nexus-{link.ModId}-{link.FileId}.zip", link.Key, link.Expires);
-    }
 
-    private async Task NexusDownloadAndInstallAsync(int modId, int fileId, string fileName, string? nxmKey, long? nxmExpires)
-    {
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
-        var temp = Path.Combine(Path.GetTempPath(), "MystTiq-nexus-" + Guid.NewGuid().ToString("N") + ".download");
-        IsBusy = true; NexusStatusText = "Asking Nexus for a download link…";
-        try
-        {
-            var link = await _nexus.GetDownloadLinkAsync(key, modId, fileId, nxmKey, nxmExpires);
-            ReportNexusRate(link);
-            if (!link.Ok || link.Value is null) { NexusStatusText = link.Error ?? "Nexus gave no download link."; return; }
 
-            var progress = new Progress<string>(text => NexusStatusText = text);
-            var failure = await _nexus.DownloadToFileAsync(link.Value, temp, NexusMaxDownloadBytes, progress);
-            if (failure is not null) { NexusStatusText = failure; return; }
 
-            var header = new byte[8];
-            await using (var probe = File.OpenRead(temp)) { _ = await probe.ReadAsync(header); }
-            var kind = NexusModsLinks.DescribeArchiveKind(header);
-            if (kind != "zip")
-            {
-                NexusStatusText = kind is "7z" or "rar"
-                    ? $"That file is a .{kind} archive. MystTiq installs .zip only: extract it, re-zip it, then use Install MOD ZIP."
-                    : "That download is not a ZIP archive, so MystTiq will not install it.";
-                return;
-            }
 
-            // v1.0.5.0 (roadmap M-1): the same layout check as the MOD browser, before anything is sent to the server.
-            if (ModSourceHttp.PlanZip(temp) is { Installable: false } plan) { NexusStatusText = plan.Summary; return; }
 
-            NexusStatusText = "Downloaded. Installing through the validated ZIP install…";
-            IsBusy = false; // InstallModZipAsync manages the busy flag itself
-            await using var stream = File.OpenRead(temp);
-            await InstallModZipAsync(stream, fileName);
-            NexusStatusText = string.IsNullOrWhiteSpace(ModSummary) ? "Install finished." : ModSummary;
-        }
-        finally
-        {
-            IsBusy = false;
-            try { if (File.Exists(temp)) File.Delete(temp); } catch { /* best-effort temp cleanup */ }
-        }
-    }
 
-    private void NexusOpenPage()
-    {
-        if (SelectedNexusMod is not { } mod) { NexusStatusText = "Select a mod first."; return; }
-        try { Process.Start(new ProcessStartInfo(NexusModsLinks.ModPageUrl(mod.ModId)) { UseShellExecute = true }); }
-        catch (Exception ex) { NexusStatusText = $"Could not open the browser: {ex.Message}"; }
-    }
 
-    private async Task DeleteSelectedModAsync()
-    {
-        if (SelectedMod is null) return; var selected = SelectedMod;
-        await RunModMutationAsync((profile) => _api.DeleteModAsync(profile, selected.Type, selected.Package, BearerToken), "Delete failed");
-    }
 
-    private async Task RollbackSelectedModAsync()
-    {
-        if (SelectedMod is null) return; var selected = SelectedMod;
-        await RunModMutationAsync((profile) => _api.RollbackModAsync(profile, selected.Type, selected.Package, BearerToken), "Rollback failed");
-    }
 
-    // v0.7.77.0: per-MOD "Repair / Re-install" -- direct request. Distinct from Update (only
-    // offers when Steam's local copy is newer) and the existing global Repair button (only
-    // neutralizes legacy enabled.txt overrides, never touches a MOD's own files). Always available
-    // to try for any selected MOD, not just ones already flagged Misconfigured -- the backend
-    // itself reports honestly if no local Workshop source is known rather than this trying to
-    // pre-guess availability client-side.
-    private async Task RepairSelectedModAsync()
-    {
-        if (SelectedMod is null) return; var selected = SelectedMod;
-        await RunModMutationAsync((profile) => _api.RepairModAsync(profile, selected.Type, selected.Package, BearerToken), "Repair failed");
-    }
 
-    private async Task SetAllModsEnabledAsync(bool enabled) =>
-        await RunModMutationAsync(profile => _api.SetAllModsEnabledAsync(profile, enabled, BearerToken), "Bulk state change failed");
 
-    private async Task RepairModsAsync() =>
-        await RunModMutationAsync(profile => _api.RepairModsAsync(profile, BearerToken), "Repair failed");
 
-    private async Task ScanWorkshopModsAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { WorkshopScanState = ex.Message; return; }
-        IsBusy = true;
-        WorkshopScanState = "Scanning local Steam Workshop content…";
-        try
-        {
-            var result = await _api.ScanWorkshopModsAsync(profile, BearerToken);
-            WorkshopItems.Clear(); foreach (var item in result.Items) WorkshopItems.Add(item);
-            SelectedWorkshopItem = WorkshopItems.FirstOrDefault();
-            WorkshopScanState = result.Detail;
-        }
-        catch (Exception ex) { WorkshopScanState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task ImportSelectedWorkshopModAsync()
-    {
-        if (SelectedWorkshopItem is null) return;
-        var selected = SelectedWorkshopItem;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { WorkshopScanState = ex.Message; return; }
-        IsBusy = true;
-        try
-        {
-            var result = await _api.ImportWorkshopModAsync(profile, selected.WorkshopId, BearerToken);
-            WorkshopScanState = result.Message;
-            ApplyModInventory(await _api.GetModsAsync(profile, BearerToken));
-            var rescan = await _api.ScanWorkshopModsAsync(profile, BearerToken);
-            WorkshopItems.Clear(); foreach (var item in rescan.Items) WorkshopItems.Add(item);
-            SelectedWorkshopItem = WorkshopItems.FirstOrDefault(x => x.WorkshopId == selected.WorkshopId) ?? WorkshopItems.FirstOrDefault();
-        }
-        catch (Exception ex) { WorkshopScanState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    // v0.7.41.0: MOD update detection (item 52). Check calls the headless service's real,
-    // locally-verifiable comparison (installed files vs. Steam's local Workshop content cache for
-    // a matching item, no network calls, no fabricated "latest version" claim) and remembers the
-    // matched WorkshopId so Update can reuse the existing Workshop-import route unchanged.
-    private async Task CheckSelectedModUpdateAsync()
-    {
-        if (SelectedMod is not { } mod) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { SelectedModUpdateText = ex.Message; return; }
-        IsBusy = true;
-        SelectedModUpdateText = "Checking for an update…";
-        try
-        {
-            var result = await _api.CheckModUpdateAsync(profile, mod.Type, mod.Package, BearerToken);
-            SelectedModUpdateText = result.Detail;
-            _selectedModUpdateWorkshopId = result.UpdateAvailable ? result.WorkshopId : null;
-            (UpdateSelectedModCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        }
-        catch (Exception ex) { SelectedModUpdateText = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task UpdateSelectedModAsync()
-    {
-        if (_selectedModUpdateWorkshopId is not { } workshopId || SelectedMod is not { } mod) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { SelectedModUpdateText = ex.Message; return; }
-        IsBusy = true;
-        try
-        {
-            var result = await _api.ImportWorkshopModAsync(profile, workshopId, BearerToken);
-            var inventory = await _api.GetModsAsync(profile, BearerToken);
-            ApplyModInventory(inventory);
-            // Reselecting runs through SelectedMod's setter, which clears SelectedModUpdateText as
-            // stale for the new selection -- set the result message after, not before, reselecting.
-            SelectedMod = ModItems.FirstOrDefault(x => string.Equals(x.Package, mod.Package, StringComparison.OrdinalIgnoreCase)) ?? SelectedMod;
-            SelectedModUpdateText = result.Message;
-        }
-        catch (Exception ex) { SelectedModUpdateText = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    // v0.7.55.0: website-sourced MOD descriptions (item 40's deferred half). Only ever runs from an
-    // explicit user click (Fetch/Refresh) -- never automatically on selection change, so switching
-    // through the MOD list never triggers a network call on its own. A description already showing
-    // for this selection means the click is a Refresh, so it forces a re-fetch past the cache.
-    private async Task FetchSelectedModDescriptionAsync()
-    {
-        if (SelectedMod is not { } mod) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { SelectedModDescription = new ModDescriptionResultDto { Available = false, Detail = ex.Message }; return; }
-        IsBusy = true;
-        try
-        {
-            var forceRefresh = SelectedModDescription is not null;
-            SelectedModDescription = await _api.GetModDescriptionAsync(profile, mod.Type, mod.Package, forceRefresh, BearerToken);
-        }
-        catch (Exception ex) { SelectedModDescription = new ModDescriptionResultDto { Available = false, Detail = ex.Message }; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task SetSelectedModDescriptionSourceAsync()
-    {
-        if (SelectedMod is not { } mod) return;
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { SelectedModDescription = new ModDescriptionResultDto { Available = false, Detail = ex.Message }; return; }
-        IsBusy = true;
-        try
-        {
-            var result = await _api.SetModDescriptionSourceAsync(profile, mod.Type, mod.Package, SelectedModDescriptionSourceInput, BearerToken);
-            SelectedModDescription = result.Success
-                ? await _api.GetModDescriptionAsync(profile, mod.Type, mod.Package, true, BearerToken)
-                : new ModDescriptionResultDto { Available = false, Detail = result.Message };
-        }
-        catch (Exception ex) { SelectedModDescription = new ModDescriptionResultDto { Available = false, Detail = ex.Message }; }
-        finally { IsBusy = false; }
-    }
 
-    // v0.7.59.0: Safe-Start MOD Diagnostic. IsBusy only wraps the initial Begin POST -- the
-    // diagnostic itself runs server-side over many minutes, so a dedicated poll loop (not IsBusy)
-    // tracks it independently, matching the "don't hold IsBusy for a genuinely long background
-    // operation" discipline this ViewModel already applies to UE4SS install preview/apply.
-    private Task BeginModSafeStartAsync() => BeginModSafeStartAsync(testLoad: false);
 
-    private async Task BeginModSafeStartAsync(bool testLoad)
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { ModSafeStartStatus = new SafeStartStatusDto { Completed = true, FinalMessage = ex.Message }; return; }
-        IsBusy = true;
-        try
-        {
-            var result = testLoad
-                ? await _api.BeginModTestLoadAsync(profile, BearerToken)
-                : await _api.BeginModSafeStartAsync(profile, BearerToken);
-            if (!result.Success)
-            {
-                ModSafeStartStatus = new SafeStartStatusDto { Completed = true, FinalMessage = result.Message };
-                return;
-            }
-        }
-        catch (Exception ex)
-        {
-            ModSafeStartStatus = new SafeStartStatusDto { Completed = true, FinalMessage = ex.Message };
-            return;
-        }
-        finally { IsBusy = false; }
-        StartModSafeStartPolling();
-    }
-
-    private void StartModSafeStartPolling()
-    {
-        _modSafeStartPollTimer?.Stop();
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-        timer.Tick += async (_, _) => await PollModSafeStartStatusAsync();
-        _modSafeStartPollTimer = timer;
-        timer.Start();
-        _ = PollModSafeStartStatusAsync();
-    }
-
-    private async Task PollModSafeStartStatusAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch { return; }
-        try
-        {
-            var status = await _api.GetModSafeStartStatusAsync(profile, BearerToken);
-            ModSafeStartStatus = status;
-            (BeginModSafeStartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (CancelModSafeStartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            if (status is null || status.Completed)
-            {
-                _modSafeStartPollTimer?.Stop();
-                _modSafeStartPollTimer = null;
-                if (status is { Completed: true })
-                {
-                    // The diagnostic may have disabled MODs along the way -- refresh the inventory
-                    // so the Installed MODs list reflects the real, current enabled/disabled state.
-                    var inventory = await _api.GetModsAsync(profile, BearerToken);
-                    ApplyModInventory(inventory);
-                }
-            }
-        }
-        catch { /* Transient poll failure -- the timer tries again on its own next tick. */ }
-    }
-
-    private async Task CancelModSafeStartAsync()
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch { return; }
-        try { await _api.CancelModSafeStartAsync(profile, BearerToken); }
-        catch { /* Best effort -- the next poll tick will reflect whatever the server actually did. */ }
-        await PollModSafeStartStatusAsync();
-    }
-
-    private async Task RunModMutationAsync(Func<ConnectionProfile, Task<ModMutationResultDto>> operation, string failureState)
-    {
-        ConnectionProfile profile;
-        try { profile = BuildProfileFromEditor(SelectedProfile?.Id); }
-        catch (Exception ex) { ModSummary = ex.Message; return; }
-        IsBusy = true;
-        try { var result = await operation(profile); ModSummary = result.Message; ApplyModInventory(await _api.GetModsAsync(profile, BearerToken)); }
-        catch (Exception ex) { ModState = failureState; ModSummary = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private void ApplyModInventory(ModInventoryDto inventory)
-    {
-        ModItems.Clear(); foreach (var mod in inventory.Mods) ModItems.Add(mod);
-        SelectedMod = ModItems.FirstOrDefault();
-        RaisePropertyChanged(nameof(ModsNeedingAttention)); RaisePropertyChanged(nameof(HasModsNeedingAttention));
-        ModState = "Ready"; ModSummary = inventory.Summary; ModHealth = inventory.OverallHealth;
-        ModInstalledText = inventory.Installed.ToString(); ModConfirmedText = inventory.RuntimeConfirmed.ToString();
-        ModUnverifiedText = inventory.ActiveUnverified.ToString(); ModDisabledText = inventory.Disabled.ToString();
-        ModIssuesText = inventory.ConfirmedIssues.ToString();
-        RaisePropertyChanged(nameof(IsModHealthGood)); RaisePropertyChanged(nameof(IsModHealthDegraded));
-        Ue4ssHealth = inventory.Ue4ss.HealthState; Ue4ssDetection = inventory.Ue4ss.DetectionMethod;
-        Ue4ssActiveRoot = inventory.Ue4ss.ActiveModsRoot; Ue4ssRuntimeRoot = inventory.Ue4ss.RuntimeRootText;
-        Ue4ssWarning = inventory.Ue4ss.WarningMessage;
-        Ue4ssInstalledVersion = inventory.Ue4ss.InstalledVersion;
-    }
 
     private async Task StartServerAsync()
     {
@@ -7190,7 +6347,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             : $"{status.ActiveState ?? "unknown"} / {status.SubState ?? "unknown"}";
     }
 
-    private static string FormatTime(DateTimeOffset value) =>
+    internal static string FormatTime(DateTimeOffset value) =>
         value == default ? "Unknown" : value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
     private static string FormatTime(DateTimeOffset? value) =>

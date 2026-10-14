@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -382,27 +382,27 @@ public sealed partial class MainWindow : Window
     private async void InstallBrowserMod_OnClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
-        var prepared = await vm.PrepareModBrowserInstallAsync();
+        var prepared = await vm.Mods.PrepareModBrowserInstallAsync();
         if (prepared is null) return;
         var dialog = new Views.ConfirmOperationDialog(
             string.Format(Localizer.T("Install {0} from {1}?"), prepared.Package, Localizer.T(prepared.SourceName)),
             [Localizer.T(prepared.Plan.Summary), Localizer.T("PalServer must be stopped; MystTiq refuses the install while it runs.")],
             Localizer.T("Install"), danger: false);
-        if (await dialog.ShowDialog<bool>(this) != true) { vm.DiscardPreparedMod(prepared); return; }
-        await vm.InstallPreparedModAsync(prepared);
+        if (await dialog.ShowDialog<bool>(this) != true) { vm.Mods.DiscardPreparedMod(prepared); return; }
+        await vm.Mods.InstallPreparedModAsync(prepared);
     }
 
     // v1.0.5.0: Nexus Mod Manager Download links open MystTiq; another program holding them is named and replaced only on a yes.
     private async void UseMystTiqForNxm_OnClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
-        if (vm.OtherNxmHandler is { } other)
+        if (vm.Mods.OtherNxmHandler is { } other)
         {
             var dialog = new Views.ConfirmOperationDialog(Localizer.T("Let MystTiq take Mod Manager Download links instead?"),
                 [string.Format(Localizer.T("They open with this program now: {0}"), other)], Localizer.T("Allow"), danger: false);
             if (await dialog.ShowDialog<bool>(this) != true) return;
         }
-        vm.UseMystTiqForNxmLinks();
+        vm.Mods.UseMystTiqForNxmLinks();
     }
 
     // v1.0.6.1: stop the older local service and start this app's own, after a confirmation.
@@ -637,7 +637,7 @@ public sealed partial class MainWindow : Window
     private void OpenModDescriptionSource_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
-        var url = vm.SelectedModDescription?.SourceUrl;
+        var url = vm.Mods.SelectedModDescription?.SourceUrl;
         if (string.IsNullOrWhiteSpace(url)) return;
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)) return;
         Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
@@ -797,7 +797,7 @@ public sealed partial class MainWindow : Window
         });
         var file = files.FirstOrDefault(); if (file is null) return;
         await using var stream = await file.OpenReadAsync();
-        await vm.InstallModZipAsync(stream, file.Name);
+        await vm.Mods.InstallModZipAsync(stream, file.Name);
     }
 
     // v0.7.78.0: drag-and-drop counterpart to InstallModZip_Click above -- same install path, just
@@ -817,7 +817,7 @@ public sealed partial class MainWindow : Window
         if (file is null) return;
         e.Handled = true;
         await using var stream = await file.OpenReadAsync();
-        await vm.InstallModZipAsync(stream, file.Name);
+        await vm.Mods.InstallModZipAsync(stream, file.Name);
     }
 
     private async void AnalyzeWorldArchive_Click(object? sender, RoutedEventArgs e)

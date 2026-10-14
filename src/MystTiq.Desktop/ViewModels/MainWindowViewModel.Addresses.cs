@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 
@@ -14,7 +14,7 @@ public sealed partial class MainWindowViewModel
         private set { if (SetField(ref _isStartupStuck, value)) RaisePropertyChanged(nameof(ShowStuckStartPanel)); }
     }
 
-    public bool ShowStuckStartPanel => IsStartupStuck || ModSafeStartStatus is not null;
-    public bool IsModSafeStartRunning => ModSafeStartStatus is { IsRunning: true };
-    public string StuckStartStatusText => StuckStartText.Describe(ModSafeStartStatus);
+    public bool ShowStuckStartPanel => IsStartupStuck || Mods.ModSafeStartStatus is not null;
+    public bool IsModSafeStartRunning => Mods.ModSafeStartStatus is { IsRunning: true };
+    public string StuckStartStatusText => StuckStartText.Describe(Mods.ModSafeStartStatus);
 }

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.5: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.6: file reviewed for this release (2026-10-12). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -388,12 +388,12 @@
               <TextBlock Text="{services:Tr dashboard.stuckStartHint}" TextWrapping="Wrap" FontSize="11" IsVisible="{Binding IsStartupStuck}"/>
               <WrapPanel Orientation="Horizontal" IsVisible="{Binding IsStartupStuck}">
                 <Button Classes="verify" Content="{services:Tr dashboard.stuckTestLoad}" Command="{Binding BeginStuckTestLoadCommand}" Margin="0,0,8,0" AutomationProperties.Name="{services:Tr dashboard.stuckTestLoad}"/>
-                <Button Classes="verify" Content="{services:Tr dashboard.stuckOneAtATime}" Command="{Binding BeginModSafeStartCommand}" AutomationProperties.Name="{services:Tr dashboard.stuckOneAtATime}"/>
+                <Button Classes="verify" Content="{services:Tr dashboard.stuckOneAtATime}" Command="{Binding Mods.BeginModSafeStartCommand}" AutomationProperties.Name="{services:Tr dashboard.stuckOneAtATime}"/>
               </WrapPanel>
-              <TextBlock Text="{services:TrText StuckStartStatusText}" TextWrapping="Wrap" FontSize="11" IsVisible="{Binding HasModSafeStartStatus}"/>
+              <TextBlock Text="{services:TrText StuckStartStatusText}" TextWrapping="Wrap" FontSize="11" IsVisible="{Binding Mods.HasModSafeStartStatus}"/>
               <WrapPanel Orientation="Horizontal">
-                <Button Classes="plain" Content="{services:Tr dashboard.stuckCancelTest}" Command="{Binding CancelModSafeStartCommand}" IsVisible="{Binding IsModSafeStartRunning}" Margin="0,0,8,0" AutomationProperties.Name="{services:Tr dashboard.stuckCancelTest}"/>
-                <Button Classes="plain" Content="{services:Tr dashboard.stuckDismiss}" Command="{Binding DismissModSafeStartCommand}" IsVisible="{Binding HasModSafeStartStatus}" AutomationProperties.Name="{services:Tr dashboard.stuckDismiss}"/>
+                <Button Classes="plain" Content="{services:Tr dashboard.stuckCancelTest}" Command="{Binding Mods.CancelModSafeStartCommand}" IsVisible="{Binding IsModSafeStartRunning}" Margin="0,0,8,0" AutomationProperties.Name="{services:Tr dashboard.stuckCancelTest}"/>
+                <Button Classes="plain" Content="{services:Tr dashboard.stuckDismiss}" Command="{Binding Mods.DismissModSafeStartCommand}" IsVisible="{Binding Mods.HasModSafeStartStatus}" AutomationProperties.Name="{services:Tr dashboard.stuckDismiss}"/>
               </WrapPanel>
             </StackPanel>
           </Border>
@@ -441,7 +441,7 @@
           <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
             <Border Classes="card glowPurple" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.players}" Classes="muted"/><TextBlock Text="{services:TrFormat dashboard.format.online, Path=OnlinePlayerCountText}" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.known, Path=Players.PlayerRecordCountText}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="Players"/></Grid></Border>
             <Border Grid.Column="1" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.guildsBases}" Classes="muted"/><TextBlock Text="{services:TrText Dashboard.GuildText}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{services:TrText SemanticStateText}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="Guilds"/></Grid></Border>
-            <Border Grid.Column="2" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.modPlatform}" Classes="muted"/><TextBlock Text="{services:TrText Dashboard.ModText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.health, Path=ModHealth}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="ModDashboard"/></Grid></Border>
+            <Border Grid.Column="2" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.modPlatform}" Classes="muted"/><TextBlock Text="{services:TrText Dashboard.ModText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.health, Path=Mods.ModHealth}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="ModDashboard"/></Grid></Border>
             <Border Grid.Column="3" Classes="card accentHome" Padding="8,6" ClipToBounds="True">
               <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="6" ClipToBounds="True">
                 <StackPanel MinWidth="0"><TextBlock Text="{services:Tr dashboard.cpu}" Classes="muted"/><TextBlock Text="{services:TrText CpuText}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/></StackPanel>
@@ -2288,13 +2288,13 @@
                This leads with one big, color-coded status statement (green=Healthy,
                amber=Degraded) the way an actual monitoring dashboard would, distinct from Library's
                working/management framing. -->
-          <Border Classes="card" Classes.glowGreen="{Binding IsModHealthGood}" IsVisible="{Binding IsModDashboardPage}">
+          <Border Classes="card" Classes.glowGreen="{Binding Mods.IsModHealthGood}" IsVisible="{Binding IsModDashboardPage}">
             <Grid ColumnDefinitions="Auto,*">
-              <TextBlock Text="{services:TrText ModHealth}" FontSize="28" FontWeight="Bold"/>
+              <TextBlock Text="{services:TrText Mods.ModHealth}" FontSize="28" FontWeight="Bold"/>
               <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="2">
                 <TextBlock Text="{services:Tr ui.at_a_glance_operational_health_and_confirmed_iss_3e93e9}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                <TextBlock Text="{services:TrText ModSummary}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                <TextBlock Text="{services:TrText ModState}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
+                <TextBlock Text="{services:TrText Mods.ModSummary}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Mods.ModState}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
               </StackPanel>
             </Grid>
           </Border>
@@ -2305,33 +2305,33 @@
                instead of all six sharing the same flat accentMods look, part of the same
                look-and-feel differentiation as the hero banner above. -->
           <Grid ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="10" IsVisible="{Binding IsModDashboardPage}">
-            <Border Classes="card" Classes.glowGreen="{Binding IsModHealthGood}"><StackPanel><TextBlock Text="{services:Tr ui.health}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText ModHealth}" FontSize="18" FontWeight="SemiBold"/></StackPanel></Border>
-            <Border Grid.Column="1" Classes="card glowCyan"><StackPanel><TextBlock Text="{services:Tr ui.installed}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText ModInstalledText}" FontSize="22"/></StackPanel></Border>
-            <Border Grid.Column="2" Classes="card glowGreen"><StackPanel><TextBlock Text="{services:Tr ui.confirmed}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText ModConfirmedText}" FontSize="22"/></StackPanel></Border>
-            <Border Grid.Column="3" Classes="card accentMods" BorderBrush="{DynamicResource AmberBrush}"><StackPanel><TextBlock Text="{services:Tr ui.unverified}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText ModUnverifiedText}" FontSize="22"/></StackPanel></Border>
-            <Border Grid.Column="4" Classes="card accentMods"><StackPanel><TextBlock Text="{services:Tr ui.disabled}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText ModDisabledText}" FontSize="22"/></StackPanel></Border>
-            <Border Grid.Column="5" Classes="card accentMods" BorderBrush="{DynamicResource RedBrush}"><StackPanel><TextBlock Text="{services:Tr ui.issues}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText ModIssuesText}" FontSize="22"/></StackPanel></Border>
+            <Border Classes="card" Classes.glowGreen="{Binding Mods.IsModHealthGood}"><StackPanel><TextBlock Text="{services:Tr ui.health}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Mods.ModHealth}" FontSize="18" FontWeight="SemiBold"/></StackPanel></Border>
+            <Border Grid.Column="1" Classes="card glowCyan"><StackPanel><TextBlock Text="{services:Tr ui.installed}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Mods.ModInstalledText}" FontSize="22"/></StackPanel></Border>
+            <Border Grid.Column="2" Classes="card glowGreen"><StackPanel><TextBlock Text="{services:Tr ui.confirmed}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Mods.ModConfirmedText}" FontSize="22"/></StackPanel></Border>
+            <Border Grid.Column="3" Classes="card accentMods" BorderBrush="{DynamicResource AmberBrush}"><StackPanel><TextBlock Text="{services:Tr ui.unverified}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Mods.ModUnverifiedText}" FontSize="22"/></StackPanel></Border>
+            <Border Grid.Column="4" Classes="card accentMods"><StackPanel><TextBlock Text="{services:Tr ui.disabled}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Mods.ModDisabledText}" FontSize="22"/></StackPanel></Border>
+            <Border Grid.Column="5" Classes="card accentMods" BorderBrush="{DynamicResource RedBrush}"><StackPanel><TextBlock Text="{services:Tr ui.issues}" Foreground="{DynamicResource MutedBrush}"/><TextBlock Text="{services:TrText Mods.ModIssuesText}" FontSize="22"/></StackPanel></Border>
           </Grid>
 
           <Border Classes="card accentMods" IsVisible="{Binding IsUe4ssPage}">
             <StackPanel Spacing="12">
               <TextBlock Text="{services:Tr ui.ue4ss_runtime}" FontSize="18" FontWeight="SemiBold" />
               <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
-                <Border Classes="statuscard accentMods"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.installed_version}" Classes="muted"/><TextBlock Text="{services:TrText Ue4ssInstalledVersion}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/></StackPanel></Border>
-                <Border Grid.Column="1" Classes="statuscard accentMods"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.runtime_health}" Classes="muted"/><TextBlock Text="{services:TrText Ue4ssHealth}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Ue4ssDetection}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
-                <Border Grid.Column="2" Classes="statuscard accentMods"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.active_fork}" Classes="muted"/><TextBlock Text="{services:TrText SelectedUe4ssFork}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/></StackPanel></Border>
+                <Border Classes="statuscard accentMods"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.installed_version}" Classes="muted"/><TextBlock Text="{services:TrText Mods.Ue4ssInstalledVersion}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/></StackPanel></Border>
+                <Border Grid.Column="1" Classes="statuscard accentMods"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.runtime_health}" Classes="muted"/><TextBlock Text="{services:TrText Mods.Ue4ssHealth}" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Mods.Ue4ssDetection}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+                <Border Grid.Column="2" Classes="statuscard accentMods"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.active_fork}" Classes="muted"/><TextBlock Text="{services:TrText Mods.SelectedUe4ssFork}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/></StackPanel></Border>
               </Grid>
               <Border Classes="statuscard accentMods">
                 <StackPanel Spacing="8">
                   <Grid ColumnDefinitions="Auto,220,*">
                     <TextBlock Text="{services:Tr ui.release_source}" VerticalAlignment="Center"/>
-                    <ComboBox AutomationProperties.Name="{services:Tr ui.release_source}" Grid.Column="1" ItemsSource="{Binding Ue4ssForkOptions}" SelectedItem="{Binding SelectedUe4ssFork}"/>
-                    <TextBlock Grid.Column="2" Text="{services:TrText Ue4ssReleaseCatalogStatusText}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    <ComboBox AutomationProperties.Name="{services:Tr ui.release_source}" Grid.Column="1" ItemsSource="{Binding Mods.Ue4ssForkOptions}" SelectedItem="{Binding Mods.SelectedUe4ssFork}"/>
+                    <TextBlock Grid.Column="2" Text="{services:TrText Mods.Ue4ssReleaseCatalogStatusText}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
                   </Grid>
                   <!-- v0.7.48.0: UE4SS Release Catalog, real release data. "Refresh Runtime" in the
                        ribbon populates this. v0.7.49.0: install/rollback. Select a release here,
                        then use Preview Install, Confirm Install, and Rollback in the ribbon. -->
-                  <ListBox AutomationProperties.Name="{services:Tr ui.a11y_ue4ss_releases}" ItemsSource="{Binding Ue4ssVisibleReleases}" SelectedItem="{Binding SelectedUe4ssRelease}" IsVisible="{Binding HasUe4ssReleases}">
+                  <ListBox AutomationProperties.Name="{services:Tr ui.a11y_ue4ss_releases}" ItemsSource="{Binding Mods.Ue4ssVisibleReleases}" SelectedItem="{Binding Mods.SelectedUe4ssRelease}" IsVisible="{Binding Mods.HasUe4ssReleases}">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="models:Ue4ssReleaseDto">
                         <Border Classes="statuscard accentMods" Margin="0,3">
@@ -2347,15 +2347,15 @@
                       </DataTemplate>
                     </ListBox.ItemTemplate>
                   </ListBox>
-                  <TextBlock Text="{services:TrText Ue4ssInstallState}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding HasUe4ssReleases}"/>
+                  <TextBlock Text="{services:TrText Mods.Ue4ssInstallState}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding Mods.HasUe4ssReleases}"/>
                 </StackPanel>
               </Border>
               <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                <Border Classes="statuscard accentMods"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.active_mods_root}" Classes="muted"/><TextBlock Text="{services:TrText Ue4ssActiveRoot}" FontFamily="Consolas, monospace" FontSize="11" TextWrapping="Wrap"/></StackPanel></Border>
-                <Border Grid.Column="1" Classes="statuscard accentMods"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.runtime_mods_root}" Classes="muted"/><TextBlock Text="{services:TrText Ue4ssRuntimeRoot}" FontFamily="Consolas, monospace" FontSize="11" TextWrapping="Wrap"/></StackPanel></Border>
+                <Border Classes="statuscard accentMods"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.active_mods_root}" Classes="muted"/><TextBlock Text="{services:TrText Mods.Ue4ssActiveRoot}" FontFamily="Consolas, monospace" FontSize="11" TextWrapping="Wrap"/></StackPanel></Border>
+                <Border Grid.Column="1" Classes="statuscard accentMods"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.runtime_mods_root}" Classes="muted"/><TextBlock Text="{services:TrText Mods.Ue4ssRuntimeRoot}" FontFamily="Consolas, monospace" FontSize="11" TextWrapping="Wrap"/></StackPanel></Border>
               </Grid>
-              <TextBlock Text="{services:TrText Ue4ssWarning}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap"/>
-              <Button Classes="caution" Content="{services:Tr ui.repair_ue4ss_mod_state}" Command="{Binding RepairModsCommand}" HorizontalAlignment="Left"/>
+              <TextBlock Text="{services:TrText Mods.Ue4ssWarning}" Foreground="{DynamicResource AmberBrush}" TextWrapping="Wrap"/>
+              <Button Classes="caution" Content="{services:Tr ui.repair_ue4ss_mod_state}" Command="{Binding Mods.RepairModsCommand}" HorizontalAlignment="Left"/>
             </StackPanel>
           </Border>
 
@@ -2363,8 +2363,8 @@
             <StackPanel Spacing="8">
               <TextBlock Text="{services:Tr ui.needs_attention}" FontSize="18" FontWeight="SemiBold"/>
               <TextBlock Text="{services:Tr ui.mods_whose_confirmed_health_is_neither_healthy_d_4cff25}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:Tr ui.all_mods_are_healthy_disabled_or_active_unverifi_74d30b}" Foreground="{DynamicResource GreenBrush}" IsVisible="{Binding !HasModsNeedingAttention}"/>
-              <ItemsControl ItemsSource="{Binding ModsNeedingAttention}" IsVisible="{Binding HasModsNeedingAttention}">
+              <TextBlock Text="{services:Tr ui.all_mods_are_healthy_disabled_or_active_unverifi_74d30b}" Foreground="{DynamicResource GreenBrush}" IsVisible="{Binding !Mods.HasModsNeedingAttention}"/>
+              <ItemsControl ItemsSource="{Binding Mods.ModsNeedingAttention}" IsVisible="{Binding Mods.HasModsNeedingAttention}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:ModItemDto">
                     <Border Classes="dataRow" Padding="8,6">
@@ -2404,7 +2404,7 @@
                      no version, no update badge); Dashboard is a glance view, Library is where
                      that detail actually matters and where you can act on it. Part of the same
                      look-and-feel differentiation as the hero banner and recolored stat cards. -->
-                <ListBox AutomationProperties.Name="{services:Tr ui.mod_overview}" ItemsSource="{Binding ModItems}" SelectedItem="{Binding SelectedMod}" MaxHeight="360">
+                <ListBox AutomationProperties.Name="{services:Tr ui.mod_overview}" ItemsSource="{Binding Mods.ModItems}" SelectedItem="{Binding Mods.SelectedMod}" MaxHeight="360">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:ModItemDto">
                       <Grid ColumnDefinitions="60,2*,*" ColumnSpacing="8" Margin="0,4">
@@ -2419,29 +2419,29 @@
             </Border>
             <Border Grid.Column="1" Classes="card accentMods">
               <Grid>
-              <StackPanel Spacing="10" IsVisible="{Binding HasSelectedMod}">
+              <StackPanel Spacing="10" IsVisible="{Binding Mods.HasSelectedMod}">
                 <TextBlock Text="{services:Tr ui.mod_details}" FontSize="18" FontWeight="SemiBold"/>
-                <TextBlock Text="{Binding SelectedMod.Name}" FontWeight="Bold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Mods.SelectedMod.Name}" FontWeight="Bold" TextWrapping="Wrap"/>
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.overall_health}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText SelectedMod.Health}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.Health}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.installation}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText SelectedMod.Type}"/>
-                  <TextBlock Text="{services:TrText SelectedMod.Package}" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
-                  <TextBlock Text="{services:TrText SelectedMod.EnabledText}"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.Type}"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.Package}" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.EnabledText}"/>
                 </StackPanel>
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.runtime}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText SelectedMod.RuntimeState}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.RuntimeState}" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.evidence}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText SelectedMod.Evidence}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.Evidence}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
                 </StackPanel>
               </StackPanel>
-              <TextBlock Text="{services:Tr ui.select_a_mod_from_the_list_to_see_its_details_he_969534}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="{Binding !HasSelectedMod}"/>
+              <TextBlock Text="{services:Tr ui.select_a_mod_from_the_list_to_see_its_details_he_969534}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="{Binding !Mods.HasSelectedMod}"/>
               </Grid>
             </Border>
           </Grid>
@@ -2459,8 +2459,8 @@
               <Border Classes="card accentMods">
                 <StackPanel Spacing="6">
                   <TextBlock Text="{services:Tr ui.inspect_installed_server_mod_packages_install_ne_2829f1}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                  <TextBlock Text="{services:TrText ModState}" Foreground="{DynamicResource VioletBrush}"/>
-                  <TextBlock Text="{services:TrText ModSummary}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Mods.ModState}" Foreground="{DynamicResource VioletBrush}"/>
+                  <TextBlock Text="{services:TrText Mods.ModSummary}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
                 </StackPanel>
               </Border>
               <Border Classes="card accentMods">
@@ -2477,7 +2477,7 @@
                      buttons (no backend exists for either and none is planned near-term, so they
                      were removed rather than left as dead clutter). Added a drag-and-drop zone
                      (direct request)
-                     wired to the exact same InstallModZipAsync path the picker button already uses;
+                     wired to the exact same Mods.InstallModZipAsync path the picker button already uses;
                      ZipInstallDropZone_OnDragOver/_OnDrop in MainWindow.axaml.cs only accept a
                      single real, existing .zip file, matching the Choose ZIP dialog's own filter. -->
                 <!-- v1.0.0.3 (reported 2026-10-05: drag and drop did not install): without a background only the button and caption
@@ -2497,11 +2497,11 @@
                 <TextBlock Text="{services:Tr ui.available_local_steam_workshop_mods}" FontSize="18" FontWeight="SemiBold"/>
                 <TextBlock Text="{services:Tr ui.scans_locally_installed_steam_workshop_content_f_78b72f}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
                 <WrapPanel>
-                  <Button Classes="info" Content="{services:Tr ui.refresh_9cbbfc}" Command="{Binding ScanWorkshopModsCommand}" Margin="0,0,6,6"/>
-                  <Button Classes="apply" Content="{services:Tr ui.import_selected}" Command="{Binding ImportSelectedWorkshopModCommand}" Margin="0,0,6,6"/>
+                  <Button Classes="info" Content="{services:Tr ui.refresh_9cbbfc}" Command="{Binding Mods.ScanWorkshopModsCommand}" Margin="0,0,6,6"/>
+                  <Button Classes="apply" Content="{services:Tr ui.import_selected}" Command="{Binding Mods.ImportSelectedWorkshopModCommand}" Margin="0,0,6,6"/>
                 </WrapPanel>
-                <TextBlock Text="{services:TrText WorkshopScanState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-                <ListBox AutomationProperties.Name="{services:Tr ui.available_local_steam_workshop_mods}" ItemsSource="{Binding WorkshopItems}" SelectedItem="{Binding SelectedWorkshopItem}" MaxHeight="320">
+                <TextBlock Text="{services:TrText Mods.WorkshopScanState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+                <ListBox AutomationProperties.Name="{services:Tr ui.available_local_steam_workshop_mods}" ItemsSource="{Binding Mods.WorkshopItems}" SelectedItem="{Binding Mods.SelectedWorkshopItem}" MaxHeight="320">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:WorkshopItemDto">
                       <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8" Margin="0,6">
@@ -2526,57 +2526,57 @@
               <StackPanel Spacing="10" Margin="0,8,0,0">
                 <TextBlock Text="{services:Tr ui.mod_browser_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
                 <Grid ColumnDefinitions="220,*,Auto" ColumnSpacing="8">
-                  <ComboBox AutomationProperties.Name="{services:Tr ui.mod_source}" ItemsSource="{Binding ModSourceOptions}" SelectedItem="{Binding SelectedModSource}" HorizontalAlignment="Stretch">
+                  <ComboBox AutomationProperties.Name="{services:Tr ui.mod_source}" ItemsSource="{Binding Mods.ModSourceOptions}" SelectedItem="{Binding Mods.SelectedModSource}" HorizontalAlignment="Stretch">
                     <ComboBox.ItemTemplate>
                       <DataTemplate x:DataType="models:ModSourceOption">
                         <TextBlock Text="{services:TrText Name}"/>
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
-                  <TextBox Grid.Column="1" Text="{Binding ModBrowserQuery, Mode=TwoWay}" PlaceholderText="{services:Tr ui.mod_browser_query}"/>
-                  <Button Classes="info" Grid.Column="2" Content="{services:Tr ui.search_mods}" Command="{Binding SearchModBrowserCommand}" IsDefault="False"/>
+                  <TextBox Grid.Column="1" Text="{Binding Mods.ModBrowserQuery, Mode=TwoWay}" PlaceholderText="{services:Tr ui.mod_browser_query}"/>
+                  <Button Classes="info" Grid.Column="2" Content="{services:Tr ui.search_mods}" Command="{Binding Mods.SearchModBrowserCommand}" IsDefault="False"/>
                 </Grid>
 
-                <StackPanel x:Name="ModBrowserFoldersSetup" Spacing="6" IsVisible="{Binding IsFolderModSource}">
+                <StackPanel x:Name="ModBrowserFoldersSetup" Spacing="6" IsVisible="{Binding Mods.IsFolderModSource}">
                   <TextBlock Text="{services:Tr ui.mod_browser_folders_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="11" TextWrapping="Wrap"/>
-                  <ListBox AutomationProperties.Name="{services:Tr ui.mod_browser_folders}" ItemsSource="{Binding ModBrowserFolders}" SelectedItem="{Binding SelectedModBrowserFolder}" MaxHeight="90" FontWeight="Normal" FontSize="12"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.mod_browser_folders}" ItemsSource="{Binding Mods.ModBrowserFolders}" SelectedItem="{Binding Mods.SelectedModBrowserFolder}" MaxHeight="90" FontWeight="Normal" FontSize="12"/>
                   <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <TextBox Text="{Binding NewModBrowserFolder, Mode=TwoWay}" PlaceholderText="{services:Tr ui.mod_browser_folder_placeholder}"/>
-                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.add_folder}" Command="{Binding AddModBrowserFolderCommand}"/>
-                    <Button Classes="danger" Grid.Column="2" Content="{services:Tr ui.remove_selected_folder}" Command="{Binding RemoveModBrowserFolderCommand}"/>
+                    <TextBox Text="{Binding Mods.NewModBrowserFolder, Mode=TwoWay}" PlaceholderText="{services:Tr ui.mod_browser_folder_placeholder}"/>
+                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.add_folder}" Command="{Binding Mods.AddModBrowserFolderCommand}"/>
+                    <Button Classes="danger" Grid.Column="2" Content="{services:Tr ui.remove_selected_folder}" Command="{Binding Mods.RemoveModBrowserFolderCommand}"/>
                   </Grid>
                 </StackPanel>
 
-                <StackPanel x:Name="ModBrowserCurseForgeSetup" Spacing="6" IsVisible="{Binding IsCurseForgeModSource}">
+                <StackPanel x:Name="ModBrowserCurseForgeSetup" Spacing="6" IsVisible="{Binding Mods.IsCurseForgeModSource}">
                   <TextBlock Text="{services:Tr ui.curseforge_key_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="11" TextWrapping="Wrap"/>
                   <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <TextBox Text="{Binding CurseForgeKeyInput, Mode=TwoWay}" PasswordChar="●" PlaceholderText="{services:Tr ui.curseforge_api_key}"/>
-                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.save_key}" Command="{Binding SaveCurseForgeKeyCommand}"/>
-                    <Button Classes="danger" Grid.Column="2" Content="{services:Tr ui.forget_key}" Command="{Binding ForgetCurseForgeKeyCommand}"/>
+                    <TextBox Text="{Binding Mods.CurseForgeKeyInput, Mode=TwoWay}" PasswordChar="●" PlaceholderText="{services:Tr ui.curseforge_api_key}"/>
+                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.save_key}" Command="{Binding Mods.SaveCurseForgeKeyCommand}"/>
+                    <Button Classes="danger" Grid.Column="2" Content="{services:Tr ui.forget_key}" Command="{Binding Mods.ForgetCurseForgeKeyCommand}"/>
                   </Grid>
                 </StackPanel>
 
-                <StackPanel x:Name="ModBrowserGitHubSetup" Spacing="6" IsVisible="{Binding IsGitHubModSource}">
+                <StackPanel x:Name="ModBrowserGitHubSetup" Spacing="6" IsVisible="{Binding Mods.IsGitHubModSource}">
                   <TextBlock Text="{services:Tr ui.github_repos_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="11" TextWrapping="Wrap"/>
-                  <ListBox AutomationProperties.Name="{services:Tr ui.github_repositories}" ItemsSource="{Binding ModBrowserRepositories}" SelectedItem="{Binding SelectedModBrowserRepository}" MaxHeight="90" FontWeight="Normal" FontSize="12"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.github_repositories}" ItemsSource="{Binding Mods.ModBrowserRepositories}" SelectedItem="{Binding Mods.SelectedModBrowserRepository}" MaxHeight="90" FontWeight="Normal" FontSize="12"/>
                   <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <TextBox Text="{Binding NewModBrowserRepository, Mode=TwoWay}" PlaceholderText="{services:Tr ui.github_repo_placeholder}"/>
-                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.add_repository}" Command="{Binding AddModBrowserRepositoryCommand}"/>
-                    <Button Classes="danger" Grid.Column="2" Content="{services:Tr ui.remove_selected_repository}" Command="{Binding RemoveModBrowserRepositoryCommand}"/>
+                    <TextBox Text="{Binding Mods.NewModBrowserRepository, Mode=TwoWay}" PlaceholderText="{services:Tr ui.github_repo_placeholder}"/>
+                    <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.add_repository}" Command="{Binding Mods.AddModBrowserRepositoryCommand}"/>
+                    <Button Classes="danger" Grid.Column="2" Content="{services:Tr ui.remove_selected_repository}" Command="{Binding Mods.RemoveModBrowserRepositoryCommand}"/>
                   </Grid>
                 </StackPanel>
 
-                <StackPanel x:Name="ModBrowserNexusSetup" Spacing="6" IsVisible="{Binding IsNexusModSource}">
+                <StackPanel x:Name="ModBrowserNexusSetup" Spacing="6" IsVisible="{Binding Mods.IsNexusModSource}">
                   <TextBlock Text="{services:Tr ui.nexus_browser_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="11" TextWrapping="Wrap"/>
-                  <TextBlock Text="{services:TrText NxmHandlerText}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Mods.NxmHandlerText}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
                   <WrapPanel>
                     <Button Classes="apply" Content="{services:Tr ui.allow_nxm_links}" Click="UseMystTiqForNxm_OnClick" Margin="0,0,8,6"/>
-                    <Button Classes="danger" Content="{services:Tr ui.stop_taking_nxm_links}" Command="{Binding StopUsingMystTiqForNxmLinksCommand}" Margin="0,0,8,6"/>
+                    <Button Classes="danger" Content="{services:Tr ui.stop_taking_nxm_links}" Command="{Binding Mods.StopUsingMystTiqForNxmLinksCommand}" Margin="0,0,8,6"/>
                   </WrapPanel>
                 </StackPanel>
 
                 <Grid ColumnDefinitions="3*,2*" ColumnSpacing="10">
-                  <ListBox x:Name="ModBrowserResultsList" AutomationProperties.Name="{services:Tr ui.mod_browser_results}" ItemsSource="{Binding ModBrowserResults}" SelectedItem="{Binding SelectedModListing}" MaxHeight="260">
+                  <ListBox x:Name="ModBrowserResultsList" AutomationProperties.Name="{services:Tr ui.mod_browser_results}" ItemsSource="{Binding Mods.ModBrowserResults}" SelectedItem="{Binding Mods.SelectedModListing}" MaxHeight="260">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="models:ModListing">
                         <StackPanel Margin="0,4">
@@ -2589,7 +2589,7 @@
                     </ListBox.ItemTemplate>
                   </ListBox>
                   <StackPanel Grid.Column="1" Spacing="8">
-                    <ListBox AutomationProperties.Name="{services:Tr ui.a11y_mod_files}" ItemsSource="{Binding ModBrowserFiles}" SelectedItem="{Binding SelectedModFile}" MaxHeight="180">
+                    <ListBox AutomationProperties.Name="{services:Tr ui.a11y_mod_files}" ItemsSource="{Binding Mods.ModBrowserFiles}" SelectedItem="{Binding Mods.SelectedModFile}" MaxHeight="180">
                       <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="models:ModListingFile">
                           <StackPanel Margin="0,3">
@@ -2601,11 +2601,11 @@
                     </ListBox>
                     <WrapPanel>
                       <Button Classes="apply" Content="{services:Tr ui.install_selected_file}" Click="InstallBrowserMod_OnClick" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,8,6"/>
-                      <Button Classes="open" Content="{services:Tr ui.open_page}" Command="{Binding OpenModBrowserPageCommand}" Margin="0,0,8,6"/>
+                      <Button Classes="open" Content="{services:Tr ui.open_page}" Command="{Binding Mods.OpenModBrowserPageCommand}" Margin="0,0,8,6"/>
                     </WrapPanel>
                   </StackPanel>
                 </Grid>
-                <TextBlock Text="{services:TrText ModBrowserStatus}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Mods.ModBrowserStatus}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
                 <TextBlock Text="{services:Tr ui.mod_browser_attribution}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
               </StackPanel>
             </Expander>
@@ -2621,20 +2621,20 @@
               <StackPanel Spacing="10" Margin="0,8,0,0">
                 <TextBlock Text="{services:Tr ui.browse_palworld_mods_on_nexus_mods_and_install_a_851339}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
                 <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                  <TextBox Text="{Binding NexusApiKeyInput, Mode=TwoWay}" PasswordChar="●" PlaceholderText="{services:Tr ui.nexus_mods_api_key}"/>
-                  <Button Grid.Column="1" Classes="apply" Content="{services:Tr ui.connect_1a2303}" Command="{Binding NexusConnectCommand}"/>
-                  <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.save_key}" Command="{Binding NexusSaveKeyCommand}" ToolTip.Tip="{services:Tr ui.stores_the_key_on_this_pc_only_encrypted_for_you_88097d}"/>
-                  <Button Classes="danger" Grid.Column="3" Content="{services:Tr ui.forget_key}" Command="{Binding NexusForgetKeyCommand}"/>
+                  <TextBox Text="{Binding Mods.NexusApiKeyInput, Mode=TwoWay}" PasswordChar="●" PlaceholderText="{services:Tr ui.nexus_mods_api_key}"/>
+                  <Button Grid.Column="1" Classes="apply" Content="{services:Tr ui.connect_1a2303}" Command="{Binding Mods.NexusConnectCommand}"/>
+                  <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.save_key}" Command="{Binding Mods.NexusSaveKeyCommand}" ToolTip.Tip="{services:Tr ui.stores_the_key_on_this_pc_only_encrypted_for_you_88097d}"/>
+                  <Button Classes="danger" Grid.Column="3" Content="{services:Tr ui.forget_key}" Command="{Binding Mods.NexusForgetKeyCommand}"/>
                 </Grid>
-                <TextBlock Text="{services:TrText NexusAccountText}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Mods.NexusAccountText}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
                 <WrapPanel>
-                  <Button Classes="info" Content="{services:Tr ui.trending}" Command="{Binding NexusLoadListCommand}" CommandParameter="trending" Margin="0,0,6,6"/>
-                  <Button Classes="info" Content="{services:Tr ui.latest_added}" Command="{Binding NexusLoadListCommand}" CommandParameter="latest_added" Margin="0,0,6,6"/>
-                  <Button Classes="info" Content="{services:Tr ui.latest_updated}" Command="{Binding NexusLoadListCommand}" CommandParameter="latest_updated" Margin="0,0,14,6"/>
-                  <TextBox Width="260" Text="{Binding NexusLookupText, Mode=TwoWay}" PlaceholderText="{services:Tr ui.mod_id_or_nexusmods_com_page_url}" Margin="0,0,6,6"/>
-                  <Button Classes="open" Content="{services:Tr ui.look_up}" Command="{Binding NexusLookupCommand}" Margin="0,0,6,6"/>
+                  <Button Classes="info" Content="{services:Tr ui.trending}" Command="{Binding Mods.NexusLoadListCommand}" CommandParameter="trending" Margin="0,0,6,6"/>
+                  <Button Classes="info" Content="{services:Tr ui.latest_added}" Command="{Binding Mods.NexusLoadListCommand}" CommandParameter="latest_added" Margin="0,0,6,6"/>
+                  <Button Classes="info" Content="{services:Tr ui.latest_updated}" Command="{Binding Mods.NexusLoadListCommand}" CommandParameter="latest_updated" Margin="0,0,14,6"/>
+                  <TextBox Width="260" Text="{Binding Mods.NexusLookupText, Mode=TwoWay}" PlaceholderText="{services:Tr ui.mod_id_or_nexusmods_com_page_url}" Margin="0,0,6,6"/>
+                  <Button Classes="open" Content="{services:Tr ui.look_up}" Command="{Binding Mods.NexusLookupCommand}" Margin="0,0,6,6"/>
                 </WrapPanel>
-                <ListBox AutomationProperties.Name="{services:Tr ui.a11y_nexus_mods_results}" ItemsSource="{Binding NexusMods}" SelectedItem="{Binding SelectedNexusMod}" MaxHeight="220">
+                <ListBox AutomationProperties.Name="{services:Tr ui.a11y_nexus_mods_results}" ItemsSource="{Binding Mods.NexusMods}" SelectedItem="{Binding Mods.SelectedNexusMod}" MaxHeight="220">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:NexusModDto">
                       <StackPanel Margin="0,4">
@@ -2646,10 +2646,10 @@
                   </ListBox.ItemTemplate>
                 </ListBox>
                 <WrapPanel>
-                  <Button Classes="open" Content="{services:Tr ui.show_files}" Command="{Binding NexusShowFilesCommand}" Margin="0,0,6,6"/>
-                  <Button Classes="open" Content="{services:Tr ui.open_on_nexus}" Command="{Binding NexusOpenPageCommand}" Margin="0,0,6,6"/>
+                  <Button Classes="open" Content="{services:Tr ui.show_files}" Command="{Binding Mods.NexusShowFilesCommand}" Margin="0,0,6,6"/>
+                  <Button Classes="open" Content="{services:Tr ui.open_on_nexus}" Command="{Binding Mods.NexusOpenPageCommand}" Margin="0,0,6,6"/>
                 </WrapPanel>
-                <ListBox AutomationProperties.Name="{services:Tr ui.a11y_mod_files}" ItemsSource="{Binding NexusFiles}" SelectedItem="{Binding SelectedNexusFile}" MaxHeight="150">
+                <ListBox AutomationProperties.Name="{services:Tr ui.a11y_mod_files}" ItemsSource="{Binding Mods.NexusFiles}" SelectedItem="{Binding Mods.SelectedNexusFile}" MaxHeight="150">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:NexusFileDto">
                       <StackPanel Margin="0,3">
@@ -2659,13 +2659,13 @@
                     </DataTemplate>
                   </ListBox.ItemTemplate>
                 </ListBox>
-                <Button Classes="apply" Content="{services:Tr ui.download_and_install_selected_file}" Command="{Binding NexusInstallFileCommand}" HorizontalAlignment="Left" ToolTip.Tip="{services:Tr ui.premium_accounts_only_because_nexus_only_issues_4d6eac}"/>
+                <Button Classes="apply" Content="{services:Tr ui.download_and_install_selected_file}" Command="{Binding Mods.NexusInstallFileCommand}" HorizontalAlignment="Left" ToolTip.Tip="{services:Tr ui.premium_accounts_only_because_nexus_only_issues_4d6eac}"/>
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <TextBox Text="{Binding NexusNxmLinkText, Mode=TwoWay}" PlaceholderText="{services:Tr ui.free_account_paste_the_nxm_link_from_the_mod_man_1520ec}"/>
-                  <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.install_from_link}" Command="{Binding NexusInstallFromNxmCommand}"/>
+                  <TextBox Text="{Binding Mods.NexusNxmLinkText, Mode=TwoWay}" PlaceholderText="{services:Tr ui.free_account_paste_the_nxm_link_from_the_mod_man_1520ec}"/>
+                  <Button Classes="apply" Grid.Column="1" Content="{services:Tr ui.install_from_link}" Command="{Binding Mods.NexusInstallFromNxmCommand}"/>
                 </Grid>
-                <TextBlock Text="{services:TrText NexusStatusText}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
-                <TextBlock Text="{services:TrText NexusRateText}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal"/>
+                <TextBlock Text="{services:TrText Mods.NexusStatusText}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Mods.NexusRateText}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal"/>
                 <TextBlock Text="{services:Tr ui.mod_data_from_nexus_mods_nexusmods_com_mysttiq_i_c8f955}" FontSize="10" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
               </StackPanel>
             </Expander>
@@ -2686,16 +2686,16 @@
               <StackPanel Spacing="10">
                 <TextBlock Text="{services:Tr ui.installed_mods}" FontSize="18" FontWeight="SemiBold"/>
                 <TextBlock Text="{services:Tr ui.disabled_and_active_unverified_are_informational_87d14e}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
-                <ListBox ItemsSource="{Binding ModItems}" SelectedItem="{Binding SelectedMod}" MaxHeight="560" ToolTip.Tip="{services:Tr ui.right_click_a_mod_for_enable_disable_rollback_re_1ff8ee}">
+                <ListBox ItemsSource="{Binding Mods.ModItems}" SelectedItem="{Binding Mods.SelectedMod}" MaxHeight="560" ToolTip.Tip="{services:Tr ui.right_click_a_mod_for_enable_disable_rollback_re_1ff8ee}">
                   <ListBox.ContextMenu>
                     <ContextMenu>
-                      <MenuItem Header="{services:Tr ui.enable_selected}" Command="{Binding EnableSelectedModCommand}"/>
-                      <MenuItem Header="{services:Tr ui.disable_selected}" Command="{Binding DisableSelectedModCommand}"/>
+                      <MenuItem Header="{services:Tr ui.enable_selected}" Command="{Binding Mods.EnableSelectedModCommand}"/>
+                      <MenuItem Header="{services:Tr ui.disable_selected}" Command="{Binding Mods.DisableSelectedModCommand}"/>
                       <Separator/>
-                      <MenuItem Header="{services:Tr ui.rollback_selected}" Command="{Binding RollbackSelectedModCommand}" ToolTip.Tip="{services:Tr ui.restores_this_mod_to_its_state_before_the_last_i_53cdb3}"/>
-                      <MenuItem Header="{services:Tr ui.repair_selected}" Command="{Binding RepairSelectedModCommand}" ToolTip.Tip="{services:Tr ui.re_imports_this_mod_fresh_from_its_matched_local_05893d}"/>
+                      <MenuItem Header="{services:Tr ui.rollback_selected}" Command="{Binding Mods.RollbackSelectedModCommand}" ToolTip.Tip="{services:Tr ui.restores_this_mod_to_its_state_before_the_last_i_53cdb3}"/>
+                      <MenuItem Header="{services:Tr ui.repair_selected}" Command="{Binding Mods.RepairSelectedModCommand}" ToolTip.Tip="{services:Tr ui.re_imports_this_mod_fresh_from_its_matched_local_05893d}"/>
                       <Separator/>
-                      <MenuItem Header="{services:Tr ui.delete_selected}" Command="{Binding DeleteSelectedModCommand}"/>
+                      <MenuItem Header="{services:Tr ui.delete_selected}" Command="{Binding Mods.DeleteSelectedModCommand}"/>
                     </ContextMenu>
                   </ListBox.ContextMenu>
                   <ListBox.ItemTemplate>
@@ -2724,32 +2724,32 @@
 
             <Border Grid.Column="1" Classes="card accentMods">
               <Grid>
-              <StackPanel Spacing="10" IsVisible="{Binding HasSelectedMod}">
+              <StackPanel Spacing="10" IsVisible="{Binding Mods.HasSelectedMod}">
                 <TextBlock Text="{services:Tr ui.mod_details}" FontSize="18" FontWeight="SemiBold"/>
-                <TextBlock Text="{Binding SelectedMod.Name}" FontWeight="Bold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Mods.SelectedMod.Name}" FontWeight="Bold" TextWrapping="Wrap"/>
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.overall_health}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText SelectedMod.Health}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.Health}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.installation}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText SelectedMod.Type}"/>
-                  <TextBlock Text="{services:TrText SelectedMod.Package}" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
-                  <TextBlock Text="{services:TrText SelectedMod.InstallPath}" FontSize="10" FontFamily="Consolas, monospace" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                  <TextBlock Text="{services:TrText SelectedMod.EnabledText}"/>
-                  <TextBlock Text="{services:TrText SelectedMod.InstalledVersionText}" Foreground="{DynamicResource CyanBrush}"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.Type}"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.Package}" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.InstallPath}" FontSize="10" FontFamily="Consolas, monospace" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.EnabledText}"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.InstalledVersionText}" Foreground="{DynamicResource CyanBrush}"/>
                 </StackPanel>
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.runtime}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText SelectedMod.RuntimeState}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.RuntimeState}" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.compatibility}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{Binding SelectedMod.RuntimeConfirmed, StringFormat='Runtime confirmed: {0}'}"/>
+                  <TextBlock Text="{Binding Mods.SelectedMod.RuntimeConfirmed, StringFormat='Runtime confirmed: {0}'}"/>
                 </StackPanel>
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.evidence}" Classes="muted" FontSize="10"/>
-                  <TextBlock Text="{services:TrText SelectedMod.Evidence}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedMod.Evidence}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
                 </StackPanel>
                 <!-- v0.7.41.0: MOD update detection (item 52). Check compares the installed MOD
                      against a matching local Steam Workshop item's own content cache, real,
@@ -2758,10 +2758,10 @@
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.update}" Classes="muted" FontSize="10"/>
                   <WrapPanel>
-                    <Button Content="{services:Tr ui.check_for_update}" Classes="verify" Command="{Binding CheckSelectedModUpdateCommand}" Margin="0,0,6,6"/>
-                    <Button Content="{services:Tr ui.update}" Classes="apply" Command="{Binding UpdateSelectedModCommand}" Margin="0,0,6,6"/>
+                    <Button Content="{services:Tr ui.check_for_update}" Classes="verify" Command="{Binding Mods.CheckSelectedModUpdateCommand}" Margin="0,0,6,6"/>
+                    <Button Content="{services:Tr ui.update}" Classes="apply" Command="{Binding Mods.UpdateSelectedModCommand}" Margin="0,0,6,6"/>
                   </WrapPanel>
-                  <TextBlock Text="{services:TrText SelectedModUpdateText}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedModUpdateText}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
                 </StackPanel>
                 <!-- v0.7.55.0: website-sourced MOD descriptions (item 40's deferred half),
                      designed for multiple sources: an automatic Steam Workshop match (reusing the
@@ -2772,33 +2772,33 @@
                 <StackPanel Spacing="3">
                   <TextBlock Text="{services:Tr ui.description}" Classes="muted" FontSize="10"/>
                   <WrapPanel>
-                    <Button Content="{services:Tr ui.fetch_refresh_description}" Classes="info" Command="{Binding FetchSelectedModDescriptionCommand}" Margin="0,0,6,6" ToolTip.Tip="{services:Tr ui.only_fetches_when_clicked_never_automatic}"/>
+                    <Button Content="{services:Tr ui.fetch_refresh_description}" Classes="info" Command="{Binding Mods.FetchSelectedModDescriptionCommand}" Margin="0,0,6,6" ToolTip.Tip="{services:Tr ui.only_fetches_when_clicked_never_automatic}"/>
                   </WrapPanel>
-                  <StackPanel Spacing="3" IsVisible="{Binding HasSelectedModDescription}">
-                    <TextBlock Text="{Binding SelectedModDescription.Source, StringFormat='Source: {0}'}" FontSize="10" Foreground="{DynamicResource MutedBrush}"/>
-                    <TextBlock Text="{services:TrText SelectedModDescription.Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                  <StackPanel Spacing="3" IsVisible="{Binding Mods.HasSelectedModDescription}">
+                    <TextBlock Text="{Binding Mods.SelectedModDescription.Source, StringFormat='Source: {0}'}" FontSize="10" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{services:TrText Mods.SelectedModDescription.Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
                     <!-- Long Steam Workshop descriptions routinely exceed a fixed height, so this
                          scrolls rather than silently clipping past MaxHeight. -->
                     <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
-                      <TextBlock Text="{services:TrText SelectedModDescription.Description}" TextWrapping="Wrap"/>
+                      <TextBlock Text="{services:TrText Mods.SelectedModDescription.Description}" TextWrapping="Wrap"/>
                     </ScrollViewer>
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                      <TextBlock Text="{Binding SelectedModDescription.SourceUrl}" FontSize="10" Foreground="{DynamicResource CyanBrush}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                      <TextBlock Text="{Binding Mods.SelectedModDescription.SourceUrl}" FontSize="10" Foreground="{DynamicResource CyanBrush}" TextWrapping="Wrap" VerticalAlignment="Center"/>
                       <Button Classes="open" Grid.Column="1" Content="{services:Tr ui.open}" FontSize="11" Padding="8,2" Click="OpenModDescriptionSource_Click" ToolTip.Tip="{services:Tr ui.open_this_link_in_your_default_browser}"/>
                     </Grid>
                   </StackPanel>
-                  <TextBlock Text="{services:TrText SelectedModDescription.Detail}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasModDescriptionResult}"/>
+                  <TextBlock Text="{services:TrText Mods.SelectedModDescription.Detail}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding Mods.HasModDescriptionResult}"/>
                   <!-- Only shown after an actual fetch attempt found nothing, so it doesn't
                        presumptuously claim "no match" before Fetch has ever been clicked for this
                        selection. -->
-                  <TextBlock Text="{services:Tr ui.no_known_workshop_match_set_a_source_url_e_g_a_g_e24281}" Classes="muted" FontSize="10" TextWrapping="Wrap" IsVisible="{Binding ShowNoModDescriptionMatchMessage}"/>
+                  <TextBlock Text="{services:Tr ui.no_known_workshop_match_set_a_source_url_e_g_a_g_e24281}" Classes="muted" FontSize="10" TextWrapping="Wrap" IsVisible="{Binding Mods.ShowNoModDescriptionMatchMessage}"/>
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <TextBox Text="{Binding SelectedModDescriptionSourceInput}" PlaceholderText="{services:Tr ui.https_github_com_owner_repo}"/>
-                    <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.set_source}" Command="{Binding SetSelectedModDescriptionSourceCommand}"/>
+                    <TextBox Text="{Binding Mods.SelectedModDescriptionSourceInput}" PlaceholderText="{services:Tr ui.https_github_com_owner_repo}"/>
+                    <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.set_source}" Command="{Binding Mods.SetSelectedModDescriptionSourceCommand}"/>
                   </Grid>
                 </StackPanel>
               </StackPanel>
-              <TextBlock Text="{services:Tr ui.select_a_mod_from_the_installed_mods_list_to_see_5c86e5}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="{Binding !HasSelectedMod}"/>
+              <TextBlock Text="{services:Tr ui.select_a_mod_from_the_installed_mods_list_to_see_5c86e5}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="{Binding !Mods.HasSelectedMod}"/>
               </Grid>
             </Border>
           </Grid>
@@ -2807,15 +2807,15 @@
                a DispatcherTimer since the diagnostic itself runs server-side over several minutes
                (a full start/stop cycle per candidate MOD), so this card shows real progress rather
                than a spinner with no detail for that whole duration. -->
-          <Border Classes="card accentMods" IsVisible="{Binding HasModSafeStartStatus}">
+          <Border Classes="card accentMods" IsVisible="{Binding Mods.HasModSafeStartStatus}">
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="{services:Tr ui.safe_start_diagnostic}" FontSize="14" FontWeight="SemiBold"/>
-                <Button Grid.Column="1" Content="{services:Tr ui.cancel}" Classes="plain" Command="{Binding CancelModSafeStartCommand}" IsVisible="{Binding ModSafeStartStatus.IsRunning}"/>
+                <Button Grid.Column="1" Content="{services:Tr ui.cancel}" Classes="plain" Command="{Binding Mods.CancelModSafeStartCommand}" IsVisible="{Binding Mods.ModSafeStartStatus.IsRunning}"/>
               </Grid>
-              <TextBlock Text="{services:TrText ModSafeStartStatus.Phase}" TextWrapping="Wrap" IsVisible="{Binding ModSafeStartStatus.IsRunning}"/>
-              <TextBlock Text="{services:TrText ModSafeStartStatus.ProgressText}" Classes="muted" FontSize="11" IsVisible="{Binding ModSafeStartStatus.IsRunning}"/>
-              <ItemsControl ItemsSource="{Binding ModSafeStartStatus.Results}">
+              <TextBlock Text="{services:TrText Mods.ModSafeStartStatus.Phase}" TextWrapping="Wrap" IsVisible="{Binding Mods.ModSafeStartStatus.IsRunning}"/>
+              <TextBlock Text="{services:TrText Mods.ModSafeStartStatus.ProgressText}" Classes="muted" FontSize="11" IsVisible="{Binding Mods.ModSafeStartStatus.IsRunning}"/>
+              <ItemsControl ItemsSource="{Binding Mods.ModSafeStartStatus.Results}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:SafeStartModResultDto">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,2">
@@ -2829,10 +2829,10 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Text="{services:TrText ModSafeStartStatus.FinalMessage}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource GreenBrush}"
-                         IsVisible="{Binding ModSafeStartStatus.Success}"/>
-              <TextBlock Text="{services:TrText ModSafeStartStatus.FinalMessage}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource AmberBrush}"
-                         IsVisible="{Binding ModSafeStartStatus.CompletedUnsuccessfully}"/>
+              <TextBlock Text="{services:TrText Mods.ModSafeStartStatus.FinalMessage}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource GreenBrush}"
+                         IsVisible="{Binding Mods.ModSafeStartStatus.Success}"/>
+              <TextBlock Text="{services:TrText Mods.ModSafeStartStatus.FinalMessage}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource AmberBrush}"
+                         IsVisible="{Binding Mods.ModSafeStartStatus.CompletedUnsuccessfully}"/>
             </StackPanel>
           </Border>
 
@@ -4394,7 +4394,7 @@
                 <TextBlock Text="{services:TrText DistributionState}" VerticalAlignment="Center" Classes="muted"/>
               </WrapPanel>
               <TextBlock Text="{services:TrText DistributionDetail}" Classes="muted" TextWrapping="Wrap"/>
-              <TextBlock Text="{services:TrText Ue4ssInstallState}" Classes="muted" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Mods.Ue4ssInstallState}" Classes="muted" TextWrapping="Wrap"/>
               <TextBox AutomationProperties.Name="{services:Tr ui.last_steamcmd_output}" Text="{Binding DistributionOutputText}" IsVisible="{Binding HasDistributionOutput}" AcceptsReturn="True" IsReadOnly="True" MaxHeight="140" FontFamily="Consolas, monospace" FontSize="11"/>
 
               <!-- v0.7.81.0: read-only environment checklist, direct follow-up request ("it should
@@ -4457,20 +4457,20 @@
               <TextBlock Text="{services:Tr ui.step_7_of_8_mods}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}"/>
               <TextBlock Text="{services:Tr ui.optional_scans_locally_installed_steam_workshop_165414}" Classes="muted" TextWrapping="Wrap"/>
               <WrapPanel>
-                <Button Classes="verify" Content="{services:Tr ui.scan_workshop_mods}" Command="{Binding ScanWorkshopModsCommand}" Margin="0,0,6,6"/>
-                <Button Classes="apply" Content="{services:Tr ui.import_selected}" Command="{Binding ImportSelectedWorkshopModCommand}" Margin="0,0,6,6"/>
+                <Button Classes="verify" Content="{services:Tr ui.scan_workshop_mods}" Command="{Binding Mods.ScanWorkshopModsCommand}" Margin="0,0,6,6"/>
+                <Button Classes="apply" Content="{services:Tr ui.import_selected}" Command="{Binding Mods.ImportSelectedWorkshopModCommand}" Margin="0,0,6,6"/>
                 <!-- v0.7.89.0: direct live feedback. A distinctly-colored button (green, matching
                      the other install-type actions in this wizard) for installing a MOD from a local
                      ZIP file directly, separate from the Workshop scan/import flow above. Reuses
-                     InstallModZip_Click verbatim, the exact same picker plus InstallModZipAsync path
+                     InstallModZip_Click verbatim, the exact same picker plus Mods.InstallModZipAsync path
                      the MOD Library page's own "Choose ZIP and Install" button already uses. ZIP
                      only, same as MOD Library: a bare .pak file has no install path anywhere in this
                      app today and would need its own separate backend capability, not just wiring up
                      a button. -->
                 <Button Classes="apply" Content="{services:Tr ui.install_mod_zip}" Click="InstallModZip_Click" IsEnabled="{Binding CanManageAdmin}" Margin="0,0,6,6"/>
               </WrapPanel>
-              <TextBlock Text="{services:TrText WorkshopScanState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
-              <ListBox AutomationProperties.Name="{services:Tr ui.available_local_steam_workshop_mods}" ItemsSource="{Binding WorkshopItems}" SelectedItem="{Binding SelectedWorkshopItem}" MaxHeight="300">
+              <TextBlock Text="{services:TrText Mods.WorkshopScanState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+              <ListBox AutomationProperties.Name="{services:Tr ui.available_local_steam_workshop_mods}" ItemsSource="{Binding Mods.WorkshopItems}" SelectedItem="{Binding Mods.SelectedWorkshopItem}" MaxHeight="300">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="models:WorkshopItemDto">
                     <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8" Margin="0,6">

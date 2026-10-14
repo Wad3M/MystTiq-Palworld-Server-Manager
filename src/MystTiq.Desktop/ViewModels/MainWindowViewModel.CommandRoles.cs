@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -16,7 +16,7 @@ public sealed partial class MainWindowViewModel
         var roles = new Dictionary<ICommand, string>(ReferenceEqualityComparer.Instance);
         void Need(string role, params ICommand?[] commands) { foreach (var c in commands) if (c is not null) roles[c] = role; }
         Need("Operator", Players._loadGameIdsCommand, Players.AddPlayerWarningCommand, AnalyzeCrashesCommand,
-            Backups.ApplyBackupRetentionCommand, BackupAllCommand, BeginModSafeStartCommand, BeginStuckTestLoadCommand, Backups.CancelBackupScanCommand, CancelModSafeStartCommand,
+            Backups.ApplyBackupRetentionCommand, BackupAllCommand, Mods.BeginModSafeStartCommand, BeginStuckTestLoadCommand, Backups.CancelBackupScanCommand, Mods.CancelModSafeStartCommand,
             Backups.CreateBackupCommand, Backups.DeleteBackupCommand, DismissNotificationCommand, DoctorAllCommand,
             EnvironmentActionCommand, FixDiagnosticCommand, ForceStopServerCommand, InstallMissingEnvironmentCommand,
             InstallPalworldServerFromWizardCommand, MarkAllNotificationsReadCommand, NotificationSelfTestCommand,
@@ -29,22 +29,22 @@ public sealed partial class MainWindowViewModel
             Players.ToggleWhitelistCommand, UpdateAllCommand, UpdatePalworldServerCommand, Backups.VerifyAllBackupsCommand,
             Backups.VerifySelectedBackupCommand);
         Need("Admin", World.ApplyBaseRecoveryCommand, World.ApplyBaseTransferCommand, World.ApplyCharacterMigrationCommand,
-            World.ApplyGuildOwnershipCommand, World.ApplyPalEditCommand, Configuration.ApplyStarterPresetCommand, ApplyUe4ssInstallCommand,
+            World.ApplyGuildOwnershipCommand, World.ApplyPalEditCommand, Configuration.ApplyStarterPresetCommand, Mods.ApplyUe4ssInstallCommand,
             World.ApplyWorldTransactionCommand, Players.BanSelectedPlayerCommand, Players.CancelTemporaryBanCommand,
             Map.CaptureTeleportPositionCommand, CreateAutomationRuleCommand, CreateDefaultServerSettingsCommand,
-            Players.CreateTemporaryBanCommand, DeleteAutomationRuleCommand, DeleteSelectedModCommand, DisableAllModsCommand,
-            DisableSelectedModCommand, EnableAllModsCommand, EnableSelectedModCommand, FinishInstallAndAdvanceCommand,
-            Players.GiveItemSelectedPlayerCommand, ImportSelectedWorkshopModCommand, InstallPalworldServerWithExtrasCommand,
+            Players.CreateTemporaryBanCommand, DeleteAutomationRuleCommand, Mods.DeleteSelectedModCommand, Mods.DisableAllModsCommand,
+            Mods.DisableSelectedModCommand, Mods.EnableAllModsCommand, Mods.EnableSelectedModCommand, FinishInstallAndAdvanceCommand,
+            Players.GiveItemSelectedPlayerCommand, Mods.ImportSelectedWorkshopModCommand, InstallPalworldServerWithExtrasCommand,
             Players.KickSelectedPlayerCommand, MuteAlertsCommand, PauseDeliveryCommand, World.PreviewBaseRecoveryCommand, World.PreviewBaseTransferCommand,
             World.PreviewCharacterMigrationCommand, World.PreviewGuildOwnershipCommand, World.PreviewPalEditCommand,
-            PreviewUe4ssInstallCommand, Players.PromoteSelectedPlayerCommand, RconSendCommand, RefreshDiscordBotConfigCommand,
-            RepairFirewallCommand, RepairModsCommand, RepairSelectedModCommand, RollbackSelectedModCommand,
-            RollbackUe4ssInstallCommand, SaveAlertRulesCommand, SaveAntiCheatRulesCommand, Configuration.SaveConfigurationCommand,
+            Mods.PreviewUe4ssInstallCommand, Players.PromoteSelectedPlayerCommand, RconSendCommand, RefreshDiscordBotConfigCommand,
+            RepairFirewallCommand, Mods.RepairModsCommand, Mods.RepairSelectedModCommand, Mods.RollbackSelectedModCommand,
+            Mods.RollbackUe4ssInstallCommand, SaveAlertRulesCommand, SaveAntiCheatRulesCommand, Configuration.SaveConfigurationCommand,
             SaveDiscordBotConfigCommand, Host.SaveNetworkPolicyCommand, Configuration.SavePalworldConfigurationCommand,
             Host.SaveResourcePolicyCommand, Players.SaveNameGuardCommand, Map.SaveTeleportCommand, Players.SaveWhitelistCommand, Map.SendPlayerToTeleportPointCommand,
-            SendTestNotificationCommand, SetSelectedModDescriptionSourceCommand, Map.TeleportPlayerToMeCommand,
+            SendTestNotificationCommand, Mods.SetSelectedModDescriptionSourceCommand, Map.TeleportPlayerToMeCommand,
             Map.TeleportToPlayerCommand, ToggleAutomationRuleEnabledCommand, Players.UnbanSelectedPlayerCommand, UpdateComponentCommand,
-            UpdateSelectedModCommand, Players.WhisperSelectedPlayerCommand);
+            Mods.UpdateSelectedModCommand, Players.WhisperSelectedPlayerCommand);
         Need("Owner", CloneIntoNewServerCommand, CloneWorldCommand, ContinueFromInstallDirectoryCommand,
             CreatePrincipalCommand, CreateUserCommand, DeleteUserCommand, ResetUserPasswordCommand,
             RevokePrincipalCommand, ToggleUserEnabledCommand);

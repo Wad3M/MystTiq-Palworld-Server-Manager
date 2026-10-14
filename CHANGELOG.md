@@ -1,4 +1,13 @@
-<!-- MystTiq v1.0.8.5: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.6: file reviewed for this release (2026-10-12). -->
+## v1.0.8.6 — The MOD Pages, Tidied
+
+- Roadmap C-6: the MOD pages (dashboard and library, UE4SS and its releases, Safe Start, the Workshop scan, Nexus Mods
+  and the MOD browser) moved into `ModsViewModel` (the ModBrowser partial file removed). The Dashboard's stuck-start
+  panel follows Safe Start through an event. The `MainWindowViewModel` files total 404,700 bytes (were 474,431).
+  Nothing the owner sees changes.
+- Fixed while moving: the pages were created before the window's services were assigned; the services now come first.
+- Version advanced to 1.0.8.6.
+
 ## v1.0.8.5 — The Backups and Save Tools Pages, Tidied
 
 - Roadmap C-5: the Backups page (the list, create, delete, restore, verify with the scan's progress, retention), the

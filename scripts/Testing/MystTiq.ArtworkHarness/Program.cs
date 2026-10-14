@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.5: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.6: file reviewed for this release (2026-10-12).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1176,7 +1176,7 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var zipPath = Path.Combine(Path.GetTempPath(), "mysttiq-drop-check-" + Guid.NewGuid().ToString("N") + ".zip");
     using (var zipFile = System.IO.Compression.ZipFile.Open(zipPath, System.IO.Compression.ZipArchiveMode.Create))
         zipFile.CreateEntry("Scripts/main.lua");
-    typeof(MainWindowViewModel).GetProperty("ModSummary")!.SetValue(vm, "before the drop");
+    typeof(ModsViewModel).GetProperty("ModSummary")!.SetValue(vm.Mods, "before the drop");
     var transfer = new Avalonia.Input.DataTransfer();
     // Avalonia's own file object (the kind a drop from Explorer carries); IStorageFile cannot be implemented here.
     var bclFile = (Avalonia.Platform.Storage.IStorageFile)Activator.CreateInstance(typeof(Avalonia.Input.DataTransfer).Assembly.GetType("Avalonia.Platform.Storage.FileIO.BclStorageFile")!,
@@ -1185,9 +1185,9 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     window.DragDrop(corner, Avalonia.Input.Raw.RawDragEventType.DragEnter, transfer, Avalonia.Input.DragDropEffects.Copy);
     window.DragDrop(corner, Avalonia.Input.Raw.RawDragEventType.DragOver, transfer, Avalonia.Input.DragDropEffects.Copy);
     window.DragDrop(corner, Avalonia.Input.Raw.RawDragEventType.Drop, transfer, Avalonia.Input.DragDropEffects.Copy);
-    for (var i = 0; i < 20 && vm.ModSummary == "before the drop"; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(50); }
-    Check(vm.ModSummary != "before the drop",
-        $"A ZIP dropped on the empty part of the MOD drop zone reaches the install [{corner} in {zone.Bounds}; summary: {vm.ModSummary}]");
+    for (var i = 0; i < 20 && vm.Mods.ModSummary == "before the drop"; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(50); }
+    Check(vm.Mods.ModSummary != "before the drop",
+        $"A ZIP dropped on the empty part of the MOD drop zone reaches the install [{corner} in {zone.Bounds}; summary: {vm.Mods.ModSummary}]");
     try { File.Delete(zipPath); } catch { }
 }
 // v1.0.0.4: each backup's world day, the Dashboard's word for an older decode, and the restore message in German.
@@ -1962,8 +1962,8 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
           GitHubReleasesModSource.NormalizeRepository("https://gitlab.com/a/b") is null && GitHubReleasesModSource.NormalizeRepository("a/b/../c") is null &&
           GitHubReleasesModSource.NormalizeRepository("just-a-name") is null,
         "A GitHub repository is accepted as owner/repo or a github.com address, nothing else");
-    Check(MainWindowViewModel.PackageNameFor("Pal Party: Deluxe!", "x.zip") == "Pal_Party_Deluxe" && MainWindowViewModel.PackageNameFor("", "GuildFeedBox-0.4.1-manual.zip") == "GuildFeedBox-0.4.1-manual" &&
-          MainWindowViewModel.PackageNameFor("../..", "a.zip") == "Mod",
+    Check(ModsViewModel.PackageNameFor("Pal Party: Deluxe!", "x.zip") == "Pal_Party_Deluxe" && ModsViewModel.PackageNameFor("", "GuildFeedBox-0.4.1-manual.zip") == "GuildFeedBox-0.4.1-manual" &&
+          ModsViewModel.PackageNameFor("../..", "a.zip") == "Mod",
         "The package name comes from the MOD's name, made safe for a folder");
 
     // A folder of ZIPs: MODs listed (one MystTiq would refuse marked), unrelated ZIPs hidden, .7z counted as skipped.
@@ -1974,36 +1974,36 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     File.WriteAllBytes(Path.Combine(folder, "photos.zip"), Zip("a.jpg", "b.jpg"));
     File.WriteAllBytes(Path.Combine(folder, "installer.zip"), Zip("setup.exe", "Mod/Scripts/main.lua"));
     File.WriteAllText(Path.Combine(folder, "other.7z"), "7z");
-    var vmFolders = (System.Collections.ObjectModel.ObservableCollection<string>)typeof(MainWindowViewModel).GetProperty("ModBrowserFolders")!.GetValue(vm)!;
+    var vmFolders = (System.Collections.ObjectModel.ObservableCollection<string>)typeof(ModsViewModel).GetProperty("ModBrowserFolders")!.GetValue(vm.Mods)!;
     var savedFolders = vmFolders.ToList(); vmFolders.Clear(); vmFolders.Add(folder);
     selectedPage.SetValue(vm, NavigationPage.ModLibrary);
-    vm.SelectedModSource = vm.ModSourceOptions.First(o => o.Id == "folders");
-    Wait((Task)typeof(MainWindowViewModel).GetMethod("SearchModBrowserAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, null)!);
-    var listed = vm.ModBrowserResults.Select(l => l.Name).ToList();
-    Check(listed.Count == 2 && listed.Contains("GuildFeedBox-0.4.1-manual") && listed.Contains("Variants") && vm.ModBrowserStatus.Contains("1 .7z or .rar") &&
-          vm.ModBrowserResults.Single(l => l.Name == "Variants").HasNote,
-        $"Downloads and folders: MOD ZIPs listed (one MystTiq cannot install marked), others hidden, .7z counted [{string.Join(", ", listed)}; {vm.ModBrowserStatus}]");
-    vm.SelectedModListing = vm.ModBrowserResults.Single(l => l.Name == "Variants");
-    var clock = Stopwatch.StartNew(); while (vm.SelectedModFile is null && clock.ElapsedMilliseconds < 5000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
-    var refusedPrep = Run(vm.PrepareModBrowserInstallAsync());
-    var refusedText = vm.ModBrowserStatus;
-    vm.SelectedModListing = vm.ModBrowserResults.Single(l => l.Name == "GuildFeedBox-0.4.1-manual");
-    clock.Restart(); while ((vm.SelectedModFile is null || !vm.SelectedModFile.Name.StartsWith("GuildFeedBox")) && clock.ElapsedMilliseconds < 5000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
-    var prepared = Run(vm.PrepareModBrowserInstallAsync());
+    vm.Mods.SelectedModSource = vm.Mods.ModSourceOptions.First(o => o.Id == "folders");
+    Wait((Task)typeof(ModsViewModel).GetMethod("SearchModBrowserAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm.Mods, null)!);
+    var listed = vm.Mods.ModBrowserResults.Select(l => l.Name).ToList();
+    Check(listed.Count == 2 && listed.Contains("GuildFeedBox-0.4.1-manual") && listed.Contains("Variants") && vm.Mods.ModBrowserStatus.Contains("1 .7z or .rar") &&
+          vm.Mods.ModBrowserResults.Single(l => l.Name == "Variants").HasNote,
+        $"Downloads and folders: MOD ZIPs listed (one MystTiq cannot install marked), others hidden, .7z counted [{string.Join(", ", listed)}; {vm.Mods.ModBrowserStatus}]");
+    vm.Mods.SelectedModListing = vm.Mods.ModBrowserResults.Single(l => l.Name == "Variants");
+    var clock = Stopwatch.StartNew(); while (vm.Mods.SelectedModFile is null && clock.ElapsedMilliseconds < 5000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
+    var refusedPrep = Run(vm.Mods.PrepareModBrowserInstallAsync());
+    var refusedText = vm.Mods.ModBrowserStatus;
+    vm.Mods.SelectedModListing = vm.Mods.ModBrowserResults.Single(l => l.Name == "GuildFeedBox-0.4.1-manual");
+    clock.Restart(); while ((vm.Mods.SelectedModFile is null || !vm.Mods.SelectedModFile.Name.StartsWith("GuildFeedBox")) && clock.ElapsedMilliseconds < 5000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
+    var prepared = Run(vm.Mods.PrepareModBrowserInstallAsync());
     Check(refusedPrep is null && refusedText.Contains("2 different PAKs") && prepared is { IsTemporary: false, Plan.Kind: ModArchiveKind.Ue4ss, Package: "GuildFeedBox" },
         $"Install Selected File reads the archive first: a choose-one archive is refused with the reason, a UE4SS MOD is ready to confirm under its own folder's name [{refusedText}]");
-    if (prepared is not null) vm.DiscardPreparedMod(prepared);
+    if (prepared is not null) vm.Mods.DiscardPreparedMod(prepared);
     Check(File.Exists(Path.Combine(folder, "GuildFeedBox-0.4.1-manual.zip")), "A file from a folder on this PC is never deleted by the browser");
 
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var browserCard = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "ModBrowserCard");
     bool Shown(string name) => browserCard?.GetVisualDescendants().OfType<StackPanel>().FirstOrDefault(s => s.Name == name)?.IsVisible == true;
     var foldersShown = Shown("ModBrowserFoldersSetup") && !Shown("ModBrowserGitHubSetup");
-    vm.SelectedModSource = vm.ModSourceOptions.First(o => o.Id == "github");
+    vm.Mods.SelectedModSource = vm.Mods.ModSourceOptions.First(o => o.Id == "github");
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
-    var githubShown = Shown("ModBrowserGitHubSetup") && !Shown("ModBrowserFoldersSetup") && vm.ModBrowserResults.Count == 0;
-    Check(browserCard is { IsVisible: true } && foldersShown && githubShown && vm.ModSourceOptions.Count == 5,
-        $"The MOD Library page has the MOD browser; each source shows its own setup (folders, GitHub repositories) [{vm.ModSourceOptions.Count} sources]");
+    var githubShown = Shown("ModBrowserGitHubSetup") && !Shown("ModBrowserFoldersSetup") && vm.Mods.ModBrowserResults.Count == 0;
+    Check(browserCard is { IsVisible: true } && foldersShown && githubShown && vm.Mods.ModSourceOptions.Count == 5,
+        $"The MOD Library page has the MOD browser; each source shows its own setup (folders, GitHub repositories) [{vm.Mods.ModSourceOptions.Count} sources]");
     vmFolders.Clear(); foreach (var f in savedFolders) vmFolders.Add(f);
     Directory.Delete(folder, true);
 
@@ -2016,13 +2016,13 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     File.SetLastWriteTimeUtc(Path.Combine(inbox, "0000000000000000001-old.nxm"), DateTime.UtcNow.AddMinutes(-30));
     var taken = handoff.TakeAll();
     Check(delivered && taken.Count == 1 && taken[0] == link && !Directory.EnumerateFiles(inbox).Any(), "nxm:// handoff: a fresh link is passed on once; stale ones and other addresses are dropped");
-    typeof(MainWindowViewModel).GetField("_nxmHandoff", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(vm, handoff);
+    typeof(ModsViewModel).GetField("_nxmHandoff", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(vm.Mods, handoff);
     handoff.Deliver(link);
     selectedPage.SetValue(vm, NavigationPage.Dashboard);
-    vm.ReceiveNxmLinks();
+    vm.Mods.ReceiveNxmLinks();
     Dispatcher.UIThread.RunJobs();
-    Check(vm.NexusNxmLinkText == link && vm.SelectedModSource?.Id == "nexus" && vm.ModBrowserStatus.Contains("MOD 3329, file 12345") && vm.SelectedPage == NavigationPage.ModLibrary,
-        $"A link from Nexus fills in the Nexus card and opens the MOD Library; it waits for Install from link [{vm.ModBrowserStatus}]");
+    Check(vm.Mods.NexusNxmLinkText == link && vm.Mods.SelectedModSource?.Id == "nexus" && vm.Mods.ModBrowserStatus.Contains("MOD 3329, file 12345") && vm.SelectedPage == NavigationPage.ModLibrary,
+        $"A link from Nexus fills in the Nexus card and opens the MOD Library; it waits for Install from link [{vm.Mods.ModBrowserStatus}]");
     Directory.Delete(inbox, true);
 
     Localizer.Instance.SetLanguage("de");

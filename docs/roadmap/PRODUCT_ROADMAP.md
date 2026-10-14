@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.8.5: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.6: file reviewed for this release (2026-10-12). -->
 # Product roadmap
 
-Updated 2026-10-08. **Current version: v1.0.8.5. Accepted baseline: v1.0.0.0. Next milestone: v1.0.8.6 (the ViewModel split: C-6, MODs; agreed with the owner 2026-10-08).**
+Updated 2026-10-08. **Current version: v1.0.8.6. Accepted baseline: v1.0.0.0. Next milestone: v1.0.8.7 (the ViewModel split: C-7, Automation, Notifications, Alert Center, Activity and audit; agreed with the owner 2026-10-08).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -169,7 +169,7 @@ Exit gate (per release):
 | C-3 | v1.0.8.3 | World: Map, Bases, Guilds, Inspector, world transactions. Recorded (v1.0.8.3, 2026-10-12): `MapViewModel` (`vm.Map`: background, viewport, markers, teleport points) and `WorldViewModel` (`vm.World`: Inspector and Pal editor, Bases, Guilds, migration, world transactions); the refreshes that feed several pages stay with the window, which hands the page what it needs. The role audit now follows code-behind calls through a page. The full gate and the ArtworkHarness pass. `MainWindowViewModel.cs` 482,828 bytes; all its files 569,569 (were 644,530). | Built |
 | C-4 | v1.0.8.4 | Server: setup wizard, Configuration, Launcher, Workspace. Recorded (v1.0.8.4, 2026-10-12): `ConfigurationViewModel` (`vm.Configuration`: the Palworld settings editor, MystTiq's service settings, the Launcher's start options) and `WorkspaceViewModel` (`vm.Workspace`); they follow each other through events. The setup wizard stays with the window: it creates the profile and the tab, which is tab coordination (C-9). The full gate and the ArtworkHarness pass. `MainWindowViewModel.cs` 435,282 bytes; all its files 493,942 (were 569,569). | Built |
 | C-5 | v1.0.8.5 | Backups and Save Tools. Recorded (v1.0.8.5, 2026-10-12): `BackupsViewModel` (`vm.Backups`: the Backups page, the save-folder access card, the Save Tools page); Backup All stays with the fleet actions. The full gate and the ArtworkHarness pass. `MainWindowViewModel.cs` 417,548 bytes; all its files 474,431 (were 493,942). | Built |
-| C-6 | v1.0.8.6 | MODs: MOD dashboard, library, UE4SS, MOD browser. | Planned |
+| C-6 | v1.0.8.6 | MODs: MOD dashboard, library, UE4SS, MOD browser. Recorded (v1.0.8.6, 2026-10-12): `ModsViewModel` (`vm.Mods`: the MOD dashboard and library, UE4SS, Safe Start, the Workshop scan, Nexus Mods, the MOD browser); the stuck-start panel follows Safe Start through an event; the window's services are now assigned before the pages are created. The full gate and the ArtworkHarness pass. `MainWindowViewModel.cs` 366,766 bytes; all its files 404,700 (were 474,431). | Built |
 | C-7 | v1.0.8.7 | Automation, Notifications, Alert Center, Activity and audit, delivery. | Planned |
 | C-8 | v1.0.8.8 | Update Center, Doctor, Crash Analyzer, Diagnostics Center. | Planned |
 | C-9 | v1.0.8.9 | Settings, Security, Fleet, browser view. What is left is the window shell and tab coordination. | Planned |
