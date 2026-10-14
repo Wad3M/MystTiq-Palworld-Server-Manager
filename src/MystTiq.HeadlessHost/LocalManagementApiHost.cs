@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.0: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -254,7 +254,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 serverConfig.LaunchArguments,
                 TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds),
                 TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds),
-                backups);
+                backups, modManagement.LogPreStartDiagnosticsAsync);
             var environmentChecklist = new HeadlessEnvironmentChecklistService(paths);
             var antiCheat = new HeadlessAntiCheatService(paths, notifications, activity, playerModeration, palEdit);
             // v0.8.9.0: watches Pal\Saved\Crashes for new Unreal crash reports (see HeadlessCrashReportWatcher).

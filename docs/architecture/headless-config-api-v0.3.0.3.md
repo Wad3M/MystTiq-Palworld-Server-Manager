@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.9.0: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.1: file reviewed for this release (2026-10-12). -->
 # Headless Configuration & Local Management API Architecture — v0.3.0.3
 
 ## Configuration

@@ -1,7 +1,7 @@
-<!-- MystTiq v1.0.9.0: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.1: file reviewed for this release (2026-10-12). -->
 # Product roadmap
 
-Updated 2026-10-08. **Current version: v1.0.9.0. Accepted baseline: v1.0.0.0. Next milestone: v1.0.9.1 (B-4, Discord control commands; scheduled by the owner 2026-10-12, D-11).**
+Updated 2026-10-08. **Current version: v1.0.9.1. Accepted baseline: v1.0.0.0. Next milestone: v1.0.9.2 (B-3, MOD load order and profile export and import; scheduled by the owner 2026-10-12, D-11).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -93,6 +93,7 @@ These were `Built` or partly verified at 1.0. Each stays open until its evidence
 | E-12 | MystTiq self-update | A download from a real published release newer than the running build. |
 | E-13 | Save Tools pip upgrade | An upgrade on a real Python install. |
 | E-14 | Code signing | The first signed Windows release, once the SignPath variables are set. Not blocking. |
+| E-15 | Discord commands (B-4, v1.0.9.1) | The owner's bot runs `/mysttiq-backup` and `/mysttiq-restart` and both show their results instead of "did not respond"; a refused command answers only the caller. |
 
 ## v1.0.5.0 — MOD browser
 
@@ -183,7 +184,7 @@ Exit gate per release: the item is `Built` with its harness evidence; a live che
 | ID | Release | Item | Status |
 | --- | --- | --- | --- |
 | T-1 | v1.0.9.0 | Commands nothing can run are removed (`ToggleWorldMapCommand`, the setup wizard's former Local/Remote choice commands), and a gate check keeps every command reachable from a button, the Ribbon or code. Recorded (v1.0.9.0, 2026-10-12): The three commands removed; the gate's reachability check passes on 251 commands and was shown to fail, naming the command, on an added unused one. | Built |
-| B-4 | v1.0.9.1 | Discord control commands. The bot already has `/mysttiq-status`, `-players`, `-start`, `-stop`, `-restart`, `-save`, `-backup`, `-broadcast`, `-kick`, `-ban` and `-unban`, each with a mapped MystTiq role and the coordinator's locks. Gaps closed here: a long command (start, stop, restart, backup) answers within Discord's 3-second limit and then reports its result (today nothing defers, so Discord shows "did not respond"); a Discord start runs the same pre-start MOD check as the REST start. Evidence: a harness on the command flow (deferral, refusals by role, conflicts). Live: the owner's bot runs a backup and a restart. | Planned |
+| B-4 | v1.0.9.1 | Discord control commands. The bot already has `/mysttiq-status`, `-players`, `-start`, `-stop`, `-restart`, `-save`, `-backup`, `-broadcast`, `-kick`, `-ban` and `-unban`, each with a mapped MystTiq role and the coordinator's locks. Gaps closed here: a long command (start, stop, restart, backup) answers within Discord's 3-second limit and then reports its result (today nothing defers, so Discord shows "did not respond"); a Discord start runs the same pre-start MOD check as the REST start. Evidence: a harness on the command flow (deferral, refusals by role, conflicts). Live: the owner's bot runs a backup and a restart. Recorded (v1.0.9.1, 2026-10-12): `DiscordCommandFlow` (acknowledge, work, edit; immediate private refusal; private failure reason; expired reply recorded) with four LogicHarness scenarios; Discord start and restart run the pre-start MOD check. Live with the owner's bot (a backup and a restart showing their results) is owed and carried. | Built |
 | B-3 | v1.0.9.2 | MOD load order and profile export and import. The MOD library shows the order MODs load in (UE4SS MODs by `mods.txt`, PAKs by how the game mounts them) and the UE4SS order can be changed. A profile (each MOD, on or off, its order, version, source and file hash) exports to a file; importing it sets order and on/off for the MODs present and lists the missing ones with their sources. Refused while the server runs; the previous `mods.txt` is kept. Evidence: a harness on a temporary MOD tree; live on the clone. | Planned |
 | B-2 | v1.0.9.3 | Anti-cheat level-gap scans from save data. A player whose level is out of line with their recorded playtime, or who gained more levels between two world days than the playtime between them allows, is reported as a finding with the numbers behind it. Findings only, never an automatic kick or ban. The thresholds are set from a copy of the real world and its backups, never the live world. Evidence: a harness with made-up histories at and past each threshold; the scan run on a copy of the real world, with its results and thresholds recorded. | Planned |
 | T-2 | v1.1.0.0 | Documentation pass and the new accepted baseline (asked 2026-10-12, after the backlog): every user and developer document read against the code and brought up to date, a full release packaged, and v1.1.0.0 named the accepted baseline in place of v1.0.0.0. | Planned |

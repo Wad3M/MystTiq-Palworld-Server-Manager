@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.0: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -1028,6 +1028,49 @@ try
             Assert(DiscordBotFormatting.RequiredRole(adminCommand) == MystTiqRole.Admin, $"{adminCommand} must be Admin");
         Assert(DiscordBotFormatting.RequiredRole("mysttiq-something-new") == MystTiqRole.Owner, "an unrecognised command must default to the strictest role");
         Assert(DiscordBotFormatting.SupportedCommands.All(c => DiscordBotFormatting.RequiredRole(c) != MystTiqRole.Owner), "every supported command must have an explicit role");
+    }, failures);
+    // v1.0.9.1 (roadmap B-4): what one slash command does, in order, against a reply that records every call.
+    RunScenarioAsync("Discord commands: a refusal is answered at once and only to the caller, and nothing runs", async () =>
+    {
+        foreach (var (granted, label) in new (MystTiqRole?, string)[] { (MystTiqRole.Viewer, "a Viewer"), (null, "no mapped role") })
+        {
+            var reply = new FakeDiscordReply(); var log = new List<string>(); var ran = false;
+            var outcome = await DiscordCommandFlow.RunAsync(reply, "mysttiq-restart", granted, () => { ran = true; return Task.FromResult("restarted"); }, (l, t, d) => log.Add($"{l}|{t}"));
+            Assert(outcome == "denied" && !ran, $"{label}: restart must be refused without running ({outcome}, ran {ran})");
+            Assert(reply.Calls.SequenceEqual(["respond(private): " + DiscordCommandFlow.NotAuthorized]), $"{label}: one private answer, no acknowledgement: {string.Join(" / ", reply.Calls)}");
+            Assert(log.SequenceEqual(["Warning|Command denied: /mysttiq-restart"]), $"{label}: the refusal is in the activity log: {string.Join(" / ", log)}");
+        }
+    }, failures);
+    RunScenarioAsync("Discord commands: an authorized command is acknowledged before its work starts, and the reply is then edited with the result", async () =>
+    {
+        var reply = new FakeDiscordReply(); var log = new List<string>();
+        var outcome = await DiscordCommandFlow.RunAsync(reply, "mysttiq-backup", MystTiqRole.Operator, async () =>
+        {
+            reply.Calls.Add("work starts");
+            await Task.Delay(50);
+            return "Backup created. world-2026-10-12.zip";
+        }, (l, t, d) => log.Add($"{l}|{t}|{d}"));
+        Assert(outcome == "done", outcome);
+        Assert(reply.Calls.SequenceEqual(["defer", "work starts", "edit: Backup created. world-2026-10-12.zip"]),
+            $"acknowledge, then work, then the result: {string.Join(" / ", reply.Calls)}");
+        Assert(log.SequenceEqual(["Information|Command: /mysttiq-backup|Backup created. world-2026-10-12.zip"]), string.Join(" / ", log));
+    }, failures);
+    RunScenarioAsync("Discord commands: a failure shows a plain public reply and sends the reason only to the caller", async () =>
+    {
+        var reply = new FakeDiscordReply(); var log = new List<string>();
+        var outcome = await DiscordCommandFlow.RunAsync(reply, "mysttiq-start", MystTiqRole.Admin,
+            () => throw new InvalidOperationException(@"C:\PalServer\Pal.exe could not be opened"), (l, t, d) => log.Add($"{l}|{t}"));
+        Assert(outcome == "failed", outcome);
+        Assert(reply.Calls.SequenceEqual(["defer", "edit: " + DiscordCommandFlow.FailedPublicly, @"followup(private): Command failed: C:\PalServer\Pal.exe could not be opened"]),
+            $"the path stays private: {string.Join(" / ", reply.Calls)}");
+        Assert(log.SequenceEqual(["Warning|Command failed: /mysttiq-start"]), string.Join(" / ", log));
+    }, failures);
+    RunScenarioAsync("Discord commands: a result Discord no longer takes (the interaction expired) is recorded, and the work still counts", async () =>
+    {
+        var reply = new FakeDiscordReply { EditThrows = true }; var log = new List<string>();
+        var outcome = await DiscordCommandFlow.RunAsync(reply, "mysttiq-stop", MystTiqRole.Operator, () => Task.FromResult("Server stopped."), (l, t, d) => log.Add($"{l}|{t}"));
+        Assert(outcome == "done", outcome);
+        Assert(log.SequenceEqual(["Information|Command: /mysttiq-stop", "Warning|Discord reply not delivered: /mysttiq-stop"]), string.Join(" / ", log));
     }, failures);
     RunScenario("Discord channel ids must be real snowflakes, and a config saved before v0.7.95.0 still loads with sensible defaults", () =>
     {
@@ -4422,6 +4465,21 @@ static HeadlessPlayersSnapshot Snapshot(params (string Id, string Name)[] player
     players.Select(p => new HeadlessPlayerSnapshot(p.Name, p.Id, p.Id, p.Id, "", "", "Steam", "1", "0")).ToList(),
     DateTimeOffset.UtcNow,
     "test");
+
+// v1.0.9.1: a slash command's reply that records each call in order (DiscordCommandFlow scenarios).
+sealed class FakeDiscordReply : IDiscordCommandReply
+{
+    public List<string> Calls { get; } = [];
+    public bool EditThrows { get; init; }
+    public Task DeferAsync() { Calls.Add("defer"); return Task.CompletedTask; }
+    public Task RespondAsync(string text, bool ephemeral) { Calls.Add($"respond({(ephemeral ? "private" : "public")}): {text}"); return Task.CompletedTask; }
+    public Task EditAsync(string text)
+    {
+        if (EditThrows) throw new InvalidOperationException("Unknown interaction");
+        Calls.Add("edit: " + text); return Task.CompletedTask;
+    }
+    public Task FollowupAsync(string text, bool ephemeral) { Calls.Add($"followup({(ephemeral ? "private" : "public")}): {text}"); return Task.CompletedTask; }
+}
 
 sealed class FakePathProfile : IServerPathProfile
 {

@@ -1,4 +1,13 @@
-<!-- MystTiq v1.0.9.0: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.9.1: file reviewed for this release (2026-10-12). -->
+## v1.0.9.1 — Discord Commands That Answer
+
+- Roadmap B-4: the Discord bot's commands were answered only after their work, past Discord's 3-second limit, so a start,
+  stop, restart or backup always showed "The application did not respond". `DiscordCommandFlow` acknowledges an
+  authorized command first and edits the reply with the result; refusals stay immediate and private; a failure's reason
+  goes only to the caller; an expired reply is recorded. A Discord start or restart now runs the REST start's pre-start MOD
+  check.
+- Version advanced to 1.0.9.1.
+
 ## v1.0.9.0 — Every Command Reachable; the Backlog Scheduled
 
 - Roadmap T-1: `ToggleWorldMapCommand`, `ChooseLocalConnectionCommand` and `ChooseRemoteConnectionCommand` removed (only

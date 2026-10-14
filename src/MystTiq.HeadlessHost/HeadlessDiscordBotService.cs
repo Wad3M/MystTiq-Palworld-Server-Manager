@@ -1,4 +1,4 @@
-// MystTiq v1.0.9.0: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.9.1: file reviewed for this release (2026-10-12).
 using System.Text.Json;
 using Discord;
 using Discord.WebSocket;
@@ -39,6 +39,7 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
     private readonly TimeSpan startupTimeout;
     private readonly TimeSpan stopTimeout;
     private readonly string configPath;
+    private readonly Func<CancellationToken, Task> preStart;
     private readonly object gate = new();
 
     private DiscordBotConfiguration config;
@@ -57,9 +58,11 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
         IReadOnlyList<string> launchArguments,
         TimeSpan startupTimeout,
         TimeSpan stopTimeout,
-        HeadlessBackupService backups)
+        HeadlessBackupService backups,
+        Func<CancellationToken, Task> preStart)
     {
         this.backups = backups;
+        this.preStart = preStart;
         this.activity = activity;
         this.lifecycle = lifecycle;
         this.rcon = rcon;
@@ -268,26 +271,29 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
 
             DiscordBotConfiguration snapshot;
             lock (gate) snapshot = config;
-            var required = DiscordBotFormatting.RequiredRole(name);
-            var granted = ResolveRole(guildUser, snapshot);
-            if (granted is null || granted < required)
-            {
-                activity.Record("Warning", "Discord Bot", $"Command denied: /{name}", "Caller's Discord roles do not map to a sufficient MystTiq role.", $"discord:{guildUser.Username}");
-                await command.RespondAsync("You are not authorized to run this command.", ephemeral: true);
-                return;
-            }
-
-            var reply = await ExecuteAsync(name, command, CancellationToken.None);
-            activity.Record("Information", "Discord Bot", $"Command: /{name}", reply, $"discord:{guildUser.Username}");
-            // Replies can contain player names and broadcast text, which players and callers choose, so
-            // mentions are switched off: a name like @everyone must never ping the guild.
-            await command.RespondAsync(reply, allowedMentions: AllowedMentions.None);
+            // v1.0.9.1 (roadmap B-4): acknowledged before the work starts, then the reply is edited with the result
+            // (see DiscordCommandFlow: a start or a backup outlasts Discord's 3-second limit).
+            var caller = $"discord:{guildUser.Username}";
+            await DiscordCommandFlow.RunAsync(new SlashCommandReply(command), name, ResolveRole(guildUser, snapshot),
+                () => ExecuteAsync(name, command, CancellationToken.None),
+                (level, title, detail) => activity.Record(level, "Discord Bot", title, detail, caller));
         }
         catch (Exception ex)
         {
+            // Only a failure before the flow took the command; the flow records and answers its own.
             activity.Record("Warning", "Discord Bot", $"Command failed: /{name}", ex.Message);
             try { await command.RespondAsync($"Command failed: {ex.Message}", ephemeral: true); } catch { /* interaction may already be closed */ }
         }
+    }
+
+    // v1.0.9.1: the real interaction behind DiscordCommandFlow. Replies can contain player names and broadcast text,
+    // which players and callers choose, so mentions are switched off: a name like @everyone must never ping the guild.
+    private sealed class SlashCommandReply(SocketSlashCommand command) : IDiscordCommandReply
+    {
+        public Task DeferAsync() => command.DeferAsync();
+        public Task RespondAsync(string text, bool ephemeral) => command.RespondAsync(text, ephemeral: ephemeral, allowedMentions: AllowedMentions.None);
+        public Task EditAsync(string text) => command.ModifyOriginalResponseAsync(m => { m.Content = text; m.AllowedMentions = AllowedMentions.None; });
+        public Task FollowupAsync(string text, bool ephemeral) => command.FollowupAsync(text, ephemeral: ephemeral, allowedMentions: AllowedMentions.None);
     }
 
     private async Task<string> ExecuteAsync(string name, SocketSlashCommand command, CancellationToken cancellationToken)
@@ -318,14 +324,21 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
                 return result.Success ? $"Backup created. {result.Message}" : $"Backup failed: {result.Message}";
             }
             case "mysttiq-start":
-                return await RunLifecycleAsync("server-start-discord", ["lifecycle", "world-mutation"], cancellationToken,
-                    () => lifecycle.StartAsync(launchArguments, startupTimeout, cancellationToken));
+                return await RunLifecycleAsync("server-start-discord", ["lifecycle", "world-mutation"], cancellationToken, async () =>
+                {
+                    // v1.0.9.1: the same pre-start MOD check as the REST start.
+                    await preStart(cancellationToken);
+                    return await lifecycle.StartAsync(launchArguments, startupTimeout, cancellationToken);
+                });
             case "mysttiq-stop":
                 return await RunLifecycleAsync("server-stop-discord", ["lifecycle"], cancellationToken,
                     () => lifecycle.StopAsync(stopTimeout, cancellationToken));
             case "mysttiq-restart":
-                return await RunLifecycleAsync("server-restart-discord", ["lifecycle", "world-mutation"], cancellationToken,
-                    () => lifecycle.RestartAsync(launchArguments, startupTimeout, stopTimeout, cancellationToken));
+                return await RunLifecycleAsync("server-restart-discord", ["lifecycle", "world-mutation"], cancellationToken, async () =>
+                {
+                    await preStart(cancellationToken);
+                    return await lifecycle.RestartAsync(launchArguments, startupTimeout, stopTimeout, cancellationToken);
+                });
             case "mysttiq-broadcast":
             {
                 var message = GetStringOption(command, "message") ?? string.Empty;
