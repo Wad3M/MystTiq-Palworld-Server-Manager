@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
 using System.Text;
 using System.Text.Json;
 using MystTiq.Core.Services;
@@ -66,7 +66,9 @@ public sealed class HeadlessPlayerRegistryService
             foreach (var player in players.Players)
             {
                 var id = NormalizeId(player.PlayerId);
-                if (string.IsNullOrWhiteSpace(id)) continue;
+                // v1.1.0.3 (roadmap F-3): a player with no character yet (loading, or on the new-character screen) is
+                // listed as "None"; every such join used to be filed under one shared "None" record.
+                if (string.IsNullOrWhiteSpace(id) || id.Equals("None", StringComparison.OrdinalIgnoreCase)) continue;
                 onlineIds.Add(id);
 
                 if (records.TryGetValue(id, out var existing))
@@ -150,6 +152,72 @@ public sealed class HeadlessPlayerRegistryService
         }
     }
 
+    /// <summary>
+    /// v1.1.0.3 (roadmap F-3): a character moved to a new player ID keeps its history: the old ID's record is merged
+    /// into the new one (first and last seen, sessions, play time, its presence events) and removed.
+    /// </summary>
+    public void MergeInto(string fromPlayerId, string toPlayerId)
+    {
+        var from = NormalizeId(fromPlayerId);
+        var to = NormalizeId(toPlayerId);
+        if (from.Length == 0 || to.Length == 0 || from.Equals(to, StringComparison.OrdinalIgnoreCase)) return;
+        lock (gate)
+        {
+            if (!MergeLocked(from, to)) return;
+            Save();
+        }
+    }
+
+    /// <summary>
+    /// v1.1.0.3 (roadmap F-3): clears the list of records that name no character any more: the shared "None" record and
+    /// records under a player ID with no character file, when the account's current ID is known (merged into it);
+    /// "None" records of an account with no known ID are removed. Returns how many records were cleared.
+    /// </summary>
+    public int CleanUp(Func<string, bool> characterExists, IReadOnlyDictionary<string, string> currentIdByAccount)
+    {
+        lock (gate)
+        {
+            var cleared = 0;
+            foreach (var record in records.Values.ToList())
+            {
+                var none = record.PlayerId.Equals("None", StringComparison.OrdinalIgnoreCase);
+                currentIdByAccount.TryGetValue(record.UserId ?? string.Empty, out var current);
+                if (current is not null && !current.Equals(record.PlayerId, StringComparison.OrdinalIgnoreCase) && (none || !characterExists(record.PlayerId)))
+                {
+                    if (MergeLocked(record.PlayerId, current)) cleared++;
+                }
+                else if (none)
+                {
+                    records.Remove(record.PlayerId);
+                    events.RemoveAll(e => string.Equals(e.PlayerId, record.PlayerId, StringComparison.OrdinalIgnoreCase));
+                    cleared++;
+                }
+            }
+            if (cleared > 0) Save();
+            return cleared;
+        }
+    }
+
+    private bool MergeLocked(string from, string to)
+    {
+        if (!records.TryGetValue(from, out var old)) return false;
+        records.Remove(from);
+        records[to] = records.TryGetValue(to, out var current)
+            ? current with
+            {
+                FirstSeenUtc = old.FirstSeenUtc < current.FirstSeenUtc ? old.FirstSeenUtc : current.FirstSeenUtc,
+                LastSeenUtc = old.LastSeenUtc > current.LastSeenUtc ? old.LastSeenUtc : current.LastSeenUtc,
+                TotalSessions = current.TotalSessions + old.TotalSessions,
+                TotalPlaytimeMinutes = current.TotalPlaytimeMinutes + old.TotalPlaytimeMinutes,
+                LastKnownName = Coalesce(current.LastKnownName, old.LastKnownName),
+                SteamId = Coalesce(current.SteamId, old.SteamId),
+                UserId = Coalesce(current.UserId, old.UserId)
+            }
+            : old with { PlayerId = to, CurrentlyOnline = false, CurrentSessionStartUtc = null };
+        for (var i = 0; i < events.Count; i++)
+            if (string.Equals(events[i].PlayerId, from, StringComparison.OrdinalIgnoreCase)) events[i] = events[i] with { PlayerId = to };
+        return true;
+    }
     private static TimeSpan Min(TimeSpan a, TimeSpan b) => a < b ? a : b;
     private static string Coalesce(string? incoming, string fallback) => string.IsNullOrWhiteSpace(incoming) ? fallback : incoming;
     private static string NormalizeId(string? value) => (value ?? string.Empty).Trim();

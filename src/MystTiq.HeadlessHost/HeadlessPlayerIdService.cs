@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -22,7 +22,7 @@ namespace MystTiq.HeadlessHost;
 /// compares with the game's own assignment instead of a formula the game no longer uses.</item>
 /// <item><b>Automatic move.</b> An account given a new ID while its character lives under the old one is queued; when
 /// nobody is online the server is stopped, a safety backup taken, the character moved (<see cref="PlayerIdMove"/>),
-/// the result decoded again and verified, the old character file and the replaced one archived (not deleted), the
+/// the result decoded again and verified, the old character file removed (v1.1.0.3: the safety backup holds it), the
 /// account's level history cleared, and the server started again. Anything unexpected refuses the move and alerts.</item>
 /// </list>
 /// </summary>
@@ -40,6 +40,7 @@ public sealed class HeadlessPlayerIdService
     private readonly Func<CancellationToken, Task<ServerLifecycleOperationResult>> startServer;
     private readonly Func<CancellationToken, Task<ServerLifecycleOperationResult>> stopServer;
     private readonly Action<string[]> forgetLevelHistory;
+    private readonly HeadlessPlayerRegistryService? registry;
     private readonly string ledgerPath;
     private readonly object gate = new();
     private readonly HashSet<string> checkedThisSession = new(StringComparer.OrdinalIgnoreCase);
@@ -51,12 +52,13 @@ public sealed class HeadlessPlayerIdService
         IOperationCoordinator coordinator, ServerProfileId profile,
         Func<CancellationToken, Task<ServerLifecycleOperationResult>> startServer,
         Func<CancellationToken, Task<ServerLifecycleOperationResult>> stopServer,
-        Action<string[]>? forgetLevelHistory = null)
+        Action<string[]>? forgetLevelHistory = null, HeadlessPlayerRegistryService? registry = null)
     {
         this.paths = paths; this.lifecycle = lifecycle; this.backups = backups; this.activity = activity;
         this.notifications = notifications; this.codec = codec; this.coordinator = coordinator; this.profile = profile;
         this.startServer = startServer; this.stopServer = stopServer;
         this.forgetLevelHistory = forgetLevelHistory ?? (_ => { });
+        this.registry = registry;
         var root = Path.Combine(paths.ManagerRuntimeRoot, "players");
         Directory.CreateDirectory(root);
         ledgerPath = Path.Combine(root, "player-ids.json");
@@ -198,14 +200,14 @@ public sealed class HeadlessPlayerIdService
     {
         OperationHandle? operation = null;
         HeadlessWorldTransactionJournal? journal = null;
-        string? working = null, levelPath = null, levelOriginal = null, toPath = null, toOriginal = null;
+        string? working = null, levelPath = null, levelOriginal = null, toPath = null, toOriginal = null, fromPath = null, fromOriginal = null;
         var replaced = false;
         try
         {
             if ((await lifecycle.GetStatusAsync(cancellationToken)).ServerMayBeRunning) throw new InvalidOperationException("PalServer is still running.");
             var world = WorldOf(request.FromPlayerId) ?? throw new InvalidOperationException($"No world has a character file for {request.FromPlayerId[..8]}.");
             levelPath = Path.Combine(world, "Level.sav");
-            var fromPath = Path.Combine(world, "Players", request.FromPlayerId + ".sav");
+            fromPath = Path.Combine(world, "Players", request.FromPlayerId + ".sav");
             toPath = Path.Combine(world, "Players", request.ToPlayerId + ".sav");
 
             operation = await coordinator.BeginAsync(profile, "player-id-move", nameof(HeadlessPlayerIdService), ["world-mutation"], cancellationToken);
@@ -230,6 +232,8 @@ public sealed class HeadlessPlayerIdService
             levelOriginal = Path.Combine(working, "Level.original.sav");
             File.Copy(levelPath, levelOriginal, true);
             if (File.Exists(toPath)) { toOriginal = Path.Combine(working, "To.original.sav"); File.Copy(toPath, toOriginal, true); }
+            fromOriginal = Path.Combine(working, "From.original.sav");
+            File.Copy(fromPath, fromOriginal, true);
 
             var level = await DecodeAsync(converter, levelOriginal, Path.Combine(working, "Level.json"), cancellationToken);
             var player = await DecodeAsync(converter, fromPath, Path.Combine(working, "From.json"), cancellationToken);
@@ -249,18 +253,17 @@ public sealed class HeadlessPlayerIdService
             if (problem is not null) throw new InvalidDataException(problem);
             Advance(journal, "Verified", "The staged world and character file were decoded again and checked.");
 
-            var archive = Path.Combine(paths.ManagerRuntimeRoot, "character-migration", "archive");
-            Directory.CreateDirectory(archive);
-            var stamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
             replaced = true;
             File.Copy(stagedLevel, levelPath + $".mysttiq-player-id-{id}.tmp", true);
             File.Replace(levelPath + $".mysttiq-player-id-{id}.tmp", levelPath, null, true);
-            if (toOriginal is not null) File.Copy(toOriginal, Path.Combine(archive, $"{request.ToPlayerId}-replaced-{stamp}.sav"), true);
             File.Copy(stagedPlayer, toPath, true);
-            File.Move(fromPath, Path.Combine(archive, $"{request.FromPlayerId}-moved-to-{request.ToPlayerId[..8]}-{stamp}.sav"), true);
+            // v1.1.0.3 (roadmap F-3, owner 2026-10-13: "it should cleanup the old files so as to not cause possible
+            // issues"): the old character file is removed once the world and the moved file are in place; the safety
+            // backup taken first holds it and the replaced one. Nothing is kept beside the world any more.
+            File.Delete(fromPath);
             var companion = Path.Combine(world, "Players", request.FromPlayerId + "_dps.sav");
-            if (File.Exists(companion)) File.Move(companion, Path.Combine(archive, $"{request.FromPlayerId}_dps-moved-{stamp}.sav"), true);
-            Advance(journal, "Committed", $"Moved. The old character file and the replaced one are in {archive}.");
+            if (File.Exists(companion)) File.Delete(companion);
+            Advance(journal, "Committed", $"Moved. The old character file was removed; the safety backup {safety.FileName} holds it and the replaced one.");
 
             lock (gate)
             {
@@ -270,6 +273,7 @@ public sealed class HeadlessPlayerIdService
                 Persist();
             }
             forgetLevelHistory([request.FromPlayerId, request.ToPlayerId]);
+            registry?.MergeInto(request.FromPlayerId, request.ToPlayerId);
             var message = $"{request.Name}'s character was moved from {request.FromPlayerId[..8]} to {request.ToPlayerId[..8]} (safety backup {safety.FileName}).";
             activity.Record("Information", "Players", "Character moved", message);
             notifications.Create("Information", "Character moved to the new player ID", message);
@@ -285,6 +289,7 @@ public sealed class HeadlessPlayerIdService
                 {
                     if (levelOriginal is not null && levelPath is not null) File.Copy(levelOriginal, levelPath, true);
                     if (toPath is not null) { if (toOriginal is not null) File.Copy(toOriginal, toPath, true); else if (File.Exists(toPath)) File.Delete(toPath); }
+                    if (fromPath is not null && fromOriginal is not null && !File.Exists(fromPath)) File.Copy(fromOriginal, fromPath, true);
                     rolledBack = true;
                 }
                 catch { rolledBack = false; }
@@ -301,6 +306,65 @@ public sealed class HeadlessPlayerIdService
             operation?.Dispose();
             if (working is not null) try { Directory.Delete(working, true); } catch { }
         }
+    }
+
+    /// <summary>
+    /// v1.1.0.3 (roadmap F-3): removes what earlier moves left behind. v1.1.0.2 kept the old and replaced character files
+    /// in runtime\character-migration\archive; each is removed when a MystTiq backup holds that character file (it can be
+    /// restored from there). The player list's records naming no character are merged into the account's current ID.
+    /// Returns how many files and records were cleared.
+    /// </summary>
+    public int CleanUpOldEntries()
+    {
+        var cleared = 0;
+        var archive = Path.Combine(paths.ManagerRuntimeRoot, "character-migration", "archive");
+        try
+        {
+            if (Directory.Exists(archive))
+            {
+                var held = PlayerFilesInBackups();
+                foreach (var file in Directory.EnumerateFiles(archive, "*.sav"))
+                {
+                    var name = Path.GetFileName(file);
+                    var playerId = name.Length >= 32 ? name[..32] : string.Empty;
+                    if (NormalizeId(playerId) is null || !held.Contains(playerId)) continue;
+                    File.Delete(file);
+                    cleared++;
+                }
+                if (!Directory.EnumerateFileSystemEntries(archive).Any()) Directory.Delete(archive);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { activity.Record("Warning", "Players", "Player ID clean-up", ex.Message); }
+        if (registry is not null)
+        {
+            Dictionary<string, string> current;
+            lock (gate) current = new(ledger.Known, StringComparer.OrdinalIgnoreCase);
+            cleared += registry.CleanUp(CharacterExists, current);
+        }
+        if (cleared > 0) activity.Record("Information", "Players", "Player ID clean-up", $"Cleared {cleared} old character file(s) and player list record(s) that named no character.");
+        return cleared;
+    }
+
+    // The player IDs whose character file is held in a MystTiq backup (a ZIP under the backup folder).
+    private HashSet<string> PlayerFilesInBackups()
+    {
+        var held = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!Directory.Exists(paths.BackupRoot)) return held;
+        foreach (var zip in Directory.EnumerateFiles(paths.BackupRoot, "*.zip", SearchOption.AllDirectories))
+        {
+            try
+            {
+                using var archive = System.IO.Compression.ZipFile.OpenRead(zip);
+                foreach (var entry in archive.Entries)
+                {
+                    var parts = entry.FullName.Replace('\\', '/').Split('/');
+                    if (parts.Length >= 2 && parts[^2].Equals("Players", StringComparison.OrdinalIgnoreCase) && entry.Name.EndsWith(".sav", StringComparison.OrdinalIgnoreCase))
+                        held.Add(Path.GetFileNameWithoutExtension(entry.Name));
+                }
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { /* an unreadable backup holds nothing */ }
+        }
+        return held;
     }
 
     private async Task<JsonNode> DecodeAsync(HeadlessSaveConverterMatch converter, string sav, string json, CancellationToken token)

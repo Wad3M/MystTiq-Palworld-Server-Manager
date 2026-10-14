@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.2: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
 # v1.0.7.3 Changed Files
 
 - `src/MystTiq.HeadlessHost/HeadlessIdentityGuardService.cs`: a loading grace (90 s) for a player with no character yet;

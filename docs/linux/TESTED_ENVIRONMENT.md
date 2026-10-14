@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.2: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
 # Linux Tested Environment
 
 This document identifies the reference environment MystTiq is tested on: today's, then the original v0.3 validation.

@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -249,7 +249,10 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                     return await lifecycle.StartAsync(serverConfig.LaunchArguments, TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds), token);
                 },
                 token => lifecycle.StopAsync(TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds), token),
-                ids => antiCheatForMoves?.ForgetLevelHistory(ids));
+                ids => antiCheatForMoves?.ForgetLevelHistory(ids), playerRegistry);
+            // v1.1.0.3 (roadmap F-3): what earlier moves left behind is cleared once at start (archived character files a
+            // backup holds, player list records that name no character).
+            _ = BackgroundWork.Shared.Run("player ID clean-up", _ => { playerIds.CleanUpOldEntries(); return Task.CompletedTask; });
             // v1.0.0.1: notices a Steam player who was not given their own character (see HeadlessIdentityGuardService).
             var identityGuard = new HeadlessIdentityGuardService(paths, activity, notifications, playerModeration, playerIds.ExpectedFor,
                 autoMove: () => playerIds.AutoMove, kickReason: playerIds.KickReason);

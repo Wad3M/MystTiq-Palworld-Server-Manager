@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.2: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
 # MystTiq Documentation
 
 This directory contains current architecture/reference documentation and archived implementation history.

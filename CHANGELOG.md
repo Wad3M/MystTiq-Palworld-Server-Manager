@@ -1,4 +1,12 @@
-<!-- MystTiq v1.1.0.2: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
+## v1.1.0.3 — Player IDs: Clean-up After a Move
+
+- Roadmap F-3 (asked 2026-10-13): a character move removes the old character file once the move is in place instead of
+  archiving it (the safety backup holds it; a working copy restores it on failure). At start, files v1.1.0.2 archived are
+  removed when a MystTiq backup holds that character. The player list no longer records "None", merges a moved player's
+  record into the new ID, and folds records naming no character into the account's current ID.
+- Version advanced to 1.1.0.3.
+
 ## v1.1.0.2 — Player IDs: Join Check and Automatic Character Move
 
 - Roadmap F-2 (asked 2026-10-13): the game gives Steam accounts new player IDs since its 1.0 update (the owner's

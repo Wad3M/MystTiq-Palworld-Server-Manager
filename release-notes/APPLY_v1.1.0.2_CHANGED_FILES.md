@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.2: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
 # v1.1.0.2 Changed Files
 
 - `src/MystTiq.HeadlessHost/PlayerIdMove.cs` (new): the move on the decoded world and character file (checks, rewrite,

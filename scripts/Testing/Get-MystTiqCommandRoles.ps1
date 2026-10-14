@@ -1,4 +1,4 @@
-# MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
+# MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
 [CmdletBinding()]
 param([string]$ProjectRoot = '.', [switch]$ShowUnresolved)
 # v0.8.23.0: which role each Desktop command needs, derived from the code rather than kept by hand. Read-only.

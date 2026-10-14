@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.2: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.0.3: file reviewed for this release (2026-10-13). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,9 +21,9 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.1.0.2 · Accepted baseline: v1.1.0.0**
+**Current version: v1.1.0.3 · Accepted baseline: v1.1.0.0**
 
-MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account ([release notes](release-notes/v1.1.0.2.md)). Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
+MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind ([release notes](release-notes/v1.1.0.3.md)). Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
 ## What's new in v1.1.0.0
 
@@ -130,7 +130,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v1.0.9.0 – v1.0.9.3 | Delivered | Every command reachable; Discord commands that answer; MOD load order and profiles; level-gap scans |
 | v1.1.0.0 | Accepted baseline | a documentation pass over every page, and everything since 1.0 as one release |
 | v1.1.0.1 | Delivered | Fixed: an error notice ("Something went wrong") that could appear when the desktop started |
-| v1.1.0.2 | Current | Every join checked; a character the game moved to a new player ID is moved back to its owner automatically, with a safety backup |
+| v1.1.0.2 | Delivered | Every join checked; a character the game moved to a new player ID is moved back to its owner automatically, with a safety backup |
+| v1.1.0.3 | Current | A character move leaves nothing behind: old files removed (the safety backup keeps them) and the player list tidied |
 
 What comes next is in the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md). Release history lives in the [changelog](CHANGELOG.md).
 

@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.3: file reviewed for this release (2026-10-13).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -4650,8 +4650,71 @@ try
             "the judge: no known character is a first sighting, the same ID (any case) is correct, another is a new ID from the game");
     }, failures);
 
+    // v1.1.0.3 (roadmap F-3): what a move leaves behind is cleared (owner 2026-10-13: "it should cleanup the old files").
+    RunScenario("Player ID clean-up (F-3): a join with no character yet is never recorded as \"None\"; a move merges the old ID's record into the new one (sessions, play time, first and last seen); stale records (\"None\", an ID with no character) are merged into the account's current ID; archived character files are removed only when a backup holds that character", () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "player-id-cleanup-" + Guid.NewGuid().ToString("N")));
+        var players = Path.Combine(paths.SaveRoot, "SaveGames", "0", "World", "Players");
+        Directory.CreateDirectory(players);
+        const string wade = "steam_76561197962020201", melly = "steam_76561198653223616";
+        const string oldId = "67D8D355000000000000000000000000", newId = "E290DA9A000000000000000000000000", mellyOld = "A3835C7B000000000000000000000000", mellyNew = "1467C601000000000000000000000000";
+        File.WriteAllText(Path.Combine(players, newId + ".sav"), "x");
+        File.WriteAllText(Path.Combine(players, mellyNew + ".sav"), "x");
+        var registry = new HeadlessPlayerRegistryService(paths);
+        var t0 = new DateTimeOffset(2026, 10, 1, 10, 0, 0, TimeSpan.Zero);
+        HeadlessPlayersSnapshot One(string user, string id, string name) => new(true, 1, [new HeadlessPlayerSnapshot(name, user, "", id, "", "", "Steam", "1", "0")], t0, "test");
+        HeadlessPlayersSnapshot Nobody() => new(true, 0, [], t0, "test");
+        registry.Observe(One(wade, "None", "Wade"), t0); registry.Observe(Nobody(), t0.AddMinutes(1));
+        Assert(registry.Snapshot().Count == 0, "a join with no character yet is not recorded (no shared \"None\" record)");
+        registry.Observe(One(wade, oldId, "Wade"), t0.AddMinutes(2)); registry.Observe(One(wade, oldId, "Wade"), t0.AddMinutes(7)); registry.Observe(Nobody(), t0.AddMinutes(8));
+        registry.Observe(One(wade, newId, "WadeeRROR"), t0.AddDays(12)); registry.Observe(One(wade, newId, "WadeeRROR"), t0.AddDays(12).AddMinutes(3)); registry.Observe(Nobody(), t0.AddDays(12).AddMinutes(4));
+        registry.MergeInto(oldId, newId);
+        var merged = registry.Snapshot().Single(r => r.UserId == wade);
+        Assert(merged.PlayerId == newId && merged.TotalSessions == 2 && Math.Abs(merged.TotalPlaytimeMinutes - 8) < 0.01 && merged.FirstSeenUtc == t0.AddMinutes(2) && merged.LastSeenUtc == t0.AddDays(12).AddMinutes(4),
+            $"a move merges the old record into the new one: 2 sessions, 8 minutes, first seen on the old ID, last seen on the new [{merged}]");
+        Assert(registry.RecentEvents().All(e => e.PlayerId != oldId), "the old ID's presence events now name the new ID");
+
+        // A list from before v1.1.0.3: a shared "None" record and a record under Melly's old ID (no character any more).
+        var registryFile = Path.Combine(paths.ManagerRuntimeRoot, "players", "player-registry.json");
+        var stale = new[]
+        {
+            new PlayerRegistryRecord("None", "Wade", "", wade, t0, t0, 29, 14.3, false, null),
+            new PlayerRegistryRecord(mellyOld, "Melly", "", melly, t0, t0.AddHours(2), 3, 10.8, false, null),
+            new PlayerRegistryRecord(newId, "Wade", "", wade, t0.AddDays(12), t0.AddDays(12), 5, 18.4, false, null)
+        };
+        File.WriteAllText(registryFile, System.Text.Json.JsonSerializer.Serialize(stale));
+        var reloaded = new HeadlessPlayerRegistryService(paths);
+        var cleared = reloaded.CleanUp(id => File.Exists(Path.Combine(players, id + ".sav")), new Dictionary<string, string> { [wade] = newId, [melly] = mellyNew });
+        var after = reloaded.Snapshot();
+        Assert(cleared == 2 && after.Count == 2 && after.Single(r => r.UserId == wade) is { PlayerId: newId, TotalSessions: 34 } && after.Single(r => r.UserId == melly) is { PlayerId: mellyNew, TotalSessions: 3 },
+            $"the shared \"None\" record and the record under Melly's old ID are merged into each account's current ID [{cleared}: {string.Join("; ", after)}]");
+        File.WriteAllText(registryFile, System.Text.Json.JsonSerializer.Serialize(new[] { new PlayerRegistryRecord("None", "Ghost", "", "steam_0", t0, t0, 1, 0.5, false, null) }));
+        var unknown = new HeadlessPlayerRegistryService(paths);
+        Assert(unknown.CleanUp(_ => false, new Dictionary<string, string>()) == 1 && unknown.Snapshot().Count == 0, "a \"None\" record of an account with no known ID is removed");
+        File.WriteAllText(registryFile, System.Text.Json.JsonSerializer.Serialize(after));
+        reloaded = new HeadlessPlayerRegistryService(paths);
+
+        // v1.1.0.2 archived files: removed only when a backup holds that character file.
+        var archive = Path.Combine(paths.ManagerRuntimeRoot, "character-migration", "archive");
+        Directory.CreateDirectory(archive);
+        File.WriteAllText(Path.Combine(archive, oldId + "-moved-to-E290DA9A-20261013-114550.sav"), "old");
+        File.WriteAllText(Path.Combine(archive, "0BADF00D000000000000000000000000-replaced-20261013-114550.sav"), "kept");
+        Directory.CreateDirectory(paths.BackupRoot);
+        using (var zip = System.IO.Compression.ZipFile.Open(Path.Combine(paths.BackupRoot, "Palworld_2026-10-13_18-27-40-113.zip"), System.IO.Compression.ZipArchiveMode.Create))
+            zip.CreateEntry("0/World/Players/" + oldId + ".sav");
+        var lifecycle = new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped };
+        var activity = new HeadlessActivityLogService(paths);
+        var operations = new MystTiq.Core.Operations.OperationCoordinator(paths);
+        var profile = new MystTiq.Core.Operations.ServerProfileId("default");
+        var ids = new HeadlessPlayerIdService(paths, lifecycle, new HeadlessBackupService(paths, lifecycle, activity, operations, profile), activity, new HeadlessNotificationService(paths, activity),
+            new HeadlessSaveCodecService(new HeadlessCrashAndSaveToolsService(paths, activity)), operations, profile,
+            token => lifecycle.StartAsync([], TimeSpan.FromSeconds(5), token), token => lifecycle.StopAsync(TimeSpan.FromSeconds(5), token), null, reloaded);
+        Assert(ids.CleanUpOldEntries() == 1 && !File.Exists(Path.Combine(archive, oldId + "-moved-to-E290DA9A-20261013-114550.sav")) && File.Exists(Path.Combine(archive, "0BADF00D000000000000000000000000-replaced-20261013-114550.sav")),
+            "an archived character file a backup holds is removed; one no backup holds is kept");
+    }, failures);
+
     // The owner's real world, copied: the service moves the character with the real converter (when both are on this computer).
-    RunScenarioAsync("Player ID move on a copy of the real world (F-2): the service stops nothing (the server is stopped), takes a safety backup, moves Wade from 67D8D355 to E290DA9A with the real converter, verifies, archives the old and replaced character files, learns the ID and clears the move; the moved world has Wade (level 15) under the new ID", async () =>
+    RunScenarioAsync("Player ID move on a copy of the real world (F-2): the service stops nothing (the server is stopped), takes a safety backup, moves Wade from 67D8D355 to E290DA9A with the real converter, verifies, removes the old character file (keeping nothing beside the world), merges the player list record, learns the ID and clears the move; the moved world has Wade (level 15) under the new ID", async () =>
     {
         var reference = Environment.GetEnvironmentVariable("MYSTTIQ_ID_MOVE_REFERENCE_WORLD") ?? @"C:\GameServers\_Backups\world-before-uid-migration-20261013-114408";
         var tools = Environment.GetEnvironmentVariable("MYSTTIQ_SAVE_TOOLS") ?? @"C:\GameServers\Palworld\Server\Tools";
@@ -4680,8 +4743,12 @@ try
             var profile = new MystTiq.Core.Operations.ServerProfileId("default");
             var codec = new HeadlessSaveCodecService(new HeadlessCrashAndSaveToolsService(paths, activity));
             var forgotten = new List<string>();
+            var registry = new HeadlessPlayerRegistryService(paths);
+            var seen = DateTimeOffset.UtcNow.AddDays(-12);
+            registry.Observe(new HeadlessPlayersSnapshot(true, 1, [new HeadlessPlayerSnapshot("Wade", "steam_76561197962020201", "76561197962020201", "67D8D355000000000000000000000000", "", "", "Steam", "15", "0")], seen, "test"), seen);
+            registry.Observe(new HeadlessPlayersSnapshot(true, 0, [], seen.AddMinutes(5), "test"), seen.AddMinutes(5));
             var ids = new HeadlessPlayerIdService(paths, lifecycle, new HeadlessBackupService(paths, lifecycle, activity, operations, profile), activity, notifications, codec, operations, profile,
-                token => lifecycle.StartAsync([], TimeSpan.FromSeconds(5), token), token => lifecycle.StopAsync(TimeSpan.FromSeconds(5), token), forgotten.AddRange);
+                token => lifecycle.StartAsync([], TimeSpan.FromSeconds(5), token), token => lifecycle.StopAsync(TimeSpan.FromSeconds(5), token), forgotten.AddRange, registry);
             const string wade = "steam_76561197962020201", oldId = "67D8D355000000000000000000000000", newId = "E290DA9A000000000000000000000000";
             ids.Observe(new HeadlessPlayersSnapshot(true, 1, [new HeadlessPlayerSnapshot("WadeeRROR", wade, "76561197962020201", newId, "", "", "Steam", "1", "0")], DateTimeOffset.UtcNow, "test"));
             Assert(ids.Snapshot().Pending.Count == 1, "the join queues the move");
@@ -4690,8 +4757,10 @@ try
             var players = Path.Combine(world, "Players");
             var archive = Path.Combine(paths.ManagerRuntimeRoot, "character-migration", "archive");
             Assert(!File.Exists(Path.Combine(players, oldId + ".sav")) && File.Exists(Path.Combine(players, newId + ".sav")), "the old character file is gone from the world and the new ID has the moved one");
-            Assert(Directory.GetFiles(archive).Length == 2 && Directory.GetFiles(archive).Any(f => f.Contains("moved-to-E290DA9A", StringComparison.Ordinal)) && Directory.GetFiles(archive).Any(f => f.Contains("replaced", StringComparison.Ordinal)),
-                "the old character file and the replaced one are archived, not deleted");
+            // v1.1.0.3 (F-3): nothing is kept beside the world; the safety backup holds the old and replaced files.
+            Assert(!Directory.Exists(archive), "nothing is kept beside the world (no archive folder): the old character file is removed");
+            Assert(registry.Snapshot().SingleOrDefault(r => r.UserId == wade) is { PlayerId: newId, TotalSessions: 1 } && registry.Snapshot().All(r => r.PlayerId != oldId),
+                "the player list's record under the old ID is merged into the new ID (its session kept)");
             Assert(Directory.GetFiles(paths.BackupRoot, "*.zip", SearchOption.AllDirectories).Length >= 1, "a safety backup was taken first");
             var snapshot = ids.Snapshot();
             Assert(snapshot.Pending.Count == 0 && snapshot.Known[wade] == newId && snapshot.Checks.Last().Result == PlayerIdResult.Moved && forgotten.Contains(oldId) && forgotten.Contains(newId),
