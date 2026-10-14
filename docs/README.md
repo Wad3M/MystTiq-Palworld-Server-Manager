@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
 # MystTiq Documentation
 
 This directory contains current architecture/reference documentation and archived implementation history.
@@ -7,11 +7,12 @@ This directory contains current architecture/reference documentation and archive
 
 - [`architecture/`](architecture/) — current architecture and platform-completion documents
 - [`release/`](release/) — publication/release-process documents
-- [`history/`](history/) — historical version-specific architecture and feature notes
+- [`history/`](history/) — historical version-specific architecture and feature notes, earlier roadmaps and the v0.3 Linux plan
 - [`linux/`](linux/) — Linux test environment and headless implementation documentation
-- [`roadmap/`](roadmap/) — cross-platform/backport planning registries
+- [`roadmap/`](roadmap/) — the product roadmap (current plan, evidence owed, backlog) and the historical backport registry
 - [`index.html`](index.html) — public GitHub Pages landing page
 - [`images/`](images/) — README/public documentation screenshots
+- [`i18n/`](i18n/) — the translation inventory and how to review a language
 - [`assets/`](assets/) — GitHub Pages assets
 
 ## Repository-level documents

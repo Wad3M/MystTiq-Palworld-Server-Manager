@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
 # MystTiq Linux Headless Command Reference
 
 Current release line: **v0.3.0.7**
@@ -28,6 +28,7 @@ An extracted build can be invoked with `./mysttiq-server`.
 | `service-install` | Install/enable MystTiq under systemd |
 | `service-uninstall` | Stop/disable/remove the systemd unit |
 | `service-run` | Long-running systemd supervisor |
+| `service-unit` | Print MystTiq's own systemd unit text (for a system-wide or per-user unit) |
 | `config-show` | Print effective configuration |
 | `config-validate` | Validate configuration |
 | `config-write-default` | Write default configuration |

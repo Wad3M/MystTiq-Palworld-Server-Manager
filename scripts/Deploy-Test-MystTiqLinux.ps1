@@ -1,4 +1,4 @@
-﻿# MystTiq v1.0.9.3: file reviewed for this release (2026-10-12).
+﻿# MystTiq v1.1.0.0: file reviewed for this release (2026-10-12).
 #requires -Version 7.0
 [CmdletBinding()]
 param(

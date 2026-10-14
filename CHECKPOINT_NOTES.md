@@ -1,38 +1,42 @@
-<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
-# MystTiq v1.0.9.3 Checkpoint: Level-Gap Scans
+<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
+# MystTiq v1.1.0.0 Checkpoint: The New Accepted Baseline
 
 ## What changed
 
-**A new anti-cheat rule: level gain against playtime.** If a player gains far more levels than their time on your
-server allows (for example, level 10 to 45 in nine minutes), MystTiq tells you, with the numbers.
+**v1.1.0.0 is the new accepted baseline**, in place of v1.0.0.0, as you asked. The code is v1.0.9.3's; this release is
+the documentation pass and the baseline.
 
-- **It only reports.** It never kicks or bans; you check the player and decide.
-- **It is generous on purpose.** An honest player levelling fast stays well inside it, and it takes your server's
-  experience rate into account.
-- **It compares from when MystTiq first saw a player.** A veteran who was already high-level is not flagged.
-- **It is on by default.** Switch it off on the Anti-Cheat card (Diagnostics Center) with the other rules.
+**The documentation pass.** I read every user and developer page against the app and fixed what had drifted:
+- **README:** 20 stacked "Also new" paragraphs became one "What's new in v1.1.0.0" by theme. The feature table now
+  lists what shipped since 1.0, and the release history is grouped by series.
+- **Website:** the milestones still showed "NEXT: MOD browser", which shipped in v1.0.5.0.
+- **Linux pages:** they still described the original v0.3 plan. They now cover how to run the service today (systemd,
+  per-user unit, `service-run`, Docker), what is tested, and what is still open. The old plan moved to history. A new
+  check keeps the Linux command list matched to the real commands.
+- **Roadmap, publishing guide, checklist and indexes:** brought up to date.
 
-**Checked against your real world.** I decoded copies of your 17 daily backups (July 31 to October 8). The biggest real
-gain, 6 levels in 17 hours, used 12% of what the rule allows. Nobody in your world is above level 15 yet, so I'll
-confirm the higher levels once the rule has watched your server for a while.
+**The 24-hour runs passed:**
+- Windows: 24 h, memory +1.5 MB, 16,600 requests with none failed, a clean stop.
+- Linux: 23.5 h, memory +3 MB, 16,736 requests with none failed, a clean stop.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.0.9.3-Logic.ps1 -RunBuild -RunLong`: 404 / 404 passed, 1 skipped (the v1.0.2.0
-  system-unit test: no passwordless sudo on the VM). Every earlier check is carried, the frozen v1.0.9.2 gate passes,
+- **Full gate** `scripts\Test-v1.1.0.0-Logic.ps1 -RunBuild -RunLong`: 407 / 407 passed, 1 skipped (the v1.0.2.0
+  system-unit test: no passwordless sudo on the VM). Every earlier check is carried, the frozen v1.0.9.3 gate passes,
   the long set passes, and the Linux VM checks ran and passed.
-- **Static gate:** 339 / 339. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
-- **B-2:** the two LogicHarness scenarios pass (the bands, the gap check, the history rules and reading ExpRate; the rule in
-  the anti-cheat service: recorded across a restart, reported with its numbers and a notice, no kick, nothing once off).
-- **Calibration:** copies of the real world's 17 daily backups (2026-07-31 to 2026-10-08) decoded with the app's own
-  converter; at experience rate 1 the largest real gain (6 levels in 17 hours) used 12% of the allowance.
-- **ArtworkHarness** (12 languages, the rule's row) and **LogicHarness** pass.
+- **Static gate:** 342 / 342. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **T-2 and D-12:** the documentation checks pass: one What's new in the README, current milestones on the site, the Linux
+  page describing today's support, every listed Linux command present in the service, and v1.1.0.0 named the accepted
+  baseline in the README, site, roadmap, checklist and publishing guide.
+- **Q-10:** the 24-hour runs' summaries (`C:\GameServers\_Soak\v1.0.7.5\windows` and `linux`) both read PASSED.
 
 ## For you
 
-1. **The join problem:** the backups show wrong-ID characters back to the world's first day (Melly's account has three
-   characters: 84544311 from July 31, A3835C7B from August 25 and 1467C601 from August 11). That points at the game or
-   account side rather than MystTiq. The double-click test will still settle it.
-2. **The 24-hour runs** (v1.0.7.5) finish around 03:00 UTC on 2026-10-13; I'll collect them then.
-3. **Next:** v1.1.0.0, the documentation pass and the new accepted baseline.
-4. **Push:** v1.0.7.0 to v1.0.9.3 are ready to push and tag when you say so.
+1. **The join problem:** waiting on your double-click test (stop the server in MystTiq, close MystTiq, double-click
+   PalServer.exe, join). It tells me whether the wrong character comes from MystTiq's launch or from the game and
+   account side.
+2. **Live checks only you can do:**
+   - run `/mysttiq-backup` from your Discord bot;
+   - leave the level-gap rule on for a week.
+3. **Push:** v1.0.7.0 to v1.1.0.0 are committed locally and checkpointed, not pushed. Say the word and I'll push and tag
+   them; v1.1.0.0 would be the release to publish.

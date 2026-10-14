@@ -1,4 +1,15 @@
-<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
+## v1.1.0.0 — The New Accepted Baseline
+
+- Roadmap T-2 and owner decision D-12: v1.1.0.0 is the accepted baseline in place of v1.0.0.0.
+- The documentation pass: the README's 20 "Also new" paragraphs became one "What's new in v1.1.0.0", the feature
+  table and release history were brought up to date; the site's milestones; the Linux page rewritten for today's support
+  (the v0.3 plan moved to history), its tested environment and the missing `service-unit` command; the roadmap's index
+  and the publishing guide's gate time corrected.
+- Roadmap Q-10 done: the 24-hour idle runs passed on Windows (24 h, memory +1.5 MB, 16,600 requests, none failed) and
+  Linux (23.5 h, memory +3 MB, 16,736 requests, none failed).
+- Version advanced to 1.1.0.0.
+
 ## v1.0.9.3 — Level-Gap Scans
 
 - Roadmap B-2: level-gap scans. A player whose level gain since MystTiq first saw them (or since their previous level)

@@ -1,7 +1,23 @@
-<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
 # Linux Tested Environment
 
-This document identifies the reference environment used to validate MystTiq's initial Linux/headless implementation.
+This document identifies the reference environment MystTiq is tested on: today's, then the original v0.3 validation.
+
+## Current reference (v1.1.0.0)
+
+The same Ubuntu Server 24.04 LTS virtual machine, now with an XFCE desktop session. The owner's production MystTiq
+service runs there as a systemd unit; tests use separate folders, ports and units and only read the production one.
+Tested live on it:
+
+- the headless service under systemd: started at boot, restarted after a crash, stopped cleanly (v1.0.6.0);
+- a per-user systemd unit without root (v1.0.6.0);
+- the desktop window, clipboard and tray under XFCE; processor-core pinning and priority; console capture;
+- a 24-hour idle run of the service: memory grew 3 MB, 16,736 status requests answered with none failed, and it
+  stopped cleanly (v1.0.7.5, recorded 2026-10-13).
+
+Still open: the desktop's file pickers, display scaling and other desktop environments (roadmap E-4).
+
+## Original validation (v0.3)
 
 ## Validated guest operating system
 
@@ -71,7 +87,7 @@ The reference environment successfully demonstrated:
 
 ## Support statement
 
-This is a **tested development reference**, not a declaration that all Ubuntu 24.04 systems or other Linux distributions are fully supported yet. Linux production support will be declared only after the v0.3 parity/hardening gates are complete.
+This is a **tested reference**, not a declaration that every Ubuntu 24.04 system or other Linux distribution is supported. The headless service is tested live as described above; the Linux desktop download is published once its remaining acceptance (E-4) is done.
 
 ## v0.3.0.1 lifecycle validation target
 

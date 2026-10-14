@@ -1,6 +1,6 @@
-<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
 # Roadmaps
 
-- [Product roadmap](PRODUCT_ROADMAP.md) — current and accepted baseline v1.0.0.0, the v1.1 MOD browser, and what stays open after 1.0; the authoritative forward plan.
+- [Product roadmap](PRODUCT_ROADMAP.md) — the current version and the accepted baseline (v1.1.0.0), what each release delivered with its evidence, the evidence still owed, and the backlog; the authoritative forward plan.
 - [Historical roadmap](../history/PRODUCT_ROADMAP_through_v0.8.25.0.md) — preserved planning history, including superseded plans.
 - [Windows backport registry](WINDOWS_BACKPORT_REGISTRY.md) — historical cross-platform tracking; consult the active roadmap for current priorities.

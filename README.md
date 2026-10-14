@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.9.3: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.1.0.0: file reviewed for this release (2026-10-12). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-67e8d5" alt="Code license: MIT"></a>
-  <img src="https://img.shields.io/badge/release-1.0-b9a4ff" alt="Release: 1.0">
+  <img src="https://img.shields.io/badge/release-1.1-b9a4ff" alt="Release: 1.1">
   <img src="https://img.shields.io/badge/desktop-Windows%20%7C%20Linux-80caff" alt="Desktop targets: Windows and Linux">
   <img src="https://img.shields.io/badge/language%20options-12-67e8d5" alt="12 language options">
 </p>
@@ -21,55 +21,42 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.0.9.3 · Accepted baseline: v1.0.0.0**
+**Current version: v1.1.0.0 · Accepted baseline: v1.1.0.0**
 
-MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
+MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. Downloads are on the Releases page; Windows is the packaged download, and Linux builds are available from source.
 
-## What's new in v1.0.9.3
+## What's new in v1.1.0.0
 
-**Level-gap scans.** A new anti-cheat rule reports a player who gains far more levels than their time on your server allows, with the numbers; it never kicks or bans, and it accounts for your experience rate.
+Everything added since 1.0, in one place. Each version's own notes are in [release-notes](release-notes/) and the [changelog](CHANGELOG.md).
 
-**Also new (v1.0.8.0): Ctrl+C fixed for a self-run service.** Running `mysttiq-server api-run` in a terminal, Ctrl+C now stops MystTiq and leaves the game running (it used to stop both), and it works from Git Bash too. **A cleaner inside**: the main window's code begins to be split into one piece per area, starting with the Console page; nothing looks different.
+**Your players and your world**
+- **Characters protected on join.** Each Steam player's character is checked as they join; a player handed a different character is turned away before a new one is made, and a player still loading is given time. Player names are unique to one account.
+- **Guarded save edits.** Remove or add an item in a player's saved inventory, or add or remove a Pal in their Pal box. Each edit is previewed and confirmed, runs only while the server is stopped, takes a checked safety backup first, and is verified before it replaces the world.
+- **Bases and Guilds** each have their own page: places with locations and workers, and people with a roster.
+- **Level-gap scans.** A new anti-cheat rule reports a player who gains far more levels than their time on your server allows, with the numbers. It only reports, and it accounts for your experience rate.
 
-**And (v1.0.7.5): an update stopped half way is no longer called installed.** If SteamCMD or MystTiq stops during an update, the server shows as Incomplete and is not started until Update runs again; closing the desktop no longer stops an update half way. **Backups wait for a save file in use** and name it if it stays in use. **Tested under load and over time**: simultaneous operations, 10,000 console lines, rapid tab switching, and a 24-hour idle run on Windows and Linux.
+**Your MODs**
+- **A MOD browser.** Search your Downloads folder, Thunderstore, CurseForge, GitHub releases or Nexus Mods and install a MOD's file in one step; each archive is checked before anything is written.
+- **Load order and profiles.** Set the order UE4SS loads your MODs in, and export your MOD setup to a file you can import on this or another server. The import shows what will change first, and the file never contains the MOD files.
+- **PalDefender and the UE4SS loader** show on the MODs page with their version and an on/off switch.
 
-**And (v1.0.7.4): secrets encrypted on disk.** The SMTP password, Discord and webhook URLs and the Discord bot token are encrypted on Windows (owner-only files on Linux); Server Doctor offers to delete the one plain copy kept during the move. **Every archive checked**: MOD installs, snapshot and backup restores and MystTiq's own update are refused before anything is written if they are too big, have too many files, or would fill the disk. **Secrets out of logs**: failed sends name only the address, password-style start arguments are hidden, and only an Admin can read the channel settings.
+**Running unattended**
+- **A frozen server is restarted**, with an alert; a healthy one is never touched.
+- **Proof that alerts arrive.** Every Discord, email and webhook send is recorded with its result, and the Dashboard warns when a channel has stopped delivering. A burst of alerts is queued and repeats are combined.
+- **One thing at a time.** Backups, updates and MOD changes can no longer overlap a server start or a save edit; scheduled work waits its turn.
+- **Nothing lost when a file is damaged.** If one of MystTiq's own lists can't be read, it loads the last good copy or refuses changes, and alerts you with a link to the repair.
+- **Tested under load and over time**: simultaneous operations, 10,000 console lines, and 24-hour idle runs on Windows and Linux.
 
-**And (v1.0.7.3): joining works again with the identity guard on.** A player still loading into the world was taken for one on the new-character screen and kicked; the guard now gives a loading player 90 seconds before it acts, and still kicks at once a player handed a different character. **A lighter console**: it only redraws when there are new lines, and a line's time no longer changes on every refresh.
+**Everyday administration**
+- **Update, on every row** of the Update Center, including MystTiq's own update, checked against its published checksums.
+- **Discord commands that answer.** The bot's start, stop, restart and backup commands now show their result instead of "did not respond".
+- **Progress you can see.** A server start shows its steps, backup scans show "12 of 47" and can be cancelled, and the connection line says what is wrong.
+- **Server > Launcher**, a clean **Exit** from the tray, the server's addresses on the Dashboard, and help when a start gets stuck.
+- **Secrets stay secret.** Saved passwords, webhook URLs and the bot token are encrypted on disk, and kept out of logs and exports.
+- **A read-only browser view** at `/web`, and a **Docker image** of the headless service.
+- **Buttons coloured by what they do**, the same on every page.
 
-**Also (v1.0.7.2): progress you can see.** A server start shows the step it is at (checking settings, launching, waiting for the game port) and how long, and a failed start says where it stopped. Verify All and the backups' world-day reading show "12 of 47", list any archive they can't read, and can be cancelled. A page opened while MystTiq is busy says what it is waiting for, and the connection line tells a stopped service from a rejected sign-in or a server whose REST API isn't answering.
-
-**Also new since 1.0 (v1.0.7.1): one thing at a time.** A backup, a server update, a MOD change or a PalDefender update can no longer run while the server is starting or a save is being edited: whichever comes second is refused with the reason, and scheduled automation simply waits its turn. **Calm during alert storms**: Discord, email and webhook sends are queued, the same alert repeated within 10 minutes is sent once with a count, and Alert Center shows what is waiting.
-
-**Also new since 1.0 (v1.0.7.0): nothing lost when a file is damaged.** If one of MystTiq's own lists (accounts, automation rules, kits, notification channels and the rest) can't be read, for example after a power cut, MystTiq loads its last good copy, or refuses changes so nothing is written over it, and alerts you with a link to the repair. **Errors you can see**: an unexpected error is recorded and shown instead of closing the app, and the service's background work logs its failures and stops cleanly.
-
-**Also new since 1.0 (v1.0.6.1): your character, not a new one.** If the MystTiq service on your PC is older than the app, the Dashboard now says so and replaces it in one click, so fixes like the identity guard are really running your server. No Launcher preset adds the start options that gave players a different character any more, and the identity alert names them when it happens.
-
-**Also new since 1.0 (v1.0.6.0): Pals in the Pal box.** On the Players page, add a Pal to a player's Pal box or remove one, with the same preview, confirmation, checked safety backup and verification as the inventory edits. An added Pal is a copy of one of its kind already in a Pal box, so its stats are the game's own. **MODs laid out as the game folder** (blueprint MODs for UE4SS, a PAK with scripts) now install where the game loads them.
-
-**Also new since 1.0 (v1.0.5.0): a MOD browser.** On the MOD Library page, search your Downloads folder, Thunderstore, CurseForge, GitHub releases you trust, or Nexus Mods, and install a MOD's file in one step. MystTiq downloads only from that source, shows what the archive holds, and asks first. Archives that would install wrongly are refused with the reason, and a UE4SS MOD packed in a folder now installs correctly.
-
-**Also new since 1.0 (v1.0.4.0): guarded save edits.** On the Players page, remove a stack from a player's saved inventory or add an item to it. Each edit is previewed and confirmed, runs only while the server is stopped, takes a checked safety backup first, and is verified before it replaces the world.
-
-**Also new since 1.0 (v1.0.3.0): a read-only browser view and a Docker image.** Open `/web` on your MystTiq service in any browser, sign in with your MystTiq account, and see each server's status, players and backups. It can't change anything. The headless service also comes as a Linux container image that keeps everything in one mounted folder and runs the Palworld server inside it.
-
-**Also new since 1.0 (v1.0.2.0): unattended reliability.** A server that is still running but has stopped answering is now restarted, with an alert, and a healthy one is never touched. Every alert MystTiq sends to Discord, email or a webhook is recorded with its result, and the Dashboard warns when a channel has not delivered for a week or its last send failed.
-
-**Also new since 1.0 (v1.0.1.0): Update, on every row.** Every component in the Update Center has an Update button. MystTiq downloads and checks its own new version; the server, UE4SS, PalDefender, pip and Save Tools update in place; the rest open their official download page. SteamCMD's is greyed out, because it updates itself.
-
-**Also new since 1.0 (v1.0.0.6): buttons and tags that say what they do.** Every button is coloured by what it does, the same on every page: red to delete or remove, purple to open, green to verify, blue to save or apply, teal to refresh, amber to restore or reset. Status tags are green when ready, amber when they need attention, red when something is missing and grey when switched off.
-
-**Also new since 1.0 (v1.0.0.5): Bases and Guilds, each in its own way.** Bases are places: where each one is, which Pals work there, and a button that shows it on the map. Guilds are people: a roster by name with the leader and who's online, and the bases they hold.
-
-**Also new since 1.0 (v1.0.0.4): restores you can check by the day.** Every backup shows its world's in-game day, and a restore tells you the day the world is now at. The Dashboard's day is current again. A restore no longer fails just because a file is briefly in use, and when something keeps it busy, MystTiq names it.
-
-**Also new since 1.0 (v1.0.0.3): PalDefender on the MODs page.** PalDefender and the UE4SS loader now show on the MODs page with their version, whether they loaded, and an on/off switch. If the UE4SS loader is off, your UE4SS MODs are marked as not loading. Dragging a ZIP onto the install box works again.
-
-**Also new since 1.0 (v1.0.0.2): unique player names.** Each player name now belongs to one account, with upper and lower case counted as the same name. A player who joins with someone else's name is turned away, and you can reserve or block names on the Players page.
-
-**Also new since 1.0 (v1.0.0.1): launcher, players and a cleaner exit.** A new **Server > Launcher** page with one-click troubleshooting presets, and servers that start just like a manual start. MystTiq now protects each Steam player's character when they join, helps when a start gets stuck (test without MODs, or find the MOD), lists the server's local and public addresses on the Dashboard, and shows Steam IDs on the Players page. Closing the window sends MystTiq to the tray; **Exit** stops everything.
-
-[Release notes](release-notes/v1.0.9.3.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
+[Release notes](release-notes/v1.1.0.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
 ## See your server at a glance
 
@@ -81,12 +68,12 @@ MystTiq 1.0 is the first stable release. Downloads are on the Releases page; Win
 
 | Work you need to do | Tools in MystTiq |
 | --- | --- |
-| **Run your servers** | Setup and adoption, start/stop/restart, updates, configuration, scheduling, diagnostics and crash recovery |
-| **Protect your worlds** | Backups, retention and restore checks, plus guarded world/player/guild repair and migration workflows |
-| **Look after your community** | Player tools, world map, kits, item/Pal tools, teleport points, whitelist, temporary bans and Discord integration; some actions require a supported mod/provider |
-| **Keep mods organized** | Inventory, enable/disable, health checks, rollback, UE4SS/Workshop support and Nexus integration |
+| **Run your servers** | Setup and adoption, start/stop/restart with visible steps, updates, configuration, the Launcher, scheduling, diagnostics, crash recovery and a frozen-server watchdog |
+| **Protect your worlds** | Backups with in-game days, retention and restore checks, guarded save edits (items and Pals), and guarded world/player/guild repair and migration workflows |
+| **Look after your community** | Player tools, protected characters and unique names, world map, kits, item/Pal tools, teleport points, whitelist, temporary bans, anti-cheat rules and Discord commands; some actions require a supported mod/provider |
+| **Keep mods organized** | A MOD browser, inventory, enable/disable, UE4SS load order, MOD profiles, health checks, rollback, UE4SS/Workshop/PalDefender support and Nexus integration |
 | **Understand the host** | CPU, memory, disk and network information, seven-day history, priority, eco mode, processor cores and game-level bandwidth settings |
-| **Share administration** | Named accounts, Viewer/Operator/Admin/Owner roles, scoped permissions, audit records and remote connections with pinned TLS; disabled controls name the role they need |
+| **Share administration** | Named accounts, Viewer/Operator/Admin/Owner roles, scoped permissions, audit records, a read-only browser view and remote connections with pinned TLS; disabled controls name the role they need |
 | **Make it comfortable** | Dark, Light, Midnight, High contrast and Follow system modes, density settings, themed artwork and 12 language options |
 
 Nexus download options depend on the account and provider. Game-level bandwidth settings are not OS-level traffic shaping.
@@ -120,56 +107,28 @@ Nexus download options depend on the account and provider. Game-level bandwidth 
 | `FullSource.zip` / GitHub source archives | Developers who want to build or inspect the source |
 | `SHA256SUMS.txt` | Checking that downloaded ZIPs match the release |
 
-Upgrading? Back up your server data, extract the new app into a fresh folder and follow that release's upgrade notes. Keep your existing configuration/data locations and verify the connection before resuming administration.
+Upgrading? Back up your server data, extract the new app into a fresh folder and follow that release's upgrade notes. Keep your existing configuration/data locations and verify the connection before resuming administration. If the Dashboard says the MystTiq service on your PC is older than the app, let it replace it.
 
-**Closing the desktop does not stop a managed server.** The headless service owns operations and persistent state; the desktop connects to it locally or remotely.
+**Closing the desktop does not stop a managed server.** The headless service owns operations and persistent state; the desktop connects to it locally or remotely. **Exit** from the tray stops everything.
 
 ## Languages and platform status
 
 English · 简体中文 · Español · Português (Brasil) · Русский · Deutsch · Français · 日本語 · 한국어 · Italiano · Polski · Türkçe
 
-- **Translation:** the desktop's labels and messages, the service's messages and the game's item/Pal names are available in all 12 languages, with English always available. Suggestions from native speakers are welcome.
+- **Translation:** the desktop's labels and messages, the service's messages and the game's item/Pal names are available in all 12 languages, with English always available. The 11 non-English languages are drafts; coverage does not establish translation quality, and suggestions from native speakers are welcome.
 - **Windows x64:** the release packages the desktop, matching service and native console helper.
-- **Linux x64:** the desktop and service build from the same source. Chinese/Japanese/Korean need suitable system fonts such as Noto Sans CJK.
+- **Linux x64:** the desktop and service build from the same source; the service runs as a systemd unit or in the Docker image. Chinese/Japanese/Korean need suitable system fonts such as Noto Sans CJK. See [Linux](docs/linux/README.md).
 
 ## Release history
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v1.0.9.3 | Current | Anti-cheat level-gap scans: a level gain far beyond the playtime behind it is reported (never an automatic kick) |
-| v1.0.9.2 | Previous | MOD load order (UE4SS) and MOD profiles you can export and import |
-| v1.0.9.1 | Earlier | Discord's start, stop, restart and backup commands answer with their result instead of "did not respond" |
-| v1.0.9.0 | Earlier | Every desktop command is reachable (three leftovers removed, a test keeps it so); the backlog is scheduled |
-| v1.0.8.9 | Earlier | Security and Fleet get their own code, which completes the main window's split; the Automation page's "no rules" card follows the rule list again |
-| v1.0.8.8 | Earlier | The Update Center, Server Doctor, the Crash Analyzer and the Diagnostics Center get their own code (the main window's split continues; nothing looks different) |
-| v1.0.8.7 | Earlier | Notifications, the Alert Center, Automation and Activity get their own code (the main window's split continues; nothing looks different) |
-| v1.0.8.6 | Earlier | The MOD pages get their own code (the main window's split continues; nothing looks different) |
-| v1.0.8.5 | Earlier | The Backups and Save Tools pages get their own code (the main window's split continues; nothing looks different) |
-| v1.0.8.4 | Earlier | The Configuration and Workspace pages get their own code (the main window's split continues; nothing looks different) |
-| v1.0.8.3 | Earlier | The Map and the world pages get their own code (the main window's split continues; nothing looks different) |
-| v1.0.8.2 | Earlier | The Players page gets its own code (the main window's split continues; nothing looks different) |
-| v1.0.8.1 | Earlier | The HOST page and the Dashboard get their own code (the main window's split continues; nothing looks different) |
-| v1.0.8.0 | Earlier | Ctrl+C on a self-run service no longer stops the game, and the main window's code begins to be split up (the Console page first) |
-| v1.0.7.5 | Earlier | An update stopped half way is no longer called installed, backups wait for a save file in use, and MystTiq is tested under load and over 24 hours |
-| v1.0.7.4 | Earlier | Saved passwords and webhook URLs are encrypted, every archive is checked before it is opened, and secrets stay out of logs |
-| v1.0.7.3 | Earlier | Players are no longer kicked by the identity guard while their character loads; the console only redraws what changed |
-| v1.0.7.2 | Earlier | Server starts show their steps, backup scans show progress and can be cancelled, and the connection line says what is wrong |
-| v1.0.7.1 | Earlier | Backups, updates and MOD changes can no longer overlap a server start or a save edit; a burst of alerts is queued and repeats combined |
-| v1.0.7.0 | Earlier | A damaged saved list can no longer wipe your accounts or settings; errors are recorded and shown instead of closing the app |
-| v1.0.6.1 | Earlier | Fixes a player getting a new character: an older MystTiq service still running is flagged and replaced in one click; no Launcher preset adds the options behind it |
-| v1.0.6.0 | Earlier | Add or remove a Pal in a player's Pal box; MODs laid out as the game folder (LogicMods, PAK with scripts) install |
-| v1.0.5.0 | Earlier | A MOD browser: your Downloads folder, Thunderstore, CurseForge, GitHub releases and Nexus Mods, each archive checked before it installs |
-| v1.0.4.0 | Earlier | Guarded save edits: remove or add an item in a player's saved inventory, with a checked backup first |
-| v1.0.3.0 | Earlier | A read-only browser view (status, players, backups) and a Docker image of the headless service |
-| v1.0.2.0 | Earlier | A frozen server is restarted; proof that alerts reach Discord, email and webhooks; the Linux service tested under systemd |
-| v1.0.1.0 | Earlier | Update on every Update Center row: MystTiq, the server, UE4SS, PalDefender, pip and Save Tools, or the official page |
-| v1.0.0.6 | Earlier | Buttons and tags coloured by what they do: Delete red, Open purple, Verify green, the same on every page |
-| v1.0.0.5 | Earlier | Bases and Guilds pages that look and work differently: places with locations and workers, people with a roster |
-| v1.0.0.4 | Earlier | Restores report the world's day; each backup shows its day; the Dashboard's day is current; restores no longer fail on a briefly busy file |
-| v1.0.0.3 | Earlier | PalDefender and the UE4SS loader on the MODs page; drag and drop fixed |
-| v1.0.0.2 | Earlier | Unique player names: each name belongs to one account, case ignored |
-| v1.0.0.1 | Earlier | Server > Launcher; characters protected on join; help for stuck starts; addresses on the Dashboard; a clean Exit from the tray |
-| v1.0.0.0 | Stable baseline | The first stable release |
+| v1.0.0.0 | Earlier baseline | The first stable release |
+| v1.0.0.1 – v1.0.6.1 | Delivered | Launcher and protected characters; unique names; PalDefender on the MODs page; restores by in-game day; Bases and Guilds; buttons by meaning; Update on every row; unattended reliability; browser view and Docker; guarded save edits; the MOD browser; Pals in the Pal box |
+| v1.0.7.0 – v1.0.7.5 | Delivered | Damaged files never overwritten; one operation at a time; visible progress; the identity guard waits for a loading player; encrypted secrets and checked archives; tested under load and for 24 hours |
+| v1.0.8.0 – v1.0.8.9 | Delivered | The main window's code split into one piece per page (nothing looks different); Ctrl+C on a self-run service leaves the game running |
+| v1.0.9.0 – v1.0.9.3 | Delivered | Every command reachable; Discord commands that answer; MOD load order and profiles; level-gap scans |
+| v1.1.0.0 | Current | Accepted baseline: a documentation pass over every page, and everything since 1.0 as one release |
 
 What comes next is in the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md). Release history lives in the [changelog](CHANGELOG.md).
 
