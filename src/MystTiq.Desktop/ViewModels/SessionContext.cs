@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.9: file reviewed for this release (2026-10-12).
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 
@@ -90,4 +90,11 @@ public abstract class PageViewModel : ViewModelBase
 
     /// <summary>Called by the window each time this page is navigated to.</summary>
     public virtual void OnShown() { }
+
+    /// <summary>
+    /// v1.0.8.9: tells this page's bindings that one of its properties changed. The window raising
+    /// <c>nameof(Page.Property)</c> on itself reached no binding (the property is the page's), which left the Automation
+    /// page's "no rules" card, the Workspace discovery status and the browser view's address stale.
+    /// </summary>
+    internal void Raise(string propertyName) => RaisePropertyChanged(propertyName);
 }

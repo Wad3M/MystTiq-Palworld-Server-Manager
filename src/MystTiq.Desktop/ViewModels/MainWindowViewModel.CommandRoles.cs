@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.9: file reviewed for this release (2026-10-12).
 using System.Windows.Input;
 using MystTiq.Desktop.Services;
 
@@ -16,8 +16,8 @@ public sealed partial class MainWindowViewModel
         var roles = new Dictionary<ICommand, string>(ReferenceEqualityComparer.Instance);
         void Need(string role, params ICommand?[] commands) { foreach (var c in commands) if (c is not null) roles[c] = role; }
         Need("Operator", Players._loadGameIdsCommand, Players.AddPlayerWarningCommand, Diagnostics.AnalyzeCrashesCommand,
-            Backups.ApplyBackupRetentionCommand, BackupAllCommand, Mods.BeginModSafeStartCommand, BeginStuckTestLoadCommand, Backups.CancelBackupScanCommand, Mods.CancelModSafeStartCommand,
-            Backups.CreateBackupCommand, Backups.DeleteBackupCommand, Alerts.DismissNotificationCommand, DoctorAllCommand,
+            Backups.ApplyBackupRetentionCommand, Fleet.BackupAllCommand, Mods.BeginModSafeStartCommand, BeginStuckTestLoadCommand, Backups.CancelBackupScanCommand, Mods.CancelModSafeStartCommand,
+            Backups.CreateBackupCommand, Backups.DeleteBackupCommand, Alerts.DismissNotificationCommand, Fleet.DoctorAllCommand,
             EnvironmentActionCommand, Diagnostics.FixDiagnosticCommand, ForceStopServerCommand, InstallMissingEnvironmentCommand,
             InstallPalworldServerFromWizardCommand, Alerts.MarkAllNotificationsReadCommand, Alerts.NotificationSelfTestCommand,
             PrepareForWorldImportCommand, Backups.PreviewBackupRetentionCommand, Diagnostics.RecheckDiagnosticCommand,
@@ -26,7 +26,7 @@ public sealed partial class MainWindowViewModel
             Backups.RestoreBackupCommand, Alerts.RunAutomationRuleNowCommand, Backups.RunSaveToolsSelfTestCommand, Players.SavePlayerNotesCommand,
             SaveWorldNowCommand, StartCommand, StopCommand, TerminateSelectedInstanceCommand, Players.ToggleKitsCommand,
             Alerts.ToggleNotificationPinCommand, Alerts.ToggleNotificationReadCommand, Players.ToggleTemporaryBansCommand,
-            Players.ToggleWhitelistCommand, UpdateAllCommand, UpdatePalworldServerCommand, Backups.VerifyAllBackupsCommand,
+            Players.ToggleWhitelistCommand, Fleet.UpdateAllCommand, UpdatePalworldServerCommand, Backups.VerifyAllBackupsCommand,
             Backups.VerifySelectedBackupCommand);
         Need("Admin", World.ApplyBaseRecoveryCommand, World.ApplyBaseTransferCommand, World.ApplyCharacterMigrationCommand,
             World.ApplyGuildOwnershipCommand, World.ApplyPalEditCommand, Configuration.ApplyStarterPresetCommand, Mods.ApplyUe4ssInstallCommand,
@@ -45,9 +45,9 @@ public sealed partial class MainWindowViewModel
             Alerts.SendTestNotificationCommand, Mods.SetSelectedModDescriptionSourceCommand, Map.TeleportPlayerToMeCommand,
             Map.TeleportToPlayerCommand, Alerts.ToggleAutomationRuleEnabledCommand, Players.UnbanSelectedPlayerCommand, Diagnostics.UpdateComponentCommand,
             Mods.UpdateSelectedModCommand, Players.WhisperSelectedPlayerCommand);
-        Need("Owner", CloneIntoNewServerCommand, CloneWorldCommand, ContinueFromInstallDirectoryCommand,
-            CreatePrincipalCommand, CreateUserCommand, DeleteUserCommand, ResetUserPasswordCommand,
-            RevokePrincipalCommand, ToggleUserEnabledCommand);
+        Need("Owner", CloneIntoNewServerCommand, Fleet.CloneWorldCommand, ContinueFromInstallDirectoryCommand,
+            Security.CreatePrincipalCommand, Security.CreateUserCommand, Security.DeleteUserCommand, Security.ResetUserPasswordCommand,
+            Security.RevokePrincipalCommand, Security.ToggleUserEnabledCommand);
         return roles;
     }
 

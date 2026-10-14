@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.9: file reviewed for this release (2026-10-12).
 using Avalonia.Media;
 
 namespace MystTiq.Desktop.Services;

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.8: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.9: file reviewed for this release (2026-10-12). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -3475,7 +3475,7 @@
               <TextBlock Text="{services:Tr ui.role_mapping_discord_role_id_mysttiq_role}" FontWeight="SemiBold"/>
               <Grid ColumnDefinitions="*,140,Auto" ColumnSpacing="10">
                 <TextBox Text="{Binding Alerts.NewRoleMappingDiscordRoleId}" PlaceholderText="{services:Tr ui.discord_role_id}"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="1" ItemsSource="{Binding MystTiqRoles}" SelectedItem="{Binding Alerts.NewRoleMappingRole}"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="1" ItemsSource="{Binding Security.MystTiqRoles}" SelectedItem="{Binding Alerts.NewRoleMappingRole}"/>
                 <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.add}" Command="{Binding Alerts.AddDiscordRoleMappingCommand}"/>
               </Grid>
               <ListBox AutomationProperties.Name="{services:Tr ui.role_mapping_discord_role_id_mysttiq_role}" ItemsSource="{Binding Alerts.DiscordRoleMappings}" SelectedItem="{Binding Alerts.SelectedRoleMapping}" MaxHeight="180">
@@ -3538,28 +3538,28 @@
         <!-- SECURITY -->
         <StackPanel IsVisible="{Binding IsSecurityPage}" Spacing="12">
           <!-- v0.7.42.0: Refresh moved to the ribbon. -->
-          <Border Classes="card accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.security}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText SecurityState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+          <Border Classes="card accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.security}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Security.SecurityState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
           <!-- v1.0.3.0 (roadmap W-1, owner decision D-1): a read-only view in any browser, signed in with a MystTiq account. -->
           <Border x:Name="BrowserViewCard" Classes="card accentSystem">
             <StackPanel Spacing="4">
               <TextBlock Text="{services:Tr ui.browser_view}" FontSize="17" FontWeight="SemiBold"/>
               <TextBlock Text="{services:Tr ui.browser_view_hint}" Classes="muted" TextWrapping="Wrap"/>
-              <SelectableTextBlock Text="{Binding BrowserViewUrlVerbatim}" FontFamily="Consolas, monospace"/>
+              <SelectableTextBlock Text="{Binding Security.BrowserViewUrlVerbatim}" FontFamily="Consolas, monospace"/>
             </StackPanel>
           </Border>
-          <Border Classes="card accentSystem" IsVisible="{Binding HasLastCreatedPrincipalToken}"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.new_token_shown_once_copy_it_now}" FontWeight="SemiBold" Foreground="{DynamicResource AmberBrush}"/><SelectableTextBlock Text="{Binding LastCreatedPrincipalToken}" FontFamily="Consolas, monospace"/></StackPanel></Border>
+          <Border Classes="card accentSystem" IsVisible="{Binding Security.HasLastCreatedPrincipalToken}"><StackPanel Spacing="6"><TextBlock Text="{services:Tr ui.new_token_shown_once_copy_it_now}" FontWeight="SemiBold" Foreground="{DynamicResource AmberBrush}"/><SelectableTextBlock Text="{Binding Security.LastCreatedPrincipalToken}" FontFamily="Consolas, monospace"/></StackPanel></Border>
           <Border Classes="card accentSystem" IsVisible="{Binding CanManagePrincipals}" IsEnabled="{Binding CanManagePrincipals}">
             <StackPanel Spacing="10">
               <TextBlock Text="{services:Tr ui.create_principal}" FontSize="17" FontWeight="SemiBold"/>
-              <Grid ColumnDefinitions="150,*" ColumnSpacing="10"><TextBox Text="{Binding NewPrincipalName}" PlaceholderText="{services:Tr ui.name}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="1" ItemsSource="{Binding MystTiqRoles}" SelectedItem="{Binding NewPrincipalRole}"/></Grid>
-              <Button Classes="apply" Content="{services:Tr ui.create}" HorizontalAlignment="Left" Command="{Binding CreatePrincipalCommand}"/>
+              <Grid ColumnDefinitions="150,*" ColumnSpacing="10"><TextBox Text="{Binding Security.NewPrincipalName}" PlaceholderText="{services:Tr ui.name}"/><ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="1" ItemsSource="{Binding Security.MystTiqRoles}" SelectedItem="{Binding Security.NewPrincipalRole}"/></Grid>
+              <Button Classes="apply" Content="{services:Tr ui.create}" HorizontalAlignment="Left" Command="{Binding Security.CreatePrincipalCommand}"/>
             </StackPanel>
           </Border>
           <Border Classes="card accentSystem"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.principals}" FontSize="17" FontWeight="SemiBold"/>
-            <ListBox AutomationProperties.Name="{services:Tr ui.principals}" ItemsSource="{Binding Principals}" SelectedItem="{Binding SelectedPrincipal}" MaxHeight="360"><ListBox.ItemTemplate><DataTemplate x:DataType="models:MystTiqPrincipalDto"><Border Classes="statuscard accentSystem" Margin="0,3"><Grid ColumnDefinitions="*,120,Auto" ColumnSpacing="10"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{services:TrText Role}"/><TextBlock Grid.Column="2" Text="{services:TrText IsExpired}"/></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
-            <Button Classes="danger" Content="{services:Tr ui.revoke_selected}" HorizontalAlignment="Left" Command="{Binding RevokePrincipalCommand}" IsEnabled="{Binding CanManagePrincipals}"/>
+            <ListBox AutomationProperties.Name="{services:Tr ui.principals}" ItemsSource="{Binding Security.Principals}" SelectedItem="{Binding Security.SelectedPrincipal}" MaxHeight="360"><ListBox.ItemTemplate><DataTemplate x:DataType="models:MystTiqPrincipalDto"><Border Classes="statuscard accentSystem" Margin="0,3"><Grid ColumnDefinitions="*,120,Auto" ColumnSpacing="10"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{services:TrText Role}"/><TextBlock Grid.Column="2" Text="{services:TrText IsExpired}"/></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+            <Button Classes="danger" Content="{services:Tr ui.revoke_selected}" HorizontalAlignment="Left" Command="{Binding Security.RevokePrincipalCommand}" IsEnabled="{Binding CanManagePrincipals}"/>
           </StackPanel></Border>
-          <!-- v0.7.114.0: named user accounts. Principals above are tokens for scripts and integrations;
+          <!-- v0.7.114.0: named user accounts. Security.Principals above are tokens for scripts and integrations;
                these are people, who sign in with a password on the Settings page. Owner only. -->
           <Border Classes="card accentSystem" IsVisible="{Binding CanManagePrincipals}" IsEnabled="{Binding CanManagePrincipals}">
             <StackPanel Spacing="10">
@@ -3567,14 +3567,14 @@
               <TextBlock Text="{services:Tr ui.people_who_sign_in_with_a_username_and_password_4ca134}"
                          Classes="muted" TextWrapping="Wrap"/>
               <Grid ColumnDefinitions="*,*,130,*" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
-                <TextBox Text="{Binding NewUserUsername}" PlaceholderText="{services:Tr ui.username}"/>
-                <TextBox Grid.Column="1" Text="{Binding NewUserDisplayName}" PlaceholderText="{services:Tr ui.display_name_optional}"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="2" ItemsSource="{Binding MystTiqRoles}" SelectedItem="{Binding NewUserRole}" HorizontalAlignment="Stretch"/>
-                <TextBox Grid.Column="3" Text="{Binding NewUserScope}" PlaceholderText="{services:Tr ui.only_this_server_id_optional}"/>
-                <TextBox Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding NewUserPassword}" PasswordChar="●" PlaceholderText="{services:Tr ui.password_at_least_10_characters}"/>
-                <Button Grid.Row="1" Grid.Column="2" Classes="apply" Content="{services:Tr ui.create_account}" Command="{Binding CreateUserCommand}"/>
+                <TextBox Text="{Binding Security.NewUserUsername}" PlaceholderText="{services:Tr ui.username}"/>
+                <TextBox Grid.Column="1" Text="{Binding Security.NewUserDisplayName}" PlaceholderText="{services:Tr ui.display_name_optional}"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.a11y_role}" Grid.Column="2" ItemsSource="{Binding Security.MystTiqRoles}" SelectedItem="{Binding Security.NewUserRole}" HorizontalAlignment="Stretch"/>
+                <TextBox Grid.Column="3" Text="{Binding Security.NewUserScope}" PlaceholderText="{services:Tr ui.only_this_server_id_optional}"/>
+                <TextBox Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Security.NewUserPassword}" PasswordChar="●" PlaceholderText="{services:Tr ui.password_at_least_10_characters}"/>
+                <Button Grid.Row="1" Grid.Column="2" Classes="apply" Content="{services:Tr ui.create_account}" Command="{Binding Security.CreateUserCommand}"/>
               </Grid>
-              <ListBox AutomationProperties.Name="{services:Tr ui.user_accounts}" ItemsSource="{Binding UserAccounts}" SelectedItem="{Binding SelectedUserAccount}" MaxHeight="300">
+              <ListBox AutomationProperties.Name="{services:Tr ui.user_accounts}" ItemsSource="{Binding Security.UserAccounts}" SelectedItem="{Binding Security.SelectedUserAccount}" MaxHeight="300">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="models:UserAccountDto">
                     <Grid ColumnDefinitions="*,*,90,120,*" ColumnSpacing="10">
@@ -3588,12 +3588,12 @@
                 </ListBox.ItemTemplate>
               </ListBox>
               <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                <TextBox Text="{Binding UserResetPassword}" PasswordChar="●" PlaceholderText="{services:Tr ui.new_password_for_the_selected_account}"/>
-                <Button Classes="caution" Grid.Column="1" Content="{services:Tr ui.reset_password}" Command="{Binding ResetUserPasswordCommand}" ToolTip.Tip="{services:Tr ui.sets_a_new_password_and_signs_the_account_out_ev_510d9d}"/>
-                <Button Classes="caution" Grid.Column="2" Content="{services:Tr ui.enable_disable}" Command="{Binding ToggleUserEnabledCommand}" ToolTip.Tip="{services:Tr ui.a_disabled_account_cannot_sign_in_and_its_open_s_c22536}"/>
-                <Button Grid.Column="3" Classes="danger" Content="{services:Tr ui.delete}" Command="{Binding DeleteUserCommand}"/>
+                <TextBox Text="{Binding Security.UserResetPassword}" PasswordChar="●" PlaceholderText="{services:Tr ui.new_password_for_the_selected_account}"/>
+                <Button Classes="caution" Grid.Column="1" Content="{services:Tr ui.reset_password}" Command="{Binding Security.ResetUserPasswordCommand}" ToolTip.Tip="{services:Tr ui.sets_a_new_password_and_signs_the_account_out_ev_510d9d}"/>
+                <Button Classes="caution" Grid.Column="2" Content="{services:Tr ui.enable_disable}" Command="{Binding Security.ToggleUserEnabledCommand}" ToolTip.Tip="{services:Tr ui.a_disabled_account_cannot_sign_in_and_its_open_s_c22536}"/>
+                <Button Grid.Column="3" Classes="danger" Content="{services:Tr ui.delete}" Command="{Binding Security.DeleteUserCommand}"/>
               </Grid>
-              <TextBlock Text="{services:TrText UserAccountsState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
+              <TextBlock Text="{services:TrText Security.UserAccountsState}" Foreground="{DynamicResource VioletBrush}" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
         </StackPanel>
@@ -3601,20 +3601,20 @@
         <!-- FLEET -->
         <StackPanel IsVisible="{Binding IsFleetPage}" Spacing="12">
           <!-- v0.7.42.0: Refresh moved to the ribbon. -->
-          <Border Classes="card accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.fleet}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText FleetState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+          <Border Classes="card accentSystem"><StackPanel Spacing="4"><TextBlock Text="{services:Tr ui.fleet}" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Fleet.FleetState}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
           <Border Classes="card accentSystem" IsVisible="{Binding CanOperate}" IsEnabled="{Binding CanOperate}">
             <StackPanel Spacing="10">
               <TextBlock Text="{services:Tr ui.fleet_actions}" FontSize="17" FontWeight="SemiBold"/>
               <TextBlock Text="{services:Tr ui.runs_across_every_configured_server_profile_stag_f49f53}" Classes="muted" TextWrapping="Wrap"/>
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="apply" Content="{services:Tr ui.backup_all}" Command="{Binding BackupAllCommand}"/>
-                <Button Classes="verify" Content="{services:Tr ui.doctor_all}" Command="{Binding DoctorAllCommand}"/>
-                <Button Classes="apply" Content="{services:Tr ui.update_all}" Command="{Binding UpdateAllCommand}"/>
+                <Button Classes="apply" Content="{services:Tr ui.backup_all}" Command="{Binding Fleet.BackupAllCommand}"/>
+                <Button Classes="verify" Content="{services:Tr ui.doctor_all}" Command="{Binding Fleet.DoctorAllCommand}"/>
+                <Button Classes="apply" Content="{services:Tr ui.update_all}" Command="{Binding Fleet.UpdateAllCommand}"/>
               </StackPanel>
             </StackPanel>
           </Border>
           <Border Classes="card accentSystem"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.server_profiles}" FontSize="17" FontWeight="SemiBold"/>
-            <ListBox AutomationProperties.Name="{services:Tr ui.server_profiles}" ItemsSource="{Binding FleetServers}" MaxHeight="360"><ListBox.ItemTemplate><DataTemplate x:DataType="models:ServerProfileSummaryDto"><Border Classes="statuscard accentSystem" Margin="0,3"><Grid ColumnDefinitions="12,*,140,Auto" ColumnSpacing="10"><Ellipse Width="8" Height="8" Fill="{Binding StatusDotColorKey, Converter={x:Static converters:SemanticStatusColorConverter.Instance}}" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Grid.Column="2" Text="{services:TrText Runtime}" Classes="muted"/><TextBlock Grid.Column="3" Text="{services:TrText StatusText}"/></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+            <ListBox AutomationProperties.Name="{services:Tr ui.server_profiles}" ItemsSource="{Binding Fleet.FleetServers}" MaxHeight="360"><ListBox.ItemTemplate><DataTemplate x:DataType="models:ServerProfileSummaryDto"><Border Classes="statuscard accentSystem" Margin="0,3"><Grid ColumnDefinitions="12,*,140,Auto" ColumnSpacing="10"><Ellipse Width="8" Height="8" Fill="{Binding StatusDotColorKey, Converter={x:Static converters:SemanticStatusColorConverter.Instance}}" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Grid.Column="2" Text="{services:TrText Runtime}" Classes="muted"/><TextBlock Grid.Column="3" Text="{services:TrText StatusText}"/></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
           </StackPanel></Border>
           <!-- v0.7.81.0: turned into an explicit step-by-step workflow, direct request: "the clone
                world option in fleet should be a workflow with drop down options to clarify what it
@@ -3649,31 +3649,31 @@
               <StackPanel Spacing="3">
                 <TextBlock Text="{services:Tr ui.new_profile}" Classes="muted" FontSize="10"/>
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                  <TextBox PlaceholderText="{services:Tr ui.new_profile_id_e_g_world_2}" Text="{Binding CloneNewProfileId}"/>
-                  <TextBox Grid.Column="1" PlaceholderText="{services:Tr ui.display_name_optional}" Text="{Binding CloneNewProfileName}"/>
+                  <TextBox PlaceholderText="{services:Tr ui.new_profile_id_e_g_world_2}" Text="{Binding Fleet.CloneNewProfileId}"/>
+                  <TextBox Grid.Column="1" PlaceholderText="{services:Tr ui.display_name_optional}" Text="{Binding Fleet.CloneNewProfileName}"/>
                 </Grid>
               </StackPanel>
 
               <StackPanel Spacing="3">
                 <TextBlock Text="{services:Tr ui.port_offset}" Classes="muted" FontSize="10"/>
                 <TextBlock Text="{services:Tr ui.added_to_the_source_server_s_own_ports_game_quer_d5bd9e}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.port_offset}" ItemsSource="{Binding CloneWorldPortOffsetOptions}" SelectedItem="{Binding CloneWorldPortOffset}" HorizontalAlignment="Left" MinWidth="140"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.port_offset}" ItemsSource="{Binding Fleet.CloneWorldPortOffsetOptions}" SelectedItem="{Binding Fleet.CloneWorldPortOffset}" HorizontalAlignment="Left" MinWidth="140"/>
               </StackPanel>
 
-              <CheckBox Content="{services:Tr ui.i_understand_this_copies_the_entire_server_insta_704aeb}" IsChecked="{Binding CloneWorldConfirmed}"/>
-              <Button Classes="apply" Content="{services:Tr ui.clone}" Command="{Binding CloneWorldCommand}" HorizontalAlignment="Left"/>
-              <TextBlock Text="{services:TrText CloneWorldStatusText}" Classes="muted" TextWrapping="Wrap"/>
+              <CheckBox Content="{services:Tr ui.i_understand_this_copies_the_entire_server_insta_704aeb}" IsChecked="{Binding Fleet.CloneWorldConfirmed}"/>
+              <Button Classes="apply" Content="{services:Tr ui.clone}" Command="{Binding Fleet.CloneWorldCommand}" HorizontalAlignment="Left"/>
+              <TextBlock Text="{services:TrText Fleet.CloneWorldStatusText}" Classes="muted" TextWrapping="Wrap"/>
               <!-- v0.7.84.0: closes the previously-undisclosed "needs a restart to come online" gap
                    the wizard's own Clone path already fixed in v0.7.83.0, offered here as an
                    explicit button rather than fired automatically, since this page's connection is
                    already actively in use. -->
-              <Button Classes="caution" Content="{services:Tr ui.restart_mysttiq_now_to_bring_it_online}" Command="{Binding RestartAfterCloneCommand}" HorizontalAlignment="Left" IsVisible="{Binding CloneWorldNeedsRestart}"/>
+              <Button Classes="caution" Content="{services:Tr ui.restart_mysttiq_now_to_bring_it_online}" Command="{Binding Fleet.RestartAfterCloneCommand}" HorizontalAlignment="Left" IsVisible="{Binding Fleet.CloneWorldNeedsRestart}"/>
               <!-- v0.9.6.0: the clone's game port is new, so it needs its own firewall rule. -->
-              <TextBlock Text="{services:Tr ui.clone_firewall_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding CloneWorldNeedsRestart}"/>
+              <TextBlock Text="{services:Tr ui.clone_firewall_hint}" Classes="muted" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding Fleet.CloneWorldNeedsRestart}"/>
             </StackPanel>
           </Border>
           <Border Classes="card accentSystem"><StackPanel Spacing="8"><TextBlock Text="{services:Tr ui.last_fleet_action_results}" FontSize="17" FontWeight="SemiBold"/>
-            <ListBox AutomationProperties.Name="{services:Tr ui.last_fleet_action_results}" ItemsSource="{Binding FleetActionResults}" MaxHeight="240"><ListBox.ItemTemplate><DataTemplate x:DataType="models:FleetActionResultDto"><Border Classes="statuscard accentSystem" Margin="0,3"><StackPanel Spacing="2"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><TextBlock Text="{Binding ServerProfileId}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{services:TrText Success}"/></Grid><TextBlock Text="{services:TrText Error}" Classes="muted" Foreground="{DynamicResource RedBrush}" TextWrapping="Wrap" IsVisible="{Binding !Success}"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+            <ListBox AutomationProperties.Name="{services:Tr ui.last_fleet_action_results}" ItemsSource="{Binding Fleet.FleetActionResults}" MaxHeight="240"><ListBox.ItemTemplate><DataTemplate x:DataType="models:FleetActionResultDto"><Border Classes="statuscard accentSystem" Margin="0,3"><StackPanel Spacing="2"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><TextBlock Text="{Binding ServerProfileId}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{services:TrText Success}"/></Grid><TextBlock Text="{services:TrText Error}" Classes="muted" Foreground="{DynamicResource RedBrush}" TextWrapping="Wrap" IsVisible="{Binding !Success}"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
           </StackPanel></Border>
         </StackPanel>
 
@@ -4226,7 +4226,7 @@
                 <TextBlock Grid.Row="1" Text="{services:Tr ui.new_server_id}" VerticalAlignment="Center"/>
                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewServerCloneTargetId}" PlaceholderText="{services:Tr ui.e_g_world_2}"/>
                 <TextBlock Grid.Row="2" Text="{services:Tr ui.port_offset}" VerticalAlignment="Center"/>
-                <ComboBox AutomationProperties.Name="{services:Tr ui.port_offset}" Grid.Row="2" Grid.Column="1" ItemsSource="{Binding CloneWorldPortOffsetOptions}" SelectedItem="{Binding CloneWorldPortOffset}" HorizontalAlignment="Left" MinWidth="140"/>
+                <ComboBox AutomationProperties.Name="{services:Tr ui.port_offset}" Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Fleet.CloneWorldPortOffsetOptions}" SelectedItem="{Binding Fleet.CloneWorldPortOffset}" HorizontalAlignment="Left" MinWidth="140"/>
               </Grid>
               <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
                 <Button Classes="plain" Content="{services:Tr ui.back}" Command="{Binding WizardBackCommand}"/>

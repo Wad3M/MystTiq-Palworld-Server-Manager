@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.9: file reviewed for this release (2026-10-12).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -112,21 +112,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _discoveryExtraRanges = string.Empty;
     private DiscoveredMystTiqService? _selectedDiscoveredService;
     private string _lifecycleStatusText = "No lifecycle operation has been requested.";
-    private string _securityState = "Open Security to load API principals.";
-    private MystTiqPrincipalDto? _selectedPrincipal;
     private MystTiqPrincipalDto? _currentPrincipal;
-    private string _newPrincipalName = string.Empty;
-    private string _newPrincipalRole = "Operator";
-    private string? _lastCreatedPrincipalToken;
-    private string _fleetState = "Open Fleet to list configured server profiles.";
     private double _serverSetupTableMaxHeight = 405;
-    private string _cloneNewProfileId = string.Empty;
-    private string _cloneNewProfileName = string.Empty;
-    private string _cloneWorldStatusText = "Clones this connection's server (binaries + world) into a new profile. Requires the source server to be stopped.";
-    private bool _cloneWorldNeedsRestart;
-    private string? _cloneWorldNewProfileId;
-    private int _cloneWorldPortOffset = 100;
-    private bool _cloneWorldConfirmed;
     private string _environmentHealthText = "Checking…";
     private string _setupOperationState = "IDLE";
     private string _setupOperationTitle = "No operation currently running";
@@ -176,7 +163,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         Mods = new ModsViewModel(Session, _nexus, _credentialStore, Navigate);
         Alerts = new AlertsViewModel(Session, Navigate);
         Diagnostics = new DiagnosticsViewModel(Session, Navigate, Mods, UpdatePalworldServerAsync, UpdatePipAsync, RefreshAllInstancesAsync, () => DistributionDetail);
-        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace, Backups, Mods, Alerts, Diagnostics];
+        Security = new SecurityViewModel(Session, ApplyCurrentPrincipal, () => CanManagePrincipals);
+        Fleet = new FleetViewModel(Session, _localDiscovery, _localBootstrapper);
+        _pages = [Logs, Host, Dashboard, Players, Map, World, Configuration, Workspace, Backups, Mods, Alerts, Diagnostics, Security, Fleet];
         // v1.0.8.6 (roadmap C-6): the Dashboard's stuck-start panel shows Safe Start while it runs and its result afterwards.
         Mods.SafeStartStatusChanged += () =>
         {
@@ -241,9 +230,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RconConnectCommand = new AsyncCommand(ConnectRconAsync, () => !IsBusy && ManagementApiConnected);
         RconDisconnectCommand = new RelayCommand(DisconnectRcon);
         RconSendCommand = new AsyncCommand(SendRconCommandAsync, () => !IsBusy && ManagementApiConnected && !string.IsNullOrWhiteSpace(RconCommandText));
-        RefreshSecurityCommand = new AsyncCommand(RefreshSecurityAsync, () => !IsBusy);
-        CreatePrincipalCommand = new AsyncCommand(CreatePrincipalAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(NewPrincipalName));
-        RevokePrincipalCommand = new AsyncCommand(RevokePrincipalAsync, () => !IsBusy && SelectedPrincipal is not null);
         // v0.7.111.0: CommandParameter is the mute length in minutes as text ("60", "480", "1440", "0" = unmute).
         // v0.8.4.0: same shape for pausing outside delivery ("0" resumes).
         // v1.0.0.5: Bases and Guilds link to each other and to the map (MainWindowViewModel.WorldCards.cs).
@@ -252,12 +238,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OpenGuildBaseCommand = new RelayCommand<string>(OpenGuildBase);
         // v1.0.0.4: the save-folder access fix (MainWindowViewModel.SaveAccess.cs).
         // v1.0.0.2: unique player names (MainWindowViewModel.NameGuard.cs).
-        RefreshFleetCommand = new AsyncCommand(RefreshFleetAsync, () => !IsBusy);
-        CloneWorldCommand = new AsyncCommand(CloneWorldAsync, () => !IsBusy && ManagementApiConnected && !string.IsNullOrWhiteSpace(CloneNewProfileId) && CloneWorldConfirmed);
-        RestartAfterCloneCommand = new AsyncCommand(RestartAfterCloneAsync, () => !IsBusy && CloneWorldNeedsRestart);
-        BackupAllCommand = new AsyncCommand(BackupAllAsync, () => !IsBusy && ManagementApiConnected);
-        DoctorAllCommand = new AsyncCommand(DoctorAllAsync, () => !IsBusy && ManagementApiConnected);
-        UpdateAllCommand = new AsyncCommand(UpdateAllAsync, () => !IsBusy && ManagementApiConnected);
         RefreshPlayersCommand = new AsyncCommand(RefreshPlayersPageAsync, () => !IsBusy);
         SaveWorldNowCommand = new AsyncCommand(SaveWorldNowAsync, () => !IsBusy);
         // v0.7.112.0: real now (PalDefender over RCON, the Starter Players.Kits provider), no longer hardcoded off.
@@ -285,7 +265,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RefreshPlayerGuildExplorerCommand = new AsyncCommand(RefreshPlayerGuildExplorerAsync, () => !IsBusy);
         RefreshPalsCommand = new AsyncCommand(RefreshPalsAsync, () => !IsBusy);
         // The "nothing is scheduled" hint follows the collection, so it disappears the moment a rule is created.
-        Alerts.AutomationRules.CollectionChanged += (_, _) => RaisePropertyChanged(nameof(Alerts.HasNoAutomationRules));
+        Alerts.AutomationRules.CollectionChanged += (_, _) => Alerts.Raise(nameof(Alerts.HasNoAutomationRules));
         Map.LoadMapBackgroundPreference();
         Configuration.RebuildConfigPresetList();
         // v1.0.0.1: the stuck-start protocol's test load, and clearing a finished test from the Dashboard.
@@ -739,7 +719,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(IsBusy));
         RaisePropertyChanged(nameof(ServerIsRunning));
         RaisePropertyChanged(nameof(IsLocalProfile));
-        RaisePropertyChanged(nameof(BrowserViewUrlVerbatim));
+        Security.Raise(nameof(Security.BrowserViewUrlVerbatim));
         RaisePropertyChanged(nameof(IsCreatingNewProfile));
         RaisePropertyChanged(nameof(IsWizardStep1));
         RaisePropertyChanged(nameof(IsWizardStepWorldSource));
@@ -877,7 +857,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         tab.Profile = updated;
         RaisePropertyChanged(nameof(SelectedProfile));
         RaisePropertyChanged(nameof(IsLocalProfile));
-        RaisePropertyChanged(nameof(BrowserViewUrlVerbatim));
+        Security.Raise(nameof(Security.BrowserViewUrlVerbatim));
         RaisePropertyChanged(nameof(IsCreatingNewProfile));
         RaisePropertyChanged(nameof(IsWizardStep1));
         RaisePropertyChanged(nameof(IsWizardStepWorldSource));
@@ -931,10 +911,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<PlayerSnapshotDto> OnlinePlayers { get; } = [];
     public ObservableCollection<string> RconOutputLines { get; } = [];
     public IReadOnlyList<string> RconPresetOptions { get; } = ["Info", "ShowPlayers", "Save", "Broadcast Server maintenance message", "Shutdown 60 Server restarting"];
-    public ObservableCollection<MystTiqPrincipalDto> Principals { get; } = [];
-    public ObservableCollection<ServerProfileSummaryDto> FleetServers { get; } = [];
-    public ObservableCollection<FleetActionResultDto> FleetActionResults { get; } = [];
-    public IReadOnlyList<string> MystTiqRoles { get; } = ["Viewer", "Operator", "Admin", "Owner"];
     public ObservableCollection<MetricHistoryPoint> MetricHistory { get; } = [];
     public ObservableCollection<HistoricalMetricPointDto> ResourceHistory { get; } = [];
     public IReadOnlyList<string> HistoryRanges { get; } = ["1 Hour", "6 Hours", "24 Hours", "7 Days", "30 Days"];
@@ -973,7 +949,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // and IsCreatingNewProfile (which gates the relocated "In-Game Server Defaults" card)
             // depends on exactly that transition, not just a real profile being selected.
             RaisePropertyChanged(nameof(IsLocalProfile));
-            RaisePropertyChanged(nameof(BrowserViewUrlVerbatim));
+            Security.Raise(nameof(Security.BrowserViewUrlVerbatim));
             RaisePropertyChanged(nameof(IsCreatingNewProfile));
             RaisePropertyChanged(nameof(IsWizardStep1));
             RaisePropertyChanged(nameof(IsWizardStepWorldSource));
@@ -1179,9 +1155,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         (TerminateSelectedInstanceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         // v0.8.14.0: the Fleet Actions buttons also depend on the connection, but were never re-evaluated, so they
         // stayed greyed out after connecting (found in the live check for this version).
-        (BackupAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (DoctorAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        (UpdateAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (Fleet.BackupAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (Fleet.DoctorAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        (Fleet.UpdateAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
     }
     // Set from the real status poll's ServerStatusDto.Ready (see ApplyStatus), not
     // parsed from ServerState's display text -- Start greys out while already running, Stop/
@@ -1207,13 +1183,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string LifecycleStatusText { get => _lifecycleStatusText; private set => SetField(ref _lifecycleStatusText, value); }
 
 
-    public string SecurityState { get => _securityState; private set => SetField(ref _securityState, value); }
-    public MystTiqPrincipalDto? SelectedPrincipal { get => _selectedPrincipal; set => SetField(ref _selectedPrincipal, value); }
     public MystTiqPrincipalDto? CurrentPrincipal { get => _currentPrincipal; private set => SetField(ref _currentPrincipal, value); }
-    public string NewPrincipalName { get => _newPrincipalName; set { if (SetField(ref _newPrincipalName, value ?? string.Empty)) (CreatePrincipalCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
-    public string NewPrincipalRole { get => _newPrincipalRole; set => SetField(ref _newPrincipalRole, value ?? "Operator"); }
-    public string? LastCreatedPrincipalToken { get => _lastCreatedPrincipalToken; private set { if (SetField(ref _lastCreatedPrincipalToken, value)) RaisePropertyChanged(nameof(HasLastCreatedPrincipalToken)); } }
-    public bool HasLastCreatedPrincipalToken => !string.IsNullOrEmpty(LastCreatedPrincipalToken);
     // The visible client-side payoff of RBAC: buttons a Viewer/Operator principal cannot use are disabled.
     // v0.8.14.0: one rule for every card (RoleAccess): hidden when the role cannot use it at all, read-only when it can
     // only read. CanOperate is new; Fleet Actions (Operator on the server) was wrongly gated at Admin.
@@ -1226,35 +1196,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
 
 
-    public string FleetState { get => _fleetState; private set => SetField(ref _fleetState, value); }
-    public string CloneNewProfileId { get => _cloneNewProfileId; set { if (SetField(ref _cloneNewProfileId, value ?? string.Empty)) (CloneWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
-    public string CloneNewProfileName { get => _cloneNewProfileName; set => SetField(ref _cloneNewProfileName, value ?? string.Empty); }
-    public string CloneWorldStatusText { get => _cloneWorldStatusText; private set => SetField(ref _cloneWorldStatusText, value); }
-    // v0.7.84.0: a successful clone here previously left the "needs a MystTiq service restart to
-    // come online" text as the only signal, with no in-app way to act on it (the same
-    // previously-undisclosed gap closed for the wizard's own Clone path in v0.7.83.0). Unlike the
-    // wizard's brand-new, not-yet-in-use tab, this page's connection is already actively in use, so
-    // the restart is offered as an explicit button rather than fired automatically -- the user
-    // decides when it's convenient to take the whole local service down briefly.
-    public bool CloneWorldNeedsRestart
-    {
-        get => _cloneWorldNeedsRestart;
-        private set
-        {
-            if (!SetField(ref _cloneWorldNeedsRestart, value)) return;
-            (RestartAfterCloneCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        }
-    }
-    public string? CloneWorldNewProfileId { get => _cloneWorldNewProfileId; private set => SetField(ref _cloneWorldNewProfileId, value); }
-    public ICommand RestartAfterCloneCommand { get; }
-    // v0.7.81.0: Clone World turned into an explicit step-by-step workflow (direct request: "should
-    // be a workflow with drop down options to clarify what it is doing"). The source was always
-    // implicitly "whichever profile this tab is connected to" (SelectedProfile) -- now labeled
-    // explicitly rather than left unstated. PortOffset already existed on WorldCloneRequestDto but
-    // was never exposed in the UI at all (the server just used its own default); now a real dropdown.
-    public IReadOnlyList<int> CloneWorldPortOffsetOptions { get; } = [100, 200, 300, 400];
-    public int CloneWorldPortOffset { get => _cloneWorldPortOffset; set => SetField(ref _cloneWorldPortOffset, value); }
-    public bool CloneWorldConfirmed { get => _cloneWorldConfirmed; set { if (SetField(ref _cloneWorldConfirmed, value)) (CloneWorldCommand as AsyncCommand)?.RaiseCanExecuteChanged(); } }
 
     public string ConnectionState
     {
@@ -1517,16 +1458,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // session even after IsBusy went back to false (nothing else ever re-raised these two).
             (GenerateServerNameCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (Configuration.SaveCurrentAsPresetCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (RestartAfterCloneCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Fleet.RestartAfterCloneCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RestartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (Diagnostics.RestartFromDiagnosticsCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (ForceStopServerCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             // v0.8.14.0: the Fleet Actions buttons gate on !IsBusy too but were never re-queried, so they stayed disabled.
-            (BackupAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (DoctorAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-            (UpdateAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Fleet.BackupAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Fleet.DoctorAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+            (Fleet.UpdateAllCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (InstallMissingEnvironmentCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (RefreshAllInstancesCommand as AsyncCommand)?.RaiseCanExecuteChanged();
             (TerminateSelectedInstanceCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -1654,14 +1595,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand RconConnectCommand { get; }
     public ICommand RconDisconnectCommand { get; }
     public ICommand RconSendCommand { get; }
-    public ICommand RefreshSecurityCommand { get; }
-    public ICommand CreatePrincipalCommand { get; }
-    public ICommand RevokePrincipalCommand { get; }
-    public ICommand RefreshFleetCommand { get; }
-    public ICommand CloneWorldCommand { get; }
-    public ICommand BackupAllCommand { get; }
-    public ICommand DoctorAllCommand { get; }
-    public ICommand UpdateAllCommand { get; }
     public ICommand RefreshPlayersCommand { get; }
     public ICommand SaveWorldNowCommand { get; }
 
@@ -1999,7 +1932,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 await Alerts.RefreshAutomationAsync();
                 break;
             case NavigationPage.Security:
-                await RefreshSecurityAsync();
+                await Security.RefreshSecurityAsync();
                 break;
             case NavigationPage.AlertCenter:
                 await Alerts.RefreshAlertCenterAsync();
@@ -2007,7 +1940,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 await Diagnostics.RefreshAntiCheatAsync();
                 break;
             case NavigationPage.Fleet:
-                await RefreshFleetAsync();
+                await Fleet.RefreshFleetAsync();
                 break;
             case NavigationPage.Host:
                 await Host.RefreshHostAsync(silent: false);
@@ -2109,7 +2042,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ConnectionKind = string.Empty;
         NewServerWizardStep = 0;
         RaisePropertyChanged(nameof(IsLocalProfile));
-        RaisePropertyChanged(nameof(BrowserViewUrlVerbatim));
+        Security.Raise(nameof(Security.BrowserViewUrlVerbatim));
         (DeleteProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
     }
 
@@ -2883,14 +2816,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         {
             groups.Add(new("Security",
             [
-                new("↻", "Refresh", "Refresh security", RefreshSecurityCommand, null, RibbonIconColor.Amber),
+                new("↻", "Refresh", "Refresh security", Security.RefreshSecurityCommand, null, RibbonIconColor.Amber),
             ]));
         }
         else if (IsFleetPage)
         {
             groups.Add(new("Fleet",
             [
-                new("↻", "Refresh", "Refresh fleet", RefreshFleetCommand, null, RibbonIconColor.Amber),
+                new("↻", "Refresh", "Refresh fleet", Fleet.RefreshFleetCommand, null, RibbonIconColor.Amber),
             ]));
         }
         else if (IsHostPage)
@@ -3724,6 +3657,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ModsViewModel Mods { get; }
     public AlertsViewModel Alerts { get; }
     public DiagnosticsViewModel Diagnostics { get; }
+    public SecurityViewModel Security { get; }
+    public FleetViewModel Fleet { get; }
     private readonly IReadOnlyList<PageViewModel> _pages;
 
     // v1.0.8.2 (roadmap C-2): the Players page refresh is one part of the whole status refresh, so it stays here.
@@ -4083,44 +4018,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _signInUsername = string.Empty;
     private string _signInPassword = string.Empty;
     private string _signInStatusText = string.Empty;
-    private string _newUserUsername = string.Empty;
-    private string _newUserDisplayName = string.Empty;
-    private string _newUserPassword = string.Empty;
-    private string _newUserRole = "Operator";
-    private string _newUserScope = string.Empty;
-    private string _userResetPassword = string.Empty;
-    private string _userAccountsState = string.Empty;
-    private UserAccountDto? _selectedUserAccount;
     public string SignInUsername { get => _signInUsername; set => SetField(ref _signInUsername, value ?? string.Empty); }
     public string SignInPassword { get => _signInPassword; set => SetField(ref _signInPassword, value ?? string.Empty); }
     public string SignInStatusText { get => _signInStatusText; set => SetField(ref _signInStatusText, value ?? string.Empty); }
     public string SignedInText => CurrentPrincipal is { } p
         ? $"Signed in as {p.Name} ({p.Role}){(p.ExpiresUtc is { } until ? $" until {until.ToLocalTime():g}" : string.Empty)}."
         : "Not signed in with a named account (a pasted token or the local sidecar decides what you can do).";
-    public string NewUserUsername { get => _newUserUsername; set => SetField(ref _newUserUsername, value ?? string.Empty); }
-    public string NewUserDisplayName { get => _newUserDisplayName; set => SetField(ref _newUserDisplayName, value ?? string.Empty); }
-    public string NewUserPassword { get => _newUserPassword; set => SetField(ref _newUserPassword, value ?? string.Empty); }
-    public string NewUserRole { get => _newUserRole; set => SetField(ref _newUserRole, value ?? "Operator"); }
-    public string NewUserScope { get => _newUserScope; set => SetField(ref _newUserScope, value ?? string.Empty); }
-    public string UserResetPassword { get => _userResetPassword; set => SetField(ref _userResetPassword, value ?? string.Empty); }
-    public string UserAccountsState { get => _userAccountsState; set => SetField(ref _userAccountsState, value ?? string.Empty); }
-    public UserAccountDto? SelectedUserAccount { get => _selectedUserAccount; set => SetField(ref _selectedUserAccount, value); }
-    public ObservableCollection<UserAccountDto> UserAccounts { get; } = [];
     public ICommand SignInCommand { get; private set; } = null!;
     public ICommand SignOutCommand { get; private set; } = null!;
-    public ICommand CreateUserCommand { get; private set; } = null!;
-    public ICommand ResetUserPasswordCommand { get; private set; } = null!;
-    public ICommand ToggleUserEnabledCommand { get; private set; } = null!;
-    public ICommand DeleteUserCommand { get; private set; } = null!;
 
     private void InitializeUserAccountCommands()
     {
         SignInCommand = new AsyncCommand(SignInAsync, () => !IsBusy);
         SignOutCommand = new AsyncCommand(SignOutAsync, () => !IsBusy);
-        CreateUserCommand = new AsyncCommand(CreateUserAsync, () => !IsBusy);
-        ResetUserPasswordCommand = new AsyncCommand(ResetUserPasswordAsync, () => !IsBusy);
-        ToggleUserEnabledCommand = new AsyncCommand(ToggleUserEnabledAsync, () => !IsBusy);
-        DeleteUserCommand = new AsyncCommand(DeleteUserAsync, () => !IsBusy);
     }
 
     private void ApplyCurrentPrincipal(MystTiqPrincipalDto? principal)
@@ -4179,113 +4089,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
-    private async Task RefreshUserAccountsAsync()
-    {
-        if (SelectedProfile is null || !CanManagePrincipals) { UserAccounts.Clear(); return; }
-        var selectedId = SelectedUserAccount?.Id;
-        var users = await _api.GetUsersAsync(SelectedProfile, BearerToken);
-        UserAccounts.Clear();
-        foreach (var user in users) UserAccounts.Add(user);
-        SelectedUserAccount = UserAccounts.FirstOrDefault(u => u.Id == selectedId);
-        UserAccountsState = $"{UserAccounts.Count} user account(s).";
-    }
-
-    private async Task RunUserAccountActionAsync(Func<Task<UserAccountResultDto>> action)
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var result = await action();
-            UserAccountsState = result.Message;
-            if (result.Success) await RefreshUserAccountsAsync();
-            if (result.Success) UserAccountsState = result.Message;
-        }
-        catch (Exception ex) { UserAccountsState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private Task CreateUserAsync() => RunUserAccountActionAsync(async () =>
-    {
-        var result = await _api.CreateUserAsync(SelectedProfile!, NewUserUsername.Trim(), NewUserDisplayName.Trim(), NewUserRole, NewUserPassword,
-            string.IsNullOrWhiteSpace(NewUserScope) ? null : NewUserScope.Trim(), BearerToken);
-        if (result.Success) { NewUserUsername = string.Empty; NewUserDisplayName = string.Empty; NewUserPassword = string.Empty; }
-        return result;
-    });
-
-    private Task ResetUserPasswordAsync()
-    {
-        if (SelectedUserAccount is not { } user) { UserAccountsState = "Select an account first."; return Task.CompletedTask; }
-        return RunUserAccountActionAsync(async () =>
-        {
-            var result = await _api.SetUserPasswordAsync(SelectedProfile!, user.Id, UserResetPassword, BearerToken);
-            if (result.Success) UserResetPassword = string.Empty;
-            return result;
-        });
-    }
-
-    private Task ToggleUserEnabledAsync()
-    {
-        if (SelectedUserAccount is not { } user) { UserAccountsState = "Select an account first."; return Task.CompletedTask; }
-        return RunUserAccountActionAsync(() => _api.UpdateUserAsync(SelectedProfile!, user.Id, user.DisplayName, user.Role, user.ScopedServerProfileId, !user.Enabled, BearerToken));
-    }
-
-    private Task DeleteUserAsync()
-    {
-        if (SelectedUserAccount is not { } user) { UserAccountsState = "Select an account first."; return Task.CompletedTask; }
-        return RunUserAccountActionAsync(() => _api.DeleteUserAsync(SelectedProfile!, user.Id, BearerToken));
-    }
-
-    private async Task RefreshSecurityAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var who = await _api.WhoAmIAsync(SelectedProfile, BearerToken);
-            ApplyCurrentPrincipal(who);
-            await RefreshUserAccountsAsync();
-
-            var principals = await _api.GetPrincipalsAsync(SelectedProfile, BearerToken);
-            var selectedId = SelectedPrincipal?.Id;
-            Principals.Clear(); foreach (var principal in principals) Principals.Add(principal);
-            SelectedPrincipal = Principals.FirstOrDefault(x => x.Id == selectedId);
-            SecurityState = $"Signed in as {who.Name} ({who.Role}). {Principals.Count} principal(s) issued.";
-        }
-        catch (Exception ex) { SecurityState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task CreatePrincipalAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var result = await _api.CreatePrincipalAsync(SelectedProfile, new HeadlessCreatePrincipalRequestDto(NewPrincipalName, NewPrincipalRole, null), BearerToken);
-            Principals.Add(result.Principal);
-            LastCreatedPrincipalToken = result.PlaintextToken;
-            NewPrincipalName = string.Empty;
-            SecurityState = $"Created principal '{result.Principal.Name}'. Copy the token now — it will not be shown again.";
-        }
-        catch (Exception ex) { SecurityState = ex.Message; }
-        finally { IsBusy = false; }
-    }
-
-    private async Task RevokePrincipalAsync()
-    {
-        if (SelectedProfile is null || SelectedPrincipal is not { } principal) return;
-        IsBusy = true;
-        try
-        {
-            await _api.RevokePrincipalAsync(SelectedProfile, principal.Id, BearerToken);
-            Principals.Remove(principal);
-            SelectedPrincipal = null;
-            SecurityState = $"Revoked principal '{principal.Name}'.";
-        }
-        catch (Exception ex) { SecurityState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
 
 
@@ -4298,91 +4101,23 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
 
 
-    private async Task RefreshFleetAsync()
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var summaries = await _api.GetServerProfilesAsync(SelectedProfile, BearerToken);
-            FleetServers.Clear();
-            foreach (var summary in summaries) FleetServers.Add(summary);
-            FleetState = $"{FleetServers.Count} server profile(s) configured.";
-        }
-        catch (Exception ex) { FleetState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private async Task CloneWorldAsync()
-    {
-        if (SelectedProfile is null || string.IsNullOrWhiteSpace(CloneNewProfileId) || !CloneWorldConfirmed) return;
-        IsBusy = true;
-        CloneWorldStatusText = "Cloning… this copies the entire server installation and can take a while.";
-        CloneWorldNeedsRestart = false;
-        try
-        {
-            var newProfileId = CloneNewProfileId.Trim();
-            var request = new WorldCloneRequestDto
-            {
-                NewProfileId = newProfileId,
-                NewProfileName = string.IsNullOrWhiteSpace(CloneNewProfileName) ? null : CloneNewProfileName.Trim(),
-                PortOffset = CloneWorldPortOffset
-            };
-            var result = await _api.CloneWorldAsync(SelectedProfile, request, BearerToken);
-            CloneWorldStatusText = result.Message;
-            if (result.Success)
-            {
-                // Reset the workflow back to a fresh state rather than leaving a checked
-                // confirmation box sitting ready to re-fire against stale profile ID/name text.
-                CloneWorldConfirmed = false;
-                await RefreshFleetAsync();
-                CloneWorldNewProfileId = newProfileId;
-                CloneWorldNeedsRestart = true;
-            }
-        }
-        catch (Exception ex) { CloneWorldStatusText = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    // v0.7.84.0: explicit, user-triggered restart offered after a successful Clone World here --
-    // reuses the exact same RestartOwnedSidecarAsync built for the wizard's own second-server flow
-    // in v0.7.83.0. Deliberately does NOT touch this tab's own TargetServerId/reconnect the way the
-    // wizard does (this tab should stay on its own already-established profile); it only brings the
-    // local service back up with the new profile now visible, matching what Fleet's own profile list
-    // already needed a restart+refresh to show.
-    private async Task RestartAfterCloneAsync()
-    {
-        if (string.IsNullOrWhiteSpace(CloneWorldNewProfileId)) return;
-        IsBusy = true;
-        CloneWorldStatusText = "Restarting the local MystTiq service to bring the new server online…";
-        try
-        {
-            var snapshot = await _localDiscovery.DiscoverAsync();
-            if (snapshot.ServiceInstalled)
-            {
-                CloneWorldStatusText = "This machine runs MystTiq as an installed Windows Service, which the desktop app can't restart on its own -- restart it manually, then refresh this page.";
-                return;
-            }
-            var restartResult = await _localBootstrapper.RestartOwnedSidecarAsync(snapshot, CloneWorldNewProfileId);
-            CloneWorldStatusText = restartResult.Available
-                ? $"Restarted. '{CloneWorldNewProfileId}' is now online."
-                : $"Automatic restart failed: {restartResult.Detail}";
-            if (restartResult.Available)
-            {
-                CloneWorldNeedsRestart = false;
-                await RefreshFleetAsync();
-            }
-        }
-        catch (Exception ex) { CloneWorldStatusText = ex.Message; }
-        finally { IsBusy = false; }
-    }
+
+
+
+
+
+
+
+
 
     // v0.7.81.0: "Clone an Existing Server" step of the new-server install wizard. Distinct from
-    // CloneWorldAsync above (Fleet's own Clone World card), which always clones FROM the currently
+    // Fleet.CloneWorldAsync above (Fleet's own Clone World card), which always clones FROM the currently
     // connected tab's own profile. Here the source is a DIFFERENT, already-saved profile (never
     // SelectedProfile -- that's this brand-new, not-yet-saved profile being created) and the target
     // is this wizard's in-progress profile. This works without touching MystTiqApiClient at all:
-    // CloneWorldAsync already takes an explicit source ConnectionProfile parameter rather than
+    // Fleet.CloneWorldAsync already takes an explicit source ConnectionProfile parameter rather than
     // always using SelectedProfile, and CredentialStore.TryLoad(profileId) already resolves a
     // bearer token for any saved profile by Id, independent of tabs -- no new backend needed.
     private async Task CloneIntoNewServerAsync()
@@ -4397,7 +4132,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             {
                 NewProfileId = newProfileId,
                 NewProfileName = string.IsNullOrWhiteSpace(ProfileName) ? null : ProfileName.Trim(),
-                PortOffset = CloneWorldPortOffset
+                PortOffset = Fleet.CloneWorldPortOffset
             };
             var token = _credentialStore.TryLoad(source.Id);
             var result = await _api.CloneWorldAsync(source, request, token);
@@ -4437,28 +4172,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         finally { IsBusy = false; }
     }
 
-    private async Task RunFleetActionAsync(string label, Func<ConnectionProfile, string?, Task<IReadOnlyList<FleetActionResultDto>>> action)
-    {
-        if (SelectedProfile is null) return;
-        IsBusy = true;
-        try
-        {
-            var results = await action(SelectedProfile, BearerToken);
-            FleetActionResults.Clear();
-            foreach (var result in results) FleetActionResults.Add(result);
-            var failures = results.Count(r => !r.Success);
-            FleetState = failures == 0
-                ? $"{label}: completed on all {results.Count} server(s)."
-                : $"{label}: {failures} of {results.Count} server(s) failed. See results below.";
-            await RefreshFleetAsync();
-        }
-        catch (Exception ex) { FleetState = ex.Message; }
-        finally { IsBusy = false; }
-    }
 
-    private Task BackupAllAsync() => RunFleetActionAsync("Backup All", (profile, token) => _api.BackupAllAsync(profile, token));
-    private Task DoctorAllAsync() => RunFleetActionAsync("Doctor All", (profile, token) => _api.DoctorAllAsync(profile, token));
-    private Task UpdateAllAsync() => RunFleetActionAsync("Update All", (profile, token) => _api.UpdateAllAsync(profile, token));
 
 
 
@@ -4658,7 +4372,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             RaisePropertyChanged(nameof(SetupReadyCountText));
             RaisePropertyChanged(nameof(SetupAttentionCountText));
             RaisePropertyChanged(nameof(SetupComponentCountText));
-            RaisePropertyChanged(nameof(Workspace.WorkspaceDiscoveryText));
+            Workspace.Raise(nameof(Workspace.WorkspaceDiscoveryText));
         }
         catch (Exception ex)
         {

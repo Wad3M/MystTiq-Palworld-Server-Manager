@@ -1,4 +1,15 @@
-<!-- MystTiq v1.0.8.8: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.9: file reviewed for this release (2026-10-12). -->
+## v1.0.8.9 — Security and Fleet, Tidied; the Split Is Done
+
+- Roadmap C-9: the Security page (principals, user accounts, the browser view's address) moved into
+  `SecurityViewModel` and the Fleet page (servers, Clone World, the fleet actions) into `FleetViewModel` (the BrowserView
+  partial file removed). Signing in, the role gates, the setup wizard and the Settings page stay with the window shell.
+  The `MainWindowViewModel` files total 321,400 bytes (were 339,118; 732,039 before the split).
+- Fixed: the window raised page properties on itself, where no binding heard them, so the Automation page's "no rules"
+  card did not follow the rule list and the Workspace discovery status could stay stale. Pages now raise their own
+  (`PageViewModel.Raise`); the gate and the ArtworkHarness check it.
+- Version advanced to 1.0.8.9.
+
 ## v1.0.8.8 — The Update Center, Doctor and Diagnostics, Tidied
 
 - Roadmap C-8: the Update Center, Server Doctor, the Crash Analyzer and the Diagnostics Center moved into

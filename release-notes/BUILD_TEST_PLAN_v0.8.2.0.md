@@ -1,4 +1,4 @@
-<!-- MystTiq v1.0.8.8: file reviewed for this release (2026-10-12). -->
+<!-- MystTiq v1.0.8.9: file reviewed for this release (2026-10-12). -->
 # v0.8.2.0 Build and Test Plan
 
 1. Clean, then PUBLISH the desktop build. Pipe the output through `Select-Object -Last`, never `-First`.

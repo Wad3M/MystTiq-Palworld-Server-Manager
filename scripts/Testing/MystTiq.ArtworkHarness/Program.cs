@@ -1,4 +1,4 @@
-// MystTiq v1.0.8.8: file reviewed for this release (2026-10-12).
+// MystTiq v1.0.8.9: file reviewed for this release (2026-10-12).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1420,6 +1420,17 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         Row("Save & Runtime Dependencies", "Visual C++ Runtime", "NotApplicable", "N/A"),
         Row("Save & Runtime Dependencies", "Microsoft C++ Build Tools", "Unknown", "Windows Registry"),
     };
+    // v1.0.8.9: a page's property that the window raised on itself reached no binding (the Automation page's "no rules"
+    // card, the browser view's address). The window's own triggers now reach the page.
+    var pageRaised = new List<string>();
+    void OnAlertsChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) => pageRaised.Add("Alerts." + e.PropertyName);
+    void OnSecurityChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) => pageRaised.Add("Security." + e.PropertyName);
+    vm.Alerts.PropertyChanged += OnAlertsChanged; vm.Security.PropertyChanged += OnSecurityChanged;
+    vm.Alerts.AutomationRules.Add(new AutomationRuleDto { Id = "harness", Name = "Harness" }); vm.Alerts.AutomationRules.Clear();
+    typeof(MainWindowViewModel).GetMethod("RaiseActiveTabPropertiesChanged", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, null);
+    vm.Alerts.PropertyChanged -= OnAlertsChanged; vm.Security.PropertyChanged -= OnSecurityChanged;
+    Check(pageRaised.Count(x => x == "Alerts.HasNoAutomationRules") == 2 && pageRaised.Contains("Security.BrowserViewUrlVerbatim"),
+        "A page property the window changes is raised on the page: the Automation page's no-rules card follows the rule list, and the browser view's address follows the tab");
     vm.Diagnostics.CoreServerComponents.Clear(); vm.Diagnostics.SaveRuntimeDependencyComponents.Clear();
     foreach (var r in core) vm.Diagnostics.CoreServerComponents.Add(r);
     foreach (var r in deps) vm.Diagnostics.SaveRuntimeDependencyComponents.Add(r);
