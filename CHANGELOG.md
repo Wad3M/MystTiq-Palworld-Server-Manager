@@ -1,4 +1,18 @@
-<!-- MystTiq v1.1.0.1: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.0.2: file reviewed for this release (2026-10-13). -->
+## v1.1.0.2 — Player IDs: Join Check and Automatic Character Move
+
+- Roadmap F-2 (asked 2026-10-13): the game gives Steam accounts new player IDs since its 1.0 update (the owner's
+  server: 67D8D355 → E290DA9A, A3835C7B → 1467C601; every way of starting the server gave the same). Every Steam join is
+  now checked against the ID the character lives under (learned from the game, else the pre-1.0 formula) and recorded;
+  a new ID from the game queues a move that runs once nobody is online: server stopped, safety backup, the throwaway
+  under the new ID removed and every reference rewritten (`PlayerIdMove`), decoded again and verified, the old and
+  replaced character files archived, the ID learned, level history cleared, server started again. Refused and alerted
+  when anything is unexpected. Players page: the Player IDs card (`GET/PUT/POST /players/ids…`, Admin for changes).
+- The identity guard expects the learned ID, says the character is being moved, lets the new-character screen through
+  with automatic moves on, and advises the move instead of start options; the Launcher calls -log and similar options
+  diagnosis options.
+- Version advanced to 1.1.0.2.
+
 ## v1.1.0.1 — Start-up Notice Fix
 
 - Roadmap F-1 (reported 2026-10-13): fixed "Something went wrong (background task)" after the desktop started. The

@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using MystTiq.Core.Models;
@@ -137,6 +137,20 @@ public sealed class HeadlessAntiCheatService
     public IReadOnlyList<LevelSample> LevelHistory(string playerId)
     {
         lock (gate) return levelHistory.TryGetValue(playerId, out var history) ? history : [];
+    }
+
+    /// <summary>
+    /// v1.1.0.2 (roadmap F-2): forgets the level history of these player IDs. A character moved to a new player ID took
+    /// over an ID first seen at level 1 (the empty character the game made), which read as a level gap (owner's server,
+    /// 2026-10-13: "level 1 to 15 with 0 minute(s) of play"); the history starts again from the next sighting.
+    /// </summary>
+    public void ForgetLevelHistory(params string[] playerIds)
+    {
+        lock (gate)
+        {
+            var removed = playerIds.Count(id => levelHistory.Remove(id));
+            if (removed > 0) Persist(levelHistoryPath, levelHistory);
+        }
     }
 
     public async Task EvaluateThrottledAsync(CancellationToken cancellationToken)

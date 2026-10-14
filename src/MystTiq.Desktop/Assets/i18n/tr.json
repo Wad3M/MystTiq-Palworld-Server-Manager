@@ -4059,5 +4059,20 @@
   "ui.reports_only": "Yalnızca bildirir",
   "msg.level_gap_finding_6a1f3e": "Oyuncu '{0}' {4} {3} dakikalık oyunla {1}. seviyeden {2}. seviyeye çıktı; en fazla {5} seviye beklenirdi. Harekete geçmeden önce oyuncuyu kontrol edin: bu kural yalnızca bildirir.",
   "msg.level_gap_since_first_seen_0b47d2": "MystTiq'in onu ilk gördüğünden beri",
-  "msg.level_gap_since_level_before_e83c51": "bir önceki seviyeden beri"
+  "msg.level_gap_since_level_before_e83c51": "bir önceki seviyeden beri",
+  "ui.player_ids": "Oyuncu kimlikleri",
+  "ui.player_ids_hint": "Her Steam oyuncusu katıldığında, oyunun verdiği oyuncu kimliği karakterinin kayıtlı olduğu kimlikle karşılaştırılır. 1.0 güncellemesinden beri oyun bir hesaba yeni bir kimlik verebilir; o hesabın karakteri önce bir güvenlik yedeği alınarak yeni kimliğe taşınır.",
+  "ui.player_ids_auto_move": "Kimse çevrimiçi değilken karakterleri otomatik taşı",
+  "ui.save_player_id_settings": "Oyuncu kimliği ayarlarını kaydet",
+  "ui.player_ids_waiting": "Taşınmayı bekliyor",
+  "ui.restart_server_and_move_character": "Sunucuyu yeniden başlat ve karakteri taşı",
+  "ui.player_ids_recent": "Son katılımlar",
+  "msg.player_id_correct_5c1e20": "Kimlik doğru",
+  "msg.player_id_first_seen_8d02a4": "İlk kez görüldü",
+  "msg.player_id_new_from_game_3fa6b1": "Oyundan yeni kimlik",
+  "msg.player_id_moved_b27c95": "Yeni kimliğe taşındı",
+  "msg.player_ids_auto_on_e4a7d3": "Otomatik taşıma açık: oyun geri dönen bir oyuncuya yeni kimlik verirse, MystTiq kimse çevrimiçi değilken önce bir güvenlik yedeği alıp karakterini taşır.",
+  "msg.player_ids_auto_off_71d9c0": "Otomatik taşıma kapalı: taşınmayı bekleyen karakter, sunucuyu yeniden başlatıp taşıyana kadar listede kalır.",
+  "msg.player_ids_moving_0c58e2": "Karakter taşınıyor: sunucu durduruluyor, bir güvenlik yedeği alınıyor, taşıma kontrol ediliyor ve sunucu yeniden başlatılıyor…",
+  "msg.launcher_diagnostic_options_6d2b90": "-log, -stdout, -FullStdOutLogOutput ve -abslog sorun teşhisi içindir; Varsayılan ön ayar bunları kapalı tutar."
 }

@@ -1,7 +1,7 @@
-<!-- MystTiq v1.1.0.1: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.0.2: file reviewed for this release (2026-10-13). -->
 # Product roadmap
 
-Updated 2026-10-13. **Current version: v1.1.0.1. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the backlog is built; what stays open is the live evidence under "Carried").**
+Updated 2026-10-13. **Current version: v1.1.0.2. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the backlog is built; what stays open is the live evidence under "Carried").**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -199,6 +199,7 @@ Each fix reproduces the fault first, then follows the release pipeline; a fix th
 | ID | Release | Item | Status |
 | --- | --- | --- | --- |
 | F-1 | v1.1.0.1 | "Something went wrong (background task)" after the desktop started (reported 2026-10-13). Every crash record on the owner's PC (four, v1.0.7.0 to v1.1.0.0) is the start-up port check's abandoned connect: it waited 750 ms, Windows refuses a closed loopback port after about 2 s, and the disposed connect faulted unobserved. Recorded (v1.1.0.1, 2026-10-13): the check cancels its connect at the limit and awaits it; an ArtworkHarness check on a closed and a listening port counts unobserved socket errors after a collection (none); the v1.1.0.0 method, run the same way in a standalone program, left 3 from 3 closed-port checks. The owner's next starts are the live check. | Built |
+| F-2 | v1.1.0.2 | Players sent to a new character (reported 2026-10-12/13). The game itself gives Steam accounts new player IDs since its 1.0 update (67D8D355 → E290DA9A, A3835C7B → 1467C601), whatever the start; the owner asked for a join-time check and an automatic move with a backup and cleanup. Recorded (v1.1.0.2, 2026-10-13): every Steam join checked against the learned ID (else the pre-1.0 formula) and listed on the Player IDs card; a new ID queues a move run once nobody is online (safety backup, verification, archive, ID learned, level history cleared, server restarted); the guard follows the learned ID. LogicHarness on a made-up world, on the join check with the guard, and on a copy of the real world with the real converter (Wade moved, 216 references, level 15). The owner joined as Wade after the same move done by hand. The next player the game moves is the live check. | Built |
 
 ## Backlog (not scheduled)
 

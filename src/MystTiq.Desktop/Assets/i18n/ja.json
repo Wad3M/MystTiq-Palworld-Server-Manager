@@ -4059,5 +4059,20 @@
   "ui.reports_only": "報告のみ",
   "msg.level_gap_finding_6a1f3e": "プレイヤー「{0}」は {4}{3} 分のプレイでレベル {1} から {2} になりました。見込みは最大 {5} レベルです。対応の前にプレイヤーを確認してください。このルールは報告のみです。",
   "msg.level_gap_since_first_seen_0b47d2": "MystTiq が最初に確認してから",
-  "msg.level_gap_since_level_before_e83c51": "直前のレベルから"
+  "msg.level_gap_since_level_before_e83c51": "直前のレベルから",
+  "ui.player_ids": "プレイヤー ID",
+  "ui.player_ids_hint": "Steam プレイヤーが参加するたびに、ゲームが割り当てたプレイヤー ID とキャラクターが保存されている ID を照合します。1.0 アップデート以降、ゲームがアカウントに新しい ID を割り当てることがあります。その場合は安全バックアップを取ってから、そのアカウントのキャラクターを新しい ID に移します。",
+  "ui.player_ids_auto_move": "誰もオンラインでないときに自動でキャラクターを移す",
+  "ui.save_player_id_settings": "プレイヤー ID 設定を保存",
+  "ui.player_ids_waiting": "移動待ち",
+  "ui.restart_server_and_move_character": "サーバーを再起動してキャラクターを移す",
+  "ui.player_ids_recent": "最近の参加",
+  "msg.player_id_correct_5c1e20": "ID は正しい",
+  "msg.player_id_first_seen_8d02a4": "初めて確認",
+  "msg.player_id_new_from_game_3fa6b1": "ゲームから新しい ID",
+  "msg.player_id_moved_b27c95": "新しい ID に移動済み",
+  "msg.player_ids_auto_on_e4a7d3": "自動移動はオンです。ゲームが戻ってきたプレイヤーに新しい ID を割り当てると、誰もオンラインでなくなった時点で、安全バックアップを取ってから MystTiq がキャラクターを移します。",
+  "msg.player_ids_auto_off_71d9c0": "自動移動はオフです。移動待ちのキャラクターは、サーバーを再起動して移すまで一覧に残ります。",
+  "msg.player_ids_moving_0c58e2": "キャラクターを移しています。サーバーを停止し、安全バックアップを取り、移動を確認してから、サーバーを再び起動します…",
+  "msg.launcher_diagnostic_options_6d2b90": "-log、-stdout、-FullStdOutLogOutput、-abslog は問題の診断用です。既定のプリセットではオフです。"
 }

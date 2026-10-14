@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -50,6 +50,10 @@ public sealed class PlayersViewModel : PageViewModel
         SaveNameGuardCommand = new AsyncCommand(SaveNameGuardAsync, () => !Session.IsBusy);
         ReserveNameCommand = new RelayCommand(ReserveName);
         ReleaseNameCommand = new RelayCommand(ReleaseSelectedName);
+        TogglePlayerIdsCommand = new RelayCommand(TogglePlayerIds);
+        RefreshPlayerIdsCommand = new AsyncCommand(RefreshPlayerIdsAsync, () => !Session.IsBusy);
+        SavePlayerIdsCommand = new AsyncCommand(SavePlayerIdsAsync, () => !Session.IsBusy);
+        MoveCharacterCommand = new AsyncCommand(MoveCharacterAsync, () => !Session.IsBusy && SelectedPlayerIdMove is not null);
         LoadPlayerMetadataCommand = new AsyncCommand(LoadSelectedPlayerMetadataAsync, () => !Session.IsBusy && SelectedPlayerRecord is not null);
         SavePlayerNotesCommand = new AsyncCommand(SaveSelectedPlayerNotesAsync, () => !Session.IsBusy && SelectedPlayerRecord is not null);
         AddPlayerWarningCommand = new AsyncCommand(AddSelectedPlayerWarningAsync, () => !Session.IsBusy && SelectedPlayerRecord is not null && !string.IsNullOrWhiteSpace(NewPlayerWarning));
@@ -1128,6 +1132,85 @@ public sealed class PlayersViewModel : PageViewModel
         NameGuardState = "Released once you save. The next player to use the name will own it.";
     }
 
+    // v1.1.0.2 (roadmap F-2, asked 2026-10-13): the Players page's Player IDs card. Every Steam player's join is checked
+    // against the ID their character lives under; an account the game gave a new ID is listed until its character is moved
+    // (automatically when nobody is online, or with the button), with a safety backup first.
+    private bool _isPlayerIdsExpanded;
+    private bool _playerIdAutoMove = true;
+    private string _playerIdsState = string.Empty;
+    private PlayerIdMoveRequestDto? _selectedPlayerIdMove;
+
+    public bool IsPlayerIdsExpanded { get => _isPlayerIdsExpanded; private set => SetField(ref _isPlayerIdsExpanded, value); }
+    public bool PlayerIdAutoMove { get => _playerIdAutoMove; set => SetField(ref _playerIdAutoMove, value); }
+    public string PlayerIdsState { get => _playerIdsState; private set => SetField(ref _playerIdsState, value); }
+    public ObservableCollection<PlayerIdCheckDto> PlayerIdChecks { get; } = [];
+    public ObservableCollection<PlayerIdMoveRequestDto> PlayerIdMoves { get; } = [];
+    public bool HasPlayerIdChecks => PlayerIdChecks.Count > 0;
+    public bool HasPlayerIdMoves => PlayerIdMoves.Count > 0;
+    public PlayerIdMoveRequestDto? SelectedPlayerIdMove
+    {
+        get => _selectedPlayerIdMove;
+        set { if (SetField(ref _selectedPlayerIdMove, value)) (MoveCharacterCommand as AsyncCommand)?.RaiseCanExecuteChanged(); }
+    }
+
+    public ICommand TogglePlayerIdsCommand { get; }
+    public ICommand RefreshPlayerIdsCommand { get; }
+    public ICommand SavePlayerIdsCommand { get; }
+    public ICommand MoveCharacterCommand { get; }
+
+    private void TogglePlayerIds()
+    {
+        IsPlayerIdsExpanded = !IsPlayerIdsExpanded;
+        if (IsPlayerIdsExpanded) Session.RunUi(() => RefreshPlayerIdsAsync());
+    }
+
+    private async Task RefreshPlayerIdsAsync()
+    {
+        if (Session.SelectedProfile is null) return;
+        Session.IsBusy = true;
+        try { ShowPlayerIds(await Session.Api.GetPlayerIdsAsync(Session.SelectedProfile, Session.BearerToken)); }
+        catch (Exception ex) { PlayerIdsState = ex.Message; }
+        finally { Session.IsBusy = false; }
+    }
+
+    private async Task SavePlayerIdsAsync()
+    {
+        if (Session.SelectedProfile is null) return;
+        Session.IsBusy = true;
+        try { ShowPlayerIds(await Session.Api.SavePlayerIdSettingsAsync(Session.SelectedProfile, PlayerIdAutoMove, Session.BearerToken)); }
+        catch (Exception ex) { PlayerIdsState = ex.Message; }
+        finally { Session.IsBusy = false; }
+    }
+
+    private async Task MoveCharacterAsync()
+    {
+        if (Session.SelectedProfile is null || SelectedPlayerIdMove is null) return;
+        Session.IsBusy = true;
+        PlayerIdsState = "Moving the character: the server is stopped, a safety backup taken, the move checked, and the server started again…";
+        try
+        {
+            var result = await Session.Api.MovePlayerIdAsync(Session.SelectedProfile, SelectedPlayerIdMove.UserId, Session.BearerToken);
+            ShowPlayerIds(await Session.Api.GetPlayerIdsAsync(Session.SelectedProfile, Session.BearerToken));
+            PlayerIdsState = result.Message;
+        }
+        catch (Exception ex) { PlayerIdsState = ex.Message; }
+        finally { Session.IsBusy = false; }
+    }
+
+    private void ShowPlayerIds(PlayerIdLedgerDto ledger)
+    {
+        PlayerIdAutoMove = ledger.AutoMove;
+        PlayerIdChecks.Clear();
+        foreach (var check in ledger.Checks.OrderByDescending(c => c.At).Take(20)) PlayerIdChecks.Add(check);
+        PlayerIdMoves.Clear();
+        foreach (var move in ledger.Pending.OrderBy(m => m.Since)) PlayerIdMoves.Add(move);
+        SelectedPlayerIdMove = PlayerIdMoves.FirstOrDefault();
+        RaisePropertyChanged(nameof(HasPlayerIdChecks));
+        RaisePropertyChanged(nameof(HasPlayerIdMoves));
+        PlayerIdsState = ledger.AutoMove
+            ? "Automatic moves are on: when the game gives a returning player a new ID, MystTiq moves their character once nobody is online, with a safety backup first."
+            : "Automatic moves are off: a character waiting to be moved stays listed until you restart the server and move it.";
+    }
     // v1.0.6.0 (roadmap S-3; owner decisions D-2 guarded edits only, D-7 add and remove a Pal): the selected player's Pal box
     // from the world save, one Pal added (a copy of one of that species already in a Pal box) or removed, each previewed,
     // confirmed (MainWindow's Click handlers) and applied with a fresh, checked safety backup while the server is stopped.

@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -191,6 +191,10 @@ public interface IMystTiqApiClient
     Task<WhitelistConfigDto> SaveWhitelistAsync(ConnectionProfile profile, WhitelistConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
     // v1.0.0.2: unique player names, read and replaced as a whole like the whitelist.
     Task<NameGuardSnapshotDto> GetNameGuardAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    // v1.1.0.2 (roadmap F-2): the join check, learned player IDs and character moves.
+    Task<PlayerIdLedgerDto> GetPlayerIdsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PlayerIdLedgerDto> SavePlayerIdSettingsAsync(ConnectionProfile profile, bool autoMove, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<PlayerIdMoveResultDto> MovePlayerIdAsync(ConnectionProfile profile, string userId, string? bearerToken = null, CancellationToken cancellationToken = default);
     Task<NameGuardConfigDto> SaveNameGuardAsync(ConnectionProfile profile, NameGuardConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default);
     // v0.8.17.0: the HOST tab, and this server's process priority and eco mode.
     Task<HostPageSnapshotDto> GetHostAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);

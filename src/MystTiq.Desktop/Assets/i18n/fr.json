@@ -4059,5 +4059,20 @@
   "ui.reports_only": "Signale seulement",
   "msg.level_gap_finding_6a1f3e": "Le joueur « {0} » est passé du niveau {1} au {2} avec {3} minute(s) de jeu {4} ; on attendrait au plus {5} niveau(x). Vérifiez le joueur avant d'agir : cette règle ne fait que signaler.",
   "msg.level_gap_since_first_seen_0b47d2": "depuis que MystTiq l'a vu pour la première fois",
-  "msg.level_gap_since_level_before_e83c51": "depuis le niveau précédent"
+  "msg.level_gap_since_level_before_e83c51": "depuis le niveau précédent",
+  "ui.player_ids": "ID des joueurs",
+  "ui.player_ids_hint": "À chaque connexion d'un joueur Steam, l'ID de joueur attribué par le jeu est comparé à l'ID sous lequel se trouve son personnage. Depuis la mise à jour 1.0, le jeu peut donner un nouvel ID à un compte ; le personnage de ce compte est alors déplacé vers le nouvel ID, après une sauvegarde de sécurité.",
+  "ui.player_ids_auto_move": "Déplacer les personnages automatiquement quand personne n'est connecté",
+  "ui.save_player_id_settings": "Enregistrer les réglages des ID",
+  "ui.player_ids_waiting": "En attente de déplacement",
+  "ui.restart_server_and_move_character": "Redémarrer le serveur et déplacer le personnage",
+  "ui.player_ids_recent": "Connexions récentes",
+  "msg.player_id_correct_5c1e20": "ID correct",
+  "msg.player_id_first_seen_8d02a4": "Vu pour la première fois",
+  "msg.player_id_new_from_game_3fa6b1": "Nouvel ID donné par le jeu",
+  "msg.player_id_moved_b27c95": "Déplacé vers le nouvel ID",
+  "msg.player_ids_auto_on_e4a7d3": "Déplacement automatique activé : quand le jeu donne un nouvel ID à un joueur qui revient, MystTiq déplace son personnage dès que personne n'est connecté, après une sauvegarde de sécurité.",
+  "msg.player_ids_auto_off_71d9c0": "Déplacement automatique désactivé : un personnage en attente reste dans la liste jusqu'à ce que vous redémarriez le serveur et le déplaciez.",
+  "msg.player_ids_moving_0c58e2": "Déplacement du personnage : arrêt du serveur, sauvegarde de sécurité, vérification du déplacement, puis redémarrage du serveur…",
+  "msg.launcher_diagnostic_options_6d2b90": "-log, -stdout, -FullStdOutLogOutput et -abslog servent à diagnostiquer des problèmes ; le préréglage par défaut les laisse désactivés."
 }

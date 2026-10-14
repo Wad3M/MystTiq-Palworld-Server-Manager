@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
 using System.Diagnostics;
 using System.Text.Json;
 using MystTiq.Core.Providers;
@@ -31,15 +31,21 @@ public sealed class HeadlessIdentityGuardService
     private readonly Func<DateTimeOffset> clock;
     private IdentityGuardConfig config;
 
-    private readonly Func<IReadOnlyList<string>> launchArguments;
+    private readonly Func<string, string?> expectedFor;
+    private readonly Func<bool> autoMove;
+    private readonly Func<string, string> kickReason;
+    private readonly HashSet<string> makingCharacter = new(StringComparer.OrdinalIgnoreCase);
 
-    // v1.0.6.1: launchArguments are the server's saved start arguments, named in the alert (the wrong-character starts all
-    // had -log, -stdout or -FullStdOutLogOutput; double-click starts, with no arguments, kept the players' characters).
+    // v1.1.0.2 (roadmap F-2): the expected ID comes from the player ID ledger (learned from the game's own assignments;
+    // the pre-1.0 Steam formula only when nothing is learned). The launch arguments the alert used to name were disproven
+    // as a cause on 2026-10-13: the game itself gives accounts new IDs.
     public HeadlessIdentityGuardService(IServerPathProfile paths, HeadlessActivityLogService activity, HeadlessNotificationService notifications, PlayerModerationCoordinator playerModeration,
-        Func<IReadOnlyList<string>>? launchArguments = null, Func<DateTimeOffset>? clock = null)
+        Func<string, string?>? expectedFor = null, Func<DateTimeOffset>? clock = null, Func<bool>? autoMove = null, Func<string, string>? kickReason = null)
     {
         this.clock = clock ?? (() => DateTimeOffset.UtcNow);
-        this.launchArguments = launchArguments ?? (() => []);
+        this.expectedFor = expectedFor ?? SteamPlayerUid.FromUserId;
+        this.autoMove = autoMove ?? (() => false);
+        this.kickReason = kickReason ?? (_ => "MystTiq: the server did not load your character. Please wait for the administrator and join again.");
         this.paths = paths;
         this.activity = activity;
         this.notifications = notifications;
@@ -80,7 +86,7 @@ public sealed class HeadlessIdentityGuardService
             var userId = (player.UserId ?? string.Empty).Trim();
             if (userId.Length == 0) continue;
             online.Add(userId);
-            var verdict = IdentityGuard.Judge(userId, player.PlayerId, ExistingCharacter);
+            var verdict = IdentityGuard.Judge(userId, player.PlayerId, ExistingCharacter, expectedFor(userId));
             if (verdict is null)
             {
                 lock (gate) noCharacterSince.Remove(userId);
@@ -99,6 +105,16 @@ public sealed class HeadlessIdentityGuardService
                     if (!noCharacterSince.TryGetValue(userId, out since)) noCharacterSince[userId] = since = now;
                 }
                 if (!IdentityGuard.NoCharacterIsDue(since, now)) continue;
+                // v1.1.0.2: with automatic moves on, the player may make a character: it gives the game's new ID, and the
+                // move then replaces it with their real one (checked and kicked as soon as it exists).
+                if (autoMove())
+                {
+                    bool first;
+                    lock (gate) first = makingCharacter.Add(userId);
+                    if (first) activity.Record("Information", "Players", "Identity guard",
+                        $"{(string.IsNullOrWhiteSpace(player.Name) ? userId : player.Name)} ({userId}) is on the new-character screen while their character is under {verdict.Expected[..8]}; once they make one, MystTiq moves their character onto it.");
+                    continue;
+                }
             }
             lock (gate) if (!handledThisSession.Add(userId)) continue;
             if (!snapshot.Enabled) continue;
@@ -107,15 +123,14 @@ public sealed class HeadlessIdentityGuardService
             var kickNote = string.Empty;
             if (snapshot.KickMismatched)
             {
-                var result = await playerModeration.ExecuteAsync("kick", userId,
-                    "MystTiq: the server did not load your character. Please wait for the administrator and join again.", cancellationToken);
+                var result = await playerModeration.ExecuteAsync("kick", userId, kickReason(userId), cancellationToken);
                 kicked = result.Success;
                 kickNote = result.Success ? " They were kicked so that no new character is made." : $" The kick failed: {result.Message}.";
             }
 
             var name = string.IsNullOrWhiteSpace(player.Name) ? userId : player.Name;
             var message = $"{name} ({userId}) was not given their character: the server assigned {verdict.AssignedDisplay}, but their Steam ID's character is {verdict.Expected[..8]}.{kickNote} Their character is safe. "
-                + IdentityGuard.LaunchAdvice(launchArguments());
+                + IdentityGuard.MoveAdvice(autoMove());
             activity.Record("Warning", "Players", "Identity guard", message);
             notifications.Create("Critical", "Player not given their character", message, pinned: true);
             Append(new IdentityGuardEvent(DateTimeOffset.UtcNow, name, userId, verdict.Assigned, verdict.Expected, kicked, SteamClientRunning(), message));
@@ -125,6 +140,7 @@ public sealed class HeadlessIdentityGuardService
         {
             handledThisSession.RemoveWhere(id => !online.Contains(id));
             foreach (var gone in noCharacterSince.Keys.Where(id => !online.Contains(id)).ToList()) noCharacterSince.Remove(gone);
+            makingCharacter.RemoveWhere(id => !online.Contains(id));
         }
     }
 
@@ -196,6 +212,14 @@ public static class IdentityGuard
     }
 
     /// <summary>
+    /// v1.1.0.2 (roadmap F-2): what the alert advises. The game gives accounts new player IDs since its 1.0 update
+    /// (shown 2026-10-13 with every way of starting the server); the fix is moving the character to the new ID.
+    /// </summary>
+    public static string MoveAdvice(bool autoMove) => autoMove
+        ? "The game gave this account a new player ID. MystTiq moves their character to it when nobody is online, with a safety backup first, and starts the server again."
+        : "The game gave this account a new player ID. Move their character to it on Players > Player IDs (a safety backup is taken first).";
+
+    /// <summary>
     /// v1.0.7.3: how long a player listed with no character is given to finish loading before the guard acts. A returning
     /// player's character appears within seconds; making a new character on the new-character screen takes longer.
     /// </summary>
@@ -204,9 +228,10 @@ public static class IdentityGuard
     /// <summary>True once a player first seen with no character at <paramref name="since"/> has had the loading grace.</summary>
     public static bool NoCharacterIsDue(DateTimeOffset since, DateTimeOffset now) => now - since >= LoadingGrace;
 
-    public static IdentityVerdict? Judge(string userId, string? assignedPlayerId, Func<string, bool> characterExists)
+    public static IdentityVerdict? Judge(string userId, string? assignedPlayerId, Func<string, bool> characterExists, string? expectedPlayerId = null)
     {
-        var expected = SteamPlayerUid.FromUserId(userId);
+        // v1.1.0.2: the expected ID is the learned one when given (the game no longer derives IDs from the Steam ID).
+        var expected = expectedPlayerId ?? SteamPlayerUid.FromUserId(userId);
         if (expected is null) return null;  // not a Steam player: no expected ID to compare with
         var assigned = (assignedPlayerId ?? string.Empty).Trim();
         if (string.Equals(assigned, expected, StringComparison.OrdinalIgnoreCase)) return null;

@@ -4059,5 +4059,20 @@
   "ui.reports_only": "Nur Meldung",
   "msg.level_gap_finding_6a1f3e": "Spieler „{0}“ stieg mit {3} Minute(n) Spielzeit {4} von Level {1} auf {2}; zu erwarten wären höchstens {5} Level. Prüfen Sie den Spieler, bevor Sie handeln: Diese Regel meldet nur.",
   "msg.level_gap_since_first_seen_0b47d2": "seit MystTiq ihn zuerst sah",
-  "msg.level_gap_since_level_before_e83c51": "seit dem Level davor"
+  "msg.level_gap_since_level_before_e83c51": "seit dem Level davor",
+  "ui.player_ids": "Spieler-IDs",
+  "ui.player_ids_hint": "Bei jedem Beitritt eines Steam-Spielers wird die vom Spiel vergebene Spieler-ID mit der ID verglichen, unter der sein Charakter liegt. Seit dem Update 1.0 kann das Spiel einem Konto eine neue ID geben; der Charakter dieses Kontos wird dann auf die neue ID verschoben, vorher mit einer Sicherungskopie.",
+  "ui.player_ids_auto_move": "Charaktere automatisch verschieben, wenn niemand online ist",
+  "ui.save_player_id_settings": "Spieler-ID-Einstellungen speichern",
+  "ui.player_ids_waiting": "Warten auf Verschieben",
+  "ui.restart_server_and_move_character": "Server neu starten und Charakter verschieben",
+  "ui.player_ids_recent": "Letzte Beitritte",
+  "msg.player_id_correct_5c1e20": "ID stimmt",
+  "msg.player_id_first_seen_8d02a4": "Zum ersten Mal gesehen",
+  "msg.player_id_new_from_game_3fa6b1": "Neue ID vom Spiel",
+  "msg.player_id_moved_b27c95": "Auf neue ID verschoben",
+  "msg.player_ids_auto_on_e4a7d3": "Automatisches Verschieben ist an: Gibt das Spiel einem zurückkehrenden Spieler eine neue ID, verschiebt MystTiq seinen Charakter, sobald niemand online ist, vorher mit einer Sicherungskopie.",
+  "msg.player_ids_auto_off_71d9c0": "Automatisches Verschieben ist aus: Ein wartender Charakter bleibt in der Liste, bis Sie den Server neu starten und ihn verschieben.",
+  "msg.player_ids_moving_0c58e2": "Charakter wird verschoben: Der Server wird gestoppt, eine Sicherungskopie erstellt, das Verschieben geprüft und der Server wieder gestartet…",
+  "msg.launcher_diagnostic_options_6d2b90": "-log, -stdout, -FullStdOutLogOutput und -abslog dienen der Fehlersuche; die Standardvorgabe lässt sie aus."
 }

@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -4526,6 +4526,192 @@ try
         File.WriteAllText(ServerInstallIntegrity.MarkerPath(serverRoot), "started=2026-10-11T10:00:00Z\nvalidate=False\n");
         Assert(ServerInstallIntegrity.Incomplete(serverRoot) is { } leftBehind && leftBehind.Contains("2026-10-11 10:00", StringComparison.Ordinal),
             "a marker left by a MystTiq that stopped mid-update is named with when it started");
+    }, failures);
+
+    // v1.1.0.2 (roadmap F-2): the game gives accounts new player IDs since its 1.0 update; the character is moved to it.
+    RunScenario("Player ID move (F-2): the character under the new ID (and its solo guild) is removed and every reference to the old ID rewritten, another player's references kept; a shared guild, a base, a reference elsewhere or two characters for the old ID refuse the move; the character file's two IDs are rewritten; the staged result is verified", () =>
+    {
+        const string oldId = "67D8D355000000000000000000000000", newId = "E290DA9A000000000000000000000000", otherId = "1467C601000000000000000000000000";
+        string G(string id) => PlayerIdMove.Guid(id);
+        static string Fill(string template, params (string Token, string Value)[] values) { foreach (var (token, value) in values) template = template.Replace(token, value); return template; }
+        System.Text.Json.Nodes.JsonNode Level(bool sharedGuild = false, bool throwawayBase = false, bool strayReference = false, bool twoOld = false)
+        {
+            static string Body(string id, string instance, string name, string extra) =>
+                Fill("""{"key":{"PlayerUId":{"value":"@0@"},"InstanceId":{"value":"@1@"}},"value":{"RawData":{"value":{"object":{"SaveParameter":{"value":{"IsPlayer":{"value":true},"NickName":{"value":"@2@"}@3@}}}}}}}""", ("@0@", id), ("@1@", instance), ("@2@", name), ("@3@", extra));
+            var bodies = new List<string>
+            {
+                Body(G(oldId), "aaaaaaaa-0000-0000-0000-000000000001", "Wade", Fill(""","LastNickNameModifierPlayerUid":{"value":"@0@"}""", ("@0@", G(oldId)))),
+                Fill("""{"key":{"PlayerUId":{"value":"00000000-0000-0000-0000-000000000000"},"InstanceId":{"value":"bbbbbbbb-0000-0000-0000-000000000002"}},"value":{"RawData":{"value":{"object":{"SaveParameter":{"value":{"CharacterID":{"value":"Lamball"},"OwnerPlayerUId":{"value":"@0@"},"OldOwnerPlayerUIds":{"value":{"values":["@1@","@2@"]}}}}}}}}}""", ("@0@", G(oldId)), ("@1@", G(oldId)), ("@2@", G(otherId))),
+                Body(G(otherId), "cccccccc-0000-0000-0000-000000000003", "M3llyM", ""),
+                Body(G(newId), "dddddddd-0000-0000-0000-000000000004", "WadeeRROR", Fill(""","LastNickNameModifierPlayerUid":{"value":"@0@"}""", ("@0@", G(newId))))
+            };
+            if (twoOld) bodies.Add(Body(G(oldId), "eeeeeeee-0000-0000-0000-000000000005", "Wade2", ""));
+            var throwawayMembers = sharedGuild ? Fill("""[{"player_uid":"@0@"},{"player_uid":"@1@"}]""", ("@0@", G(newId)), ("@1@", G(otherId))) : Fill("""[{"player_uid":"@0@"}]""", ("@0@", G(newId)));
+            var throwawayBases = throwawayBase ? """["b9"]""" : "[]";
+            var builds = strayReference ? Fill("""[{"build_player_uid":"@0@"},{"build_player_uid":"@1@"},{"build_player_uid":"@2@"}]""", ("@0@", G(oldId)), ("@1@", G(oldId)), ("@2@", G(newId))) : Fill("""[{"build_player_uid":"@0@"},{"build_player_uid":"@1@"}]""", ("@0@", G(oldId)), ("@1@", G(oldId)));
+            return System.Text.Json.Nodes.JsonNode.Parse(Fill("""
+                {"properties":{"worldSaveData":{"value":{
+                  "CharacterSaveParameterMap":{"value":[@0@]},
+                  "GroupSaveDataMap":{"value":[
+                    {"key":"g1","value":{"GroupType":{"value":"Guild"},"RawData":{"value":{"admin_player_uid":"@1@","players":[{"player_uid":"@2@"},{"player_uid":"@3@"}],"base_ids":["b1"],"individual_character_handle_ids":[{"guid":"@4@","instance_id":"aaaaaaaa-0000-0000-0000-000000000001"}]}}}},
+                    {"key":"g2","value":{"GroupType":{"value":"Guild"},"RawData":{"value":{"admin_player_uid":"@5@","players":@6@,"base_ids":@7@,"individual_character_handle_ids":[{"guid":"@8@","instance_id":"dddddddd-0000-0000-0000-000000000004"}]}}}}
+                  ]},
+                  "MapObjectSaveData":{"value":@9@}
+                }}}}
+                """, ("@0@", string.Join(",", bodies)), ("@1@", G(otherId)), ("@2@", G(otherId)), ("@3@", G(oldId)), ("@4@", G(oldId)), ("@5@", G(newId)), ("@6@", throwawayMembers), ("@7@", throwawayBases), ("@8@", G(newId)), ("@9@", builds)))!;
+        }
+
+        Assert(G(oldId) == "67d8d355-0000-0000-0000-000000000000" && G("67d8d355-0000-0000-0000-000000000000") == G(oldId), "a 32-hex player ID reads as the save's lower-case GUID, and a GUID stays as it is");
+        var level = Level();
+        var plan = PlayerIdMove.Check(level, oldId, newId);
+        Assert(plan.CanMove && plan.OldReferences == 8 && plan.NewReferences == 5 && plan.ThrowawayBodies == 1 && plan.ThrowawayGuilds == 1 && plan.Characters == 4,
+            $"the plan counts the old ID's 8 references and the throwaway's 5 (one character, one solo guild) [{plan}]");
+        var moved = PlayerIdMove.MoveWorld(level, oldId, newId);
+        Assert(moved == 8 && PlayerIdMove.Count(level, G(oldId)) == 0 && PlayerIdMove.Count(level, G(newId)) == 8 && PlayerIdMove.Count(level, G(otherId)) == 4,
+            "every reference to the old ID now names the new one; the other player's four references are untouched");
+        var text = level.ToJsonString();
+        Assert(!text.Contains("WadeeRROR", StringComparison.Ordinal) && text.Contains("\"Wade\"", StringComparison.Ordinal) && !text.Contains("\"g2\"", StringComparison.Ordinal) && text.Contains("\"g1\"", StringComparison.Ordinal),
+            "the throwaway character and its solo guild are gone; the real character and the shared guild stay");
+
+        Assert(PlayerIdMove.Check(Level(sharedGuild: true), oldId, newId).Problem is { } shared && shared.Contains("2 member(s)", StringComparison.Ordinal), "a throwaway in a guild with someone else refuses the move");
+        Assert(PlayerIdMove.Check(Level(throwawayBase: true), oldId, newId).Problem is { } based && based.Contains("1 base(s)", StringComparison.Ordinal), "a throwaway guild with a base refuses the move");
+        Assert(PlayerIdMove.Check(Level(strayReference: true), oldId, newId).Problem is { } stray && stray.Contains("outside its own character and guild", StringComparison.Ordinal), "the new ID named anywhere else refuses the move");
+        Assert(PlayerIdMove.Check(Level(twoOld: true), oldId, newId).Problem is { } two && two.Contains("found 2", StringComparison.Ordinal), "two characters for the old ID refuse the move");
+        Assert(PlayerIdMove.Check(Level(), oldId, oldId).Problem is not null, "the same ID twice refuses the move");
+        AssertThrows<InvalidOperationException>(() => PlayerIdMove.MoveWorld(Level(sharedGuild: true), oldId, newId), "a refused move changes nothing (it throws before rewriting)");
+
+        var player = System.Text.Json.Nodes.JsonNode.Parse(Fill("""{"properties":{"SaveData":{"value":{"PlayerUId":{"value":"@0@"},"IndividualId":{"value":{"PlayerUId":{"value":"@1@"},"InstanceId":{"value":"aaaaaaaa-0000-0000-0000-000000000001"}}},"OtomoCharacterContainerId":{"value":{"ID":{"value":"c0ffee00-0000-0000-0000-000000000000"}}}}}}}""", ("@0@", G(oldId)), ("@1@", G(oldId))))!;
+        Assert(PlayerIdMove.MoveCharacterFile(player, oldId, newId) == 2 && PlayerIdMove.Count(player, G(newId)) == 2 && player.ToJsonString().Contains("c0ffee00", StringComparison.Ordinal),
+            "the character file's PlayerUId and IndividualId.PlayerUId are rewritten; its Pal party reference stays");
+        Assert(PlayerIdMove.Verify(level, player, oldId, newId, 8, 3, 2) is null, "the moved world and character file pass the verification");
+        Assert(PlayerIdMove.Verify(Level(), player, oldId, newId, 8, 3, 2) is not null, "an unmoved world fails the verification");
+    }, failures);
+
+    RunScenarioAsync("Player ID check (F-2): each Steam join is checked once per session; a known character under the old ID with a new ID from the game queues a move and the guard turns the player away with the move message; after the move the learned ID is expected and nobody is kicked; a new player is first seen, then correct; with automatic moves on, the new-character screen is not kicked; the setting is kept", async () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "player-ids-" + Guid.NewGuid().ToString("N")));
+        var world = Path.Combine(paths.SaveRoot, "SaveGames", "0", "World");
+        var playersDir = Path.Combine(world, "Players");
+        Directory.CreateDirectory(playersDir);
+        File.WriteAllText(Path.Combine(playersDir, "67D8D355000000000000000000000000.sav"), "x");
+        var activity = new HeadlessActivityLogService(paths);
+        var notifications = new HeadlessNotificationService(paths, activity);
+        var lifecycle = new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped };
+        var operations = new MystTiq.Core.Operations.OperationCoordinator(paths);
+        var profile = new MystTiq.Core.Operations.ServerProfileId("default");
+        HeadlessPlayerIdService Build() => new(paths, lifecycle, new HeadlessBackupService(paths, lifecycle, activity, operations, profile), activity, notifications,
+            new HeadlessSaveCodecService(new HeadlessCrashAndSaveToolsService(paths, activity)), operations, profile,
+            token => lifecycle.StartAsync([], TimeSpan.FromSeconds(5), token), token => lifecycle.StopAsync(TimeSpan.FromSeconds(5), token));
+        var ids = Build();
+        var now = new DateTimeOffset(2026, 10, 13, 18, 0, 0, TimeSpan.Zero);
+        var fake = new FakeModerationProvider();
+        var guard = new HeadlessIdentityGuardService(paths, activity, notifications, new PlayerModerationCoordinator([fake]), ids.ExpectedFor, () => now, () => ids.AutoMove, ids.KickReason);
+        const string wade = "steam_76561197962020201", newId = "E290DA9A000000000000000000000000";
+        HeadlessPlayersSnapshot Online(string user, string playerId, string name = "Wade") => new(true, 1, [new HeadlessPlayerSnapshot(name, user, user.Replace("steam_", ""), playerId, "", "", "Steam", "15", "0")], now, "test");
+        HeadlessPlayersSnapshot Nobody() => new(true, 0, [], now, "test");
+
+        Assert(ids.AutoMove && ids.ExpectedFor(wade) == "67D8D355000000000000000000000000", "automatic moves are on by default; with nothing learned the pre-1.0 Steam formula is expected");
+        var first = ids.Observe(Online(wade, newId));
+        Assert(first.Count == 1 && first[0].Result == PlayerIdResult.NewIdFromGame && ids.Snapshot().Pending is [{ FromPlayerId: "67D8D355000000000000000000000000", ToPlayerId: newId }],
+            "the owner's 2026-10-13 join: a new ID from the game while his character is under 67D8D355 queues the move");
+        Assert(ids.Observe(Online(wade, newId)).Count == 0 && ids.Snapshot().Checks.Count == 1, "checked once per session, not on every poll");
+        Assert(ids.KickReason(wade).Contains("being moved to your new player ID", StringComparison.Ordinal), "the kick tells the player their character is being moved");
+        await guard.EnforceAsync(Online(wade, newId), CancellationToken.None);
+        Assert(fake.Calls.Count == 1 && guard.RecentEvents() is [{ Assigned: newId }] && guard.RecentEvents()[0].Message.Contains("new player ID", StringComparison.Ordinal),
+            $"the guard turns him away before he plays, and its alert explains the move [{Describe(fake.Calls)}]");
+
+        // The move ran: the old file is archived and his character is under the new ID.
+        File.Delete(Path.Combine(playersDir, "67D8D355000000000000000000000000.sav"));
+        File.WriteAllText(Path.Combine(playersDir, newId + ".sav"), "x");
+        ids.Observe(Nobody()); await guard.EnforceAsync(Nobody(), CancellationToken.None);
+        var after = ids.Observe(Online(wade, newId));
+        Assert(after is [{ Result: PlayerIdResult.FirstSeen }] && ids.ExpectedFor(wade) == newId, "his next join is first seen under the new ID, which is learned and expected from then on");
+        await guard.EnforceAsync(Online(wade, newId), CancellationToken.None);
+        Assert(fake.Calls.Count == 1, "the guard no longer turns him away");
+        ids.Observe(Nobody());
+        Assert(ids.Observe(Online(wade, newId)) is [{ Result: PlayerIdResult.Correct }], "and every join after that is correct");
+
+        const string newcomer = "steam_76561198000000001";
+        Assert(ids.Observe(Online(newcomer, "0BADF00D000000000000000000000000", "New")) is [{ Result: PlayerIdResult.FirstSeen }], "a brand-new player with no character anywhere is first seen, never queued");
+
+        // With automatic moves on, the new-character screen is let through (the character it makes is the move's target).
+        const string melly = "steam_76561198653223616";
+        File.WriteAllText(Path.Combine(playersDir, "A3835C7B000000000000000000000000.sav"), "x");
+        var calls = fake.Calls.Count;
+        await guard.EnforceAsync(Online(melly, "None", "Melly"), CancellationToken.None);
+        now = now.AddSeconds(IdentityGuard.LoadingGrace.TotalSeconds + 5);
+        await guard.EnforceAsync(Online(melly, "None", "Melly"), CancellationToken.None);
+        Assert(fake.Calls.Count == calls, "with automatic moves on, a player on the new-character screen is not kicked after the loading grace");
+
+        ids.SaveSettings(false);
+        Assert(!Build().AutoMove && Build().KickReason(wade).Contains("did not load your character", StringComparison.Ordinal), "the setting is kept across a restart, and with it off the kick says to wait for the administrator");
+        Assert(IdentityGuard.MoveAdvice(true).Contains("when nobody is online", StringComparison.Ordinal) && IdentityGuard.MoveAdvice(false).Contains("Players > Player IDs", StringComparison.Ordinal), "the alert's advice follows the setting");
+        Assert(PlayerIdJudge.Judge(wade, newId, null) == PlayerIdResult.FirstSeen && PlayerIdJudge.Judge(wade, newId, newId.ToLowerInvariant()) == PlayerIdResult.Correct && PlayerIdJudge.Judge(wade, newId, "67D8D355000000000000000000000000") == PlayerIdResult.NewIdFromGame,
+            "the judge: no known character is a first sighting, the same ID (any case) is correct, another is a new ID from the game");
+    }, failures);
+
+    // The owner's real world, copied: the service moves the character with the real converter (when both are on this computer).
+    RunScenarioAsync("Player ID move on a copy of the real world (F-2): the service stops nothing (the server is stopped), takes a safety backup, moves Wade from 67D8D355 to E290DA9A with the real converter, verifies, archives the old and replaced character files, learns the ID and clears the move; the moved world has Wade (level 15) under the new ID", async () =>
+    {
+        var reference = Environment.GetEnvironmentVariable("MYSTTIQ_ID_MOVE_REFERENCE_WORLD") ?? @"C:\GameServers\_Backups\world-before-uid-migration-20261013-114408";
+        var tools = Environment.GetEnvironmentVariable("MYSTTIQ_SAVE_TOOLS") ?? @"C:\GameServers\Palworld\Server\Tools";
+        if (!File.Exists(Path.Combine(reference, "Level.sav")) || !Directory.Exists(Path.Combine(tools, "palworld-plm-tools")))
+        {
+            Console.WriteLine($"  NOT RUN HERE: the reference world ({reference}) or the converter ({tools}) is not on this computer.");
+            return;
+        }
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "player-id-real-" + Guid.NewGuid().ToString("N")));
+        var world = Path.Combine(paths.SaveRoot, "SaveGames", "0", "19FE0A034723392ED5234F863909E660");
+        foreach (var file in Directory.EnumerateFiles(reference, "*", SearchOption.AllDirectories))
+        {
+            var target = Path.Combine(world, Path.GetRelativePath(reference, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target);
+        }
+        var link = Path.Combine(paths.ServerRoot, "Tools");
+        using (var mklink = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c mklink /J \"{link}\" \"{tools}\"") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true })!)
+            mklink.WaitForExit();
+        try
+        {
+            var activity = new HeadlessActivityLogService(paths);
+            var notifications = new HeadlessNotificationService(paths, activity);
+            var lifecycle = new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped };
+            var operations = new MystTiq.Core.Operations.OperationCoordinator(paths);
+            var profile = new MystTiq.Core.Operations.ServerProfileId("default");
+            var codec = new HeadlessSaveCodecService(new HeadlessCrashAndSaveToolsService(paths, activity));
+            var forgotten = new List<string>();
+            var ids = new HeadlessPlayerIdService(paths, lifecycle, new HeadlessBackupService(paths, lifecycle, activity, operations, profile), activity, notifications, codec, operations, profile,
+                token => lifecycle.StartAsync([], TimeSpan.FromSeconds(5), token), token => lifecycle.StopAsync(TimeSpan.FromSeconds(5), token), forgotten.AddRange);
+            const string wade = "steam_76561197962020201", oldId = "67D8D355000000000000000000000000", newId = "E290DA9A000000000000000000000000";
+            ids.Observe(new HeadlessPlayersSnapshot(true, 1, [new HeadlessPlayerSnapshot("WadeeRROR", wade, "76561197962020201", newId, "", "", "Steam", "1", "0")], DateTimeOffset.UtcNow, "test"));
+            Assert(ids.Snapshot().Pending.Count == 1, "the join queues the move");
+            var result = await ids.RunPendingAsync(wade, CancellationToken.None);
+            Assert(result.Success, $"the move succeeds [{result.Message}]");
+            var players = Path.Combine(world, "Players");
+            var archive = Path.Combine(paths.ManagerRuntimeRoot, "character-migration", "archive");
+            Assert(!File.Exists(Path.Combine(players, oldId + ".sav")) && File.Exists(Path.Combine(players, newId + ".sav")), "the old character file is gone from the world and the new ID has the moved one");
+            Assert(Directory.GetFiles(archive).Length == 2 && Directory.GetFiles(archive).Any(f => f.Contains("moved-to-E290DA9A", StringComparison.Ordinal)) && Directory.GetFiles(archive).Any(f => f.Contains("replaced", StringComparison.Ordinal)),
+                "the old character file and the replaced one are archived, not deleted");
+            Assert(Directory.GetFiles(paths.BackupRoot, "*.zip", SearchOption.AllDirectories).Length >= 1, "a safety backup was taken first");
+            var snapshot = ids.Snapshot();
+            Assert(snapshot.Pending.Count == 0 && snapshot.Known[wade] == newId && snapshot.Checks.Last().Result == PlayerIdResult.Moved && forgotten.Contains(oldId) && forgotten.Contains(newId),
+                "the move is cleared, the new ID learned, recorded as moved, and both IDs' level history forgotten");
+
+            var (converter, _) = await codec.ResolveConverterAsync(Path.Combine(world, "Level.sav"), CancellationToken.None);
+            var check = Path.Combine(paths.ServerRoot, "check"); Directory.CreateDirectory(check);
+            var levelJson = await codec.DecodeAsync(converter!, Path.Combine(world, "Level.sav"), Path.Combine(check, "Level.json"), CancellationToken.None);
+            var movedLevel = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(levelJson))!;
+            var body = movedLevel["properties"]!["worldSaveData"]!["value"]!["CharacterSaveParameterMap"]!["value"]!.AsArray()
+                .Single(e => string.Equals(e!["key"]!["PlayerUId"]!["value"]!.GetValue<string>(), PlayerIdMove.Guid(newId), StringComparison.OrdinalIgnoreCase));
+            var parameters = body!["value"]!["RawData"]!["value"]!["object"]!["SaveParameter"]!["value"]!;
+            Assert(PlayerIdMove.Count(movedLevel, PlayerIdMove.Guid(oldId)) == 0 && PlayerIdMove.Count(movedLevel, PlayerIdMove.Guid(newId)) == 216,
+                "the real world names the new ID exactly where it named the old one (216 references, as in the move done by hand)");
+            Assert(parameters["NickName"]!["value"]!.GetValue<string>() == "Wade" && parameters["Level"]!["value"]!["value"]!.GetValue<int>() == 15, "the character under the new ID is Wade, level 15");
+        }
+        finally
+        {
+            try { Directory.Delete(link); } catch { /* the junction only, never its target */ }
+        }
     }, failures);
 }
 finally

@@ -4059,5 +4059,20 @@
   "ui.reports_only": "Solo avisa",
   "msg.level_gap_finding_6a1f3e": "El jugador '{0}' pasó del nivel {1} al {2} con {3} minuto(s) de juego {4}; se esperarían como mucho {5} nivel(es). Revisa al jugador antes de actuar: esta regla solo avisa.",
   "msg.level_gap_since_first_seen_0b47d2": "desde que MystTiq lo vio por primera vez",
-  "msg.level_gap_since_level_before_e83c51": "desde el nivel anterior"
+  "msg.level_gap_since_level_before_e83c51": "desde el nivel anterior",
+  "ui.player_ids": "ID de jugadores",
+  "ui.player_ids_hint": "Cada vez que entra un jugador de Steam se comprueba el ID de jugador que le asigna el juego frente al ID donde está su personaje. Desde la actualización 1.0, el juego puede dar a una cuenta un ID nuevo; entonces el personaje de esa cuenta se mueve al ID nuevo, con una copia de seguridad antes.",
+  "ui.player_ids_auto_move": "Mover personajes automáticamente cuando no haya nadie conectado",
+  "ui.save_player_id_settings": "Guardar ajustes de ID de jugadores",
+  "ui.player_ids_waiting": "Pendientes de mover",
+  "ui.restart_server_and_move_character": "Reiniciar el servidor y mover el personaje",
+  "ui.player_ids_recent": "Entradas recientes",
+  "msg.player_id_correct_5c1e20": "ID correcto",
+  "msg.player_id_first_seen_8d02a4": "Visto por primera vez",
+  "msg.player_id_new_from_game_3fa6b1": "ID nuevo del juego",
+  "msg.player_id_moved_b27c95": "Movido al ID nuevo",
+  "msg.player_ids_auto_on_e4a7d3": "Los movimientos automáticos están activados: cuando el juego da un ID nuevo a un jugador que vuelve, MystTiq mueve su personaje en cuanto no haya nadie conectado, con una copia de seguridad antes.",
+  "msg.player_ids_auto_off_71d9c0": "Los movimientos automáticos están desactivados: un personaje pendiente de mover sigue en la lista hasta que reinicies el servidor y lo muevas.",
+  "msg.player_ids_moving_0c58e2": "Moviendo el personaje: se detiene el servidor, se hace una copia de seguridad, se comprueba el movimiento y se vuelve a iniciar el servidor…",
+  "msg.launcher_diagnostic_options_6d2b90": "-log, -stdout, -FullStdOutLogOutput y -abslog sirven para diagnosticar problemas; el preajuste Predeterminado los deja desactivados."
 }

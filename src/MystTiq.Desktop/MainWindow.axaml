@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.0.1: file reviewed for this release (2026-10-13). -->
+<!-- MystTiq v1.1.0.2: file reviewed for this release (2026-10-13). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -1873,6 +1873,62 @@
             </StackPanel>
           </Border>
 
+          <!-- PLAYER IDS (v1.1.0.2, roadmap F-2). Every Steam player's join is checked against the ID their character lives
+               under. Since its 1.0 update the game can give an account a new ID; such an account is listed here until its
+               character is moved to the new ID (automatically once nobody is online, or with the button), with a safety
+               backup first (HeadlessPlayerIdService). -->
+          <Border x:Name="PlayerIdsCard" Classes="card accentWorld" IsVisible="{Binding CanManageAdmin}" IsEnabled="{Binding CanManageAdmin}">
+            <StackPanel Spacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <Button Classes="sectionToggle" Command="{Binding Players.TogglePlayerIdsCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="▸" IsVisible="{Binding !Players.IsPlayerIdsExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="▾" IsVisible="{Binding Players.IsPlayerIdsExpanded}" FontWeight="Bold"/>
+                    <TextBlock Text="{services:Tr ui.player_ids}" FontSize="17" FontWeight="SemiBold"/>
+                  </StackPanel>
+                </Button>
+                <Button Classes="info" Grid.Column="1" Content="{services:Tr ui.refresh}" Command="{Binding Players.RefreshPlayerIdsCommand}" IsVisible="{Binding Players.IsPlayerIdsExpanded}"/>
+              </Grid>
+              <StackPanel Spacing="10" IsVisible="{Binding Players.IsPlayerIdsExpanded}">
+                <TextBlock Text="{services:Tr ui.player_ids_hint}" Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Players.PlayerIdsState}" TextWrapping="Wrap"/>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <CheckBox Content="{services:Tr ui.player_ids_auto_move}" IsChecked="{Binding Players.PlayerIdAutoMove}"/>
+                  <Button Classes="apply" Content="{services:Tr ui.save_player_id_settings}" Command="{Binding Players.SavePlayerIdsCommand}"/>
+                </StackPanel>
+                <StackPanel Spacing="6" IsVisible="{Binding Players.HasPlayerIdMoves}">
+                  <TextBlock Text="{services:Tr ui.player_ids_waiting}" FontWeight="SemiBold"/>
+                  <ListBox AutomationProperties.Name="{services:Tr ui.player_ids_waiting}" ItemsSource="{Binding Players.PlayerIdMoves}" SelectedItem="{Binding Players.SelectedPlayerIdMove}" MaxHeight="160">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="models:PlayerIdMoveRequestDto">
+                        <Grid ColumnDefinitions="*,190,150" ColumnSpacing="8">
+                          <TextBlock Text="{Binding NameVerbatim}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Grid.Column="1" Text="{Binding IdsVerbatim}" Classes="muted"/>
+                          <TextBlock Grid.Column="2" Text="{Binding SinceVerbatim}" Classes="muted"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <Button Classes="caution" Content="{services:Tr ui.restart_server_and_move_character}" Command="{Binding Players.MoveCharacterCommand}" HorizontalAlignment="Left"/>
+                </StackPanel>
+                <StackPanel Spacing="4" IsVisible="{Binding Players.HasPlayerIdChecks}">
+                  <TextBlock Text="{services:Tr ui.player_ids_recent}" FontWeight="SemiBold"/>
+                  <ItemsControl ItemsSource="{Binding Players.PlayerIdChecks}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="models:PlayerIdCheckDto">
+                        <Grid ColumnDefinitions="140,*,190,170" ColumnSpacing="8">
+                          <TextBlock Text="{Binding AtVerbatim}" Classes="muted"/>
+                          <TextBlock Grid.Column="1" Text="{Binding NameVerbatim}" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Grid.Column="2" Text="{Binding IdsVerbatim}" Classes="muted"/>
+                          <TextBlock Grid.Column="3" Text="{services:TrText Outcome}" Classes="muted"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+          </Border>
           <!-- STARTER KITS (v0.7.94.0). Delivery uses PalDefender's give commands over RCON, since
                vanilla Palworld has no give command; the card shows the real provider status and a Test
                button. Auto-gift only ever applies to players first seen after it is switched on. -->

@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -1133,7 +1133,9 @@ public sealed class ConfigurationViewModel : PageViewModel
         if (ConfigLauncherWorkingDirectory == "Custom path" && string.IsNullOrWhiteSpace(ConfigLauncherCustomWorkingDirectory))
             warnings.Add("Custom working directory is selected but no path is set.");
         if (ConfigLauncherLog || ConfigLauncherStdout || ConfigLauncherFullStdOutLogOutput || ConfigLauncherAbsLog)
-            warnings.Add("Players were given the wrong character every time PalServer started with -log, -stdout, -FullStdOutLogOutput or -abslog, and kept theirs when it started like a double-click. Use Like double-click unless you are diagnosing.");
+            // v1.1.0.2 (roadmap F-2): these options were once blamed for players getting the wrong character; on 2026-10-13 the
+            // game itself was shown to give accounts new player IDs, however the server is started.
+            warnings.Add("-log, -stdout, -FullStdOutLogOutput and -abslog are for diagnosing problems; the Default preset leaves them off.");
         if (ConfigLauncherExecutable != "PalServer.exe")
             warnings.Add("Direct Shipping executable modes bypass PalServer.exe and are intended for diagnosis/testing.");
 

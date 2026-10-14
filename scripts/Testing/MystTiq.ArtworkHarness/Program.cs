@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -1606,9 +1606,10 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     if (loadLauncher is not null) { loadLauncher.Invoke(vm.Configuration, [new List<string> { "-port=8211" }]); Dispatcher.UIThread.RunJobs(); clean &= !AnyFlag(); }
     typeof(ConfigurationViewModel).GetProperty("ConfigLauncherStdout")!.SetValue(vm.Configuration, true);
     Dispatcher.UIThread.RunJobs();
-    var warned = vm.Configuration.ConfigLauncherWarning.Contains("wrong character") && vm.Configuration.ConfigLauncherWarning.Contains("Like double-click");
+    // v1.1.0.2 (roadmap F-2): the note calls these diagnosis options; they were disproven as the cause of wrong characters.
+    var warned = vm.Configuration.ConfigLauncherWarning.Contains("for diagnosing problems") && !vm.Configuration.ConfigLauncherWarning.Contains("wrong character");
     preset.Execute("DoubleClick"); Dispatcher.UIThread.RunJobs();
-    Check(clean && warned && !vm.Configuration.ConfigLauncherWarning.Contains("wrong character"),
+    Check(clean && warned && !vm.Configuration.ConfigLauncherWarning.Contains("for diagnosing problems"),
         $"No Launcher preset adds -log, -stdout, -FullStdOutLogOutput or -abslog; switching one on warns [{vm.Configuration.ConfigLauncherWarning}]");
 }
 // v1.0.6.0 (roadmap S-3): the Players page's Pal box card lists the box, Remove is red, Add an apply button beside the

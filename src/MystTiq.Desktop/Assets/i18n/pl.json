@@ -4059,5 +4059,20 @@
   "ui.reports_only": "Tylko zgłasza",
   "msg.level_gap_finding_6a1f3e": "Gracz „{0}” przeszedł z poziomu {1} na {2} w {3} min gry {4}; należałoby oczekiwać najwyżej {5} poz. Sprawdź gracza, zanim cokolwiek zrobisz: ta reguła tylko zgłasza.",
   "msg.level_gap_since_first_seen_0b47d2": "od chwili, gdy MystTiq pierwszy raz go zobaczył",
-  "msg.level_gap_since_level_before_e83c51": "od poprzedniego poziomu"
+  "msg.level_gap_since_level_before_e83c51": "od poprzedniego poziomu",
+  "ui.player_ids": "Identyfikatory graczy",
+  "ui.player_ids_hint": "Przy każdym dołączeniu gracza Steam identyfikator gracza nadany przez grę jest porównywany z identyfikatorem, pod którym zapisana jest jego postać. Od aktualizacji 1.0 gra może nadać kontu nowy identyfikator; postać tego konta jest wtedy przenoszona na nowy identyfikator, a wcześniej powstaje kopia zapasowa.",
+  "ui.player_ids_auto_move": "Przenoś postacie automatycznie, gdy nikt nie gra",
+  "ui.save_player_id_settings": "Zapisz ustawienia identyfikatorów",
+  "ui.player_ids_waiting": "Czekają na przeniesienie",
+  "ui.restart_server_and_move_character": "Uruchom ponownie serwer i przenieś postać",
+  "ui.player_ids_recent": "Ostatnie dołączenia",
+  "msg.player_id_correct_5c1e20": "Identyfikator zgodny",
+  "msg.player_id_first_seen_8d02a4": "Pierwszy raz",
+  "msg.player_id_new_from_game_3fa6b1": "Nowy identyfikator od gry",
+  "msg.player_id_moved_b27c95": "Przeniesiono na nowy identyfikator",
+  "msg.player_ids_auto_on_e4a7d3": "Automatyczne przenoszenie jest włączone: gdy gra nada powracającemu graczowi nowy identyfikator, MystTiq przeniesie jego postać, gdy nikt nie będzie grał, wcześniej robiąc kopię zapasową.",
+  "msg.player_ids_auto_off_71d9c0": "Automatyczne przenoszenie jest wyłączone: postać czekająca na przeniesienie zostaje na liście, dopóki nie uruchomisz ponownie serwera i jej nie przeniesiesz.",
+  "msg.player_ids_moving_0c58e2": "Przenoszenie postaci: serwer zostaje zatrzymany, powstaje kopia zapasowa, przeniesienie jest sprawdzane, a serwer uruchamiany ponownie…",
+  "msg.launcher_diagnostic_options_6d2b90": "-log, -stdout, -FullStdOutLogOutput i -abslog służą do diagnozowania problemów; domyślny zestaw je wyłącza."
 }

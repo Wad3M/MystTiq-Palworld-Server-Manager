@@ -4059,5 +4059,20 @@
   "ui.reports_only": "仅报告",
   "msg.level_gap_finding_6a1f3e": "玩家“{0}”{4}在 {3} 分钟的游戏时间内从 {1} 级升到 {2} 级；预计最多 {5} 级。请先核实该玩家再采取行动：此规则只报告。",
   "msg.level_gap_since_first_seen_0b47d2": "（自 MystTiq 首次看到以来）",
-  "msg.level_gap_since_level_before_e83c51": "（自上一个等级以来）"
+  "msg.level_gap_since_level_before_e83c51": "（自上一个等级以来）",
+  "ui.player_ids": "玩家 ID",
+  "ui.player_ids_hint": "每个 Steam 玩家加入时，都会核对游戏分配的玩家 ID 与其角色所在的 ID。自 1.0 更新起，游戏可能给账号分配新的 ID；此时会先做安全备份，再把该账号的角色移到新 ID。",
+  "ui.player_ids_auto_move": "无人在线时自动移动角色",
+  "ui.save_player_id_settings": "保存玩家 ID 设置",
+  "ui.player_ids_waiting": "等待移动",
+  "ui.restart_server_and_move_character": "重启服务器并移动角色",
+  "ui.player_ids_recent": "最近的加入",
+  "msg.player_id_correct_5c1e20": "ID 正确",
+  "msg.player_id_first_seen_8d02a4": "首次出现",
+  "msg.player_id_new_from_game_3fa6b1": "游戏给了新 ID",
+  "msg.player_id_moved_b27c95": "已移到新 ID",
+  "msg.player_ids_auto_on_e4a7d3": "自动移动已开启：当游戏给回归玩家分配新 ID 时，MystTiq 会在无人在线时先做安全备份，再移动其角色。",
+  "msg.player_ids_auto_off_71d9c0": "自动移动已关闭：等待移动的角色会一直列出，直到你重启服务器并移动它。",
+  "msg.player_ids_moving_0c58e2": "正在移动角色：停止服务器、做安全备份、检查移动结果，然后重新启动服务器…",
+  "msg.launcher_diagnostic_options_6d2b90": "-log、-stdout、-FullStdOutLogOutput 和 -abslog 用于诊断问题；默认预设会关闭它们。"
 }

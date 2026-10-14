@@ -1,29 +1,33 @@
-<!-- MystTiq v1.1.0.1: file reviewed for this release (2026-10-13). -->
-# MystTiq v1.1.0.1 Checkpoint: Start-up Notice Fix
+<!-- MystTiq v1.1.0.2: file reviewed for this release (2026-10-13). -->
+# MystTiq v1.1.0.2 Checkpoint: Player IDs, Join Check and Automatic Character Move
 
 ## What changed
 
-**Fixed: "Something went wrong (background task)" after the desktop started** (roadmap F-1, reported 2026-10-13).
-Every desktop crash record on your PC (five by the end of the day, v1.0.7.0 to v1.1.0.0) was the same thing: the
-start-up check for a port in use gave up on its connection attempt after 0.75 s and abandoned it, while Windows takes
-about 2 s to refuse a closed local port. The abandoned attempt failed later with nothing waiting for it, and the desktop
-reported it. Nothing stopped and no data was affected. The check now cancels its attempt at the limit and waits for it.
-
-v1.1.0.0 stays the accepted baseline; this is a fix on top of it.
+**Players the game sends to a new character get their own back, automatically** (roadmap F-2, asked 2026-10-13).
+Since its 1.0 update the game can give a returning Steam player a new player ID; their character stays under the old
+one. Your account (67D8D355 → E290DA9A) and Melly's (A3835C7B → 1467C601) were both affected, whatever way the server
+was started.
+- **Every join is checked** and listed on the new **Player IDs** card (Players page).
+- **A character the game moved is moved to the new ID**: once nobody is online MystTiq stops the server, takes a safety
+  backup, moves the character (level, Pals, buildings, guild), checks it, archives the old file and starts the server
+  again. Or press **Restart server and move character**. Anything unexpected is refused with an alert.
+- **The guard learns each player's ID from the game**, so a moved player is not turned away.
+- The Launcher no longer blames -log and similar options for wrong characters.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.1.0.1-Logic.ps1 -RunBuild -RunLong`: 408 of 409 run passed, 1 skipped (the v1.0.2.0
-  system-unit test: no passwordless sudo on the VM). The one failure, the Linux desktop-session check, was its SSH probe
-  to the VM hanging for two hours on a dead connection (the VM answered SSH instantly when checked); run again on its
-  own, `scripts\Test-v0.8.26.0-LinuxDesktopSession.ps1` passed (16 checks, the real window on the VM's XFCE desktop).
-  The frozen v1.1.0.0 gate passes, the long set passes, and the other Linux VM checks ran and passed.
-- **F-1:** the ArtworkHarness checks the start-up port check on a closed and a listening port and counts socket errors
-  left unobserved after a collection: none. The v1.1.0.0 method, run the same way in a standalone program, left 3 from
-  3 closed-port checks; the new one none. A gate check rejects any connect in the source that is waited on and abandoned.
-- **Static gate:** 344 / 344. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **Full gate** `scripts\Test-v1.1.0.2-Logic.ps1 -RunBuild -RunLong`: 413 / 413 passed, 1 skipped (the v1.0.2.0
+  system-unit test: no passwordless sudo on the VM). Every earlier check is carried (the v1.0.6.1 identity-advice check
+  pinned to the move advice and the corrected Launcher note), the frozen v1.1.0.1 gate passes, the long set passes, and
+  the Linux VM checks ran and passed. The first full run stopped at one ArtworkHarness check still expecting the old
+  Launcher wording; with it updated the ArtworkHarness passes 838 checks, the Player IDs card in every language included.
+- **F-2:** three LogicHarness scenarios pass: the move on a made-up world (rewrite, refusals, verification), the join
+  check with the identity guard, and the service moving Wade from 67D8D355 to E290DA9A on a copy of the real world with
+  the real converter (safety backup, 216 references, level 15 under the new ID, old and replaced files archived).
+- **Static gate:** passed. **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
 
 ## For you
 
-1. **Pushes:** v1.0.7.0 to v1.1.0.1 are committed locally only; they need your yes to push and tag.
-2. **Live checks only you can do:** run `/mysttiq-backup` from your Discord bot; leave the level-gap rule on for a week.
+1. **Connect again:** your server is running through MystTiq with its window hidden; join at `192.168.1.5:8211`.
+2. **Pushes:** v1.0.7.0 to v1.1.0.2 are committed locally only; they need your yes to push and tag.
+3. **Live checks only you can do:** `/mysttiq-backup` from your Discord bot; a week of the level-gap rule.

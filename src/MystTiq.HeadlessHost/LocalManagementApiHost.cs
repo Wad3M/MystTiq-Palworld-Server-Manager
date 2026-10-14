@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -239,8 +239,20 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var rconModeration = new RconPlayerModerationProvider(rcon, activity);
             var playerModeration = new PlayerModerationCoordinator([playerAdmin, rconModeration]);
             var whitelist = new HeadlessWhitelistService(paths, activity, playerModeration);
+            // v1.1.0.2 (roadmap F-2): the join check, each account's learned player ID and the automatic character move
+            // (see HeadlessPlayerIdService); the anti-cheat service, built below, is given to it once it exists.
+            HeadlessAntiCheatService? antiCheatForMoves = null;
+            var playerIds = new HeadlessPlayerIdService(paths, lifecycle, backups, activity, notifications, saveCodec, operations, profileId,
+                async token =>
+                {
+                    await modManagement.LogPreStartDiagnosticsAsync(token);
+                    return await lifecycle.StartAsync(serverConfig.LaunchArguments, TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds), token);
+                },
+                token => lifecycle.StopAsync(TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds), token),
+                ids => antiCheatForMoves?.ForgetLevelHistory(ids));
             // v1.0.0.1: notices a Steam player who was not given their own character (see HeadlessIdentityGuardService).
-            var identityGuard = new HeadlessIdentityGuardService(paths, activity, notifications, playerModeration, () => serverConfig.LaunchArguments ?? []);
+            var identityGuard = new HeadlessIdentityGuardService(paths, activity, notifications, playerModeration, playerIds.ExpectedFor,
+                autoMove: () => playerIds.AutoMove, kickReason: playerIds.KickReason);
             // v1.0.0.2: unique player names (see HeadlessNameGuardService).
             var nameGuard = new HeadlessNameGuardService(paths, activity, notifications, playerModeration, playerRegistry);
             var kits = new HeadlessKitService(paths, activity, playerRegistry, new RconKitCommandRunner(paths, rcon));
@@ -260,6 +272,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var antiCheat = new HeadlessAntiCheatService(paths, notifications, activity, playerModeration, palEdit,
                 id => playerRegistry.Snapshot().FirstOrDefault(r => string.Equals(r.PlayerId, id.Trim(), StringComparison.OrdinalIgnoreCase))?.TotalPlaytimeMinutes,
                 () => LevelGapScan.ReadExpRate(Path.Combine(paths.ConfigRoot, "PalWorldSettings.ini")));
+            antiCheatForMoves = antiCheat;
             // v0.8.9.0: watches Pal\Saved\Crashes for new Unreal crash reports (see HeadlessCrashReportWatcher).
             var crashReports = new HeadlessCrashReportWatcher(paths, string.IsNullOrWhiteSpace(serverConfig.Name) ? serverConfig.Id : serverConfig.Name,
                 crashAndSaveTools, notifications,
@@ -333,6 +346,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 Whitelist = whitelist,
             IdentityGuard = identityGuard,
             NameGuard = nameGuard,
+                PlayerIds = playerIds,
                 Kits = kits,
                 GameIds = gameIds,
                 Teleport = teleport,
@@ -672,6 +686,18 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
         routes.MapPut("/players/identity-guard", (IdentityGuardConfig updated) => Results.Ok(p.IdentityGuard.SaveConfig(updated)))
             .RequireRole(MystTiqRole.Admin, p.Id);
         // v1.0.0.2: unique player names: whether it is on, who owns which name, and the players turned away.
+        // v1.1.0.2 (roadmap F-2): the join check's record, the learned player IDs and the character moves.
+        routes.MapGet("/players/ids", () => Results.Ok(p.PlayerIds.Snapshot()));
+        routes.MapPut("/players/ids/settings", (PlayerIdSettingsRequest request) => Results.Ok(p.PlayerIds.SaveSettings(request.AutoMove)))
+            .RequireRole(MystTiqRole.Admin, p.Id);
+        routes.MapPost("/players/ids/move", async (PlayerIdMoveCommand request, CancellationToken token) =>
+        {
+            var players = await p.Monitoring.GetPlayersAsync(token);
+            if (players.Available && players.OnlineCount > 0)
+                return Results.Conflict(PlayerIdMoveResult.Failure("Players are online. The server is restarted for the move, so wait until nobody is playing."));
+            var result = await p.PlayerIds.RunPendingAsync(string.IsNullOrWhiteSpace(request.UserId) ? null : request.UserId.Trim(), token);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
         routes.MapGet("/players/name-guard", () => Results.Ok(new { config = p.NameGuard.GetConfig(), events = p.NameGuard.RecentEvents() }))
             .RequireRole(MystTiqRole.Viewer, p.Id);
         routes.MapPut("/players/name-guard", (NameGuardConfig updated) => Results.Ok(p.NameGuard.SaveConfig(updated)))
@@ -716,8 +742,12 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             // v0.7.10.0: whitelist enforcement runs from the same poll cadence the player registry
             // above already uses -- see HeadlessWhitelistService's own comment for why.
             await p.Whitelist.EnforceAsync(players, token);
+            // v1.1.0.2 (roadmap F-2): the join check runs first, so a player the game gave a new ID is queued for the move
+            // before the guard turns them away; queued moves run once nobody is online.
+            p.PlayerIds.Observe(players);
             // v1.0.0.1: a Steam player not given their own character is caught on the same poll, before they make a new one.
             await p.IdentityGuard.EnforceAsync(players, token);
+            p.PlayerIds.RunPendingWhenIdle(players);
             // v1.0.0.2: a player using a name another account owns is turned away on the same poll.
             await p.NameGuard.EnforceAsync(players, token);
             // v0.7.94.0: starter-kit auto-gift, same poll-driven cadence (the registry's Observe above

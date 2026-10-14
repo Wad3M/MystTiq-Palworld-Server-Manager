@@ -1,4 +1,4 @@
-// MystTiq v1.1.0.1: file reviewed for this release (2026-10-13).
+// MystTiq v1.1.0.2: file reviewed for this release (2026-10-13).
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -363,6 +363,13 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/players/whitelist", request, cancellationToken); return await ReadOperationAsync<WhitelistConfigDto>(response, cancellationToken); }
     public async Task<NameGuardSnapshotDto> GetNameGuardAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<NameGuardSnapshotDto>("/api/v1/players/name-guard", cancellationToken) ?? new(); }
+    // v1.1.0.2 (roadmap F-2): the join check, learned player IDs and character moves.
+    public async Task<PlayerIdLedgerDto> GetPlayerIdsAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); return await client.GetFromJsonAsync<PlayerIdLedgerDto>("/api/v1/players/ids", cancellationToken) ?? new(); }
+    public async Task<PlayerIdLedgerDto> SavePlayerIdSettingsAsync(ConnectionProfile profile, bool autoMove, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/players/ids/settings", new { autoMove }, cancellationToken); return await ReadOperationAsync<PlayerIdLedgerDto>(response, cancellationToken); }
+    public async Task<PlayerIdMoveResultDto> MovePlayerIdAsync(ConnectionProfile profile, string userId, string? bearerToken = null, CancellationToken cancellationToken = default)
+    { using var client = BuildClient(profile, bearerToken); using var response = await client.PostAsJsonAsync("/api/v1/players/ids/move", new { userId }, cancellationToken); return await ReadOperationAsync<PlayerIdMoveResultDto>(response, cancellationToken); }
     public async Task<NameGuardConfigDto> SaveNameGuardAsync(ConnectionProfile profile, NameGuardConfigDto request, string? bearerToken = null, CancellationToken cancellationToken = default)
     { using var client = BuildClient(profile, bearerToken); using var response = await client.PutAsJsonAsync("/api/v1/players/name-guard", request, cancellationToken); return await ReadOperationAsync<NameGuardConfigDto>(response, cancellationToken); }
 

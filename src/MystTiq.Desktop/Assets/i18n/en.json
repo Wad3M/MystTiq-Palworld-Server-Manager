@@ -4059,5 +4059,20 @@
   "ui.reports_only": "Reports only",
   "msg.level_gap_finding_6a1f3e": "Player '{0}' went from level {1} to {2} with {3} minute(s) of play {4}; at most {5} level(s) would be expected. Check the player before acting: this rule only reports.",
   "msg.level_gap_since_first_seen_0b47d2": "since MystTiq first saw them",
-  "msg.level_gap_since_level_before_e83c51": "since the level before"
+  "msg.level_gap_since_level_before_e83c51": "since the level before",
+  "ui.player_ids": "Player IDs",
+  "ui.player_ids_hint": "Every Steam player's join is checked against the player ID their character lives under. Since its 1.0 update the game can give an account a new ID; that account's character is then moved to the new ID, with a safety backup first.",
+  "ui.player_ids_auto_move": "Move characters automatically when nobody is online",
+  "ui.save_player_id_settings": "Save player ID settings",
+  "ui.player_ids_waiting": "Waiting to be moved",
+  "ui.restart_server_and_move_character": "Restart server and move character",
+  "ui.player_ids_recent": "Recent joins",
+  "msg.player_id_correct_5c1e20": "Correct ID",
+  "msg.player_id_first_seen_8d02a4": "First seen",
+  "msg.player_id_new_from_game_3fa6b1": "New ID from the game",
+  "msg.player_id_moved_b27c95": "Moved to the new ID",
+  "msg.player_ids_auto_on_e4a7d3": "Automatic moves are on: when the game gives a returning player a new ID, MystTiq moves their character once nobody is online, with a safety backup first.",
+  "msg.player_ids_auto_off_71d9c0": "Automatic moves are off: a character waiting to be moved stays listed until you restart the server and move it.",
+  "msg.player_ids_moving_0c58e2": "Moving the character: the server is stopped, a safety backup taken, the move checked, and the server started again…",
+  "msg.launcher_diagnostic_options_6d2b90": "-log, -stdout, -FullStdOutLogOutput and -abslog are for diagnosing problems; the Default preset leaves them off."
 }

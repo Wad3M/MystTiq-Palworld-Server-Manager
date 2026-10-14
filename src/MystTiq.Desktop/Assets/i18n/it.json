@@ -4059,5 +4059,20 @@
   "ui.reports_only": "Solo segnalazione",
   "msg.level_gap_finding_6a1f3e": "Il giocatore '{0}' è passato dal livello {1} al {2} con {3} minuto/i di gioco {4}; ci si aspetterebbero al massimo {5} livello/i. Controlla il giocatore prima di agire: questa regola segnala soltanto.",
   "msg.level_gap_since_first_seen_0b47d2": "da quando MystTiq lo ha visto la prima volta",
-  "msg.level_gap_since_level_before_e83c51": "dal livello precedente"
+  "msg.level_gap_since_level_before_e83c51": "dal livello precedente",
+  "ui.player_ids": "ID giocatori",
+  "ui.player_ids_hint": "A ogni ingresso di un giocatore Steam, l'ID giocatore assegnato dal gioco viene confrontato con l'ID sotto cui si trova il suo personaggio. Dall'aggiornamento 1.0 il gioco può dare a un account un nuovo ID; il personaggio di quell'account viene allora spostato sul nuovo ID, dopo un backup di sicurezza.",
+  "ui.player_ids_auto_move": "Sposta i personaggi automaticamente quando nessuno è online",
+  "ui.save_player_id_settings": "Salva impostazioni ID giocatori",
+  "ui.player_ids_waiting": "In attesa di spostamento",
+  "ui.restart_server_and_move_character": "Riavvia il server e sposta il personaggio",
+  "ui.player_ids_recent": "Ingressi recenti",
+  "msg.player_id_correct_5c1e20": "ID corretto",
+  "msg.player_id_first_seen_8d02a4": "Visto per la prima volta",
+  "msg.player_id_new_from_game_3fa6b1": "Nuovo ID dal gioco",
+  "msg.player_id_moved_b27c95": "Spostato sul nuovo ID",
+  "msg.player_ids_auto_on_e4a7d3": "Spostamento automatico attivo: quando il gioco dà un nuovo ID a un giocatore che torna, MystTiq sposta il suo personaggio appena non c'è nessuno online, dopo un backup di sicurezza.",
+  "msg.player_ids_auto_off_71d9c0": "Spostamento automatico disattivato: un personaggio in attesa resta in elenco finché non riavvii il server e lo sposti.",
+  "msg.player_ids_moving_0c58e2": "Spostamento del personaggio: il server viene fermato, si fa un backup di sicurezza, si verifica lo spostamento e si riavvia il server…",
+  "msg.launcher_diagnostic_options_6d2b90": "-log, -stdout, -FullStdOutLogOutput e -abslog servono a diagnosticare problemi; il preset predefinito li lascia disattivati."
 }

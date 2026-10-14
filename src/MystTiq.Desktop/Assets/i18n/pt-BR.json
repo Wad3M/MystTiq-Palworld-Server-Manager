@@ -4059,5 +4059,20 @@
   "ui.reports_only": "Só avisa",
   "msg.level_gap_finding_6a1f3e": "O jogador '{0}' foi do nível {1} ao {2} com {3} minuto(s) de jogo {4}; seriam esperados no máximo {5} nível(is). Verifique o jogador antes de agir: esta regra só avisa.",
   "msg.level_gap_since_first_seen_0b47d2": "desde que o MystTiq o viu pela primeira vez",
-  "msg.level_gap_since_level_before_e83c51": "desde o nível anterior"
+  "msg.level_gap_since_level_before_e83c51": "desde o nível anterior",
+  "ui.player_ids": "IDs de jogadores",
+  "ui.player_ids_hint": "A cada entrada de um jogador Steam, o ID de jogador atribuído pelo jogo é comparado ao ID onde está o personagem dele. Desde a atualização 1.0, o jogo pode dar um ID novo a uma conta; o personagem dessa conta é então movido para o ID novo, com um backup de segurança antes.",
+  "ui.player_ids_auto_move": "Mover personagens automaticamente quando ninguém estiver online",
+  "ui.save_player_id_settings": "Salvar configurações de IDs de jogadores",
+  "ui.player_ids_waiting": "Aguardando mudança",
+  "ui.restart_server_and_move_character": "Reiniciar o servidor e mover o personagem",
+  "ui.player_ids_recent": "Entradas recentes",
+  "msg.player_id_correct_5c1e20": "ID correto",
+  "msg.player_id_first_seen_8d02a4": "Visto pela primeira vez",
+  "msg.player_id_new_from_game_3fa6b1": "ID novo do jogo",
+  "msg.player_id_moved_b27c95": "Movido para o ID novo",
+  "msg.player_ids_auto_on_e4a7d3": "Mudanças automáticas ativadas: quando o jogo dá um ID novo a um jogador que volta, o MystTiq move o personagem dele assim que ninguém estiver online, com um backup de segurança antes.",
+  "msg.player_ids_auto_off_71d9c0": "Mudanças automáticas desativadas: um personagem aguardando mudança fica na lista até você reiniciar o servidor e movê-lo.",
+  "msg.player_ids_moving_0c58e2": "Movendo o personagem: o servidor é parado, um backup de segurança é feito, a mudança é verificada e o servidor é iniciado de novo…",
+  "msg.launcher_diagnostic_options_6d2b90": "-log, -stdout, -FullStdOutLogOutput e -abslog servem para diagnosticar problemas; a predefinição Padrão os deixa desligados."
 }
