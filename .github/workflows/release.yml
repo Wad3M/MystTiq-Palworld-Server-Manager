@@ -116,7 +116,7 @@ jobs:
         shell: pwsh
         run: ./scripts/Package-GitHubRelease.ps1 -Runtime linux-x64
       - name: Fetch the Docker image archive
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: docker-image
           path: artifacts
