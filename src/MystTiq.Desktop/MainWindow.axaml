@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
+<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -294,7 +294,7 @@
               <StackPanel IsVisible="{Binding IsV5ModsCategory}" Spacing="3">
                 <ToggleButton Classes="nav" IsChecked="{Binding IsModDashboardPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModDashboard"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_dashboard}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModDashboard}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsChecked="{Binding IsModLibraryPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModLibrary"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_library}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModLibrary}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsModSourcesPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModSources"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_dashboard}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModSources}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsChecked="{Binding IsModSourcesPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModSources"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_sources}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModSources}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsChecked="{Binding IsUe4ssPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Ue4ss"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt ue4ss}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Ue4ss}"/></Grid></Border></ToggleButton>
               </StackPanel>
               <StackPanel IsVisible="{Binding IsV5ToolsCategory}" Spacing="3">

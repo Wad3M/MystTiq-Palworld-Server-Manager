@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
+<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
 # v1.0.8.6 Changed Files
 
 - `src/MystTiq.Desktop/ViewModels/ModsViewModel.cs` (new): the MOD pages, with the former

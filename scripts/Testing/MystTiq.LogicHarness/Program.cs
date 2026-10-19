@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.1: file reviewed for this release (2026-10-18).
+// MystTiq v1.1.1.2: file reviewed for this release (2026-10-19).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -4724,6 +4724,46 @@ try
             token => lifecycle.StartAsync([], TimeSpan.FromSeconds(5), token), token => lifecycle.StopAsync(TimeSpan.FromSeconds(5), token), null, reloaded);
         Assert(ids.CleanUpOldEntries() == 1 && !File.Exists(Path.Combine(archive, oldId + "-moved-to-E290DA9A-20261013-114550.sav")) && File.Exists(Path.Combine(archive, "0BADF00D000000000000000000000000-replaced-20261013-114550.sav")),
             "an archived character file a backup holds is removed; one no backup holds is kept");
+    }, failures);
+
+    // ---- v1.1.1.2 (roadmap F-16): the pages read the newest decoded save ----
+    RunScenarioAsync("Decoded world (F-16): the Players, Guilds, Bases and Map data come from the newest decoded save, MystTiq's own copy when the one beside Level.sav is older (the owner's server: beside it from 2026-10-01, before the ID moves), and say which; an empty file is never used; with no copy at all there is none", async () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "decoded-world-" + Guid.NewGuid().ToString("N")));
+        var world = Path.Combine(paths.SaveRoot, "SaveGames", "0", "19FE0A034723392ED5234F863909E660");
+        Directory.CreateDirectory(Path.Combine(world, "Players"));
+        var level = Path.Combine(world, "Level.sav");
+        File.WriteAllText(level, "level");
+        var cacheRoot = HeadlessWorldClockService.CacheRootFor(paths);
+        Assert(DecodedWorld.Newest(world, cacheRoot) is null, "no decoded copy anywhere: none");
+
+        var beside = Path.Combine(world, "Level.sav.json");
+        File.WriteAllText(beside, "{}");
+        File.SetLastWriteTimeUtc(beside, new DateTime(2026, 10, 1, 13, 57, 6, DateTimeKind.Utc));
+        File.SetLastWriteTimeUtc(level, new DateTime(2026, 10, 16, 7, 23, 22, DateTimeKind.Utc));
+        Assert(DecodedWorld.Newest(world, cacheRoot) == beside && DecodedWorld.Describe(beside, world, cacheRoot).Contains("older than the world save", StringComparison.Ordinal),
+            "only the stale copy beside Level.sav: it is used, and said to be older than the world save");
+
+        var own = DecodedWorld.OwnCopyPath(cacheRoot, world);
+        Directory.CreateDirectory(cacheRoot);
+        File.WriteAllText(own, "{}");
+        File.SetLastWriteTimeUtc(own, new DateTime(2026, 10, 16, 7, 24, 0, DateTimeKind.Utc));
+        var describe = DecodedWorld.Describe(own, world, cacheRoot);
+        Assert(own.EndsWith(Path.Combine("decoded", "19FE0A034723392ED5234F863909E660.Level.sav.json"), StringComparison.OrdinalIgnoreCase) &&
+               DecodedWorld.Newest(world, cacheRoot) == own && describe.Contains("MystTiq's own decoded copy", StringComparison.Ordinal) && !describe.Contains("older", StringComparison.Ordinal),
+            $"MystTiq's own copy, newer than the one beside Level.sav, is the one read, and said to be current [{describe}]");
+        Assert(DecodedWorld.Newest(world, null) == beside, "without MystTiq's own folder, the copy beside Level.sav as before");
+
+        var explorer = new HeadlessPlayerGuildExplorerService(paths, new HeadlessMonitoringService(paths, new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped }));
+        var snapshot = await explorer.ExploreAsync(CancellationToken.None);
+        Assert(snapshot.ActiveWorldPath == world && snapshot.DecodedLevelJsonPath == own,
+            $"the Players, Guilds, Bases and Map data read MystTiq's own current copy, not the stale one beside Level.sav [{snapshot.DecodedLevelJsonPath}]");
+
+        File.WriteAllText(own, string.Empty);
+        File.SetLastWriteTimeUtc(own, new DateTime(2026, 10, 17, 0, 0, 0, DateTimeKind.Utc));
+        Assert(DecodedWorld.Newest(world, cacheRoot) == beside, "an empty copy is never used, however new");
+        var reading = HeadlessWorldClockService.Read(world, cacheRoot);
+        Assert(!reading.Current, "the world clock reads through the same rule (the stale copy beside Level.sav is not current)");
     }, failures);
 
     // ---- v1.1.1.0: the player checks without a desktop, every account (not only Steam), a link by hand ----

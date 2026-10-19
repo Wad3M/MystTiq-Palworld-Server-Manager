@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
+<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -21,9 +21,9 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.1.1.1 · Accepted baseline: v1.1.0.0**
+**Current version: v1.1.1.2 · Accepted baseline: v1.1.0.0**
 
-MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind; v1.1.1.0 adds MOD Sources, runs the player checks without the desktop and adds the Linux and Docker downloads; v1.1.1.1 leaves .NET's unused crash-dump helper out of the downloads ([release notes](release-notes/v1.1.1.1.md)). Downloads are on the Releases page: Windows, Linux and a Docker image of the service.
+MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind; v1.1.1.0 adds MOD Sources, runs the player checks without the desktop and adds the Linux and Docker downloads; v1.1.1.1 leaves .NET's unused crash-dump helper out of the downloads ; v1.1.1.2 keeps the Players, Guilds and Map pages current ([release notes](release-notes/v1.1.1.2.md)). Downloads are on the Releases page: Windows, Linux and a Docker image of the service.
 
 ## What's new in v1.1.0.0
 
@@ -135,7 +135,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 | v1.1.0.2 | Delivered | Every join checked; a character the game moved to a new player ID is moved back to its owner automatically, with a safety backup |
 | v1.1.0.3 | Delivered | A character move leaves nothing behind: old files removed (the safety backup keeps them) and the player list tidied |
 | v1.1.1.0 | Delivered | MOD Sources under MODs; player checks run without the desktop; players on the new-character screen told what to do; Xbox accounts covered; link an account to its character; faster tab switching; Linux and Docker downloads |
-| v1.1.1.1 | Current | Downloads without .NET's unused crash-dump helper (online scanners ran it instead of MystTiq) |
+| v1.1.1.1 | Delivered | Downloads without .NET's unused crash-dump helper (online scanners ran it instead of MystTiq) |
+| v1.1.1.2 | Current | The Players, Guilds, Bases and Map pages show the world as it is now; new MOD Sources and Launcher icons |
 
 What comes next is in the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md). Release history lives in the [changelog](CHANGELOG.md).
 

@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.1: file reviewed for this release (2026-10-18).
+// MystTiq v1.1.1.2: file reviewed for this release (2026-10-19).
 using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -47,9 +47,7 @@ public sealed class HeadlessWorldClockService
     /// </summary>
     public static WorldClockReading Read(string worldPath, string? cacheRoot = null)
     {
-        var json = new[] { "Level.sav.json", "Level.json", "Level.sav.decoded.json" }.Select(n => Path.Combine(worldPath, n))
-            .Append(cacheRoot is null ? string.Empty : Path.Combine(cacheRoot, Path.GetFileName(worldPath.TrimEnd(Path.DirectorySeparatorChar)) + ".Level.sav.json"))
-            .Where(p => p.Length > 0 && File.Exists(p)).OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault();
+        var json = DecodedWorld.Newest(worldPath, cacheRoot);
         if (json is null) return WorldClockReading.None;
         var ticks = WorldClock.ReadTicks(json);
         if (ticks is null) return WorldClockReading.None;
@@ -93,7 +91,7 @@ public sealed class HeadlessWorldClockService
                 if (!File.Exists(sidecar) || !WorldClock.IsCurrent(File.GetLastWriteTimeUtc(sidecar), File.GetLastWriteTimeUtc(level)))
                 {
                     Directory.CreateDirectory(cacheRoot);
-                    File.Copy(result.DecodedJsonPath, Path.Combine(cacheRoot, Path.GetFileName(worldPath.TrimEnd(Path.DirectorySeparatorChar)) + ".Level.sav.json"), true);
+                    File.Copy(result.DecodedJsonPath, DecodedWorld.OwnCopyPath(cacheRoot, worldPath), true);
                 }
             }
             LastError = result.Success ? null : result.Error;
@@ -148,6 +146,45 @@ public sealed class HeadlessWorldClockService
     private static WorldClockResult Fail(string error) => new(false, null, error, null);
 
     private static void TryDelete(string path) { try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch { } }
+}
+
+/// <summary>
+/// v1.1.1.2 (roadmap F-16): where a world's decoded save is read from. MystTiq writes it beside Level.sav when it may (the
+/// map, Players, Guilds and Bases pages read it there) and otherwise into its own copy under runtime\world-clock\decoded.
+/// Only the world clock looked at both, so on a server whose save folder MystTiq may not write (the owner's) those pages
+/// kept showing the copy beside Level.sav from 2026-10-01, before the player ID moves. Every reader now takes the newer.
+/// </summary>
+public static class DecodedWorld
+{
+    public static readonly string[] BesideNames = ["Level.sav.json", "Level.json", "Level.sav.decoded.json"];
+
+    /// <summary>MystTiq's own copy of a world's decoded save: &lt;cacheRoot&gt;\&lt;world id&gt;.Level.sav.json.</summary>
+    public static string OwnCopyPath(string cacheRoot, string worldPath) =>
+        Path.Combine(cacheRoot, Path.GetFileName(worldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + ".Level.sav.json");
+
+    /// <summary>The newest non-empty decoded copy of the world (beside Level.sav or MystTiq's own); null when there is none.</summary>
+    public static string? Newest(string worldPath, string? cacheRoot) =>
+        BesideNames.Select(name => Path.Combine(worldPath, name))
+            .Concat(cacheRoot is null ? [] : [OwnCopyPath(cacheRoot, worldPath)])
+            .Where(path => File.Exists(path) && new FileInfo(path).Length > 0)
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
+
+    /// <summary>Whether a path is MystTiq's own copy (under cacheRoot) rather than the one beside Level.sav.</summary>
+    public static bool IsOwnCopy(string path, string? cacheRoot) =>
+        cacheRoot is not null && Path.GetFullPath(path).StartsWith(Path.GetFullPath(cacheRoot), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Where the pages' world data came from, for their status line.</summary>
+    public static string Describe(string path, string worldPath, string? cacheRoot)
+    {
+        var savedUtc = File.GetLastWriteTimeUtc(path);
+        var level = Path.Combine(worldPath, "Level.sav");
+        var where = IsOwnCopy(path, cacheRoot) ? "MystTiq's own decoded copy" : "the decoded save beside Level.sav";
+        var age = File.Exists(level) && !WorldClock.IsCurrent(savedUtc, File.GetLastWriteTimeUtc(level))
+            ? "; older than the world save, a newer one is being made"
+            : string.Empty;
+        return $"{where}, decoded {savedUtc:yyyy-MM-dd HH:mm} UTC{age}";
+    }
 }
 
 /// <summary>The world-clock rules, pure so the logic harness covers them.</summary>

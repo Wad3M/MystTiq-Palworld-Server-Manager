@@ -1,4 +1,13 @@
-<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
+<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
+## v1.1.1.2 — Current Players, Guilds and Map, New Icons
+
+- Roadmap F-16 (asked 2026-10-19): the Players, Guilds, Bases and Map pages and the Give Item picker read the newest decoded
+  save (beside `Level.sav` or MystTiq's own copy) instead of only the one beside `Level.sav`, which on the owner's server
+  was from 2026-10-01; the pages say which copy they read.
+- F-17: the owner's new icons for MOD Sources (its own at last) and Launcher.
+- The README screenshots retaken from this version.
+- Version advanced to 1.1.1.2.
+
 ## v1.1.1.1 — Cleaner Packages
 
 - Roadmap F-15 (asked 2026-10-17, after a VirusTotal report): .NET's crash-dump helper (`createdump`) is left out of

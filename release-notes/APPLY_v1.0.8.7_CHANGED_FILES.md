@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
+<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
 # v1.0.8.7 Changed Files
 
 - `src/MystTiq.Desktop/ViewModels/AlertsViewModel.cs` (new): the Notifications, Alert Center, Automation and Activity pages,

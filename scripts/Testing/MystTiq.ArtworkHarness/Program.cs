@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.1: file reviewed for this release (2026-10-18).
+// MystTiq v1.1.1.2: file reviewed for this release (2026-10-19).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -149,7 +149,8 @@ Check(!vm.IsLightMode && ReferenceEquals(vm.SetupArtwork, ArtworkCatalog.Page(Na
 
 var iconUris = AssetLoader.GetAssets(new Uri("avares://MystTiq.Desktop/Assets/Icons/"), null).OrderBy(u => u.AbsolutePath).ToArray();
 // v1.0.0.1: Launcher now has its own navigation illustration instead of reusing Workspace.
-Check(iconUris.Length == 28, "All 28 navigation illustrations are embedded");
+// v1.1.1.2: MOD Sources has its own icon (the owner's art, 2026-10-19), so 29.
+Check(iconUris.Length == 29 && iconUris.Any(u => u.AbsolutePath.EndsWith("/icon-mod_sources.png")), "All 29 navigation illustrations are embedded, MOD Sources' own among them");
 Check(ArtworkCatalog.Category(NavigationPage.Host) == "host" && iconUris.Any(u => u.AbsolutePath.EndsWith("/icon-host.png")) && !ReferenceEquals(ArtworkCatalog.Page(NavigationPage.Host, false), ArtworkCatalog.Page(NavigationPage.Settings, false)),
     "the HOST tab has its own art and navigation icon (no longer the System art and diagnostics icon)");
 Check(iconUris.Any(u => u.AbsolutePath.EndsWith("/icon-launcher.png")),

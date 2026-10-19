@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.1: file reviewed for this release (2026-10-18).
+// MystTiq v1.1.1.2: file reviewed for this release (2026-10-19).
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using MystTiq.Core.Services;
@@ -52,7 +52,9 @@ public sealed class HeadlessPlayerGuildExplorerService
         }
 
         var playerSaves = DiscoverPlayerSaves(world);
-        var semanticPath = ResolveDecodedLevelJson(world);
+        // v1.1.1.2 (roadmap F-16): the newest decoded copy, beside Level.sav or MystTiq's own.
+        var decodedCacheRoot = HeadlessWorldClockService.CacheRootFor(paths);
+        var semanticPath = DecodedWorld.Newest(world, decodedCacheRoot);
         var guildRecords = new List<SemanticGuildRecord>();
         var semanticWarnings = new List<string>();
         var semanticAvailable = false;
@@ -74,7 +76,7 @@ public sealed class HeadlessPlayerGuildExplorerService
                 semanticWarnings.AddRange(parsed.Warnings);
                 semanticAvailable = parsed.AuthoritativeRootCount > 0;
                 semanticSource = semanticAvailable
-                    ? $"Decoded GroupSaveDataMap: {semanticPath}"
+                    ? $"Decoded GroupSaveDataMap ({DecodedWorld.Describe(semanticPath, world, decodedCacheRoot)}): {semanticPath}"
                     : $"Decoded Level JSON found, but no authoritative GroupSaveDataMap: {semanticPath}";
             }
             catch (Exception ex)
@@ -86,7 +88,7 @@ public sealed class HeadlessPlayerGuildExplorerService
         else
         {
             semanticWarnings.Add(
-                "Level.sav.json was not found beside the active Level.sav. Player save identities are available, but guild/name semantics require decoded Level JSON.");
+                "No decoded save was found beside the active Level.sav or in MystTiq's own copy. Player save identities are available, but guild/name semantics require decoded Level JSON.");
         }
 
         HeadlessPlayersSnapshot? live = null;
@@ -343,19 +345,6 @@ public sealed class HeadlessPlayerGuildExplorerService
         }
 
         return result;
-    }
-
-    private static string? ResolveDecodedLevelJson(string worldPath)
-    {
-        var candidates = new[]
-        {
-            Path.Combine(worldPath, "Level.sav.json"),
-            Path.Combine(worldPath, "Level.json"),
-            Path.Combine(worldPath, "Level.sav.decoded.json")
-        };
-
-        return candidates.FirstOrDefault(path =>
-            File.Exists(path) && new FileInfo(path).Length > 0);
     }
 
     private static SemanticParseResult ParseGuilds(string jsonPath)

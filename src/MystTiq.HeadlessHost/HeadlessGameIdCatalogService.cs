@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.1: file reviewed for this release (2026-10-18).
+// MystTiq v1.1.1.2: file reviewed for this release (2026-10-19).
 using MystTiq.Core.Services;
 
 namespace MystTiq.HeadlessHost;
@@ -45,7 +45,8 @@ public sealed class HeadlessGameIdCatalogService
     public GameIdCatalogSnapshot GetCatalog(string? language = null)
     {
         var world = ResolveActiveWorld();
-        var decoded = world is null ? null : ResolveDecodedLevelJson(world);
+        // v1.1.1.2 (roadmap F-16): the newest decoded copy, beside Level.sav or MystTiq's own.
+        var decoded = world is null ? null : DecodedWorld.Newest(world, HeadlessWorldClockService.CacheRootFor(paths));
         SaveGameIds? ids = null;
         DateTimeOffset? decodedUtc = null;
         string? readError = null;
@@ -176,9 +177,4 @@ public sealed class HeadlessGameIdCatalogService
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
     }
-
-    private static string? ResolveDecodedLevelJson(string worldPath) =>
-        new[] { "Level.sav.json", "Level.json", "Level.sav.decoded.json" }
-            .Select(name => Path.Combine(worldPath, name))
-            .FirstOrDefault(path => File.Exists(path) && new FileInfo(path).Length > 0);
 }

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
+<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
 # v1.0.7.1 Changed Files
 
 - `src/MystTiq.HeadlessHost/OperationHold.cs` (new): holds the coordinator's locks for a piece of work, or says why not.
