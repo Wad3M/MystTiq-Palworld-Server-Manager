@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
+# MystTiq v1.1.1.1: file reviewed for this release (2026-10-18).
 # v1.1.1.0 (owner 2026-10-14: "our package should include a linux build and a docker build"): builds the MystTiq headless
 # Docker image (deploy/docker/Dockerfile) from this source and, with -Save, writes it as an image archive for the release:
 #   artifacts/MystTiqPalworldServer_v<version>_Docker-linux-x64.tar.gz   (load it with: docker load -i <file>)
@@ -20,6 +20,8 @@ try {
     & dotnet publish (Join-Path $root 'src/MystTiq.HeadlessHost/MystTiq.HeadlessHost.csproj') -c Release -r linux-x64 --self-contained true `
         -p:PublishSingleFile=true -p:PublishTrimmed=false -o (Join-Path $context 'app') | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'linux-x64 publish of the service failed' }
+    # v1.1.1.1: .NET's crash-dump helper is left out of every publish (Directory.Build.targets); the image never holds it.
+    if (Test-Path (Join-Path $context 'app/createdump')) { throw "The image must not contain .NET's createdump helper." }
     # The image's scripts must keep Unix line endings whatever the checkout did.
     foreach ($f in 'Dockerfile', 'entrypoint.sh') {
         [IO.File]::WriteAllText((Join-Path $context $f), [IO.File]::ReadAllText((Join-Path $root "deploy/docker/$f")).Replace("`r`n", "`n"))

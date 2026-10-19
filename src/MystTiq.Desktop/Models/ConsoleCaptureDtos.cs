@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
+// MystTiq v1.1.1.1: file reviewed for this release (2026-10-18).
 // MystTiq v1.0.0.1: startup-window console capture DTOs.
 using System.Text.Json.Serialization;
 

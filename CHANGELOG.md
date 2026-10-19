@@ -1,4 +1,12 @@
-<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
+<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
+## v1.1.1.1 — Cleaner Packages
+
+- Roadmap F-15 (asked 2026-10-17, after a VirusTotal report): .NET's crash-dump helper (`createdump`) is left out of
+  every publish (`Directory.Build.targets`); the packaging refuses a package or Docker image that holds it. Sandboxes had
+  run it instead of MystTiq. MystTiq never used it.
+- The README screenshots (Dashboard, Players, Backups, MOD Library) retaken from this version.
+- Version advanced to 1.1.1.1.
+
 ## v1.1.1.0 — MOD Sources, Player Checks Without the Desktop, Linux and Docker Downloads
 
 - Roadmap F-4 (asked 2026-10-14): MOD Sources, a page under MODs with the Steam Workshop card, the MOD browser and the

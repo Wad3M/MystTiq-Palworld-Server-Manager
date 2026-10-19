@@ -1,7 +1,7 @@
-<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
+<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
 # Product roadmap
 
-Updated 2026-10-14. **Current version: v1.1.1.0. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the backlog is built; what stays open is the live evidence under "Carried").**
+Updated 2026-10-18. **Current version: v1.1.1.1. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the backlog is built; what stays open is the live evidence under "Carried").**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -213,6 +213,8 @@ Each fix reproduces the fault first, then follows the release pipeline; a fix th
 | F-12 | v1.1.1.0 | The Like double-click preset and start-option advice outlived their reason (F-2). Recorded (v1.1.1.0, 2026-10-14): removed. | Built |
 | F-13 | v1.1.1.0 | Linux and Docker in the package (asked 2026-10-14: "our package should include a linux build and a docker build"). Recorded (v1.1.1.0, 2026-10-14): the release workflow attaches the Linux download and the headless Docker image (`scripts/Build-DockerImage.ps1`, built on a Linux runner). Linux desktop acceptance (E-4) stays open. | Built |
 | F-14 | v1.1.1.0 | Tab switching froze about 2 s per open window (found 2026-10-14 by the harness's tab-switch check, 20 minutes long; v1.1.0.3 the same). Recorded (v1.1.1.0, 2026-10-14): the theme was re-applied on every switch (99.8% of the time); an unchanged theme is now left alone: 3,658 ms to 14 ms per switch. ArtworkHarness check. | Built |
+| F-15 | v1.1.1.1 | A VirusTotal behaviour report (2026-10-17, 0 detections) matched a "vcruntime140 side-loading" rule: the sandbox ran .NET's `createdump.exe` from the ZIP instead of MystTiq, and only its own Python's DLLs loaded. Recorded (v1.1.1.1, 2026-10-18): `createdump` left out of every publish (`Directory.Build.targets`), packaging and the Docker build refuse it; gate check publishes the service for Windows and Linux. Code signing (E-14) stays the broader reputation fix. | Built |
+| F-16 | next | Found 2026-10-19 while taking the README screenshots: the Players, Guilds, Bases and Map pages read only the decoded `Level.sav.json` beside `Level.sav`, which MystTiq refreshes only when it may write in the save folder. On the owner's server that file is from 2026-10-01 (before the ID moves), so those pages show the old IDs; the world clock already falls back to MystTiq's own current copy (`runtime\world-clock\decoded`). Acceptance: those pages use the newer of the two, and say which; a LogicHarness check with a stale file beside the save. | Planned |
 
 ## Backlog (not scheduled)
 

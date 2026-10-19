@@ -1,0 +1,13 @@
+<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
+<Project>
+  <!-- v1.1.1.1: a self-contained publish brings .NET's crash-dump helper (createdump.exe, createdump on Linux). MystTiq
+       never uses it, and malware sandboxes that unpack the release ZIP ran it instead of MystTiq (VirusTotal, 2026-10-17:
+       the report showed only createdump and the sandbox's own Python, matched to a vcruntime140 side-loading rule). It is
+       left out of every publish, so the packages hold only MystTiq's own programs. Without it .NET can still run; it only
+       cannot write an on-demand memory dump of a crashed MystTiq, which MystTiq does not ask for. -->
+  <Target Name="MystTiqLeaveOutCreateDump" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Filename)' == 'createdump'" />
+    </ItemGroup>
+  </Target>
+</Project>

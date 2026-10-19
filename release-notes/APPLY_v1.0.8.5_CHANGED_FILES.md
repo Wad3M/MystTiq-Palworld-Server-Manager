@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
+<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
 # v1.0.8.5 Changed Files
 
 - `src/MystTiq.Desktop/ViewModels/BackupsViewModel.cs` (new): the Backups and Save Tools pages, with the former

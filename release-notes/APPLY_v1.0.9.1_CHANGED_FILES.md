@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
+<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
 # v1.0.9.1 Changed Files
 
 - `src/MystTiq.HeadlessHost/DiscordCommandFlow.cs` (new): the order of one slash command (refuse, or acknowledge, work,

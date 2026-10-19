@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.0: file reviewed for this release (2026-10-14).
+# MystTiq v1.1.1.1: file reviewed for this release (2026-10-18).
 #requires -Version 7.0
 [CmdletBinding()]
 param(
@@ -19,12 +19,19 @@ $artifacts = Join-Path $root 'artifacts'
 $zip = Join-Path $artifacts "$name.zip"
 # Every invocation gets its own staging directory; never delete or stop a running app.
 if (Test-Path -LiteralPath $zip) { throw "Package already exists: $zip. Preserve it or choose a fresh checkout." }
+# v1.1.1.1: .NET's crash-dump helper is left out of every publish (Directory.Build.targets); a package holding it is refused,
+# since malware sandboxes ran it instead of MystTiq.
+function Assert-NoCreateDump([string]$Folder) {
+    $found = @(Get-ChildItem -LiteralPath $Folder -Recurse -File | Where-Object { $_.BaseName -eq 'createdump' })
+    if ($found.Count -gt 0) { throw "The package must not contain .NET's createdump helper: $($found.FullName -join ', ')" }
+}
 if ($FromFolder) {
     $source = (Resolve-Path -LiteralPath $FromFolder).Path
     $suffix = if ($Runtime -eq 'win-x64') { '.exe' } else { '' }
     foreach ($exe in @((Join-Path $source "MystTiq.Desktop$suffix"), (Join-Path $source "headless/mysttiq-server$suffix"))) {
         if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Missing executable in ${FromFolder}: $exe" }
     }
+    Assert-NoCreateDump $source
     # The ZIP holds one top-level folder named after the release, as an unsigned package does.
     $stage = Join-Path $artifacts ("package-" + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
@@ -51,6 +58,7 @@ $suffix = if ($Runtime -eq 'win-x64') { '.exe' } else { '' }
 foreach ($exe in @((Join-Path $app "MystTiq.Desktop$suffix"), (Join-Path $sidecar "mysttiq-server$suffix"))) {
     if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Missing executable: $exe" }
 }
+Assert-NoCreateDump $app
 if ($Runtime -eq 'win-x64') {
     $native = Join-Path $artifacts 'native/MystTiqConsoleProxy.dll'
     if (Test-Path -LiteralPath $native -PathType Leaf) {

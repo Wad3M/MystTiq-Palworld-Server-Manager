@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.0: file reviewed for this release (2026-10-14). -->
+<!-- MystTiq v1.1.1.1: file reviewed for this release (2026-10-18). -->
 # v1.0.1.0 Changed Files
 
 - `src/MystTiq.Desktop/Models/ComponentVersionDto.cs`: `UpdateMethod`, `CanUpdate`, `UpdateHint`, `ShowsOpen` for every
