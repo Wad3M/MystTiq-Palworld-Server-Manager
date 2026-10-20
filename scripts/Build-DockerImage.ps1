@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.2: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
 # v1.1.1.0 (owner 2026-10-14: "our package should include a linux build and a docker build"): builds the MystTiq headless
 # Docker image (deploy/docker/Dockerfile) from this source and, with -Save, writes it as an image archive for the release:
 #   artifacts/MystTiqPalworldServer_v<version>_Docker-linux-x64.tar.gz   (load it with: docker load -i <file>)

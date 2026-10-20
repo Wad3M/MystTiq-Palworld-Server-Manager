@@ -1,4 +1,13 @@
-<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
+## v1.1.1.3 — Dependency Updates
+
+- Roadmap F-18 (asked 2026-10-19): the four Dependabot updates folded in through the full gate: Avalonia 12.1.4 (and
+  Avalonia.Headless in both harnesses), Discord.Net.WebSocket 3.20.2, Microsoft.Extensions.Hosting.WindowsServices
+  10.0.13, actions/download-artifact v8.
+- Roadmap reviewed with the owner (D-14): every Built item accepted as Done; X-1, B-5 and the carried evidence except E-10
+  rejected; F-19 (why a server stopped) and F-20 (start with Windows) planned for v1.1.2.0.
+- Version advanced to 1.1.1.3.
+
 ## v1.1.1.2 — Current Players, Guilds and Map, New Icons
 
 - Roadmap F-16 (asked 2026-10-19): the Players, Guilds, Bases and Map pages and the Give Item picker read the newest decoded

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
 # v1.1.0.3 Changed Files
 
 - `src/MystTiq.HeadlessHost/HeadlessPlayerIdService.cs`: the old character file is removed after a verified move (a

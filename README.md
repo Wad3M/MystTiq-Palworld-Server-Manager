@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-67e8d5" alt="Code license: MIT"></a>
-  <img src="https://img.shields.io/badge/release-1.1-b9a4ff" alt="Release: 1.1">
+  <img src="https://img.shields.io/badge/release-1.1.1.3-b9a4ff" alt="Release: 1.1.1.3">
   <img src="https://img.shields.io/badge/desktop-Windows%20%7C%20Linux-80caff" alt="Desktop targets: Windows and Linux">
   <img src="https://img.shields.io/badge/language%20options-12-67e8d5" alt="12 language options">
 </p>
@@ -21,11 +21,13 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current version: v1.1.1.2 · Accepted baseline: v1.1.0.0**
+**Current release: v1.1.1.3 · Accepted baseline: v1.1.0.0**
 
-MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind; v1.1.1.0 adds MOD Sources, runs the player checks without the desktop and adds the Linux and Docker downloads; v1.1.1.1 leaves .NET's unused crash-dump helper out of the downloads ; v1.1.1.2 keeps the Players, Guilds and Map pages current ([release notes](release-notes/v1.1.1.2.md)). Downloads are on the Releases page: Windows, Linux and a Docker image of the service.
+MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind; v1.1.1.0 adds MOD Sources, runs the player checks without the desktop and adds the Linux and Docker downloads; v1.1.1.1 leaves .NET's unused crash-dump helper out of the downloads; v1.1.1.2 keeps the Players, Guilds and Map pages current; v1.1.1.3 updates four libraries ([release notes](release-notes/v1.1.1.3.md)). Downloads are on the Releases page: Windows, Linux and a Docker image of the service.
 
-## What's new in v1.1.0.0
+<a id="whats-new-in-v1.1.0.0"></a>
+
+## ✨ Highlights since v1.1.0.0
 
 Everything added since 1.0, in one place. Each version's own notes are in [release-notes](release-notes/) and the [changelog](CHANGELOG.md).
 
@@ -58,13 +60,17 @@ Everything added since 1.0, in one place. Each version's own notes are in [relea
 
 [Release notes](release-notes/v1.1.0.0.md) · [Translation inventory](docs/i18n/UI_TEXT_INVENTORY.md) · [Help review a translation](CONTRIBUTING.md#translation-feedback)
 
-## See your server at a glance
+<a id="see-your-server-at-a-glance"></a>
+
+## 📸 See your server at a glance
 
 ![MystTiq dashboard with server controls, health and world information](docs/images/01-dashboard.png)
 
-*Repository screenshots illustrate the interface and may show an earlier build.*
+*Dashboard in v1.1.1.2. The screenshots featured here are included in the v1.1.1.2 FullSource archive and show the demo server; its status and data are illustrative.*
 
-## Built around everyday administration
+<a id="built-around-everyday-administration"></a>
+
+## 🧰 Built around everyday administration
 
 | Work you need to do | Tools in MystTiq |
 | --- | --- |
@@ -81,21 +87,29 @@ Nexus download options depend on the account and provider. Game-level bandwidth 
 <details>
 <summary><strong>More of the interface: backups, players and mods</strong></summary>
 
-### Backups
+### 💾 Backups
 
-![Backup management](docs/images/06-backups.png)
+Browse verified backups by in-game day and preview retention cleanup.
 
-### Players
+![MystTiq v1.1.1.2 Backup Center with verified archives, world days and retention controls](docs/images/06-backups.png)
 
-![Player administration](docs/images/03-players.png)
+### 👥 Players
 
-### Mods
+Find known players and inspect their saved characters, guild membership and operator notes.
 
-![Mod management](docs/images/07-mods.png)
+![MystTiq v1.1.1.2 Player Directory with player details and notes](docs/images/03-players.png)
+
+### 🧩 MOD Library
+
+Inspect installed MODs, manage enabled state, and access load order and MOD profiles.
+
+![MystTiq v1.1.1.2 MOD Library with installed MODs, status and profile controls](docs/images/07-mods.png)
 
 </details>
 
-## Get started
+<a id="get-started"></a>
+
+## 🚀 Get started
 
 1. Open [Releases](https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/releases) and read the selected version's notes.
 2. Download its **Windows-x64.zip**, extract the entire folder, and run **MystTiq.Desktop.exe**. Keep the `headless` folder alongside it. The package includes .NET.
@@ -113,7 +127,9 @@ Upgrading? Back up your server data, extract the new app into a fresh folder and
 
 **Closing the desktop does not stop a managed server.** The headless service owns operations and persistent state; the desktop connects to it locally or remotely. **Exit** from the tray stops everything.
 
-## Languages and platform status
+<a id="languages-and-platform-status"></a>
+
+## 🌍 Languages and platform status
 
 English · 简体中文 · Español · Português (Brasil) · Русский · Deutsch · Français · 日本語 · 한국어 · Italiano · Polski · Türkçe
 
@@ -121,26 +137,26 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 - **Windows x64:** the release packages the desktop, matching service and native console helper.
 - **Linux x64:** the desktop and service build from the same source; the service runs as a systemd unit or in the Docker image. Chinese/Japanese/Korean need suitable system fonts such as Noto Sans CJK. See [Linux](docs/linux/README.md).
 
-## Release history
+<a id="release-history"></a>
+
+## 📚 Release history
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v1.0.0.0 | Earlier baseline | The first stable release |
-| v1.0.0.1 – v1.0.6.1 | Delivered | Launcher and protected characters; unique names; PalDefender on the MODs page; restores by in-game day; Bases and Guilds; buttons by meaning; Update on every row; unattended reliability; browser view and Docker; guarded save edits; the MOD browser; Pals in the Pal box |
-| v1.0.7.0 – v1.0.7.5 | Delivered | Damaged files never overwritten; one operation at a time; visible progress; the identity guard waits for a loading player; encrypted secrets and checked archives; tested under load and for 24 hours |
-| v1.0.8.0 – v1.0.8.9 | Delivered | The main window's code split into one piece per page (nothing looks different); Ctrl+C on a self-run service leaves the game running |
-| v1.0.9.0 – v1.0.9.3 | Delivered | Every command reachable; Discord commands that answer; MOD load order and profiles; level-gap scans |
-| v1.1.0.0 | Accepted baseline | a documentation pass over every page, and everything since 1.0 as one release |
-| v1.1.0.1 | Delivered | Fixed: an error notice ("Something went wrong") that could appear when the desktop started |
-| v1.1.0.2 | Delivered | Every join checked; a character the game moved to a new player ID is moved back to its owner automatically, with a safety backup |
-| v1.1.0.3 | Delivered | A character move leaves nothing behind: old files removed (the safety backup keeps them) and the player list tidied |
-| v1.1.1.0 | Delivered | MOD Sources under MODs; player checks run without the desktop; players on the new-character screen told what to do; Xbox accounts covered; link an account to its character; faster tab switching; Linux and Docker downloads |
+| v1.1.1.3 | Current release | Library updates (the four Dependabot pull requests): Avalonia 12.1.4, Discord.Net 3.20.2, the Windows service host 10.0.13 |
+| v1.1.1.2 | Delivered | The Players, Guilds, Bases and Map pages show the world as it is now; new MOD Sources and Launcher icons |
 | v1.1.1.1 | Delivered | Downloads without .NET's unused crash-dump helper (online scanners ran it instead of MystTiq) |
-| v1.1.1.2 | Current | The Players, Guilds, Bases and Map pages show the world as it is now; new MOD Sources and Launcher icons |
+| v1.1.1.0 | Delivered | MOD Sources under MODs; player checks run without the desktop; players on the new-character screen told what to do; Xbox accounts covered; link an account to its character; faster tab switching; Linux and Docker downloads |
+| v1.1.0.3 | Delivered | A character move leaves nothing behind: old files removed (the safety backup keeps them) and the player list tidied |
+| v1.1.0.2 | Delivered | Every join checked; a character the game moved to a new player ID is moved back to its owner automatically, with a safety backup |
+| v1.1.0.1 | Delivered | Fixed: an error notice ("Something went wrong") that could appear when the desktop started |
+| v1.1.0.0 | Accepted baseline | A documentation pass over every page, and everything since 1.0 as one release |
 
 What comes next is in the [roadmap](docs/roadmap/PRODUCT_ROADMAP.md). Release history lives in the [changelog](CHANGELOG.md).
 
-## Build and contribute
+<a id="build-and-contribute"></a>
+
+## 🛠️ Build and contribute
 
 Install the **.NET 10 SDK** and **PowerShell 7**, then run from the repository root:
 
@@ -155,6 +171,14 @@ The app consists of `MystTiq.Desktop`, `MystTiq.HeadlessHost` and `MystTiq.Core`
 
 [Contribution guide](CONTRIBUTING.md) · [Publishing guide](docs/release/README.md) · [Release checklist](RELEASE_CHECKLIST.md) · [Linux testing](docs/linux/TESTED_ENVIRONMENT.md) · [Security reporting](SECURITY.md) · [Code signing policy](CODE_SIGNING_POLICY.md) · [Privacy policy](PRIVACY.md)
 
-## License and attribution
+## 🤝 Development credits
+
+MystTiq Palworld Server Manager was built through a combination of hand-written code and AI-assisted development with **Claude by Anthropic** and **ChatGPT by OpenAI**. Thank you to both tools for their assistance throughout development, alongside the human creativity, problem-solving and hands-on coding that bring the project to life.
+
+The project’s maintainers remain responsible for reviewing, testing and maintaining the code and deciding what ships.
+
+<a id="license-and-attribution"></a>
+
+## 📜 License and attribution
 
 MystTiq code is [MIT licensed](LICENSE). Palworld names and third-party/game artwork belong to their respective owners; the code license does not grant rights to those assets. MystTiq is an independent community project and is not affiliated with Pocketpair.

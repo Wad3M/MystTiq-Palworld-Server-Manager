@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.2: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
 name: Release
 
 on:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag (for example v1.1.1.2)
+        description: Existing release tag (for example v1.1.1.3)
         required: true
         type: string
 
@@ -116,7 +116,7 @@ jobs:
         shell: pwsh
         run: ./scripts/Package-GitHubRelease.ps1 -Runtime linux-x64
       - name: Fetch the Docker image archive
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: docker-image
           path: artifacts

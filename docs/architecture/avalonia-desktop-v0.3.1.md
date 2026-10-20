@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
 # Avalonia Cross-Platform Desktop Architecture
 
 Decision: **Avalonia UI + .NET 10 + C# + XAML** for MystTiq v0.3.1.x.

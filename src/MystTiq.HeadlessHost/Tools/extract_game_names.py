@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.2: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
 """MystTiq: read the English (or another language's) item and Pal display names from the server's own game pak.
 
 Read-only. Parses the Unreal pak (version 11) index, extracts two localisation tables, and prints JSON:

@@ -1,29 +1,24 @@
-<!-- MystTiq v1.1.1.2: file reviewed for this release (2026-10-19). -->
-# MystTiq v1.1.1.2 Checkpoint: Current Players, Guilds and Map, New Icons
+<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
+# MystTiq v1.1.1.3 Checkpoint: Dependency Updates
 
 ## What changed
 
-**Your Players, Guilds, Bases and Map pages show the world as it is now**, as you asked. They read a decoded copy of
-the world from 10-01 that sits beside `Level.sav` (MystTiq may not write in your save folder), so they still showed
-Wade and Melly under their old IDs. They now read whichever copy is newer, beside `Level.sav` or MystTiq's own, and say
-which. The Give Item picker reads the same way.
+The four Dependabot updates, folded in as you asked: Avalonia 12.1.4 (the desktop's UI framework), Discord.Net 3.20.2
+(the Discord bot), the Windows service host 10.0.13, and the release workflow's download-artifact v8. Once this is
+pushed, Dependabot closes its four pull requests and deletes their branches by itself.
 
-**Your new icons:** MOD Sources has its own icon (it borrowed MOD Dashboard's) and Launcher has the rocket. Their dark
-backgrounds were made transparent so they sit on the navigation like the others.
-
-**Proven on a copy of your world:** with the 10-01 copy kept beside `Level.sav` and made read-only (as on your
-server), the Players data came from MystTiq's own current copy, with Wade under E290DA9A and Melly under 1467C601. The
-README screenshots were retaken from that run, so they show v1.1.1.2 and the new MOD Sources icon.
+**Roadmap reviewed with you:** every Built item is Done; X-1, B-5 and the carried evidence except E-10 (native translation
+review) are rejected; F-19 (why a server stopped) and F-20 (start with Windows) are planned for v1.1.2.0; the 127.0.0.1
+investigation is not planned; Melly's Xbox character and Spiral stay.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.1.1.2-Logic.ps1 -RunBuild -RunLong`: 425 / 425 passed. The Linux VM was back at
-  **192.168.1.122**, and its checks were run against that address straight after: cores pinned, the service unit accepted
-  by systemd, remote sign-in as all four roles from Windows and Linux, the per-user systemd unit and the desktop in the
-  XFCE session all **passed** (the system-wide unit check stays skipped: no passwordless sudo).
-- **F-16:** the LogicHarness scenario passes, and on a demo copy of your world (stale 10-01 copy beside `Level.sav`,
-  read-only) the Players data came from MystTiq's own current copy.
-- **F-17:** both icons are 1254x1254 with a transparent background; the ArtworkHarness counts 29 navigation icons.
-- **Packages:** the Windows ZIP, the Linux ZIP and the Docker image (it answered `/healthz` as v1.1.1.2 with TLS and
-  sign-in on), none holding `createdump`, all in `SHA256SUMS.txt`. **Static gate:** passed after the screenshot update.
-  **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.
+- **Full gate** `scripts\Test-v1.1.1.3-Logic.ps1 -RunBuild -RunLong` (VM at 192.168.1.122): 431 / 432 passed, 1 skipped
+  (the system-wide unit: no passwordless sudo). The one failure was the Linux desktop-session check, whose file probe
+  hung eight hours on an `ssh` that never saw the end of its session (the remote command had finished); it was stopped and
+  the check rerun on its own: **passed** (the real window on the VM's XFCE desktop, all four roles). Both harnesses pass on
+  Avalonia 12.1.4.
+- **Packages:** the Windows ZIP, the Linux ZIP and the Docker image (`/healthz` answered v1.1.1.3 with TLS and sign-in
+  on), no `createdump`, all in `SHA256SUMS.txt`. **Linux VM:** v1.1.1.3 installed in the home folder (`~/MystTiq/current`),
+  the production unit untouched. **Static gate:** passed after the README and roadmap updates. **Validate-Release
+  -Strict:** 0 errors, 0 warnings. **Distribution check:** passed.

@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.2: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
