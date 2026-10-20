@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -5041,6 +5041,120 @@ try
         cts2.Cancel(); await loop2;
         Assert(stopped.Starts == 0, "and leaves the one stopped on purpose alone");
     }, failures);
+
+    // v1.1.4.0 (roadmap U-1): the Dashboard's one-button server update: stop (reason "Server update"), safety backup,
+    // SteamCMD update, start again if it ran; a failed step ends it, starts the server again and raises a notification.
+    RunScenarioAsync("Server update (U-1): a running server is stopped (reason Server update), backed up, updated and started again; a stopped one is updated and stays stopped", async () =>
+    {
+        HeadlessServerUpdateFlowService Flow(ScriptedLifecycle inner, List<string> calls, List<string> stopReasons, List<string> log, List<string> alerts,
+            bool backupOk = true, bool updateOk = true)
+        {
+            var wrapper = new PolicyApplyingLifecycle(inner) { StopRecorded = (reason, _) => stopReasons.Add(reason) };
+            return new HeadlessServerUpdateFlowService(
+                _ => Task.FromResult(new ComponentVersionInfo("Core Server", "Palworld Dedicated Server", "25247047", "25300000", "UpdateAvailable", "SteamCMD", DateTimeOffset.UtcNow, "Steam's public build is 25300000.")),
+                wrapper,
+                async token => { calls.Add("start"); return await inner.StartAsync([], TimeSpan.FromSeconds(1), token); },
+                _ => { calls.Add("backup"); return Task.FromResult((backupOk, backupOk ? "Backup created." : "disk full")); },
+                _ => { calls.Add($"update running={inner.Running}"); return Task.FromResult((updateOk, updateOk ? "SteamCMD update completed." : "SteamCMD exit code 8")); },
+                TimeSpan.FromSeconds(1),
+                record: (level, title, detail) => log.Add($"{level}: {title}"),
+                notifyFailure: (title, _) => alerts.Add(title));
+        }
+
+        var running = new ScriptedLifecycle { Running = true };
+        var (calls, reasons, log, alerts) = (new List<string>(), new List<string>(), new List<string>(), new List<string>());
+        var flow = Flow(running, calls, reasons, log, alerts);
+        var card = await flow.GetCardAsync(CancellationToken.None);
+        Assert(card.State == "Update available" && card.Installed == "25247047" && card.Latest == "25300000" && card.Job is null, $"the card shows both builds [{card.State} {card.Installed} {card.Latest}]");
+        var (job, started) = flow.Begin("owner", background: false);
+        Assert(started && job.Running && job.RequestedBy == "owner", "the update starts");
+        Assert(flow.Begin("someone else", background: false) is ({ Id: var sameId }, false) && sameId == job.Id, "a second update is refused while one runs (the running one is returned)");
+        Assert((await flow.GetCardAsync(CancellationToken.None)).State == "Updating", "the card says Updating while it runs");
+        var done = await flow.RunAsync(job.Id, CancellationToken.None);
+        Assert(done is { Success: true, Running: false, Phase: "Done", WasRunning: true } && running.Running, $"it finished and the server runs again [{done.Phase}: {done.Message}]");
+        Assert(string.Join(",", calls) == "backup,update running=False,start", $"stopped before the backup and the update, started after [{string.Join(",", calls)}]");
+        Assert(reasons.SequenceEqual(["Server update"]), $"the stop says why: Server update [{string.Join(",", reasons)}]");
+        Assert(log.Contains("Information: Server update started") && log.Contains("Information: Server update finished") && alerts.Count == 0, $"each step is logged [{string.Join(" | ", log)}]");
+
+        var stopped = new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped };
+        (calls, reasons, log, alerts) = (new List<string>(), new List<string>(), new List<string>(), new List<string>());
+        flow = Flow(stopped, calls, reasons, log, alerts);
+        var quiet = await flow.RunAsync(flow.Begin(null, background: false).Job.Id, CancellationToken.None);
+        Assert(quiet is { Success: true, WasRunning: false } && !stopped.Running && string.Join(",", calls) == "backup,update running=False" && reasons.Count == 0,
+            $"a stopped server is updated and stays stopped [{string.Join(",", calls)}]");
+        Assert(HeadlessServerUpdateFlowService.StateFor("UpToDate") == "Up to date" && HeadlessServerUpdateFlowService.StateFor("NotInstalled") == "Not installed"
+               && HeadlessServerUpdateFlowService.StateFor("Unavailable") == "Unavailable" && HeadlessServerUpdateFlowService.StateFor(null) == "Unavailable", "the card's states read as the desktop's tags");
+    }, failures);
+
+    RunScenarioAsync("Server update (U-1): a failed backup or update ends it, the server is started again, and a notification says so", async () =>
+    {
+        foreach (var (backupOk, updateOk, expectUpdate) in new[] { (false, true, false), (true, false, true) })
+        {
+            var inner = new ScriptedLifecycle { Running = true };
+            var calls = new List<string>(); var alerts = new List<string>();
+            var flow = new HeadlessServerUpdateFlowService(
+                _ => Task.FromResult(new ComponentVersionInfo("Core Server", "Palworld Dedicated Server", "1", "2", "UpdateAvailable", "SteamCMD", DateTimeOffset.UtcNow, "")),
+                inner,
+                async token => { calls.Add("start"); return await inner.StartAsync([], TimeSpan.FromSeconds(1), token); },
+                _ => { calls.Add("backup"); return Task.FromResult((backupOk, backupOk ? "ok" : "disk full")); },
+                _ => { calls.Add("update"); return Task.FromResult((updateOk, updateOk ? "ok" : "SteamCMD exit code 8")); },
+                TimeSpan.FromSeconds(1), notifyFailure: (title, _) => alerts.Add(title));
+            var result = await flow.RunAsync(flow.Begin(null, background: false).Job.Id, CancellationToken.None);
+            Assert(result is { Success: false, Phase: "Failed" } && inner.Running && calls.Contains("update") == expectUpdate && calls[^1] == "start" && alerts.Count == 1,
+                $"backup {backupOk}, update {updateOk}: failed, server started again, one notification [{string.Join(",", calls)}; {result.Message}]");
+            Assert(result.Message.Contains(backupOk ? "SteamCMD exit code 8" : "disk full") && result.Message.Contains("The server was started again."), $"the message says what failed [{result.Message}]");
+        }
+        var check = new HeadlessServerUpdateFlowService(_ => throw new InvalidOperationException("SteamCMD missing"), new ScriptedLifecycle(),
+            _ => Task.FromResult<ServerLifecycleOperationResult>(null!), _ => Task.FromResult((true, "")), _ => Task.FromResult((true, "")), TimeSpan.FromSeconds(1));
+        var unavailable = await check.GetCardAsync(CancellationToken.None);
+        Assert(unavailable.State == "Unavailable" && unavailable.Detail.Contains("SteamCMD missing"), "a failed build check shows Unavailable with the reason");
+    }, failures);
+
+    // v1.1.4.0: a stop whose caller gave up (seen live 2026-10-20: an API client cancelled after a second) is still logged.
+    RunScenarioAsync("Stop reasons: a stop that ends with an exception (its caller cancelled) is still logged, and the exception still reaches the caller", async () =>
+    {
+        var wrapper = new PolicyApplyingLifecycle(new CancellingStopLifecycle());
+        var interrupted = new List<(string Reason, string Error)>();
+        var recorded = 0;
+        wrapper.StopRecorded = (_, _) => recorded++;
+        wrapper.StopInterrupted = (reason, error) => interrupted.Add((reason, error));
+        var thrown = false;
+        using (ServerStopReason.Begin("probe (by Legacy shared token)"))
+        {
+            try { await wrapper.StopAsync(TimeSpan.FromSeconds(1)); }
+            catch (OperationCanceledException) { thrown = true; }
+        }
+        Assert(thrown && recorded == 0 && interrupted.Count == 1 && interrupted[0].Reason == "probe (by Legacy shared token)" && interrupted[0].Error.StartsWith("OperationCanceledException"),
+            $"the interrupted stop is reported with its reason and the caller still sees the cancellation [{string.Join(" | ", interrupted)}]");
+    }, failures);
+
+    // v1.1.4.0 (roadmap F-21): with several servers on one computer, a stopped one no longer reports another running one
+    // (started by MystTiq) as "running, but not at the configured path"; one started by hand from another folder still is.
+    RunScenarioAsync("Wrong-path warning (F-21): another server MystTiq started is not this server at the wrong path; a PalServer started by hand from another folder still is", async () =>
+    {
+        var root = Path.Combine(tempRoot, "foreign-server");
+        Directory.CreateDirectory(root);
+        var stateStore = new ServerLifecycleStateStore(root);
+        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopped, null, DateTimeOffset.UtcNow.AddMinutes(-5), true, "Stopped.", "Stop in MystTiq (button or tray menu)"));
+        var other = @"C:\GameServers\Palworld\Server";
+        // PalServer.exe (500) started by a MystTiq service (400), and its Shipping-Cmd (501).
+        var managedElsewhere = new FixedSessionInspector([
+            new ServerSessionProcessInfo(500, 400, "PalServer", other + @"\PalServer.exe", true),
+            new ServerSessionProcessInfo(501, 500, "PalServer-Win64-Shipping-Cmd", other + @"\Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe", true)]);
+        var names = new Dictionary<int, string> { [400] = "mysttiq-server", [300] = "explorer" };
+        var lifecycle = new WindowsServerLifecycleService(ServerPlatformProfile.Windows, new HarnessPathProfile(root), managedElsewhere, stateStore)
+            { ProcessNameOf = pid => names.TryGetValue(pid, out var n) ? n : null };
+        var quiet = await lifecycle.GetStatusAsync();
+        Assert(quiet.Detail == "PalServer is not running." && quiet.LastStopReason == "Stop in MystTiq (button or tray menu)",
+            $"another server MystTiq runs is not reported as this one at the wrong path [{quiet.Detail}]");
+        managedElsewhere.Processes = [new ServerSessionProcessInfo(600, 300, "PalServer-Win64-Shipping-Cmd", other + @"\Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe", true)];
+        var byHand = await lifecycle.GetStatusAsync();
+        Assert(byHand.Detail.StartsWith("A PalServer process is running, but not at the configured path.") && byHand.Detail.Contains("PID 600"),
+            $"a PalServer started by hand from another folder is still reported [{byHand.Detail}]");
+        Assert(!ForeignServerProcess.StartedByMystTiq(new ServerSessionProcessInfo(700, 0, "PalServer", "x", true), [], _ => "mysttiq-server")
+               && !ForeignServerProcess.StartedByMystTiq(new ServerSessionProcessInfo(701, 702, "PalServer", "x", true), [], _ => null),
+            "no parent, or a parent that has exited, is not MystTiq");
+    }, failures);
 }
 finally
 {
@@ -5559,4 +5673,19 @@ sealed class FakeGitHub(Dictionary<string, byte[]> responses) : HttpMessageHandl
         Task.FromResult(responses.TryGetValue(request.RequestUri!.AbsolutePath, out var body)
             ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(body) }
             : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+}
+
+// v1.1.4.0: a lifecycle whose stop is cancelled by its caller.
+sealed class CancellingStopLifecycle : IServerLifecycleService
+{
+    private static ServerLifecycleSnapshot Snapshot() => new(ServerLifecyclePhase.Stopped, null, [], [], false, false, DateTimeOffset.UtcNow, null, "stopped");
+    public Task<ServerLifecycleSnapshot> GetStatusAsync(CancellationToken cancellationToken = default) => Task.FromResult(Snapshot());
+    public Task<ServerLifecycleOperationResult> StartAsync(IReadOnlyList<string> serverArguments, TimeSpan startupTimeout, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new ServerLifecycleOperationResult(HeadlessExitCode.Success, Snapshot(), false, "started"));
+    public Task<ServerLifecycleOperationResult> StopAsync(TimeSpan gracefulTimeout, CancellationToken cancellationToken = default) =>
+        throw new OperationCanceledException("The request was cancelled.");
+    public Task<ServerLifecycleOperationResult> RestartAsync(IReadOnlyList<string> serverArguments, TimeSpan startupTimeout, TimeSpan gracefulTimeout, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new ServerLifecycleOperationResult(HeadlessExitCode.Success, Snapshot(), false, "restarted"));
+    public Task<IReadOnlyList<ServerInstanceInfo>> FindAllInstancesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ServerInstanceInfo>>([]);
+    public Task<InstanceTerminationResult> TerminateUnmanagedInstanceAsync(int processId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 }

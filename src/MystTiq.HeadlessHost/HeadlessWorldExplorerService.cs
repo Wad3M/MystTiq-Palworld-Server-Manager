@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using MystTiq.Core.Services;
 using System.Text;
 using System.Text.RegularExpressions;

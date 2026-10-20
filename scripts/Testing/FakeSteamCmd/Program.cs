@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 // v1.0.7.5 (roadmap Q-10): behaves like SteamCMD installing or updating Palworld into +force_install_dir, as the long test
 // set needs it. What it does comes from "mode.txt" beside it (so a test can change it between runs):
 //   complete: writes the app manifest as fully installed (StateFlags 4) and exits 0, like a finished update.

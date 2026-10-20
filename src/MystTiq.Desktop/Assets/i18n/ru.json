@@ -4090,5 +4090,17 @@
   "settings.startWithSystem.elsewhere": "Настроено для другой копии MystTiq. Выключите и снова включите, чтобы запускать эту.",
   "settings.startWithSystem.on": "MystTiq будет запускаться при входе в систему.",
   "settings.startWithSystem.off": "MystTiq больше не будет запускаться при входе в систему.",
-  "settings.startWithSystem.failed": "Не удалось изменить запуск при входе:"
+  "settings.startWithSystem.failed": "Не удалось изменить запуск при входе:",
+  "dashboard.serverUpdate": "ОБНОВЛЕНИЕ СЕРВЕРА",
+  "dashboard.updateServer": "Обновить сервер",
+  "dashboard.serverUpdate.build": "Сборка {0}",
+  "dashboard.serverUpdate.newBuild": "{0} → {1}",
+  "dashboard.serverUpdate.confirmTitle": "Обновить сервер?",
+  "dashboard.serverUpdate.builds": "Установленная сборка {0}; публичная сборка Steam {1}.",
+  "dashboard.serverUpdate.running": "Сервер работает ({0} в сети): он будет остановлен, что отключит всех, затем обновлён и запущен снова.",
+  "dashboard.serverUpdate.stopped": "Сервер остановлен: он будет обновлён и останется остановленным.",
+  "dashboard.serverUpdate.safety": "Сначала создаётся резервная копия. Обновление выполняется рядом с сервером и завершится, даже если закрыть MystTiq.",
+  "dashboard.serverUpdate.current": "Steam сообщает, что эта сборка актуальна, поэтому скачивать, возможно, нечего.",
+  "dashboard.serverUpdate.started": "Обновление сервера началось.",
+  "dashboard.serverUpdate.refused": "Не удалось начать обновление сервера:"
 }

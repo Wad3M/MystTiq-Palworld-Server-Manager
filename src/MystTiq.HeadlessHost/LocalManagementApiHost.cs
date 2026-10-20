@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -294,6 +294,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             policyLifecycle.AfterStart = async token => await resourcePolicy.ApplyAsync(token);
             policyLifecycle.StopRecorded = (reason, result) => activity.Record(result.Success ? "Information" : "Warning", "Lifecycle",
                 result.Success ? $"Server stopped: {reason}" : $"Server stop failed: {reason}", result.Message);
+            policyLifecycle.StopInterrupted = (reason, error) => activity.Record("Warning", "Lifecycle", $"Server stop interrupted: {reason}",
+                $"The stop did not report its end ({error}); the server's status shows where it got to.");
             var automation = new HeadlessAutomationService(paths, configuration, serverConfig, lifecycle, backups, notifications, notificationRouting, rcon, operations, activity, alertCenter, monitoring, antiCheat, crashReports, resourcePolicy);
             var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer, backups, crashAndSaveTools, () => alertCenter.LowDiskCriticalPercent(), automation, componentUpdates, networkDiagnostics, profileId.Value, serverConfig.LaunchArguments, fleetPaths.ManagerRuntimeRoot);
             var worldClone = new HeadlessWorldCloneService(paths, lifecycle, serverConfig, fleetConfigurationApi, palworldConfiguration, activity);
@@ -305,6 +307,30 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             var playerWatch = new HeadlessPlayerWatchService(monitoring.GetPlayersAsync,
                 (players, token) => RunPlayerChecksAsync(players, playerRegistry, whitelist, playerIds, identityGuard, nameGuard, kits, temporaryBans, token),
                 activity);
+
+            // v1.1.4.0 (roadmap U-1): stop (reason "Server update"), safety backup, SteamCMD update, start again if it ran.
+            var serverUpdate = new HeadlessServerUpdateFlowService(
+                componentUpdates.GetPalworldServerVersionAsync,
+                lifecycle,
+                async token =>
+                {
+                    var (hold, refusal) = await OperationHold.TryBeginAsync(operations, profileId, "server-update-start", nameof(HeadlessServerUpdateFlowService),
+                        ["lifecycle", "world-mutation"], "Starting the server after its update", token);
+                    if (refusal is not null) throw new InvalidOperationException(refusal);
+                    using (hold)
+                    {
+                        await modManagement.LogPreStartDiagnosticsAsync(token);
+                        var started = await lifecycle.StartAsync(serverConfig.LaunchArguments, TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds), token);
+                        if (started.Success) hold!.Succeeded(started.Message); else hold!.Failed(started.Message);
+                        return started;
+                    }
+                },
+                async token => { var made = await backups.CreateAsync(BackupClass.Safety, token); return (made.Success, made.Message); },
+                async token => { var done = await serverDistribution.UpdateAsync(false, token); return (done.Success, done.Message); },
+                TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds),
+                operations, profileId,
+                (level, title, detail) => activity.Record(level, "Server update", title, detail),
+                (title, message) => notifications.Create("Warning", title, message, pinned: true));
 
             profiles[profileId] = new ServerProfileHost
             {
@@ -367,6 +393,7 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 Teleport = teleport,
                 TemporaryBans = temporaryBans,
                 ComponentUpdates = componentUpdates,
+                ServerUpdate = serverUpdate,
                 ModSafeStart = modSafeStart,
                 ResourcePolicy = resourcePolicy,
                 HostMonitor = hostMonitor,
@@ -1487,6 +1514,17 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
 
         routes.MapGet("/server/distribution", () =>
             Results.Ok(p.ServerDistribution.GetStatus()));
+
+        // v1.1.4.0 (roadmap U-1): the Dashboard's Server update card. GET checks the build (SteamCMD; its answer is kept 15
+        // minutes); /job answers at once with the running or last update; POST starts the whole update (Admin) and returns
+        // 202, or 409 with the update already running.
+        routes.MapGet("/server/update", async (CancellationToken token) => Results.Ok(await p.ServerUpdate.GetCardAsync(token)));
+        routes.MapGet("/server/update/job", () => p.ServerUpdate.CurrentJob is { } job ? Results.Ok(job) : Results.NoContent());
+        routes.MapPost("/server/update", (HttpContext context) =>
+        {
+            var (job, started) = p.ServerUpdate.Begin((context.Items[RbacEndpointExtensions.PrincipalItemKey] as MystTiqPrincipal)?.Name);
+            return started ? Results.Accepted("/api/v1/server/update/job", job) : Results.Conflict(job);
+        }).RequireRole(MystTiqRole.Admin, p.Id);
 
         routes.MapGet("/server/distribution/plan", (bool? validate) =>
             Results.Ok(p.ServerDistribution.GetPlan(validate ?? true)));

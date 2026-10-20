@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 namespace MystTiq.Desktop.ViewModels;
 
 // v1.0.6.1 (reported 2026-10-06): the desktop connects to whatever service answers on this computer's address. A v1.0.6.0

@@ -1,4 +1,4 @@
-# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 [CmdletBinding()]
 param([ValidateSet('Debug','Release')][string]$Configuration='Release')
 $ErrorActionPreference='Stop'

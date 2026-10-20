@@ -1,25 +1,27 @@
-<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
-# MystTiq v1.1.2.0 Checkpoint: Why It Stopped, and Start with Windows
+<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
+# MystTiq v1.1.4.0 Checkpoint: Update the Server from the Dashboard
 
 ## What changed
 
-- **Why a server stopped (F-19).** Every stop now says who or what asked for it: a button or the tray in MystTiq, Exit,
-  Discord (with the user), an automation rule, MOD Safe Start, a character move, a frozen-server restart, the command
-  line, the service stopping, or the API (with the account). The Dashboard's Overall Health card shows
-  "Last stop: <reason> · <time>", and the activity log says "Server stopped: <reason>". The next unexplained stop will
-  say what did it.
-- **Start with Windows (F-20).** Settings > Appearance, "Start MystTiq when I sign in (opens in the tray)". Off until you
-  turn it on; I have not turned it on on your PC. With it on, the server that was running when the PC went down starts
-  again, and one you stopped stays stopped. A Windows restart is no longer held up by the window hiding to the tray.
-- **Patch.** The Linux VM checks pass `-n` to ssh, so a finished remote command cannot leave a check waiting.
+- **Server update card (U-1).** The Dashboard's LIFECYCLE bar is shorter, and beside it, above OVERALL HEALTH, a
+  card shows your installed Palworld build against Steam's, with **Update Server**. It asks first (saying how many
+  players are online), then the service stops the server, takes a safety backup, runs SteamCMD and starts it again,
+  even if you close MystTiq. I have not run an update on your server; yours is on Steam's current build.
+- **Wrong-path warning fixed (F-21).** With your five server profiles, a stopped one said "A PalServer process is
+  running, but not at the configured path" whenever another of your servers ran. Found while taking the screenshots.
+- **Interrupted stops logged (F-22).** A stop whose request was cancelled now leaves a line in the activity log.
+- **Screenshots.** All twelve in `docs/images` retaken from v1.1.4.0; the README captions say so.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.1.2.0-Logic.ps1 -RunBuild -RunLong` (VM at 192.168.1.122): 440 / 440 passed, 1 skipped
-  (the system-wide unit: no passwordless sudo). The Linux desktop session check passed on the first run (ssh now with
-  `-n`). LogicHarness: the four F-19/F-20 scenarios; ArtworkHarness: 852 checks, including the stop reason sent, the
-  Last stop line and the Settings option on a test Run key (deleted afterwards; the real Run key untouched).
-- **Packages:** the Windows ZIP, the Linux ZIP and the Docker image (`/healthz` answered v1.1.2.0 with TLS and sign-in
-  on), no `createdump`, all in `SHA256SUMS.txt`. **Linux VM:** v1.1.2.0 installed in the home folder
-  (`~/MystTiq/current`), the production unit untouched. **Static gate:** 374 / 374. **Validate-Release -Strict:** 0
+- **Full gate** `scripts\Test-v1.1.4.0-Logic.ps1 -RunBuild -RunLong` (VM at 192.168.1.122): 447 / 447 passed, 1 skipped
+  (the system-wide unit: no passwordless sudo). LogicHarness: the update flow (running and stopped server, failed backup,
+  failed update, refused second update), the wrong-path rule and the interrupted stop. ArtworkHarness: 858 checks,
+  including the card in 12 languages at 950, 1100 and 1440 px (the Italian tag ends in "…" at 950 px, with a tooltip).
+- **Live:** the card's route answered from a demo service using the real SteamCMD (build 25247047, up to date), and the
+  demo's status read "PalServer is not running." while the owner's server ran (it reported that server as its own wrong
+  path before F-21). All twelve screenshots retaken from that demo and checked by eye; the demo was deleted.
+- **Packages:** the Windows ZIP, the Linux ZIP and the Docker image (`/healthz` answered v1.1.4.0 with TLS and sign-in
+  on), no `createdump`, all in `SHA256SUMS.txt`. **Linux VM:** v1.1.4.0 installed in the home folder
+  (`~/MystTiq/current`), the production unit untouched. **Static gate:** 381 / 381. **Validate-Release -Strict:** 0
   errors, 0 warnings. **Distribution check:** passed.

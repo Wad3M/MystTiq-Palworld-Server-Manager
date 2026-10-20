@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -15,6 +15,8 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
     private readonly ServerPlatformProfile platform;
     private readonly IServerPathProfile paths;
     private readonly IServerSessionInspector sessionInspector;
+    // v1.1.4.0 (roadmap F-21): reads a parent process's name; the logic harness replaces it.
+    public Func<int, string?> ProcessNameOf { get; init; } = ForeignServerProcess.NameOf;
     private readonly ServerLifecycleStateStore stateStore;
     private readonly int expectedGamePort;
     private readonly object consoleLogGate = new();
@@ -394,11 +396,14 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
     private IReadOnlyList<ServerSessionProcessInfo> FindProcessesWithMismatchedPath()
     {
         var root = NormalizedServerRoot();
-        return sessionInspector.FindProcessesByName(platform.ProcessNames).Where(process =>
+        var all = sessionInspector.FindProcessesByName(platform.ProcessNames);
+        return all.Where(process =>
         {
             if (string.IsNullOrWhiteSpace(process.ExecutablePath)) return false;
-            try { return !Path.GetFullPath(process.ExecutablePath).StartsWith(root, StringComparison.OrdinalIgnoreCase); }
+            try { if (Path.GetFullPath(process.ExecutablePath).StartsWith(root, StringComparison.OrdinalIgnoreCase)) return false; }
             catch { return false; }
+            // v1.1.4.0 (roadmap F-21): another server MystTiq runs is not this one at the wrong path.
+            return !ForeignServerProcess.StartedByMystTiq(process, all, ProcessNameOf);
         }).OrderBy(process => process.ProcessId).ToArray();
     }
 

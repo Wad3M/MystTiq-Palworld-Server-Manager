@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Providers;
@@ -82,6 +82,8 @@ public sealed class ServerProfileHost : IAsyncDisposable
     public required HeadlessTeleportService Teleport { get; init; }
     public required HeadlessTemporaryBanService TemporaryBans { get; init; }
     public required HeadlessComponentUpdateService ComponentUpdates { get; init; }
+    // v1.1.4.0 (roadmap U-1): the Dashboard's Server update card and its one-button update.
+    public required HeadlessServerUpdateFlowService ServerUpdate { get; init; }
     public required HeadlessModSafeStartService ModSafeStart { get; init; }
     // v0.8.17.0: process priority and eco mode for this server, and the machine's own readings (one monitor for the fleet).
     public required HeadlessResourcePolicyService ResourcePolicy { get; init; }

@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 namespace MystTiq.Desktop.Models;
 
 // v1.1.0.2 (roadmap F-2): GET /players/ids, PUT /players/ids/settings, POST /players/ids/move. The join check's record,

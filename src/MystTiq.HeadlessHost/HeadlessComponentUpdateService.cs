@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -95,6 +95,9 @@ public sealed class HeadlessComponentUpdateService
             now,
             "SteamCMD has no version number of its own -- it self-updates on every launch, so there is nothing to compare against a \"latest\" release.");
     }
+
+    // v1.1.4.0 (roadmap U-1): the Palworld row alone, for the Dashboard's Server update card.
+    public Task<ComponentVersionInfo> GetPalworldServerVersionAsync(CancellationToken ct) => CheckPalworldServerAsync(DateTimeOffset.UtcNow, ct);
 
     private async Task<ComponentVersionInfo> CheckPalworldServerAsync(DateTimeOffset now, CancellationToken ct)
     {

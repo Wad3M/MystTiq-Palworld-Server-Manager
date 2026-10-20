@@ -4090,5 +4090,17 @@
   "settings.startWithSystem.elsewhere": "To ustawienie dotyczy innej kopii MystTiq. Wyłącz je i włącz ponownie, aby uruchamiać tę kopię.",
   "settings.startWithSystem.on": "MystTiq będzie uruchamiany po zalogowaniu.",
   "settings.startWithSystem.off": "MystTiq nie będzie już uruchamiany po zalogowaniu.",
-  "settings.startWithSystem.failed": "Nie udało się zmienić uruchamiania po zalogowaniu:"
+  "settings.startWithSystem.failed": "Nie udało się zmienić uruchamiania po zalogowaniu:",
+  "dashboard.serverUpdate": "AKTUALIZACJA SERWERA",
+  "dashboard.updateServer": "Aktualizuj serwer",
+  "dashboard.serverUpdate.build": "Kompilacja {0}",
+  "dashboard.serverUpdate.newBuild": "{0} → {1}",
+  "dashboard.serverUpdate.confirmTitle": "Zaktualizować serwer?",
+  "dashboard.serverUpdate.builds": "Zainstalowana kompilacja {0}; publiczna kompilacja Steam {1}.",
+  "dashboard.serverUpdate.running": "Serwer działa ({0} online): zostanie zatrzymany, co rozłączy wszystkich, a potem zaktualizowany i uruchomiony ponownie.",
+  "dashboard.serverUpdate.stopped": "Serwer jest zatrzymany: zostanie zaktualizowany i pozostanie zatrzymany.",
+  "dashboard.serverUpdate.safety": "Najpierw tworzona jest kopia bezpieczeństwa. Aktualizacja działa obok serwera i kończy się nawet po zamknięciu MystTiq.",
+  "dashboard.serverUpdate.current": "Steam podaje, że ta kompilacja jest aktualna, więc może nie być nic do pobrania.",
+  "dashboard.serverUpdate.started": "Aktualizacja serwera rozpoczęta.",
+  "dashboard.serverUpdate.refused": "Nie udało się rozpocząć aktualizacji serwera:"
 }

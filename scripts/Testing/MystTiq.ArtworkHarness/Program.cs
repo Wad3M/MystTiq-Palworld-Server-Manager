@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -2214,6 +2214,78 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         selectedPage.SetValue(vm, NavigationPage.Dashboard);
         Dispatcher.UIThread.RunJobs();
     }
+}
+
+// v1.1.4.0 (roadmap U-1): the Server update card sits beside the shortened LIFECYCLE bar, above OVERALL HEALTH, and fits
+// at 950, 1100 and 1440 px in every language: its title, tag, build line and Update Server button stay inside the card.
+{
+    var connected = typeof(MainWindowViewModel).GetProperty(nameof(vm.ManagementApiConnected))!;
+    connected.SetValue(vm, true);
+    vm.ApplyServerUpdateCard(new ServerUpdateCardDto { Installed = "25247047", Latest = "25300000", State = "Update available", Detail = "Steam's public build is 25300000." });
+    selectedPage.SetValue(vm, NavigationPage.Dashboard);
+    var problems = new List<string>();
+    var trimmedTags = new List<string>();
+    foreach (var language in Localizer.Languages)
+    {
+        Localizer.Instance.SetLanguage(language.Code);
+        foreach (var width in new[] { 950.0, 1100.0, 1440.0 })
+        {
+            window.Width = width; window.Height = width >= 1440 ? 880 : 650;
+            Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
+            var row = window.GetVisualDescendants().OfType<Grid>().FirstOrDefault(g => g.Name == "LifecycleRow");
+            var card = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "ServerUpdateCard");
+            var button = card?.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "UpdateServerButton");
+            var tag = card?.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("tag"));
+            if (row is not { IsEffectivelyVisible: true } || card is null || button is not { IsEffectivelyVisible: true } || tag is null) { problems.Add($"{language.Code}@{width}: missing"); continue; }
+            var cardLeft = card.TranslatePoint(default, window)!.Value.X;
+            var cardRight = cardLeft + card.Bounds.Width;
+            var buttonRight = button.TranslatePoint(new Point(button.Bounds.Width, 0), window)!.Value.X;
+            var tagRight = tag.TranslatePoint(new Point(tag.Bounds.Width, 0), window)!.Value.X;
+            var health = window.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.IsEffectivelyVisible && t.Text == Localizer.Instance["dashboard.overallHealth"]);
+            var healthLeft = health?.TranslatePoint(default, window)!.Value.X ?? -1;
+            var buttonText = button.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault();
+            var title = card.GetVisualDescendants().OfType<TextBlock>().First(x => x.Name == "ServerUpdateTitle");
+            var buildLine = card.GetVisualDescendants().OfType<TextBlock>().First(x => x.Name == "ServerUpdateLine");
+            var lineRight = buildLine.TranslatePoint(new Point(buildLine.Bounds.Width, 0), window)!.Value.X;
+            var oneLine = title.FontSize * 1.8;
+            // A text cut short must end in an ellipsis (the tag's full state is its tooltip), never be clipped mid-word.
+            var tagText = tag.GetVisualDescendants().OfType<TextBlock>().First();
+            double Natural(TextBlock source)
+            {
+                var probe = new TextBlock { Text = source.Text, FontSize = source.FontSize, FontWeight = source.FontWeight, FontFamily = source.FontFamily };
+                probe.Measure(Size.Infinity);
+                return probe.DesiredSize.Width;
+            }
+            var tagShort = Natural(tagText) > tagText.Bounds.Width + 0.5;
+            var tagClipped = tagShort && tagText.TextTrimming == TextTrimming.None;
+            if (tagShort && !tagClipped) trimmedTags.Add($"{language.Code}@{width}");
+            var lineShort = Natural(buildLine) > buildLine.Bounds.Width + 0.5;
+            var titleShort = Natural(title) > title.Bounds.Width + 0.5;
+            if (titleShort) trimmedTags.Add($"title {language.Code}@{width}");
+            // Everything inside the card: the title on one line (trimmed if it must be), the build number whole, the tag and
+            // the button inside its right edge, and the card no taller than four short rows.
+            if (tagClipped || lineShort || buttonRight > cardRight - 1 || tagRight > cardRight - 1 || lineRight > cardRight - 1 || buttonText is null || buttonText.DesiredSize.Width > button.Bounds.Width + 0.5
+                || title.Bounds.Height > oneLine || buildLine.Bounds.Height > oneLine || buildLine.Bounds.Width + 0.5 < buildLine.DesiredSize.Width
+                || card.Bounds.Height > 110 || Math.Abs(cardLeft - (healthLeft - 8)) > 12)
+                problems.Add($"{language.Code}@{width}: card {cardLeft:0}-{cardRight:0} h{card.Bounds.Height:0}, button to {buttonRight:0}, tag to {tagRight:0}, line to {lineRight:0} h{buildLine.Bounds.Height:0}, title h{title.Bounds.Height:0}, health at {healthLeft:0}");
+        }
+        if (language.Code is "en" or "de" or "it" or "ja") { window.Width = 950; window.Height = 650; Render($"server-update-card-{language.Code}-950"); }
+    }
+    Localizer.Instance.SetLanguage("en");
+    window.Width = 1440; window.Height = 880;
+    var line = vm.ServerUpdateLineText;
+    Check(problems.Count == 0 && line == "25247047 → 25300000" && vm.ServerUpdateState == "Update available",
+        $"U-1: the Server update card is beside the LIFECYCLE bar above OVERALL HEALTH, and its title, tag, builds and Update Server button fit at 950, 1100 and 1440 px in all 12 languages [{string.Join("; ", problems)}] (tag ends in … at: {string.Join(", ", trimmedTags)})");
+    vm.ApplyServerUpdateCard(new ServerUpdateCardDto { Installed = "25300000", Latest = "25300000", State = "Up to date",
+        Job = new ServerUpdateJobDto { Running = true, Phase = "Updating", Message = "Updating the server files with SteamCMD…" } });
+    var whileRunning = vm.ServerUpdateState == "Updating" && vm.ServerUpdateLineText.StartsWith("Updating the server files") && vm.IsServerUpdateRunning && !vm.CanUpdateServer;
+    vm.ApplyServerUpdateCard(new ServerUpdateCardDto { Installed = "25300000", Latest = "25300000", State = "Up to date",
+        Job = new ServerUpdateJobDto { Running = false, Success = true, Phase = "Done", Message = "SteamCMD update completed.", FinishedAt = DateTimeOffset.UtcNow } });
+    var after = vm.ServerUpdateState == "Up to date" && vm.ServerUpdateLineText == "Build 25300000" && vm.CanUpdateServer && vm.ServerUpdateDetail.StartsWith("SteamCMD update completed.");
+    var lines = vm.ServerUpdateConfirmationLines();
+    Check(whileRunning && after && lines.Count == 4 && lines[0] == "Installed build 25300000; Steam's public build 25300000." && lines[^1].StartsWith("Steam reports this build is current"),
+        $"U-1: while an update runs the card shows its step and the button waits; afterwards the build and the result; the confirmation says what happens [{string.Join(" | ", lines)}]");
+    connected.SetValue(vm, false);
 }
 
 Console.WriteLine($"PASS {checks} checks. Offline headless rendering only; no live server acceptance.");

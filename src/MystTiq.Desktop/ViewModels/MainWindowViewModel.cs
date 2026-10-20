@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1141,6 +1141,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     }
     private void RaiseManagementApiConnectedDependents()
     {
+        RaisePropertyChanged(nameof(CanUpdateServer));
         (Backups.CreateBackupCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StartCommand as AsyncCommand)?.RaiseCanExecuteChanged();
         (StopCommand as AsyncCommand)?.RaiseCanExecuteChanged();
@@ -3411,6 +3412,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             _ = Dashboard.RefreshHostAddressesAsync(profile, requestTab, force: false);
             // v1.0.2.0 (roadmap R-2): the Dashboard's warning when a switched-on channel has no proven delivery.
             _ = Alerts.RefreshDeliveryHealthAsync(profile, requestTab, force: false);
+            // v1.1.4.0 (roadmap U-1): the Server update card (its build every 15 minutes, a running update every poll).
+            _ = RefreshServerUpdateCardAsync(profile, requestTab, force: false);
             ApplyPlayers(snapshot.Players);
             ApplyMetrics(snapshot.Metrics);
             ApplyLogs(snapshot.LogTail);
@@ -3487,6 +3490,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             Detail = $"Connected to MystTiq {health.Version} ({health.Platform}) at {profile.BaseAddress}.";
             // v1.0.6.1: a local service older than this app runs the servers without the fixes since its version.
             CheckLocalServiceVersion(health.Version, profile.BaseAddress);
+            // v1.1.4.0 (roadmap U-1): the Server update card, in the background (SteamCMD can take half a minute).
+            _ = RefreshServerUpdateCardAsync(profile, requestTab, force: true);
 
             // v0.7.71.0: remember a successfully-used token (encrypted, see CredentialStore) so the
             // next connect to this same profile doesn't need it re-pasted. Only saves on a proven
@@ -4057,6 +4062,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(CanOperate));
         RaisePropertyChanged(nameof(CanManageAdmin));
         RaisePropertyChanged(nameof(CanManagePrincipals));
+        RaisePropertyChanged(nameof(CanUpdateServer));
         RaisePropertyChanged(nameof(RoleHiddenNotice));
         RaisePropertyChanged(nameof(HasRoleHiddenNotice));
         RaisePropertyChanged(nameof(SignedInText));

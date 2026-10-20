@@ -4090,5 +4090,17 @@
   "settings.startWithSystem.elsewhere": "Bu, başka bir MystTiq kopyası için ayarlanmış. Bu kopyayı başlatmak için kapatıp yeniden açın.",
   "settings.startWithSystem.on": "MystTiq oturum açtığınızda başlayacak.",
   "settings.startWithSystem.off": "MystTiq artık oturum açtığınızda başlamayacak.",
-  "settings.startWithSystem.failed": "Oturum açılışında başlatma değiştirilemedi:"
+  "settings.startWithSystem.failed": "Oturum açılışında başlatma değiştirilemedi:",
+  "dashboard.serverUpdate": "SUNUCU GÜNCELLEMESİ",
+  "dashboard.updateServer": "Sunucuyu güncelle",
+  "dashboard.serverUpdate.build": "Derleme {0}",
+  "dashboard.serverUpdate.newBuild": "{0} → {1}",
+  "dashboard.serverUpdate.confirmTitle": "Sunucu güncellensin mi?",
+  "dashboard.serverUpdate.builds": "Kurulu derleme {0}; Steam'in genel derlemesi {1}.",
+  "dashboard.serverUpdate.running": "Sunucu çalışıyor ({0} çevrimiçi): durdurulur, bu herkesin bağlantısını keser; sonra güncellenir ve yeniden başlatılır.",
+  "dashboard.serverUpdate.stopped": "Sunucu durdurulmuş: güncellenir ve durmuş olarak kalır.",
+  "dashboard.serverUpdate.safety": "Önce bir güvenlik yedeği alınır. Güncelleme sunucunun yanında çalışır ve MystTiq kapatılsa bile tamamlanır.",
+  "dashboard.serverUpdate.current": "Steam bu derlemenin güncel olduğunu bildiriyor, bu yüzden indirilecek bir şey olmayabilir.",
+  "dashboard.serverUpdate.started": "Sunucu güncellemesi başladı.",
+  "dashboard.serverUpdate.refused": "Sunucu güncellemesi başlatılamadı:"
 }

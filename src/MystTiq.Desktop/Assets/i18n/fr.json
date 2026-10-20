@@ -4090,5 +4090,17 @@
   "settings.startWithSystem.elsewhere": "Ce réglage vise une autre copie de MystTiq. Désactivez-le puis réactivez-le pour démarrer celle-ci.",
   "settings.startWithSystem.on": "MystTiq démarrera à l’ouverture de session.",
   "settings.startWithSystem.off": "MystTiq ne démarrera plus à l’ouverture de session.",
-  "settings.startWithSystem.failed": "Le démarrage à l’ouverture de session n’a pas pu être modifié :"
+  "settings.startWithSystem.failed": "Le démarrage à l’ouverture de session n’a pas pu être modifié :",
+  "dashboard.serverUpdate": "MISE À JOUR DU SERVEUR",
+  "dashboard.updateServer": "Mettre à jour le serveur",
+  "dashboard.serverUpdate.build": "Build {0}",
+  "dashboard.serverUpdate.newBuild": "{0} → {1}",
+  "dashboard.serverUpdate.confirmTitle": "Mettre à jour le serveur ?",
+  "dashboard.serverUpdate.builds": "Build installé {0} ; build public Steam {1}.",
+  "dashboard.serverUpdate.running": "Le serveur tourne ({0} en ligne) : il est arrêté, ce qui déconnecte tout le monde, puis mis à jour et redémarré.",
+  "dashboard.serverUpdate.stopped": "Le serveur est arrêté : il est mis à jour et reste arrêté.",
+  "dashboard.serverUpdate.safety": "Une sauvegarde de sécurité est faite d’abord. La mise à jour s’exécute à côté du serveur et se termine même si MystTiq est fermé.",
+  "dashboard.serverUpdate.current": "Steam indique que ce build est le plus récent ; il n’y aura peut-être rien à télécharger.",
+  "dashboard.serverUpdate.started": "La mise à jour du serveur a commencé.",
+  "dashboard.serverUpdate.refused": "La mise à jour du serveur n’a pas pu démarrer :"
 }

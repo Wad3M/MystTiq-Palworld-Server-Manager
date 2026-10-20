@@ -4090,5 +4090,17 @@
   "settings.startWithSystem.elsewhere": "これは別の MystTiq のコピー用に設定されています。オフにしてからオンに戻すと、このコピーが起動します。",
   "settings.startWithSystem.on": "サインイン時に MystTiq が起動します。",
   "settings.startWithSystem.off": "サインイン時に MystTiq は起動しなくなりました。",
-  "settings.startWithSystem.failed": "サインイン時の起動を変更できませんでした:"
+  "settings.startWithSystem.failed": "サインイン時の起動を変更できませんでした:",
+  "dashboard.serverUpdate": "サーバー更新",
+  "dashboard.updateServer": "サーバーを更新",
+  "dashboard.serverUpdate.build": "ビルド {0}",
+  "dashboard.serverUpdate.newBuild": "{0} → {1}",
+  "dashboard.serverUpdate.confirmTitle": "サーバーを更新しますか？",
+  "dashboard.serverUpdate.builds": "インストール済みビルド {0}、Steam の公開ビルド {1}。",
+  "dashboard.serverUpdate.running": "サーバーは稼働中です（{0} 人オンライン）。停止すると全員が切断され、その後更新して再起動します。",
+  "dashboard.serverUpdate.stopped": "サーバーは停止中です。更新後も停止したままです。",
+  "dashboard.serverUpdate.safety": "最初に安全バックアップを作成します。更新はサーバー側で実行され、MystTiq を閉じても完了します。",
+  "dashboard.serverUpdate.current": "Steam ではこのビルドが最新とされているため、ダウンロードするものがない可能性があります。",
+  "dashboard.serverUpdate.started": "サーバーの更新を開始しました。",
+  "dashboard.serverUpdate.refused": "サーバーの更新を開始できませんでした:"
 }

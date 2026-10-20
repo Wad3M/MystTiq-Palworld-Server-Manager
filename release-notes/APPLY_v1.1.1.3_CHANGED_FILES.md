@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
 # v1.1.1.3 Changed Files
 
 - `src/MystTiq.Desktop/MystTiq.Desktop.csproj`: Avalonia, Avalonia.Desktop, Avalonia.Fonts.Inter, Avalonia.Themes.Fluent 12.1.4.

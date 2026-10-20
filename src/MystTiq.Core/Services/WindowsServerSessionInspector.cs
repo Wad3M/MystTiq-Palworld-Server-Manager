@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
@@ -60,13 +60,44 @@ public sealed class WindowsServerSessionInspector : IServerSessionInspector
                 // then lost it ("crashed"). A process is now listed until Windows reports it has exited (above).
                 bool responding;
                 try { responding = process.Responding; } catch { responding = false; }
-                result.Add(new ServerSessionProcessInfo(process.Id, 0, process.ProcessName, path, responding));
+                // v1.1.4.0 (roadmap F-21): the parent too, so another server MystTiq started is told apart from this one.
+                result.Add(new ServerSessionProcessInfo(process.Id, ParentOf(process.Id), process.ProcessName, path, responding));
             }
             catch { }
             finally { process.Dispose(); }
         }
         return result.OrderBy(item => item.ProcessId).ToArray();
     }
+
+    // v1.1.4.0 (roadmap F-21): the parent process id (0 when it cannot be read), with limited query access only.
+    private static int ParentOf(int processId)
+    {
+        var handle = OpenProcess(ProcessQueryLimitedInformation, false, processId);
+        if (handle == IntPtr.Zero) return 0;
+        try
+        {
+            var info = new ProcessBasicInformation();
+            return NtQueryInformationProcess(handle, 0, ref info, System.Runtime.InteropServices.Marshal.SizeOf<ProcessBasicInformation>(), out _) == 0
+                ? (int)info.InheritedFromUniqueProcessId
+                : 0;
+        }
+        catch { return 0; }
+        finally { CloseHandle(handle); }
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct ProcessBasicInformation
+    {
+        public IntPtr ExitStatus;
+        public IntPtr PebBaseAddress;
+        public IntPtr AffinityMask;
+        public IntPtr BasePriority;
+        public IntPtr UniqueProcessId;
+        public IntPtr InheritedFromUniqueProcessId;
+    }
+
+    [System.Runtime.InteropServices.DllImport("ntdll.dll")]
+    private static extern int NtQueryInformationProcess(IntPtr process, int informationClass, ref ProcessBasicInformation information, int length, out int returnLength);
 
     private static string ImagePath(int processId)
     {

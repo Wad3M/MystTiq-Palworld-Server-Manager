@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -326,6 +326,12 @@ public interface IMystTiqApiClient
         bool validate = true,
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
+
+    // v1.1.4.0 (roadmap U-1): the Dashboard's Server update card, its update's progress (null when none has run) and the
+    // one-button update (stop, safety backup, SteamCMD, start again, on the service).
+    Task<ServerUpdateCardDto> GetServerUpdateAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ServerUpdateJobDto?> GetServerUpdateJobAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<ServerUpdateJobDto> StartServerUpdateAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default);
 
     // v0.7.45.0: Update Center Overhaul -- real installed/latest version tracking per component.
     Task<ComponentVersionSnapshotDto> GetComponentVersionsAsync(

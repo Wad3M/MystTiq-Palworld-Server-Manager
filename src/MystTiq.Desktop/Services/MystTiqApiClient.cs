@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -767,6 +767,30 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
         return await ReadOperationAsync<ServerDistributionOperationResultDto>(
             response,
             cancellationToken);
+    }
+
+    public async Task<ServerUpdateCardDto> GetServerUpdateAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        return await client.GetFromJsonAsync<ServerUpdateCardDto>("/api/v1/server/update", cancellationToken)
+            ?? throw new InvalidOperationException("MystTiq returned an empty server update check.");
+    }
+
+    public async Task<ServerUpdateJobDto?> GetServerUpdateJobAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.GetAsync("/api/v1/server/update/job", cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ServerUpdateJobDto>(cancellationToken);
+    }
+
+    // 202 with the new update, or 409 with the one already running: both carry the job.
+    public async Task<ServerUpdateJobDto> StartServerUpdateAsync(ConnectionProfile profile, string? bearerToken = null, CancellationToken cancellationToken = default)
+    {
+        using var client = BuildClient(profile, bearerToken);
+        using var response = await client.PostAsync("/api/v1/server/update", null, cancellationToken);
+        return await ReadOperationAsync<ServerUpdateJobDto>(response, cancellationToken);
     }
 
     public async Task<ComponentVersionSnapshotDto> GetComponentVersionsAsync(

@@ -4090,5 +4090,17 @@
   "settings.startWithSystem.elsewhere": "This is set for a different copy of MystTiq. Turn it off and on again to start this one.",
   "settings.startWithSystem.on": "MystTiq will start when you sign in.",
   "settings.startWithSystem.off": "MystTiq will no longer start when you sign in.",
-  "settings.startWithSystem.failed": "The sign-in start could not be changed:"
+  "settings.startWithSystem.failed": "The sign-in start could not be changed:",
+  "dashboard.serverUpdate": "SERVER UPDATE",
+  "dashboard.updateServer": "Update Server",
+  "dashboard.serverUpdate.build": "Build {0}",
+  "dashboard.serverUpdate.newBuild": "{0} → {1}",
+  "dashboard.serverUpdate.confirmTitle": "Update the server?",
+  "dashboard.serverUpdate.builds": "Installed build {0}; Steam's public build {1}.",
+  "dashboard.serverUpdate.running": "The server is running ({0} online): it is stopped, which disconnects everyone, then updated and started again.",
+  "dashboard.serverUpdate.stopped": "The server is stopped: it is updated and stays stopped.",
+  "dashboard.serverUpdate.safety": "A safety backup is taken first. The update runs next to the server and finishes even if MystTiq is closed.",
+  "dashboard.serverUpdate.current": "Steam reports this build is current, so there may be nothing to download.",
+  "dashboard.serverUpdate.started": "The server update has started.",
+  "dashboard.serverUpdate.refused": "The server update could not start:"
 }

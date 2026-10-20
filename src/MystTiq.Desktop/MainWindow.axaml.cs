@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -410,6 +410,16 @@ public sealed partial class MainWindow : Window
             if (await dialog.ShowDialog<bool>(this) != true) return;
         }
         vm.Mods.UseMystTiqForNxmLinks();
+    }
+
+    // v1.1.4.0 (roadmap U-1): the Dashboard's Update Server, after a confirmation saying what happens to a running server.
+    private async void UpdateServer_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || !vm.CanUpdateServer) return;
+        var dialog = new Views.ConfirmOperationDialog(Localizer.Instance["dashboard.serverUpdate.confirmTitle"], vm.ServerUpdateConfirmationLines(),
+            Localizer.Instance["dashboard.updateServer"], danger: false);
+        if (await dialog.ShowDialog<bool>(this) != true) return;
+        await vm.StartServerUpdateAsync();
     }
 
     // v1.0.6.1: stop the older local service and start this app's own, after a confirmation.

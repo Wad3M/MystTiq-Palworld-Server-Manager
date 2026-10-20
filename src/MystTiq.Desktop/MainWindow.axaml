@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -374,12 +374,29 @@
             </Grid>
           </Border>
 
-          <Border Classes="card accentHome" Padding="7,5" IsVisible="{Binding ManagementApiConnected}">
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-              <TextBlock Text="{services:Tr dashboard.lifecycle}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" FontSize="11"/>
-              <TextBlock Grid.Column="1" Text="{services:TrText LifecycleStatusText}" TextWrapping="Wrap" FontSize="11"/>
-            </Grid>
-          </Border>
+          <!-- v1.1.4.0 (roadmap U-1, owner 2026-10-19): the LIFECYCLE bar spans the first three card columns and the Server update
+               card takes the fourth, above OVERALL HEALTH: the installed build against Steam's, and Update Server (Admin). -->
+          <Grid x:Name="LifecycleRow" ColumnDefinitions="1.15*,1.15*,1.15*,1.15*" ColumnSpacing="8" IsVisible="{Binding ManagementApiConnected}">
+            <Border Grid.ColumnSpan="3" Classes="card accentHome" Padding="7,5">
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <TextBlock Text="{services:Tr dashboard.lifecycle}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" FontSize="11"/>
+                <TextBlock Grid.Column="1" Text="{services:TrText LifecycleStatusText}" TextWrapping="Wrap" FontSize="11"/>
+              </Grid>
+            </Border>
+            <Border x:Name="ServerUpdateCard" Grid.Column="3" Classes="card accentHome" Padding="7,5" ToolTip.Tip="{services:TrText ServerUpdateDetail}">
+              <StackPanel Spacing="3">
+                <TextBlock x:Name="ServerUpdateTitle" Text="{services:Tr dashboard.serverUpdate}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                <WrapPanel Orientation="Horizontal">
+                  <Border x:Name="ServerUpdateTag" Classes="tag" Margin="0,0,6,2" services:StatusTag.Status="{Binding ServerUpdateState}" ToolTip.Tip="{services:TrText ServerUpdateState}"><TextBlock Text="{services:TrText ServerUpdateState}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/></Border>
+                  <TextBlock x:Name="ServerUpdateLine" Text="{services:TrText ServerUpdateLineText}" FontSize="11" VerticalAlignment="Center" TextWrapping="NoWrap" Margin="0,0,0,2"/>
+                </WrapPanel>
+                <!-- The role is on the button itself (the v0.8.23.0 rule); the wrapper also waits for a running update. -->
+                <Panel HorizontalAlignment="Left" IsEnabled="{Binding CanUpdateServer}" IsVisible="{Binding CanManageAdmin}">
+                  <Button x:Name="UpdateServerButton" Classes="apply" Content="{services:Tr dashboard.updateServer}" Padding="7,2" FontSize="11" Click="UpdateServer_OnClick" IsEnabled="{Binding CanManageAdmin}" AutomationProperties.Name="{services:Tr dashboard.updateServer}"/>
+                </Panel>
+              </StackPanel>
+            </Border>
+          </Grid>
 
           <!-- v1.0.0.1: the stuck-start protocol. Shown when a start has run two minutes without opening its port, and while a
                test runs or its result is on screen: test once with every MOD off, or find the MOD by testing one at a time. -->

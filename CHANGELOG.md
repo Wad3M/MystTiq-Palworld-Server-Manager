@@ -1,4 +1,17 @@
-<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
+## v1.1.4.0 — Update the Server from the Dashboard
+
+- Roadmap U-1: the Dashboard's LIFECYCLE bar spans three card columns and a **Server update** card takes the fourth,
+  above OVERALL HEALTH: the installed and Steam public builds, a tag, and **Update Server** (Admin, after a
+  confirmation naming players online). The update runs on the service: stop (reason "Server update"), safety backup,
+  SteamCMD update, start again if it ran; each step on the card and in the activity log; a failed step starts the server
+  again and raises a notification. Routes `GET /server/update`, `GET /server/update/job`, `POST /server/update`.
+- Roadmap F-21: a stopped server no longer reports another server MystTiq started as "running, but not at the
+  configured path"; process parents are read on Windows.
+- Roadmap F-22: a stop that ends in an exception (its request cancelled) is logged as "Server stop interrupted".
+- The twelve `docs/images` screenshots retaken from this version. There is no v1.1.3.0.
+- Version advanced to 1.1.4.0.
+
 ## v1.1.2.0 — Why It Stopped, and Start with Windows
 
 - Roadmap F-19: every stop records who or what asked for it, saved with the stop (`StopReason` in the lifecycle state)

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
 # MystTiq on Linux
 
 MystTiq's Linux support is **headless-first**: managing the server never depends on a desktop being present. The headless

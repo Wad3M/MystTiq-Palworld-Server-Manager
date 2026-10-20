@@ -1,4 +1,4 @@
-# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 [CmdletBinding()]
 param(
     [string]$HostName = '192.168.1.122',

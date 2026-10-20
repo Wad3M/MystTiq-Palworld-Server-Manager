@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 namespace MystTiq.Desktop.Models;
 
 // v1.0.4.0 (roadmap S-1, S-2): a player's main inventory as the world save holds it, and the guarded edit's preview and result.

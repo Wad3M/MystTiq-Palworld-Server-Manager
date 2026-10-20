@@ -4090,5 +4090,17 @@
   "settings.startWithSystem.elsewhere": "Isto está configurado para outra cópia do MystTiq. Desative e ative de novo para iniciar esta.",
   "settings.startWithSystem.on": "O MystTiq será iniciado quando você entrar.",
   "settings.startWithSystem.off": "O MystTiq não será mais iniciado quando você entrar.",
-  "settings.startWithSystem.failed": "Não foi possível alterar o início ao entrar:"
+  "settings.startWithSystem.failed": "Não foi possível alterar o início ao entrar:",
+  "dashboard.serverUpdate": "ATUALIZAR SERVIDOR",
+  "dashboard.updateServer": "Atualizar servidor",
+  "dashboard.serverUpdate.build": "Build {0}",
+  "dashboard.serverUpdate.newBuild": "{0} → {1}",
+  "dashboard.serverUpdate.confirmTitle": "Atualizar o servidor?",
+  "dashboard.serverUpdate.builds": "Build instalada {0}; build pública da Steam {1}.",
+  "dashboard.serverUpdate.running": "O servidor está rodando ({0} online): ele é parado, o que desconecta todos, depois atualizado e iniciado de novo.",
+  "dashboard.serverUpdate.stopped": "O servidor está parado: ele é atualizado e continua parado.",
+  "dashboard.serverUpdate.safety": "Primeiro é feito um backup de segurança. A atualização roda junto ao servidor e termina mesmo se o MystTiq for fechado.",
+  "dashboard.serverUpdate.current": "A Steam informa que esta build é a atual, então talvez não haja nada para baixar.",
+  "dashboard.serverUpdate.started": "A atualização do servidor começou.",
+  "dashboard.serverUpdate.refused": "Não foi possível iniciar a atualização do servidor:"
 }

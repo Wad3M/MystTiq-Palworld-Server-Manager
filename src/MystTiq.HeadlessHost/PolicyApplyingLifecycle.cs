@@ -1,4 +1,4 @@
-// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
 using MystTiq.Core.Models;
 using MystTiq.Core.Services;
 
@@ -16,6 +16,8 @@ public sealed class PolicyApplyingLifecycle(IServerLifecycleService inner) : ISe
     // v1.1.2.0 (roadmap F-19): told about each stop made through this server's services, with its reason, so the
     // activity log says why the server stopped. It never turns a stop into a failure.
     public Action<string, ServerLifecycleOperationResult>? StopRecorded { get; set; }
+    // v1.1.4.0: told about a stop that ended with an exception (its reason, and the exception).
+    public Action<string, string>? StopInterrupted { get; set; }
 
     public Task<ServerLifecycleSnapshot> GetStatusAsync(CancellationToken cancellationToken = default) => inner.GetStatusAsync(cancellationToken);
 
@@ -25,7 +27,15 @@ public sealed class PolicyApplyingLifecycle(IServerLifecycleService inner) : ISe
     public async Task<ServerLifecycleOperationResult> StopAsync(TimeSpan gracefulTimeout, CancellationToken cancellationToken = default)
     {
         var reason = ServerStopReason.Describe();
-        var result = await inner.StopAsync(gracefulTimeout, cancellationToken);
+        ServerLifecycleOperationResult result;
+        try { result = await inner.StopAsync(gracefulTimeout, cancellationToken); }
+        catch (Exception ex)
+        {
+            // v1.1.4.0: a stop whose caller gave up (an API client disconnecting) or that failed is still logged; seen live on
+            // 2026-10-20, when a cancelled request's stop finished but left no line in the activity log.
+            try { StopInterrupted?.Invoke(reason, $"{ex.GetType().Name}: {ex.Message}"); } catch { /* an observer never fails the stop */ }
+            throw;
+        }
         try { StopRecorded?.Invoke(reason, result); } catch { /* an observer never fails the stop */ }
         return result;
     }

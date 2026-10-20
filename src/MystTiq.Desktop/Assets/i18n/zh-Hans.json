@@ -4090,5 +4090,17 @@
   "settings.startWithSystem.elsewhere": "此设置指向另一个 MystTiq 副本。将其关闭后再打开即可启动此副本。",
   "settings.startWithSystem.on": "登录时将启动 MystTiq。",
   "settings.startWithSystem.off": "登录时将不再启动 MystTiq。",
-  "settings.startWithSystem.failed": "无法更改登录时启动："
+  "settings.startWithSystem.failed": "无法更改登录时启动：",
+  "dashboard.serverUpdate": "服务器更新",
+  "dashboard.updateServer": "更新服务器",
+  "dashboard.serverUpdate.build": "版本 {0}",
+  "dashboard.serverUpdate.newBuild": "{0} → {1}",
+  "dashboard.serverUpdate.confirmTitle": "更新服务器？",
+  "dashboard.serverUpdate.builds": "已安装版本 {0}；Steam 公开版本 {1}。",
+  "dashboard.serverUpdate.running": "服务器正在运行（{0} 人在线）：将先停止服务器（所有人都会断开），然后更新并重新启动。",
+  "dashboard.serverUpdate.stopped": "服务器已停止：更新后保持停止。",
+  "dashboard.serverUpdate.safety": "会先创建安全备份。更新在服务器端运行，即使关闭 MystTiq 也会完成。",
+  "dashboard.serverUpdate.current": "Steam 显示此版本为当前版本，可能没有需要下载的内容。",
+  "dashboard.serverUpdate.started": "服务器更新已开始。",
+  "dashboard.serverUpdate.refused": "无法开始服务器更新："
 }
