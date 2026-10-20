@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 [CmdletBinding()]
 param(
     [ValidateSet('Windows', 'Linux')][string]$Target = 'Windows',
@@ -95,23 +95,23 @@ if ($Target -eq 'Linux') {
             Push-Location $work; & $tar -czf $tgz app Measure-MystTiqIdleSoak.sh; $tarExit = $LASTEXITCODE; Pop-Location
             if ($tarExit -ne 0 -or -not (Test-Path $tgz)) { throw "Packing the soak for the VM failed (tar exit $tarExit)." }
             Remove-Item $work -Recurse -Force
-            ssh @sshArgs $remote "mkdir -p $dir"
+            ssh -n @sshArgs $remote "mkdir -p $dir"
             if ($LASTEXITCODE -ne 0) { throw "Cannot reach $remote over SSH (pass -LinuxHost if the VM moved)." }
             scp @sshArgs $tgz "${remote}:$dir/" | Out-Null
             Remove-Item $tgz
-            $out = @(ssh @sshArgs $remote "cd $dir && tar -xzf soak.tgz && rm -f soak.tgz && bash Measure-MystTiqIdleSoak.sh start $Hours $SampleMinutes $PollSeconds $Port" 2>&1)
+            $out = @(ssh -n @sshArgs $remote "cd $dir && tar -xzf soak.tgz && rm -f soak.tgz && bash Measure-MystTiqIdleSoak.sh start $Hours $SampleMinutes $PollSeconds $Port" 2>&1)
             $out | ForEach-Object { Write-Host $_ }
             Set-Content (Join-Path $OutputDir 'remote.txt') "$remote $dir"
             if (-not ($out -match '^started ')) { throw 'The Linux soak did not start.' }
             Write-Host "Collect later with: -Target Linux -Action Collect -RemoteName $RemoteName -OutputDir `"$OutputDir`""
             return
         }
-        'Status' { ssh @sshArgs $remote "bash $dir/Measure-MystTiqIdleSoak.sh status"; return }
+        'Status' { ssh -n @sshArgs $remote "bash $dir/Measure-MystTiqIdleSoak.sh status"; return }
         'Collect' {
-            $state = @(ssh @sshArgs $remote "test -f $dir/results/finished.txt && echo finished || echo running" 2>&1)
-            if (-not ($state -match '^finished$')) { Write-Host "The soak is still running on the VM:"; ssh @sshArgs $remote "bash $dir/Measure-MystTiqIdleSoak.sh status"; exit 2 }
+            $state = @(ssh -n @sshArgs $remote "test -f $dir/results/finished.txt && echo finished || echo running" 2>&1)
+            if (-not ($state -match '^finished$')) { Write-Host "The soak is still running on the VM:"; ssh -n @sshArgs $remote "bash $dir/Measure-MystTiqIdleSoak.sh status"; exit 2 }
             scp @sshArgs "${remote}:$dir/results/*" $OutputDir | Out-Null
-            ssh @sshArgs $remote "bash $dir/Measure-MystTiqIdleSoak.sh stop >/dev/null; rm -rf $dir"
+            ssh -n @sshArgs $remote "bash $dir/Measure-MystTiqIdleSoak.sh stop >/dev/null; rm -rf $dir"
             $v = Write-SoakReport $OutputDir 'Linux, per-user systemd unit'
             if ($v -ne 'PASSED') { exit 1 }
             return

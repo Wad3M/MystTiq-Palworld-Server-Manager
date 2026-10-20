@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using MystTiq.Core.Models;
 
 namespace MystTiq.Core.Services;
@@ -192,6 +192,8 @@ public sealed class HeadlessSupervisor
         SaveHistory();
         Console.Error.WriteLine($"{detail} Frozen-server restart attempt {restartHistory.Count}/{options.MaximumRestartAttempts}.");
         await NotifyAsync(SupervisorEventKind.FrozenDetected, restartHistory.Count, detail, cancellationToken);
+        // v1.1.2.0 (roadmap F-19).
+        using var stopReason = ServerStopReason.Begin("Frozen-server restart (the server stopped answering)");
         var restart = await lifecycle.RestartAsync(serverArguments, options.StartupTimeout, FrozenStopTimeout, cancellationToken);
         watchdog.Forget();
         await ReportRestartAsync(restart, cancellationToken);
@@ -207,6 +209,9 @@ public sealed class HeadlessSupervisor
             return;
 
         Console.WriteLine("MystTiq service stopping; requesting graceful PalServer shutdown.");
+        // v1.1.2.0 (roadmap F-19): service-run starts the server again when the service starts (RunAsync), so the
+        // reason only says why it went down.
+        using var stopReason = ServerStopReason.Begin("The MystTiq service stopped (Windows shut down or the service was stopped)");
         var result = await lifecycle.StopAsync(options.StopTimeout, cancellationToken);
         Console.WriteLine($"PalServer shutdown result: {result.ExitCode} — {result.Message}");
     }

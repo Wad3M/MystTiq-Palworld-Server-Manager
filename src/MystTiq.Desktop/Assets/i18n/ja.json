@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "プレイヤー ID（32 文字）",
   "ui.link_account": "アカウントを関連付け",
   "dashboard.samePcJoinHint": "この PC でプレイしますか？127.0.0.1 や localhost ではなく、上のローカルアドレスで参加してください。127.0.0.1 経由の接続は切断されたことがあります。",
-  "msg.enter_link_ids_3be9d0": "アカウントのユーザー ID とキャラクターのプレイヤー ID を入力してください。"
+  "msg.enter_link_ids_3be9d0": "アカウントのユーザー ID とキャラクターのプレイヤー ID を入力してください。",
+  "dashboard.lastStop": "最後の停止: {0} · {1}",
+  "settings.startWithSystem.label": "サインイン時に MystTiq を起動する（トレイで開く）",
+  "settings.startWithSystem.note": "MystTiq はいつもどおりヘルパーを起動し、コンピューターのシャットダウン時に動いていたサーバーは再び起動します。自分で停止したサーバーは停止したままです。",
+  "settings.startWithSystem.elsewhere": "これは別の MystTiq のコピー用に設定されています。オフにしてからオンに戻すと、このコピーが起動します。",
+  "settings.startWithSystem.on": "サインイン時に MystTiq が起動します。",
+  "settings.startWithSystem.off": "サインイン時に MystTiq は起動しなくなりました。",
+  "settings.startWithSystem.failed": "サインイン時の起動を変更できませんでした:"
 }

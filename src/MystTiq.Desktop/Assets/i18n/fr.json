@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "ID de joueur (32 caractères)",
   "ui.link_account": "Lier le compte",
   "dashboard.samePcJoinHint": "Vous jouez sur ce PC ? Rejoignez avec une adresse locale ci-dessus, pas 127.0.0.1 ni localhost : des connexions par 127.0.0.1 ont été coupées.",
-  "msg.enter_link_ids_3be9d0": "Saisissez l'ID utilisateur du compte et l'ID de joueur du personnage."
+  "msg.enter_link_ids_3be9d0": "Saisissez l'ID utilisateur du compte et l'ID de joueur du personnage.",
+  "dashboard.lastStop": "Dernier arrêt : {0} · {1}",
+  "settings.startWithSystem.label": "Démarrer MystTiq à l’ouverture de session (s’ouvre dans la zone de notification)",
+  "settings.startWithSystem.note": "MystTiq démarre son assistant comme d’habitude, et un serveur qui tournait à l’arrêt de l’ordinateur redémarre. Un serveur que vous avez arrêté reste arrêté.",
+  "settings.startWithSystem.elsewhere": "Ce réglage vise une autre copie de MystTiq. Désactivez-le puis réactivez-le pour démarrer celle-ci.",
+  "settings.startWithSystem.on": "MystTiq démarrera à l’ouverture de session.",
+  "settings.startWithSystem.off": "MystTiq ne démarrera plus à l’ouverture de session.",
+  "settings.startWithSystem.failed": "Le démarrage à l’ouverture de session n’a pas pu être modifié :"
 }

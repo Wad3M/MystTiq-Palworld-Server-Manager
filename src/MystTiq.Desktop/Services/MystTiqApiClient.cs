@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -59,20 +59,27 @@ public sealed class MystTiqApiClient : IMystTiqApiClient
     public Task<LifecycleOperationResultDto> StopServerAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
-        CancellationToken cancellationToken = default) =>
-        RunLifecycleAsync(profile, bearerToken, "/api/v1/server/stop", cancellationToken);
+        CancellationToken cancellationToken = default,
+        string? reason = null) =>
+        RunLifecycleAsync(profile, bearerToken, "/api/v1/server/stop" + ReasonQuery(reason), cancellationToken);
 
     public Task<LifecycleOperationResultDto> ForceStopServerAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
-        CancellationToken cancellationToken = default) =>
-        RunLifecycleAsync(profile, bearerToken, "/api/v1/server/force-stop", cancellationToken);
+        CancellationToken cancellationToken = default,
+        string? reason = null) =>
+        RunLifecycleAsync(profile, bearerToken, "/api/v1/server/force-stop" + ReasonQuery(reason), cancellationToken);
 
     public Task<LifecycleOperationResultDto> RestartServerAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
-        CancellationToken cancellationToken = default) =>
-        RunLifecycleAsync(profile, bearerToken, "/api/v1/server/restart", cancellationToken);
+        CancellationToken cancellationToken = default,
+        string? reason = null) =>
+        RunLifecycleAsync(profile, bearerToken, "/api/v1/server/restart" + ReasonQuery(reason), cancellationToken);
+
+    // v1.1.2.0 (roadmap F-19): the stop reason travels as ?reason= (an older helper ignores it).
+    public static string ReasonQuery(string? reason) =>
+        string.IsNullOrWhiteSpace(reason) ? string.Empty : "?reason=" + Uri.EscapeDataString(reason.Trim());
 
     public async Task<IReadOnlyList<ServerInstanceDto>> GetAllInstancesAsync(
         ConnectionProfile profile,

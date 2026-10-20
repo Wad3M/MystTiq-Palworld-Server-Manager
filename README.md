@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-67e8d5" alt="Code license: MIT"></a>
-  <img src="https://img.shields.io/badge/release-1.1.1.3-b9a4ff" alt="Release: 1.1.1.3">
+  <img src="https://img.shields.io/badge/release-1.1.2.0-b9a4ff" alt="Release: 1.1.2.0">
   <img src="https://img.shields.io/badge/desktop-Windows%20%7C%20Linux-80caff" alt="Desktop targets: Windows and Linux">
   <img src="https://img.shields.io/badge/language%20options-12-67e8d5" alt="12 language options">
 </p>
@@ -21,9 +21,9 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current release: v1.1.1.3 · Accepted baseline: v1.1.0.0**
+**Current release: v1.1.2.0 · Accepted baseline: v1.1.0.0**
 
-MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind; v1.1.1.0 adds MOD Sources, runs the player checks without the desktop and adds the Linux and Docker downloads; v1.1.1.1 leaves .NET's unused crash-dump helper out of the downloads; v1.1.1.2 keeps the Players, Guilds and Map pages current; v1.1.1.3 updates four libraries ([release notes](release-notes/v1.1.1.3.md)). Downloads are on the Releases page: Windows, Linux and a Docker image of the service.
+MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind; v1.1.1.0 adds MOD Sources, runs the player checks without the desktop and adds the Linux and Docker downloads; v1.1.1.1 leaves .NET's unused crash-dump helper out of the downloads; v1.1.1.2 keeps the Players, Guilds and Map pages current; v1.1.1.3 updates four libraries; v1.1.2.0 records why a server stopped and can start MystTiq with Windows ([release notes](release-notes/v1.1.2.0.md)). Downloads are on the Releases page: Windows, Linux and a Docker image of the service.
 
 <a id="whats-new-in-v1.1.0.0"></a>
 
@@ -44,6 +44,8 @@ Everything added since 1.0, in one place. Each version's own notes are in [relea
 
 **Running unattended**
 - **A frozen server is restarted**, with an alert; a healthy one is never touched.
+- **Why it stopped.** Every stop records who or what asked for it (a button, Exit from the tray, Discord, an automation rule, a character move), and the Dashboard shows the last one (v1.1.2.0).
+- **Starts with Windows** if you choose: MystTiq opens in the tray when you sign in and starts again the server that was running, never one you stopped (v1.1.2.0).
 - **Proof that alerts arrive.** Every Discord, email and webhook send is recorded with its result, and the Dashboard warns when a channel has stopped delivering. A burst of alerts is queued and repeats are combined.
 - **One thing at a time.** Backups, updates and MOD changes can no longer overlap a server start or a save edit; scheduled work waits its turn.
 - **Nothing lost when a file is damaged.** If one of MystTiq's own lists can't be read, it loads the last good copy or refuses changes, and alerts you with a link to the repair.
@@ -143,7 +145,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v1.1.1.3 | Current release | Library updates (the four Dependabot pull requests): Avalonia 12.1.4, Discord.Net 3.20.2, the Windows service host 10.0.13 |
+| v1.1.2.0 | Current release | Why a server stopped (on the Dashboard and in the activity log); an option to start MystTiq with Windows |
+| v1.1.1.3 | Delivered | Library updates (the four Dependabot pull requests): Avalonia 12.1.4, Discord.Net 3.20.2, the Windows service host 10.0.13 |
 | v1.1.1.2 | Delivered | The Players, Guilds, Bases and Map pages show the world as it is now; new MOD Sources and Launcher icons |
 | v1.1.1.1 | Delivered | Downloads without .NET's unused crash-dump helper (online scanners ran it instead of MystTiq) |
 | v1.1.1.0 | Delivered | MOD Sources under MODs; player checks run without the desktop; players on the new-character screen told what to do; Xbox accounts covered; link an account to its character; faster tab switching; Linux and Docker downloads |

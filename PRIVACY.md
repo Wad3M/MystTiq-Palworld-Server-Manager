@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
 # Privacy policy
 
 MystTiq collects no telemetry or analytics and sends nothing to the project's authors. It keeps its settings, accounts,

@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -39,10 +39,10 @@ try {
     $tgz = Join-Path $work 'remote-signin.tgz'
     Push-Location $work; tar -czf $tgz app setup.sh teardown.sh accounts.txt; Pop-Location
 
-    ssh @sshArgs $remote "rm -rf $dir; mkdir -p $dir"
+    ssh -n @sshArgs $remote "rm -rf $dir; mkdir -p $dir"
     if ($LASTEXITCODE -ne 0) { throw "Cannot reach $remote over SSH (the VM's address may have changed; pass -LinuxHost)." }
     scp @sshArgs $tgz "${remote}:$dir/" | Out-Null
-    $setup = @(ssh @sshArgs $remote "cd $dir && tar -xzf remote-signin.tgz && rm -f remote-signin.tgz && bash setup.sh $LinuxHost $Port" 2>&1)
+    $setup = @(ssh -n @sshArgs $remote "cd $dir && tar -xzf remote-signin.tgz && rm -f remote-signin.tgz && bash setup.sh $LinuxHost $Port" 2>&1)
     $setup | Where-Object { $_ -notmatch '^PIN=' } | ForEach-Object { "   $_" }
     if (-not ($setup -match '^READY$')) { throw 'the remote instance did not start' }
     if (@($setup -match '^USER-CREATED').Count -ne $accounts.Count) { throw 'not every test account was created' }
@@ -58,7 +58,7 @@ try {
     if ($harnessExit -ne 0) { throw 'MystTiq v0.8.15.0 remote sign-in failed.' }
 }
 finally {
-    $down = @(ssh @sshArgs $remote "bash $dir/teardown.sh" 2>&1)
+    $down = @(ssh -n @sshArgs $remote "bash $dir/teardown.sh" 2>&1)
     $tornDown = [bool]($down -match 'TORN-DOWN')
     Write-Host "   remote instance removed: $tornDown"
     Remove-Item -LiteralPath (Join-Path $work 'settings.json') -Force -ErrorAction SilentlyContinue

@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "ID giocatore (32 caratteri)",
   "ui.link_account": "Collega account",
   "dashboard.samePcJoinHint": "Giochi su questo PC? Entra con un indirizzo locale qui sopra, non con 127.0.0.1 o localhost: le connessioni tramite 127.0.0.1 sono cadute.",
-  "msg.enter_link_ids_3be9d0": "Inserisci l'ID utente dell'account e l'ID giocatore del personaggio."
+  "msg.enter_link_ids_3be9d0": "Inserisci l'ID utente dell'account e l'ID giocatore del personaggio.",
+  "dashboard.lastStop": "Ultimo arresto: {0} · {1}",
+  "settings.startWithSystem.label": "Avvia MystTiq all’accesso (si apre nell’area di notifica)",
+  "settings.startWithSystem.note": "MystTiq avvia il suo assistente come sempre, e un server in esecuzione allo spegnimento del computer si riavvia. Un server che hai arrestato resta arrestato.",
+  "settings.startWithSystem.elsewhere": "È impostato per un’altra copia di MystTiq. Disattivalo e riattivalo per avviare questa.",
+  "settings.startWithSystem.on": "MystTiq si avvierà all’accesso.",
+  "settings.startWithSystem.off": "MystTiq non si avvierà più all’accesso.",
+  "settings.startWithSystem.failed": "Impossibile modificare l’avvio all’accesso:"
 }

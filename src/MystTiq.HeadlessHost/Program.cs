@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -534,6 +534,8 @@ switch (command.ToLowerInvariant())
                     : 0;
             }
 
+            // v1.1.2.0 (roadmap F-19): a stop or restart from the command line says so.
+            using var stopReason = ServerStopReason.Begin($"Command line: mysttiq-server {command.ToLowerInvariant()}");
             ServerLifecycleOperationResult result = command.ToLowerInvariant() switch
             {
                 "start" => await lifecycle.StartAsync(

@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "ID de jugador (32 caracteres)",
   "ui.link_account": "Vincular cuenta",
   "dashboard.samePcJoinHint": "¿Juegas en este PC? Entra con una dirección local de arriba, no con 127.0.0.1 ni localhost: las conexiones por 127.0.0.1 se han cortado.",
-  "msg.enter_link_ids_3be9d0": "Introduce el ID de usuario de la cuenta y el ID de jugador del personaje."
+  "msg.enter_link_ids_3be9d0": "Introduce el ID de usuario de la cuenta y el ID de jugador del personaje.",
+  "dashboard.lastStop": "Última detención: {0} · {1}",
+  "settings.startWithSystem.label": "Iniciar MystTiq al iniciar sesión (se abre en la bandeja)",
+  "settings.startWithSystem.note": "MystTiq inicia su asistente como siempre, y un servidor que estaba en marcha cuando se apagó el equipo vuelve a iniciarse. Un servidor que detuvo sigue detenido.",
+  "settings.startWithSystem.elsewhere": "Esto está configurado para otra copia de MystTiq. Desactívelo y vuelva a activarlo para iniciar esta.",
+  "settings.startWithSystem.on": "MystTiq se iniciará al iniciar sesión.",
+  "settings.startWithSystem.off": "MystTiq ya no se iniciará al iniciar sesión.",
+  "settings.startWithSystem.failed": "No se pudo cambiar el inicio al iniciar sesión:"
 }

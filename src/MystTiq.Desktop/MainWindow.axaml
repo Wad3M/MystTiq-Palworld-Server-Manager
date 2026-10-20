@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -434,7 +434,7 @@
               <Grid RowDefinitions="Auto,Auto,Auto">
                 <TextBlock Text="{services:Tr dashboard.overallHealth}" Classes="muted"/>
                 <TextBlock Grid.Row="1" Text="{services:TrText DashboardHealthText}" FontSize="15" FontWeight="SemiBold" Foreground="{Binding HealthStateColorKey, Converter={x:Static converters:SemanticStatusColorConverter.Instance}}"/>
-                <TextBlock Grid.Row="2" Text="{services:TrText Dashboard.HealthDetail}" Classes="muted" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Grid.Row="2" Text="{services:TrText Dashboard.HealthDetail}" ToolTip.Tip="{services:TrText Dashboard.HealthDetail}" Classes="muted" TextTrimming="CharacterEllipsis"/>
               </Grid>
             </Border>
           </Grid>
@@ -4003,6 +4003,13 @@
                 <ComboBox AutomationProperties.Name="{services:Tr settings.language.label}" Grid.Column="1" ItemsSource="{Binding UiLanguages}" SelectedItem="{Binding SelectedUiLanguage}" MinWidth="180"/>
               </Grid>
               <TextBlock Text="{services:Tr settings.language.note}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              <!-- v1.1.2.0 (roadmap F-20): start MystTiq when the owner signs in, in the tray. Off until turned on. -->
+              <StackPanel x:Name="StartWithSystemPanel" Spacing="4" IsVisible="{Binding StartWithSystemSupported}">
+                <CheckBox AutomationProperties.Name="{services:Tr settings.startWithSystem.label}" IsChecked="{Binding StartWithSystemEnabled}" Content="{services:Tr settings.startWithSystem.label}"/>
+                <TextBlock Text="{services:Tr settings.startWithSystem.note}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:Tr settings.startWithSystem.elsewhere}" Classes="muted" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding StartWithSystemPointsElsewhere}"/>
+                <TextBlock Text="{services:TrText StartWithSystemStatusText}" Classes="muted" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding StartWithSystemStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              </StackPanel>
               <ItemsControl ItemsSource="{Binding AccentThemeOptions}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>

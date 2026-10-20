@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using MystTiq.Core.Models;
@@ -159,7 +159,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
             persisted?.LastTransitionAt,
             persisted?.Phase == ServerLifecyclePhase.Crashed
                 ? persisted.Detail
-                : "PalServer is not running."));
+                : "PalServer is not running.").WithLastStop(persisted));
     }
 
     // v1.0.7.2 (roadmap Q-8): the start's stages, carried by every status read while it runs.
@@ -310,6 +310,8 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         TimeSpan gracefulTimeout,
         CancellationToken cancellationToken = default)
     {
+        // v1.1.2.0 (roadmap F-19): saved with every state this stop writes.
+        var stopReason = ServerStopReason.Describe();
         var processes = FindManagedServerProcesses();
         if (processes.Count == 0)
         {
@@ -319,7 +321,8 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
                 snapshot.NativeProcessId,
                 DateTimeOffset.UtcNow,
                 true,
-                "Stop was requested while PalServer was already stopped."));
+                "Stop was requested while PalServer was already stopped.",
+                stopReason));
 
             snapshot = snapshot with
             {
@@ -343,7 +346,8 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
             native?.ProcessId,
             transitionAt,
             true,
-            "Graceful SIGTERM shutdown requested."));
+            "Graceful SIGTERM shutdown requested.",
+            stopReason));
 
         // v0.7.68.0: try RCON's native Shutdown first when configured/reachable -- purely additive,
         // the SIGTERM below (and the SIGKILL escalation further down) still runs completely
@@ -360,7 +364,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
 
         if (await WaitForExitAsync(gracefulTimeout, cancellationToken))
         {
-            return CompleteStopped(false, "PalServer stopped after graceful SIGTERM.");
+            return CompleteStopped(false, "PalServer stopped after graceful SIGTERM.", stopReason);
         }
 
         // Capture descendants before escalation so crash/telemetry helpers do not linger.
@@ -377,7 +381,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
 
         if (await WaitForExitAsync(ForceKillWait, cancellationToken))
         {
-            return CompleteStopped(true, "PalServer required SIGKILL escalation after the graceful shutdown timeout.");
+            return CompleteStopped(true, "PalServer required SIGKILL escalation after the graceful shutdown timeout.", stopReason);
         }
 
         var remaining = await GetStatusAsync(cancellationToken);
@@ -397,6 +401,8 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         var status = await GetStatusAsync(cancellationToken);
         if (status.Processes.Count > 0)
         {
+            // v1.1.2.0 (roadmap F-19): a restart's stop says so unless its caller already said why.
+            using var restartReason = ServerStopReason.Current is null ? ServerStopReason.Begin("Restart") : null;
             var stop = await StopAsync(gracefulTimeout, cancellationToken);
             if (stop.ExitCode == HeadlessExitCode.StopTimeout)
                 return stop;
@@ -415,7 +421,7 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
         return await StartAsync(serverArguments, startupTimeout, cancellationToken);
     }
 
-    private ServerLifecycleOperationResult CompleteStopped(bool forced, string message)
+    private ServerLifecycleOperationResult CompleteStopped(bool forced, string message, string? stopReason = null)
     {
         var now = DateTimeOffset.UtcNow;
         lock (stateGate) stateStore.Write(new PersistedServerLifecycleState(
@@ -423,7 +429,8 @@ public sealed class LinuxServerLifecycleService : IServerLifecycleService
             null,
             now,
             true,
-            message));
+            message,
+            stopReason));
 
         var snapshot = new ServerLifecycleSnapshot(
             ServerLifecyclePhase.Stopped,

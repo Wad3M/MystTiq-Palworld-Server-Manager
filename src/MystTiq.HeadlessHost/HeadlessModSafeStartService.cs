@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
@@ -130,6 +130,8 @@ public sealed class HeadlessModSafeStartService
 
     private async Task RunAsync(SafeStartJob job, List<HeadlessModItem> candidates, bool stopStuckFirst, OperationHandle handle, CancellationToken ct)
     {
+        // v1.1.2.0 (roadmap F-19): every stop Safe Start makes says so.
+        using var stopReason = ServerStopReason.Begin($"MOD Safe Start ({job.Mode})");
         try
         {
             if (stopStuckFirst)

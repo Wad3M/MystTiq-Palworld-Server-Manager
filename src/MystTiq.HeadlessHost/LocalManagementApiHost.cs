@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -248,7 +248,12 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                     await modManagement.LogPreStartDiagnosticsAsync(token);
                     return await lifecycle.StartAsync(serverConfig.LaunchArguments, TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds), token);
                 },
-                token => lifecycle.StopAsync(TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds), token),
+                async token =>
+                {
+                    // v1.1.2.0 (roadmap F-19).
+                    using var stopReason = ServerStopReason.Begin("Character move (a player's ID changed)");
+                    return await lifecycle.StopAsync(TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds), token);
+                },
                 ids => antiCheatForMoves?.ForgetLevelHistory(ids), playerRegistry);
             // v1.1.0.3 (roadmap F-3): what earlier moves left behind is cleared once at start (archived character files a
             // backup holds, player list records that name no character).
@@ -287,6 +292,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 async token => { var players = await monitoring.GetPlayersAsync(token); return players.Available ? players.OnlineCount : null; },
                 activity);
             policyLifecycle.AfterStart = async token => await resourcePolicy.ApplyAsync(token);
+            policyLifecycle.StopRecorded = (reason, result) => activity.Record(result.Success ? "Information" : "Warning", "Lifecycle",
+                result.Success ? $"Server stopped: {reason}" : $"Server stop failed: {reason}", result.Message);
             var automation = new HeadlessAutomationService(paths, configuration, serverConfig, lifecycle, backups, notifications, notificationRouting, rcon, operations, activity, alertCenter, monitoring, antiCheat, crashReports, resourcePolicy);
             var diagnostics = new HeadlessDiagnosticsService(doctor, environmentChecklist, lifecycle, paths, serverDistribution, palworldConfiguration, playerRegistry, playerGuildExplorer, backups, crashAndSaveTools, () => alertCenter.LowDiskCriticalPercent(), automation, componentUpdates, networkDiagnostics, profileId.Value, serverConfig.LaunchArguments, fleetPaths.ManagerRuntimeRoot);
             var worldClone = new HeadlessWorldCloneService(paths, lifecycle, serverConfig, fleetConfigurationApi, palworldConfiguration, activity);
@@ -1619,12 +1626,22 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
             await p.ModManagement.LogPreStartDiagnosticsAsync(token);
             return await p.Lifecycle.StartAsync(p.ServerProfile.LaunchArguments, TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds), token);
         })).RequireRole(MystTiqRole.Operator, p.Id);
-        routes.MapPost("/server/stop", async (CancellationToken token) => await host.RunLifecycleActionAsync(operations, p.Id, "server-stop", ["lifecycle"], token, () =>
-            p.Lifecycle.StopAsync(TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds), token))).RequireRole(MystTiqRole.Operator, p.Id);
-        routes.MapPost("/server/force-stop", async (CancellationToken token) => await host.RunLifecycleActionAsync(operations, p.Id, "server-force-stop", ["lifecycle"], token, () =>
-            p.Lifecycle.StopAsync(TimeSpan.Zero, token))).RequireRole(MystTiqRole.Operator, p.Id);
-        routes.MapPost("/server/restart", async (CancellationToken token) => await host.RunLifecycleActionAsync(operations, p.Id, "server-restart", ["lifecycle", "world-mutation"], token, async () =>
+        // v1.1.2.0 (roadmap F-19): a stop says why (the optional ?reason= the desktop sends) and who asked for it.
+        routes.MapPost("/server/stop", async (HttpContext context, string? reason, CancellationToken token) =>
         {
+            using var stopReason = ServerStopReason.Begin(ApiStopReason(context, reason, "Stop"));
+            return await host.RunLifecycleActionAsync(operations, p.Id, "server-stop", ["lifecycle"], token, () =>
+                p.Lifecycle.StopAsync(TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds), token));
+        }).RequireRole(MystTiqRole.Operator, p.Id);
+        routes.MapPost("/server/force-stop", async (HttpContext context, string? reason, CancellationToken token) =>
+        {
+            using var stopReason = ServerStopReason.Begin(ApiStopReason(context, reason, "Force stop"));
+            return await host.RunLifecycleActionAsync(operations, p.Id, "server-force-stop", ["lifecycle"], token, () =>
+                p.Lifecycle.StopAsync(TimeSpan.Zero, token));
+        }).RequireRole(MystTiqRole.Operator, p.Id);
+        routes.MapPost("/server/restart", async (HttpContext context, string? reason, CancellationToken token) => await host.RunLifecycleActionAsync(operations, p.Id, "server-restart", ["lifecycle", "world-mutation"], token, async () =>
+        {
+            using var stopReason = ServerStopReason.Begin(ApiStopReason(context, reason, "Restart"));
             await p.ModManagement.LogPreStartDiagnosticsAsync(token);
             return await p.Lifecycle.RestartAsync(p.ServerProfile.LaunchArguments, TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds), TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds), token);
         })).RequireRole(MystTiqRole.Operator, p.Id);
@@ -1741,6 +1758,14 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
     // v0.6.2.0: takes the target server profile explicitly (one lifecycle route mapping per
     // profile) so locks on one server never block another (see OperationCoordinator's
     // (profile, resourceKey) composite key).
+    // v1.1.2.0 (roadmap F-19): "<reason> (by <who>)", the reason defaulting to what the route does.
+    public static string ApiStopReason(HttpContext context, string? reason, string action)
+    {
+        var who = (context.Items[RbacEndpointExtensions.PrincipalItemKey] as MystTiqPrincipal)?.Name;
+        var what = string.IsNullOrWhiteSpace(reason) ? $"{action} through the API" : reason.Trim();
+        return string.IsNullOrWhiteSpace(who) ? what : $"{what} (by {who})";
+    }
+
     private async Task<IResult> RunLifecycleActionAsync(
         IOperationCoordinator coordinator, ServerProfileId profile, string kind, IReadOnlyList<string> resourceKeys,
         CancellationToken cancellationToken, Func<Task<ServerLifecycleOperationResult>> operation)

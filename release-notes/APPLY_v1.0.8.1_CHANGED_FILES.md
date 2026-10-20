@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
 # v1.0.8.1 Changed Files
 
 - `src/MystTiq.Desktop/ViewModels/HostPageViewModel.cs` (new): the HOST page, from the former `MainWindowViewModel.Host.cs`,

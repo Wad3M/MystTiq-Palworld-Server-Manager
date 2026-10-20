@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Text.Json;
 using Discord;
 using Discord.WebSocket;
@@ -331,11 +331,16 @@ public sealed class HeadlessDiscordBotService : IAsyncDisposable
                     return await lifecycle.StartAsync(launchArguments, startupTimeout, cancellationToken);
                 });
             case "mysttiq-stop":
+            {
+                // v1.1.2.0 (roadmap F-19): the stop says who asked for it.
+                using var stopReason = ServerStopReason.Begin($"Discord /mysttiq-stop by {command.User.Username}");
                 return await RunLifecycleAsync("server-stop-discord", ["lifecycle"], cancellationToken,
                     () => lifecycle.StopAsync(stopTimeout, cancellationToken));
+            }
             case "mysttiq-restart":
                 return await RunLifecycleAsync("server-restart-discord", ["lifecycle", "world-mutation"], cancellationToken, async () =>
                 {
+                    using var stopReason = ServerStopReason.Begin($"Discord /mysttiq-restart by {command.User.Username}");
                     await preStart(cancellationToken);
                     return await lifecycle.RestartAsync(launchArguments, startupTimeout, stopTimeout, cancellationToken);
                 });

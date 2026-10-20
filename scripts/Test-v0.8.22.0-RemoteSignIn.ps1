@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -43,10 +43,10 @@ try {
     $tgz = Join-Path $work 'remote-signin.tgz'
     Push-Location $work; tar -czf $tgz app setup.sh teardown.sh accounts.txt; Pop-Location
 
-    ssh @sshArgs $remote "rm -rf $dir; mkdir -p $dir"
+    ssh -n @sshArgs $remote "rm -rf $dir; mkdir -p $dir"
     if ($LASTEXITCODE -ne 0) { throw "Cannot reach $remote over SSH (the VM's address may have changed; pass -LinuxHost)." }
     scp @sshArgs $tgz "${remote}:$dir/" | Out-Null
-    $setup = @(ssh @sshArgs $remote "cd $dir && tar -xzf remote-signin.tgz && rm -f remote-signin.tgz && bash setup.sh $LinuxHost $Port" 2>&1)
+    $setup = @(ssh -n @sshArgs $remote "cd $dir && tar -xzf remote-signin.tgz && rm -f remote-signin.tgz && bash setup.sh $LinuxHost $Port" 2>&1)
     $setup | Where-Object { $_ -notmatch '^PIN=' } | ForEach-Object { "   $_" }
     if (-not ($setup -match '^READY$')) { throw 'the remote instance did not start' }
     if (@($setup -match '^USER-CREATED').Count -ne $accounts.Count) { throw 'not every test account was created' }
@@ -74,14 +74,14 @@ try {
         scp @sshArgs $htgz "${remote}:$dir/" | Out-Null
         # What the VM user's real settings folders hold before and after: the run must not add or change anything there.
         $probe = 'for d in "$HOME/.config/MystTiq" "$HOME/.local/share/MystTiq" "$HOME/.config/mysttiq" "$HOME/.local/share/mysttiq"; do [ -e "$d" ] && find "$d" -type f -printf "%p %s %T@\n"; done | sort; echo PROBE-END'
-        $before = @(ssh @sshArgs $remote $probe 2>&1)
+        $before = @(ssh -n @sshArgs $remote $probe 2>&1)
         $run = "cd $dir && tar -xzf harness.tgz && rm -f harness.tgz && mkdir -p home/.config home/.local/share && chmod +x harness/MystTiq.RemoteSignInHarness && " +
             "HOME=$dir/home XDG_CONFIG_HOME=$dir/home/.config XDG_DATA_HOME=$dir/home/.local/share ./harness/MystTiq.RemoteSignInHarness settings-linux.json renders; echo LINUX-EXIT=`$?"
-        $linux = @(ssh @sshArgs $remote $run 2>&1)
+        $linux = @(ssh -n @sshArgs $remote $run 2>&1)
         $linux | Where-Object { $_ -notmatch '^LINUX-EXIT=' } | ForEach-Object { "   $_" }
         $linuxExit = @($linux -match '^LINUX-EXIT=')
         if ($linuxExit.Count -ne 1 -or $linuxExit[0] -ne 'LINUX-EXIT=0') { $failures += 'the Desktop on Linux' }
-        $after = @(ssh @sshArgs $remote $probe 2>&1)
+        $after = @(ssh -n @sshArgs $remote $probe 2>&1)
         if (($before -join "`n") -ne ($after -join "`n")) { Write-Host '[FAIL] the Linux run wrote to the VM user''s settings folders' -ForegroundColor Red; $failures += 'the VM user''s settings untouched' }
         else { Write-Host 'PASS the Linux run left the VM user''s settings folders as they were' }
         New-Item (Join-Path $work 'renders-linux') -ItemType Directory -Force | Out-Null
@@ -91,7 +91,7 @@ try {
     Copy-Item (Join-Path $work 'renders\remote-*.png') (Join-Path $root 'artifacts\remote-signin') -ErrorAction SilentlyContinue
 }
 finally {
-    $down = @(ssh @sshArgs $remote "bash $dir/teardown.sh" 2>&1)
+    $down = @(ssh -n @sshArgs $remote "bash $dir/teardown.sh" 2>&1)
     Write-Host "   remote instance removed: $([bool]($down -match 'TORN-DOWN'))"
     foreach ($secret in 'settings.json', 'settings-linux.json', 'accounts.txt') { Remove-Item -LiteralPath (Join-Path $work $secret) -Force -ErrorAction SilentlyContinue }
     Remove-Item -LiteralPath (Join-Path $work 'harness.tgz'), (Join-Path $work 'remote-signin.tgz') -Force -ErrorAction SilentlyContinue

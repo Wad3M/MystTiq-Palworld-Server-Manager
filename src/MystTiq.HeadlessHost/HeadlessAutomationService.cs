@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Text.Json;
 using MystTiq.Core.Automation;
 using MystTiq.Core.Models;
@@ -304,6 +304,8 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
                         catch { return false; }
                     }
                     : null;
+                // v1.1.2.0 (roadmap F-19): the stop says which rule asked for it.
+                using var stopReason = ServerStopReason.Begin($"Automation rule '{ruleName}'");
                 return await RunLifecycleActionAsync("automation-stop", ["lifecycle"], action, token,
                     () => lifecycle.StopAsync(TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds), token), abortIfPlayerPresent);
             }
@@ -311,8 +313,11 @@ public sealed class HeadlessAutomationService : IAsyncDisposable
                 return await RunLifecycleActionAsync("automation-start", ["lifecycle", "world-mutation"], action, token,
                     () => lifecycle.StartAsync(serverProfile.LaunchArguments, TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds), token));
             case AutomationActionKind.RestartServer:
+            {
+                using var stopReason = ServerStopReason.Begin($"Restart by automation rule '{ruleName}'");
                 return await RunLifecycleActionAsync("automation-restart", ["lifecycle", "world-mutation"], action, token,
                     () => lifecycle.RestartAsync(serverProfile.LaunchArguments, TimeSpan.FromSeconds(configuration.Lifecycle.StartupTimeoutSeconds), TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds), token));
+            }
             default:
                 return (false, $"Unsupported action kind: {action.Kind}", null);
         }

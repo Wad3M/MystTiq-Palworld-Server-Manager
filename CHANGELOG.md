@@ -1,4 +1,18 @@
-<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
+## v1.1.2.0 — Why It Stopped, and Start with Windows
+
+- Roadmap F-19: every stop records who or what asked for it, saved with the stop (`StopReason` in the lifecycle state)
+  and in the activity log; the Dashboard's Overall Health card shows "Last stop: <reason> · <time>" while the server is
+  stopped. Reasons from the desktop (Stop, Force Stop, Restart, Stop & Close, Exit, Force Exit), Discord (with the
+  user), automation (the rule), MOD Safe Start, a character move, a frozen-server restart, the command line, the service
+  stopping, and the API (`?reason=`, with the account). The status API adds `lastStopReason` and `lastStopAt`.
+- Roadmap F-20: Settings > Appearance, "Start MystTiq when I sign in (opens in the tray)", off until turned on (the
+  current user's Run key; an XDG autostart entry on Linux). `--tray` starts hidden. A Windows shutdown or restart is no
+  longer held up by the window hiding to the tray: running servers are asked to save first. A server that was running
+  when the computer went down starts again (crash recovery); one stopped on purpose stays stopped.
+- Scripts: `-n` on every non-interactive `ssh` call in the VM scripts (the v1.1.1.3 gate waited eight hours on one).
+- Version advanced to 1.1.2.0.
+
 ## v1.1.1.3 — Dependency Updates
 
 - Roadmap F-18 (asked 2026-10-19): the four Dependabot updates folded in through the full gate: Avalonia 12.1.4 (and

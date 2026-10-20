@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -24,23 +24,23 @@ $sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o
 $remote = "$LinuxUser@$LinuxHost"
 $dir = '/tmp/mysttiq-v1020-systemd'
 function Phase([string]$name) {
-    $lines = @(ssh @sshArgs $remote "cd $dir && bash check.sh $name; echo exit=`$?" 2>&1)
+    $lines = @(ssh -n @sshArgs $remote "cd $dir && bash check.sh $name; echo exit=`$?" 2>&1)
     $lines | ForEach-Object { Write-Host ("$_" -replace '\b(\d{1,3}\.){3}\d{1,3}\b', '<ip>') }
     return [bool]($lines -match '^exit=0$')
 }
-ssh @sshArgs $remote "rm -rf $dir; mkdir -p $dir"
+ssh -n @sshArgs $remote "rm -rf $dir; mkdir -p $dir"
 if ($LASTEXITCODE -ne 0) { throw "Cannot reach $remote over SSH (the VM's address may have changed; pass -LinuxHost)." }
 scp @sshArgs $tgz "${remote}:$dir/" | Out-Null
-ssh @sshArgs $remote "cd $dir && tar -xzf linux-systemd.tgz" | Out-Null
+ssh -n @sshArgs $remote "cd $dir && tar -xzf linux-systemd.tgz" | Out-Null
 $okAll = $true
 try {
     $okAll = (Phase 'install') -and $okAll
     $okAll = (Phase 'crash') -and $okAll
     if (-not $SkipReboot) {
-        ssh @sshArgs $remote 'sudo -n systemctl reboot' 2>$null | Out-Null
+        ssh -n @sshArgs $remote 'sudo -n systemctl reboot' 2>$null | Out-Null
         Start-Sleep 20
         $back = $false
-        for ($i = 0; $i -lt 40 -and -not $back; $i++) { ssh @sshArgs $remote 'true' 2>$null | Out-Null; $back = $LASTEXITCODE -eq 0; if (-not $back) { Start-Sleep 5 } }
+        for ($i = 0; $i -lt 40 -and -not $back; $i++) { ssh -n @sshArgs $remote 'true' 2>$null | Out-Null; $back = $LASTEXITCODE -eq 0; if (-not $back) { Start-Sleep 5 } }
         if (-not $back) { throw 'The VM did not come back after the reboot.' }
         $okAll = (Phase 'after-reboot') -and $okAll
     }
@@ -48,7 +48,7 @@ try {
 }
 finally {
     $okAll = (Phase 'cleanup') -and $okAll
-    ssh @sshArgs $remote "rm -rf $dir" | Out-Null
+    ssh -n @sshArgs $remote "rm -rf $dir" | Out-Null
     Remove-Item -LiteralPath $work -Recurse -Force
 }
 if (-not $okAll) { throw 'MystTiq v1.0.2.0 Linux systemd check failed.' }

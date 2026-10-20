@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -26,10 +26,10 @@ Push-Location $work; tar -czf $tgz app fixture check.sh; Pop-Location
 $sshArgs = @('-i', [Environment]::ExpandEnvironmentVariables($IdentityFile), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=4')
 $remote = "$LinuxUser@$LinuxHost"
 $dir = '/tmp/mysttiq-v0817-isolated'
-ssh @sshArgs $remote "rm -rf $dir; mkdir -p $dir"
+ssh -n @sshArgs $remote "rm -rf $dir; mkdir -p $dir"
 if ($LASTEXITCODE -ne 0) { throw "Cannot reach $remote over SSH (the VM's address may have changed; pass -LinuxHost)." }
 scp @sshArgs $tgz "${remote}:$dir/" | Out-Null
-$lines = @(ssh @sshArgs $remote "cd $dir && tar -xzf linux-isolated.tgz && bash check.sh; echo exit=`$?; cd /; rm -rf $dir" 2>&1)
+$lines = @(ssh -n @sshArgs $remote "cd $dir && tar -xzf linux-isolated.tgz && bash check.sh; echo exit=`$?; cd /; rm -rf $dir" 2>&1)
 $lines | ForEach-Object { "$_" -replace '\b(\d{1,3}\.){3}\d{1,3}\b', '<ip>' }
 Remove-Item -LiteralPath $work -Recurse -Force
 if (-not ($lines -match '^exit=0$')) { throw 'MystTiq v0.8.17.0 Linux isolated check failed.' }

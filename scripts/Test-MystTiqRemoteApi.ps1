@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 #requires -Version 7.0
 [CmdletBinding()]
 param(
@@ -57,14 +57,14 @@ $sshArgs = @(
     "-o", "PasswordAuthentication=no"
 )
 
-& $ssh @sshArgs $target "printf 'MYSTTIQ_SSH_OK\n'" | Out-Null
+& $ssh -n @sshArgs $target "printf 'MYSTTIQ_SSH_OK\n'" | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Fail "Trusted SSH key authentication failed for $target."
     Stop-OnFailure
 }
 Pass "Trusted SSH channel is available."
 
-$configJson = & $ssh @sshArgs $target "/opt/mysttiq/bin/mysttiq-server config-show --config '$ConfigFile'"
+$configJson = & $ssh -n @sshArgs $target "/opt/mysttiq/bin/mysttiq-server config-show --config '$ConfigFile'"
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($configJson -join "`n"))) {
     Fail "Unable to read effective MystTiq configuration over SSH."
     Stop-OnFailure
@@ -105,7 +105,7 @@ else {
 
 Stop-OnFailure
 
-$tokenLines = & $ssh @sshArgs $target "test -s '$TokenFile' && cat '$TokenFile'"
+$tokenLines = & $ssh -n @sshArgs $target "test -s '$TokenFile' && cat '$TokenFile'"
 if ($LASTEXITCODE -ne 0) {
     Fail "API token file is missing or empty: $TokenFile"
     Stop-OnFailure
@@ -118,7 +118,7 @@ if ([string]::IsNullOrWhiteSpace($token)) {
 }
 Pass "API token retrieved into process memory only."
 
-$listener = & $ssh @sshArgs $target "ss -lnt | grep -F '${LinuxHost}:${Port}'"
+$listener = & $ssh -n @sshArgs $target "ss -lnt | grep -F '${LinuxHost}:${Port}'"
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($listener -join "`n"))) {
     Fail "Linux is not listening on ${LinuxHost}:${Port}."
     Stop-OnFailure

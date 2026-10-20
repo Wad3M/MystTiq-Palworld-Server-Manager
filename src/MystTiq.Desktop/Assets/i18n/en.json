@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "Player ID (32 characters)",
   "ui.link_account": "Link account",
   "dashboard.samePcJoinHint": "Playing on this PC? Join with a local address above, not 127.0.0.1 or localhost: joins through 127.0.0.1 have dropped.",
-  "msg.enter_link_ids_3be9d0": "Enter the account's user ID and the character's player ID."
+  "msg.enter_link_ids_3be9d0": "Enter the account's user ID and the character's player ID.",
+  "dashboard.lastStop": "Last stop: {0} · {1}",
+  "settings.startWithSystem.label": "Start MystTiq when I sign in (opens in the tray)",
+  "settings.startWithSystem.note": "MystTiq starts its helper as usual, and a server that was running when the computer shut down starts again. A server you stopped stays stopped.",
+  "settings.startWithSystem.elsewhere": "This is set for a different copy of MystTiq. Turn it off and on again to start this one.",
+  "settings.startWithSystem.on": "MystTiq will start when you sign in.",
+  "settings.startWithSystem.off": "MystTiq will no longer start when you sign in.",
+  "settings.startWithSystem.failed": "The sign-in start could not be changed:"
 }

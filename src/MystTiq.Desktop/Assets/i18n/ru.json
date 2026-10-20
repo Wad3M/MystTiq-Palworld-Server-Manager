@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "ID игрока (32 символа)",
   "ui.link_account": "Привязать аккаунт",
   "dashboard.samePcJoinHint": "Играете на этом ПК? Подключайтесь по локальному адресу выше, а не через 127.0.0.1 или localhost: подключения через 127.0.0.1 обрывались.",
-  "msg.enter_link_ids_3be9d0": "Введите ID пользователя аккаунта и ID игрока персонажа."
+  "msg.enter_link_ids_3be9d0": "Введите ID пользователя аккаунта и ID игрока персонажа.",
+  "dashboard.lastStop": "Последняя остановка: {0} · {1}",
+  "settings.startWithSystem.label": "Запускать MystTiq при входе в систему (открывается в трее)",
+  "settings.startWithSystem.note": "MystTiq как обычно запускает своего помощника, а сервер, работавший при выключении компьютера, запускается снова. Остановленный вами сервер остаётся остановленным.",
+  "settings.startWithSystem.elsewhere": "Настроено для другой копии MystTiq. Выключите и снова включите, чтобы запускать эту.",
+  "settings.startWithSystem.on": "MystTiq будет запускаться при входе в систему.",
+  "settings.startWithSystem.off": "MystTiq больше не будет запускаться при входе в систему.",
+  "settings.startWithSystem.failed": "Не удалось изменить запуск при входе:"
 }

@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -38,12 +38,12 @@ try {
     $tgz = Join-Path $work 'session.tgz'
     Push-Location $work; tar -czf $tgz app harness setup.sh teardown.sh accounts.txt; Pop-Location
 
-    ssh @sshArgs $remote "rm -rf $dir; mkdir -p $dir"
+    ssh -n @sshArgs $remote "rm -rf $dir; mkdir -p $dir"
     if ($LASTEXITCODE -ne 0) { throw "Cannot reach $remote over SSH (the VM's address may have changed; pass -LinuxHost)." }
-    $display = @(ssh @sshArgs $remote 'DISPLAY=:0 XAUTHORITY=$HOME/.Xauthority xwininfo -root 2>&1 | grep -c Width' 2>&1)
+    $display = @(ssh -n @sshArgs $remote 'DISPLAY=:0 XAUTHORITY=$HOME/.Xauthority xwininfo -root 2>&1 | grep -c Width' 2>&1)
     if ($display[0] -ne '1') { throw 'The VM has no reachable desktop session on display :0 (is the test user logged in to the desktop?).' }
     scp @sshArgs $tgz "${remote}:$dir/" | Out-Null
-    $setup = @(ssh @sshArgs $remote "cd $dir && tar -xzf session.tgz && rm -f session.tgz && bash setup.sh $LinuxHost $Port" 2>&1)
+    $setup = @(ssh -n @sshArgs $remote "cd $dir && tar -xzf session.tgz && rm -f session.tgz && bash setup.sh $LinuxHost $Port" 2>&1)
     if (-not ($setup -match '^READY$') -or -not ($setup -match '^USER-CREATED')) { $setup | ForEach-Object { "   $_" }; throw 'the isolated instance did not start' }
     $pin = (@($setup -match '^PIN=')[0]).Substring(4).Trim()
     @{ baseUrl = "https://${LinuxHost}:$Port/"; pin = $pin; renderPrefix = 'linux-desktop'; realWindow = $true
@@ -52,14 +52,14 @@ try {
     scp @sshArgs (Join-Path $work 'settings.json') "${remote}:$dir/settings.json" | Out-Null
 
     $probe = 'for d in "$HOME/.config/MystTiq" "$HOME/.local/share/MystTiq" "$HOME/.config/mysttiq" "$HOME/.local/share/mysttiq"; do [ -e "$d" ] && find "$d" -type f -printf "%p %s %T@\n"; done | sort; echo PROBE-END'
-    $before = @(ssh @sshArgs $remote $probe 2>&1)
+    $before = @(ssh -n @sshArgs $remote $probe 2>&1)
     # The real session: the user's display and session bus; the harness's own settings in /tmp.
     $run = "cd $dir && mkdir -p home/.config home/.local/share renders && chmod +x harness/MystTiq.RemoteSignInHarness && " +
         "DISPLAY=:0 XAUTHORITY=/home/$LinuxUser/.Xauthority XDG_RUNTIME_DIR=/run/user/`$(id -u) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/`$(id -u)/bus " +
         "HOME=$dir/home XDG_CONFIG_HOME=$dir/home/.config XDG_DATA_HOME=$dir/home/.local/share ./harness/MystTiq.RemoteSignInHarness settings.json renders; echo SESSION-EXIT=`$?"
-    $out = @(ssh @sshArgs $remote $run 2>&1)
+    $out = @(ssh -n @sshArgs $remote $run 2>&1)
     $out | Where-Object { $_ -notmatch '^SESSION-EXIT=' } | ForEach-Object { "   $_" -replace '\b(\d{1,3}\.){3}\d{1,3}\b', '<vm>' }
-    $after = @(ssh @sshArgs $remote $probe 2>&1)
+    $after = @(ssh -n @sshArgs $remote $probe 2>&1)
     $untouched = ($before -join "`n") -eq ($after -join "`n")
     Write-Host ("{0} the VM user's MystTiq settings folders are as they were" -f $(if ($untouched) { 'PASS' } else { 'FAIL' }))
     New-Item (Join-Path $root 'artifacts\linux-session') -ItemType Directory -Force | Out-Null
@@ -67,7 +67,7 @@ try {
     $failed = -not ($untouched -and @($out -match '^SESSION-EXIT=0$').Count -eq 1)
 }
 finally {
-    $down = @(ssh @sshArgs $remote "bash $dir/teardown.sh" 2>&1)
+    $down = @(ssh -n @sshArgs $remote "bash $dir/teardown.sh" 2>&1)
     Write-Host "   isolated instance removed: $([bool]($down -match 'TORN-DOWN'))"
     foreach ($secret in 'settings.json', 'accounts.txt') { Remove-Item -LiteralPath (Join-Path $work $secret) -Force -ErrorAction SilentlyContinue }
     Remove-Item -LiteralPath (Join-Path $work 'session.tgz') -Force -ErrorAction SilentlyContinue

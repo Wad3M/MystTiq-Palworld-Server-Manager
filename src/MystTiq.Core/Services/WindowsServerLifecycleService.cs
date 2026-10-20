@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -116,7 +116,7 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
             persisted?.Phase == ServerLifecyclePhase.Crashed ? ServerLifecyclePhase.Crashed : ServerLifecyclePhase.Stopped,
             persisted?.LastKnownProcessId, [], ports, false, persisted?.Phase == ServerLifecyclePhase.Crashed,
             now, persisted?.LastTransitionAt,
-            persisted?.Phase == ServerLifecyclePhase.Crashed ? persisted.Detail : "PalServer is not running."));
+            persisted?.Phase == ServerLifecyclePhase.Crashed ? persisted.Detail : "PalServer is not running.").WithLastStop(persisted));
     }
 
     // v1.0.7.2 (roadmap Q-8): the start's stages, carried by every status read while it runs.
@@ -253,6 +253,8 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
 
     public async Task<ServerLifecycleOperationResult> StopAsync(TimeSpan gracefulTimeout, CancellationToken cancellationToken = default)
     {
+        // v1.1.2.0 (roadmap F-19): saved with every state this stop writes.
+        var stopReason = ServerStopReason.Describe();
         var processes = FindManagedServerProcesses();
         if (processes.Count == 0)
         {
@@ -268,7 +270,7 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
             var snapshot = await GetStatusAsync(cancellationToken);
             stateStore.Write(new PersistedServerLifecycleState(
                 ServerLifecyclePhase.Stopped, snapshot.NativeProcessId, DateTimeOffset.UtcNow, true,
-                "Stop was requested while PalServer was already stopped."));
+                "Stop was requested while PalServer was already stopped.", stopReason));
             snapshot = snapshot with
             {
                 Phase = ServerLifecyclePhase.Stopped,
@@ -281,7 +283,7 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
 
         lock (stateGate)
             stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopping, SelectNativeProcess(processes)?.ProcessId,
-                DateTimeOffset.UtcNow, true, "Windows shutdown requested."));
+                DateTimeOffset.UtcNow, true, "Windows shutdown requested.", stopReason));
 
         // v0.7.68.0 bugfix: found live-testing this same session's own tray-toast fix, then traced
         // properly -- CloseMainWindow() below silently does NOTHING (returns false, no exception,
@@ -315,14 +317,14 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
         if (await WaitForExitAsync(gracefulTimeout, cancellationToken))
         {
             AppendLifecycleConsoleLine("PalServer stopped cleanly.");
-            return CompleteStopped(false, "PalServer stopped cleanly.");
+            return CompleteStopped(false, "PalServer stopped cleanly.", stopReason);
         }
 
         foreach (var item in FindManagedServerProcesses().OrderByDescending(item => item.ProcessId))
         {
             try { using var process = Process.GetProcessById(item.ProcessId); process.Kill(entireProcessTree: true); } catch { }
         }
-        if (await WaitForExitAsync(ForceKillWait, cancellationToken)) return CompleteStopped(true, "PalServer required forced termination after the graceful shutdown timeout.");
+        if (await WaitForExitAsync(ForceKillWait, cancellationToken)) return CompleteStopped(true, "PalServer required forced termination after the graceful shutdown timeout.", stopReason);
         return new ServerLifecycleOperationResult(HeadlessExitCode.StopTimeout, await GetStatusAsync(cancellationToken), true,
             "PalServer remained active after Windows shutdown escalation.");
     }
@@ -331,13 +333,15 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
     {
         if (FindManagedServerProcesses().Count > 0)
         {
+            // v1.1.2.0 (roadmap F-19): a restart's stop says so unless its caller already said why.
+            using var restartReason = ServerStopReason.Current is null ? ServerStopReason.Begin("Restart") : null;
             var stop = await StopAsync(gracefulTimeout, cancellationToken);
             if (stop.ExitCode == HeadlessExitCode.StopTimeout) return stop;
         }
         return await StartAsync(serverArguments, startupTimeout, cancellationToken);
     }
 
-    private ServerLifecycleOperationResult CompleteStopped(bool forced, string message)
+    private ServerLifecycleOperationResult CompleteStopped(bool forced, string message, string? stopReason = null)
     {
         windowPolicyCancellation?.Cancel();
         windowPolicyCancellation?.Dispose();
@@ -345,8 +349,9 @@ public sealed class WindowsServerLifecycleService : IServerLifecycleService
         ownedProcess?.Dispose();
         ownedProcess = null;
         var now = DateTimeOffset.UtcNow;
-        lock (stateGate) stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopped, null, now, true, message));
-        var snapshot = new ServerLifecycleSnapshot(ServerLifecyclePhase.Stopped, null, [], sessionInspector.GetGuardedListeningPorts(), false, false, now, now, message);
+        lock (stateGate) stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopped, null, now, true, message, stopReason));
+        var snapshot = new ServerLifecycleSnapshot(ServerLifecyclePhase.Stopped, null, [], sessionInspector.GetGuardedListeningPorts(), false, false, now, now, message)
+            { LastStopReason = stopReason, LastStopAt = stopReason is null ? null : now };
         return new ServerLifecycleOperationResult(HeadlessExitCode.Success, snapshot, forced, message);
     }
 

@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "Identyfikator gracza (32 znaki)",
   "ui.link_account": "Powiąż konto",
   "dashboard.samePcJoinHint": "Grasz na tym komputerze? Dołącz przez adres lokalny powyżej, nie 127.0.0.1 ani localhost: połączenia przez 127.0.0.1 się zrywały.",
-  "msg.enter_link_ids_3be9d0": "Wpisz identyfikator użytkownika konta i identyfikator gracza postaci."
+  "msg.enter_link_ids_3be9d0": "Wpisz identyfikator użytkownika konta i identyfikator gracza postaci.",
+  "dashboard.lastStop": "Ostatnie zatrzymanie: {0} · {1}",
+  "settings.startWithSystem.label": "Uruchamiaj MystTiq po zalogowaniu (otwiera się w zasobniku)",
+  "settings.startWithSystem.note": "MystTiq uruchamia swojego pomocnika jak zwykle, a serwer działający w chwili wyłączenia komputera uruchamia się ponownie. Serwer zatrzymany przez Ciebie pozostaje zatrzymany.",
+  "settings.startWithSystem.elsewhere": "To ustawienie dotyczy innej kopii MystTiq. Wyłącz je i włącz ponownie, aby uruchamiać tę kopię.",
+  "settings.startWithSystem.on": "MystTiq będzie uruchamiany po zalogowaniu.",
+  "settings.startWithSystem.off": "MystTiq nie będzie już uruchamiany po zalogowaniu.",
+  "settings.startWithSystem.failed": "Nie udało się zmienić uruchamiania po zalogowaniu:"
 }

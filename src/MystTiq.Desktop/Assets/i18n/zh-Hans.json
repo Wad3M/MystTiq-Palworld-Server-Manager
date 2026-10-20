@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "玩家 ID（32 个字符）",
   "ui.link_account": "关联账号",
   "dashboard.samePcJoinHint": "在这台电脑上玩？请用上面的本地地址加入，不要用 127.0.0.1 或 localhost：通过 127.0.0.1 加入曾出现掉线。",
-  "msg.enter_link_ids_3be9d0": "请输入账号的用户 ID 和角色的玩家 ID。"
+  "msg.enter_link_ids_3be9d0": "请输入账号的用户 ID 和角色的玩家 ID。",
+  "dashboard.lastStop": "上次停止：{0} · {1}",
+  "settings.startWithSystem.label": "登录时启动 MystTiq（在托盘中打开）",
+  "settings.startWithSystem.note": "MystTiq 会照常启动其助手，计算机关机时正在运行的服务器会再次启动。你手动停止的服务器保持停止。",
+  "settings.startWithSystem.elsewhere": "此设置指向另一个 MystTiq 副本。将其关闭后再打开即可启动此副本。",
+  "settings.startWithSystem.on": "登录时将启动 MystTiq。",
+  "settings.startWithSystem.off": "登录时将不再启动 MystTiq。",
+  "settings.startWithSystem.failed": "无法更改登录时启动："
 }

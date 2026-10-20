@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 namespace MystTiq.Core.Models;
 
 public enum ServerLifecyclePhase
@@ -57,6 +57,16 @@ public sealed record ServerLifecycleSnapshot(
     public string? StartupStage { get; init; }
     public DateTimeOffset? StartupStageSinceUtc { get; init; }
     public DateTimeOffset? StartupBeganUtc { get; init; }
+
+    // v1.1.2.0 (roadmap F-19): when the server is stopped on purpose, why and when that stop was asked for.
+    public string? LastStopReason { get; init; }
+    public DateTimeOffset? LastStopAt { get; init; }
+
+    /// <summary>The stop reason a persisted state carries, on a stopped snapshot (none when it crashed or runs).</summary>
+    public ServerLifecycleSnapshot WithLastStop(PersistedServerLifecycleState? persisted) =>
+        Phase == ServerLifecyclePhase.Stopped && persisted is { StopRequested: true, StopReason: { Length: > 0 } reason }
+            ? this with { LastStopReason = reason, LastStopAt = persisted.LastTransitionAt }
+            : this;
 }
 
 public sealed record ServerLifecycleOperationResult(
@@ -73,7 +83,9 @@ public sealed record PersistedServerLifecycleState(
     int? LastKnownProcessId,
     DateTimeOffset LastTransitionAt,
     bool StopRequested,
-    string Detail);
+    string Detail,
+    // v1.1.2.0 (roadmap F-19): why the last stop was asked for (ServerStopReason).
+    string? StopReason = null);
 
 // v0.7.44.0: a machine-wide, path-agnostic process match -- unlike ServerLifecycleSnapshot.Processes
 // (which only ever lists processes already confirmed to sit under this profile's own ServerRoot),

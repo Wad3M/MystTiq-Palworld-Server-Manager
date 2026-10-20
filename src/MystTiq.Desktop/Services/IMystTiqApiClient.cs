@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -27,20 +27,24 @@ public interface IMystTiqApiClient
         string? bearerToken = null,
         CancellationToken cancellationToken = default);
 
+    // v1.1.2.0 (roadmap F-19): reason says why (saved with the stop and shown on the Dashboard).
     Task<LifecycleOperationResultDto> StopServerAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? reason = null);
 
     Task<LifecycleOperationResultDto> ForceStopServerAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? reason = null);
 
     Task<LifecycleOperationResultDto> RestartServerAsync(
         ConnectionProfile profile,
         string? bearerToken = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? reason = null);
 
     // v0.7.44.0: machine-wide Palworld instance detection/termination -- see ServerInstanceDto.
     Task<IReadOnlyList<ServerInstanceDto>> GetAllInstancesAsync(

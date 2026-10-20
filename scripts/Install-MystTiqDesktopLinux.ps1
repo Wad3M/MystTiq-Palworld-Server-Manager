@@ -1,4 +1,4 @@
-# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 [CmdletBinding()]
 param(
     [string]$HostName = '192.168.1.122',
@@ -25,14 +25,14 @@ $ssh = @('-i', $IdentityFile, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', 
 $target = "$UserName@$HostName"
 
 Write-Host "==> Copying MystTiq v$packageVersion to $target" -ForegroundColor Cyan
-& ssh @ssh $target 'mkdir -p ~/MystTiq/.incoming'
+& ssh -n @ssh $target 'mkdir -p ~/MystTiq/.incoming'
 if ($LASTEXITCODE -ne 0) { throw "Cannot reach $target over SSH." }
 & scp @ssh $Package "${target}:MystTiq/.incoming/package.zip"
 if ($LASTEXITCODE -ne 0) { throw 'Copying the package failed.' }
 & scp @ssh $icon "${target}:MystTiq/.incoming/mysttiq.png"
 if ($LASTEXITCODE -ne 0) { throw 'Copying the icon failed.' }
 $localHash = (Get-FileHash $Package -Algorithm SHA256).Hash.ToLowerInvariant()
-$remoteHash = ((& ssh @ssh $target "sha256sum ~/MystTiq/.incoming/package.zip | cut -d' ' -f1") | Out-String).Trim().ToLowerInvariant()
+$remoteHash = ((& ssh -n @ssh $target "sha256sum ~/MystTiq/.incoming/package.zip | cut -d' ' -f1") | Out-String).Trim().ToLowerInvariant()
 if ($remoteHash -ne $localHash) { throw "The copied package does not match (local $localHash, remote $remoteHash)." }
 
 $install = @'

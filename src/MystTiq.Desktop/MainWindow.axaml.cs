@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -241,6 +241,13 @@ public sealed partial class MainWindow : Window
     private void MainWindow_Closing(object? sender, WindowClosingEventArgs e)
     {
         if (Application.Current is not App app || app.IsExplicitExitRequested) return;
+        // v1.1.2.0 (roadmap F-20): Windows shutting down or restarting is let through (hiding to the tray held it up),
+        // after asking the running servers to save their worlds; they resume when MystTiq starts again.
+        if (e.CloseReason == WindowCloseReason.OSShutdown)
+        {
+            app.CloseForSystemShutdown();
+            return;
+        }
         e.Cancel = true;
         app.CloseToTray();
     }

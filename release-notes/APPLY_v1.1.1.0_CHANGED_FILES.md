@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
 # v1.1.1.0 Changed Files
 
 - MOD Sources: `src/MystTiq.Desktop/Models/NavigationPage.cs` (`ModSources` appended), `MainWindow.axaml` (the nav entry;

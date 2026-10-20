@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "Spieler-ID (32 Zeichen)",
   "ui.link_account": "Konto verknüpfen",
   "dashboard.samePcJoinHint": "Auf diesem PC spielen? Mit einer lokalen Adresse oben beitreten, nicht mit 127.0.0.1 oder localhost: Verbindungen über 127.0.0.1 sind abgebrochen.",
-  "msg.enter_link_ids_3be9d0": "Benutzer-ID des Kontos und Spieler-ID des Charakters eingeben."
+  "msg.enter_link_ids_3be9d0": "Benutzer-ID des Kontos und Spieler-ID des Charakters eingeben.",
+  "dashboard.lastStop": "Letzter Stopp: {0} · {1}",
+  "settings.startWithSystem.label": "MystTiq bei der Anmeldung starten (öffnet im Infobereich)",
+  "settings.startWithSystem.note": "MystTiq startet seinen Helfer wie gewohnt, und ein Server, der beim Herunterfahren des Computers lief, startet wieder. Ein Server, den Sie gestoppt haben, bleibt gestoppt.",
+  "settings.startWithSystem.elsewhere": "Dies ist für eine andere MystTiq-Kopie eingerichtet. Aus- und wieder einschalten, um diese zu starten.",
+  "settings.startWithSystem.on": "MystTiq startet bei Ihrer Anmeldung.",
+  "settings.startWithSystem.off": "MystTiq startet nicht mehr bei Ihrer Anmeldung.",
+  "settings.startWithSystem.failed": "Der Start bei der Anmeldung konnte nicht geändert werden:"
 }

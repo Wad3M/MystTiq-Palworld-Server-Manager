@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -21,6 +21,9 @@ public sealed class ServerStatusDto
     [JsonPropertyName("startupStage")] public string? StartupStage { get; init; }
     [JsonPropertyName("startupStageSinceUtc")] public DateTimeOffset? StartupStageSinceUtc { get; init; }
     [JsonPropertyName("startupBeganUtc")] public DateTimeOffset? StartupBeganUtc { get; init; }
+    // v1.1.2.0 (roadmap F-19): on a stopped server, why and when the last stop was asked for.
+    [JsonPropertyName("lastStopReason")] public string? LastStopReason { get; init; }
+    [JsonPropertyName("lastStopAt")] public DateTimeOffset? LastStopAt { get; init; }
 
     /// <summary>v1.0.7.2 (Q-8): "Waiting for the game port: 40 s (starting for 85 s)" while a start runs, else empty.</summary>
     public string StartupStageText(DateTimeOffset now) => StartupStage is { Length: > 0 } stage

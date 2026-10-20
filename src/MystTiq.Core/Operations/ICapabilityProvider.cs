@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 namespace MystTiq.Core.Operations;
 
 // Minimal provider/capability contract. Existing platform-abstraction

@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using MystTiq.Core.Models;
 using MystTiq.Core.Services;
 
@@ -13,13 +13,22 @@ public sealed class PolicyApplyingLifecycle(IServerLifecycleService inner) : ISe
 {
     public Func<CancellationToken, Task>? AfterStart { get; set; }
 
+    // v1.1.2.0 (roadmap F-19): told about each stop made through this server's services, with its reason, so the
+    // activity log says why the server stopped. It never turns a stop into a failure.
+    public Action<string, ServerLifecycleOperationResult>? StopRecorded { get; set; }
+
     public Task<ServerLifecycleSnapshot> GetStatusAsync(CancellationToken cancellationToken = default) => inner.GetStatusAsync(cancellationToken);
 
     public async Task<ServerLifecycleOperationResult> StartAsync(IReadOnlyList<string> serverArguments, TimeSpan startupTimeout, CancellationToken cancellationToken = default) =>
         await AfterAsync(await inner.StartAsync(serverArguments, startupTimeout, cancellationToken), cancellationToken);
 
-    public Task<ServerLifecycleOperationResult> StopAsync(TimeSpan gracefulTimeout, CancellationToken cancellationToken = default) =>
-        inner.StopAsync(gracefulTimeout, cancellationToken);
+    public async Task<ServerLifecycleOperationResult> StopAsync(TimeSpan gracefulTimeout, CancellationToken cancellationToken = default)
+    {
+        var reason = ServerStopReason.Describe();
+        var result = await inner.StopAsync(gracefulTimeout, cancellationToken);
+        try { StopRecorded?.Invoke(reason, result); } catch { /* an observer never fails the stop */ }
+        return result;
+    }
 
     public async Task<ServerLifecycleOperationResult> RestartAsync(IReadOnlyList<string> serverArguments, TimeSpan startupTimeout, TimeSpan gracefulTimeout, CancellationToken cancellationToken = default) =>
         await AfterAsync(await inner.RestartAsync(serverArguments, startupTimeout, gracefulTimeout, cancellationToken), cancellationToken);

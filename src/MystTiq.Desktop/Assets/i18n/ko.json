@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "플레이어 ID (32자)",
   "ui.link_account": "계정 연결",
   "dashboard.samePcJoinHint": "이 PC에서 플레이하나요? 127.0.0.1이나 localhost가 아니라 위의 로컬 주소로 접속하세요. 127.0.0.1로 접속하면 끊긴 적이 있습니다.",
-  "msg.enter_link_ids_3be9d0": "계정 사용자 ID와 캐릭터 플레이어 ID를 입력하세요."
+  "msg.enter_link_ids_3be9d0": "계정 사용자 ID와 캐릭터 플레이어 ID를 입력하세요.",
+  "dashboard.lastStop": "마지막 중지: {0} · {1}",
+  "settings.startWithSystem.label": "로그인할 때 MystTiq 시작(트레이에서 열림)",
+  "settings.startWithSystem.note": "MystTiq는 평소처럼 도우미를 시작하고, 컴퓨터가 종료될 때 실행 중이던 서버는 다시 시작됩니다. 직접 중지한 서버는 중지된 상태로 남습니다.",
+  "settings.startWithSystem.elsewhere": "다른 MystTiq 사본으로 설정되어 있습니다. 껐다가 다시 켜면 이 사본이 시작됩니다.",
+  "settings.startWithSystem.on": "로그인할 때 MystTiq가 시작됩니다.",
+  "settings.startWithSystem.off": "로그인할 때 MystTiq가 더 이상 시작되지 않습니다.",
+  "settings.startWithSystem.failed": "로그인 시 시작을 변경할 수 없습니다:"
 }

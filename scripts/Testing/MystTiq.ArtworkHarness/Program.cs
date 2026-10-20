@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -2159,6 +2159,61 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     }
     finally { TaskScheduler.UnobservedTaskException -= count; }
     static int FreeLoopbackPort() { var l = new TcpListener(IPAddress.Loopback, 0); l.Start(); var p = ((IPEndPoint)l.LocalEndpoint).Port; l.Stop(); return p; }
+}
+
+// v1.1.2.0 (roadmap F-19): each desktop stop sends why; the Dashboard shows the last stop of a server stopped on purpose.
+{
+    var query = MystTiqApiClient.ReasonQuery(MainWindowViewModel.StopReasons.Exit(force: false));
+    var stopped = new ServerStatusDto { Phase = 1, LastStopReason = "Discord /mysttiq-stop by owner", LastStopAt = new DateTimeOffset(2026, 10, 19, 21, 5, 0, TimeSpan.Zero) };
+    var line = MainWindowViewModel.LastStopLine(stopped);
+    Check(query == "?reason=MystTiq%20closed%20with%20Exit" && MystTiqApiClient.ReasonQuery("  ") == string.Empty
+          && line.StartsWith("Last stop: Discord /mysttiq-stop by owner · ") && line.Contains("2026-10-")
+          && MainWindowViewModel.LastStopLine(new ServerStatusDto { Phase = 3, LastStopReason = "x" }) == string.Empty
+          && MainWindowViewModel.LastStopLine(new ServerStatusDto { Phase = 1, CrashDetected = true, LastStopReason = "x" }) == string.Empty
+          && MainWindowViewModel.LastStopLine(new ServerStatusDto { Phase = 1 }) == string.Empty,
+        $"F-19: a desktop stop sends its reason (?reason=); the Dashboard says 'Last stop: <reason> · <time>' only for a server stopped on purpose [{line}]");
+}
+
+// v1.1.2.0 (roadmap F-20): Settings turns "start when I sign in" on and off. The harness uses its own Run key (Windows) or
+// autostart file (Linux): the real ones are never written.
+{
+    var testKey = @"Software\MystTiq-Harness-" + Guid.NewGuid().ToString("N") + @"\Run";
+    var testFile = Path.Combine(Path.GetTempPath(), "mysttiq-autostart-" + Guid.NewGuid().ToString("N"), "autostart", "mysttiq.desktop");
+    var exe = OperatingSystem.IsWindows() ? @"C:\Program Files\MystTiq\MystTiq.Desktop.exe" : "/home/owner/MystTiq/current/MystTiq.Desktop";
+    try
+    {
+        vm.UseStartWithSystem(new StartWithSystem(testKey, testFile, exe));
+        selectedPage.SetValue(vm, NavigationPage.Settings);
+        Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+        var panel = window.GetVisualDescendants().OfType<StackPanel>().FirstOrDefault(s => s.Name == "StartWithSystemPanel");
+        var box = panel?.GetVisualDescendants().OfType<CheckBox>().FirstOrDefault();
+        var offFirst = box?.IsChecked == false && !vm.StartWithSystemEnabled;
+        box!.IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+        var written = OperatingSystem.IsWindows()
+            ? (Microsoft.Win32.Registry.CurrentUser.OpenSubKey(testKey)?.GetValue(StartWithSystem.WindowsValueName) as string)
+            : File.Exists(testFile) ? File.ReadAllText(testFile) : null;
+        var expected = OperatingSystem.IsWindows() ? StartWithSystem.WindowsCommand(exe) : StartWithSystem.LinuxDesktopEntry(exe);
+        var on = vm.StartWithSystemEnabled && written == expected && !vm.StartWithSystemPointsElsewhere
+                 && vm.StartWithSystemStatusText == Localizer.Instance["settings.startWithSystem.on"];
+        var elsewhere = new StartWithSystem(testKey, testFile, exe + ".old").PointsElsewhere();
+        box.IsChecked = false;
+        Dispatcher.UIThread.RunJobs();
+        var off = !vm.StartWithSystemEnabled && (OperatingSystem.IsWindows()
+            ? Microsoft.Win32.Registry.CurrentUser.OpenSubKey(testKey)?.GetValue(StartWithSystem.WindowsValueName) is null
+            : !File.Exists(testFile));
+        var tray = StartWithSystem.StartedInTray(["--tray"]) && StartWithSystem.StartedInTray(["--TRAY"]) && !StartWithSystem.StartedInTray([]) && !StartWithSystem.StartedInTray(null);
+        Check(panel is { IsEffectivelyVisible: true } && offFirst && on && elsewhere && off && tray && expected.Contains("--tray"),
+            $"F-20: Settings turns starting at sign-in on (the entry starts this copy with --tray) and off; an entry for another copy is noticed [panel {panel?.IsEffectivelyVisible}, off first {offFirst}, on {on}, elsewhere {elsewhere}, off {off}, tray {tray}]");
+    }
+    finally
+    {
+        vm.UseStartWithSystem(new StartWithSystem(testKey, testFile, exe));
+        if (OperatingSystem.IsWindows()) Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(testKey.Substring(0, testKey.LastIndexOf('\\')), throwOnMissingSubKey: false);
+        if (Directory.Exists(Path.GetDirectoryName(Path.GetDirectoryName(testFile))!)) Directory.Delete(Path.GetDirectoryName(Path.GetDirectoryName(testFile))!, true);
+        selectedPage.SetValue(vm, NavigationPage.Dashboard);
+        Dispatcher.UIThread.RunJobs();
+    }
 }
 
 Console.WriteLine($"PASS {checks} checks. Offline headless rendering only; no live server acceptance.");

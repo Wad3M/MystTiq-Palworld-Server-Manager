@@ -4083,5 +4083,12 @@
   "ui.character_player_id_placeholder": "Oyuncu kimliği (32 karakter)",
   "ui.link_account": "Hesabı bağla",
   "dashboard.samePcJoinHint": "Bu bilgisayarda mı oynuyorsunuz? 127.0.0.1 veya localhost yerine yukarıdaki yerel adresle katılın: 127.0.0.1 üzerinden bağlantılar koptu.",
-  "msg.enter_link_ids_3be9d0": "Hesabın kullanıcı kimliğini ve karakterin oyuncu kimliğini girin."
+  "msg.enter_link_ids_3be9d0": "Hesabın kullanıcı kimliğini ve karakterin oyuncu kimliğini girin.",
+  "dashboard.lastStop": "Son durdurma: {0} · {1}",
+  "settings.startWithSystem.label": "Oturum açtığımda MystTiq'i başlat (tepside açılır)",
+  "settings.startWithSystem.note": "MystTiq yardımcısını her zamanki gibi başlatır ve bilgisayar kapanırken çalışan sunucu yeniden başlar. Sizin durdurduğunuz sunucu durmuş olarak kalır.",
+  "settings.startWithSystem.elsewhere": "Bu, başka bir MystTiq kopyası için ayarlanmış. Bu kopyayı başlatmak için kapatıp yeniden açın.",
+  "settings.startWithSystem.on": "MystTiq oturum açtığınızda başlayacak.",
+  "settings.startWithSystem.off": "MystTiq artık oturum açtığınızda başlamayacak.",
+  "settings.startWithSystem.failed": "Oturum açılışında başlatma değiştirilemedi:"
 }

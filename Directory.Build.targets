@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
 <Project>
   <!-- v1.1.1.1: a self-contained publish brings .NET's crash-dump helper (createdump.exe, createdump on Linux). MystTiq
        never uses it, and malware sandboxes that unpack the release ZIP ran it instead of MystTiq (VirusTotal, 2026-10-17:

@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -4948,6 +4948,98 @@ try
         {
             try { Directory.Delete(link); } catch { /* the junction only, never its target */ }
         }
+    }, failures);
+
+    // v1.1.2.0 (roadmap F-19): why the server stopped. The owner's server stopped cleanly three times with nothing saying
+    // why; each stop now saves its reason with the stop, and the status of a server stopped on purpose carries it.
+    RunScenario("Stop reasons (F-19): a reason set around a stop is the one saved, nested reasons restore the outer one, and reasons are kept to one short line", () =>
+    {
+        Assert(ServerStopReason.Current is null && ServerStopReason.Describe() == ServerStopReason.Unrecorded, "no reason set: the stop says none was recorded");
+        using (ServerStopReason.Begin("Discord /mysttiq-stop by owner"))
+        {
+            Assert(ServerStopReason.Describe() == "Discord /mysttiq-stop by owner", "the caller's reason is the one described");
+            using (ServerStopReason.Begin("Restart")) Assert(ServerStopReason.Current == "Restart", "an inner reason applies inside its scope");
+            Assert(ServerStopReason.Current == "Discord /mysttiq-stop by owner", "the outer reason is back once the inner scope ends");
+            var seen = Task.Run(() => ServerStopReason.Current).GetAwaiter().GetResult();
+            Assert(seen == "Discord /mysttiq-stop by owner", "the reason flows into work the caller starts (AsyncLocal)");
+        }
+        Assert(ServerStopReason.Current is null, "and is gone after the caller's scope");
+        Assert(ServerStopReason.Clean("  two\nlines\t here ") == "two lines here", "white space and line breaks collapse to one line");
+        Assert(ServerStopReason.Clean(new string('x', 500)).Length == ServerStopReason.MaximumLength, "a long reason is cut to the maximum length");
+        Assert(ServerStopReason.Clean("   ") == ServerStopReason.Unrecorded, "an empty reason is not recorded as blank");
+    }, failures);
+
+    RunScenarioAsync("Stop reasons (F-19): the Windows lifecycle saves the reason with the stop; the status of the stopped server carries it, a crashed one does not", async () =>
+    {
+        var root = Path.Combine(tempRoot, "stop-reason");
+        Directory.CreateDirectory(root);
+        var stateStore = new ServerLifecycleStateStore(root);
+        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Running, 7777, DateTimeOffset.UtcNow.AddMinutes(-3), false, "Running."));
+        var lifecycle = new WindowsServerLifecycleService(ServerPlatformProfile.Windows, new HarnessPathProfile(root), new EmptySessionInspector(), stateStore);
+        using (ServerStopReason.Begin("MystTiq closed with Exit (by Legacy shared token)"))
+            await lifecycle.StopAsync(TimeSpan.FromSeconds(1));
+        var saved = stateStore.Read();
+        Assert(saved is { Phase: ServerLifecyclePhase.Stopped, StopRequested: true, StopReason: "MystTiq closed with Exit (by Legacy shared token)" }, $"the stop's reason is saved with it, got {saved}");
+        var status = await lifecycle.GetStatusAsync();
+        Assert(status.LastStopReason == "MystTiq closed with Exit (by Legacy shared token)" && status.LastStopAt == saved!.LastTransitionAt,
+            $"the stopped server's status says why and when [{status.LastStopReason} at {status.LastStopAt}]");
+        await lifecycle.StopAsync(TimeSpan.FromSeconds(1));
+        Assert(stateStore.Read()!.StopReason == ServerStopReason.Unrecorded && (await lifecycle.GetStatusAsync()).LastStopReason == ServerStopReason.Unrecorded,
+            "a stop nobody explained says so, rather than keeping an older reason");
+        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Crashed, 7777, DateTimeOffset.UtcNow, false, "Gone without a stop."));
+        var crashed = await lifecycle.GetStatusAsync();
+        Assert(crashed.LastStopReason is null && crashed.LastStopAt is null, "a crashed server has no stop reason");
+        var older = System.Text.Json.JsonSerializer.Deserialize<PersistedServerLifecycleState>("""{"Phase":1,"LastKnownProcessId":null,"LastTransitionAt":"2026-10-18T10:00:00+00:00","StopRequested":true,"Detail":"old"}""");
+        Assert(older is { StopReason: null, Phase: ServerLifecyclePhase.Stopped }, "a state file from before v1.1.2.0 still reads (no reason)");
+    }, failures);
+
+    RunScenarioAsync("Stop reasons (F-19): each stop made through a server's services is reported with its reason (the activity log), a failing observer never fails the stop, and an API stop says who asked", async () =>
+    {
+        var inner = new ScriptedLifecycle { Running = true };
+        var wrapper = new PolicyApplyingLifecycle(inner);
+        var recorded = new List<(string Reason, bool Success)>();
+        wrapper.StopRecorded = (reason, result) => recorded.Add((reason, result.Success));
+        using (ServerStopReason.Begin("Automation rule 'Nightly stop'")) await wrapper.StopAsync(TimeSpan.FromSeconds(1));
+        await wrapper.StopAsync(TimeSpan.FromSeconds(1));
+        Assert(recorded.Count == 2 && recorded[0] == ("Automation rule 'Nightly stop'", true) && recorded[1].Reason == ServerStopReason.Unrecorded,
+            $"each stop is reported with its reason [{string.Join(" | ", recorded)}]");
+        wrapper.StopRecorded = (_, _) => throw new InvalidOperationException("observer failed");
+        inner.Running = true;
+        var stop = await wrapper.StopAsync(TimeSpan.FromSeconds(1));
+        Assert(stop.Success && !inner.Running, "a failing observer does not fail the stop");
+        var api = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        api.Items[RbacEndpointExtensions.PrincipalItemKey] = MystTiqPrincipal.LegacyOwner;
+        Assert(LocalManagementApiHost.ApiStopReason(api, "MystTiq closed with Exit", "Stop") == "MystTiq closed with Exit (by Legacy shared token)"
+               && LocalManagementApiHost.ApiStopReason(api, null, "Force stop") == "Force stop through the API (by Legacy shared token)"
+               && LocalManagementApiHost.ApiStopReason(new Microsoft.AspNetCore.Http.DefaultHttpContext(), " ", "Stop") == "Stop through the API",
+            "an API stop says why (the desktop's reason, else the route) and who asked");
+    }, failures);
+
+    // v1.1.2.0 (roadmap F-20): what "start with Windows" relies on. A server that was running when the computer went down
+    // reads as gone without a stop, and crash recovery starts it again; one stopped on purpose (with its reason) stays
+    // stopped.
+    RunScenarioAsync("Start with the computer (F-20): after a shutdown a server that was running is started again by crash recovery; one stopped on purpose stays stopped", async () =>
+    {
+        var root = Path.Combine(tempRoot, "resume-after-shutdown");
+        Directory.CreateDirectory(root);
+        var stateStore = new ServerLifecycleStateStore(root);
+        var lifecycle = new WindowsServerLifecycleService(ServerPlatformProfile.Windows, new HarnessPathProfile(root), new EmptySessionInspector(), stateStore);
+        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Running, 8888, DateTimeOffset.UtcNow.AddHours(-1), false, "Running."));
+        var afterReboot = await lifecycle.GetStatusAsync();
+        Assert(afterReboot.CrashDetected, $"a running server gone after a reboot is found gone without a stop, got {afterReboot.Phase}");
+        stateStore.Write(new PersistedServerLifecycleState(ServerLifecyclePhase.Stopped, null, DateTimeOffset.UtcNow.AddHours(-1), true, "Stopped.", "Stop in MystTiq (button or tray menu)"));
+        var stoppedOnPurpose = await lifecycle.GetStatusAsync();
+        Assert(!stoppedOnPurpose.CrashDetected && stoppedOnPurpose.Phase == ServerLifecyclePhase.Stopped, "a server stopped on purpose is not taken for a crash");
+
+        var crashed = new ScriptedLifecycle { Running = false, CrashFlag = true, Phase = ServerLifecyclePhase.Crashed };
+        var (loop, cts) = StartRecovery(crashed, new RecordingObserver());
+        Assert(WaitFor(() => crashed.Starts == 1), "crash recovery starts the server that was running");
+        cts.Cancel(); await loop;
+        var stopped = new ScriptedLifecycle { Running = false, CrashFlag = false, Phase = ServerLifecyclePhase.Stopped };
+        var (loop2, cts2) = StartRecovery(stopped, new RecordingObserver());
+        Thread.Sleep(300);
+        cts2.Cancel(); await loop2;
+        Assert(stopped.Starts == 0, "and leaves the one stopped on purpose alone");
     }, failures);
 }
 finally

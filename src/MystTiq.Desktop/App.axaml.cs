@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Linq;
 using System.Threading.Tasks;
 using MystTiq.Core.Services;
@@ -52,7 +52,12 @@ public sealed partial class App : Application
                 e.Handled = true;
             };
             CrashRecorder.Recorded += (source, error, path) => Dispatcher.UIThread.Post(() => viewModel.ShowUnexpectedError(source, error, path));
-            desktop.MainWindow = mainWindow;
+            // v1.1.2.0 (roadmap F-20): started with the computer (--tray), MystTiq opens in the tray; the tray icon's Show
+            // brings the window up. Everything else starts as usual (the helper, and with it a server to resume).
+            if (StartWithSystem.StartedInTray(desktop.Args))
+                mainWindow.ShowInTaskbar = false;
+            else
+                desktop.MainWindow = mainWindow;
 
             // v0.7.73.0: the tray icon is the one thing left visible once the window is hidden or
             // the GUI is fully gone (v0.7.73.0: "no tray icon"
@@ -161,6 +166,13 @@ public sealed partial class App : Application
     private static void Execute(System.Windows.Input.ICommand? command)
     {
         if (command?.CanExecute(null) == true) command.Execute(null);
+    }
+
+    // v1.1.2.0 (roadmap F-20): see MainWindow_Closing. Waits at most 4 s: Windows ends apps soon after asking.
+    public void CloseForSystemShutdown()
+    {
+        try { viewModel?.SaveWorldsForSystemShutdown(TimeSpan.FromSeconds(4)); } catch { /* never hold up the shutdown */ }
+        explicitExitRequested = true;
     }
 
     private void RequestExplicitExit()

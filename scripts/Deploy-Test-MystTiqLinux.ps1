@@ -1,4 +1,4 @@
-﻿# MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+﻿# MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 #requires -Version 7.0
 [CmdletBinding()]
 param(
@@ -66,7 +66,7 @@ function Initialize-Authentication {
             "-o", "PasswordAuthentication=no"
         )
 
-        & $ssh @script:SshArgs $target "printf 'MYSTTIQ_KEY_AUTH_OK\n'"
+        & $ssh -n @script:SshArgs $target "printf 'MYSTTIQ_KEY_AUTH_OK\n'"
         if ($LASTEXITCODE -eq 0) {
             Pass "Using dedicated MystTiq SSH key: $identity"
             return
@@ -105,7 +105,7 @@ Then rerun this deployment command.
 }
 
 function Invoke-Remote([string]$Command, [switch]$AllowFailure) {
-    & $ssh @script:SshArgs $target $Command
+    & $ssh -n @script:SshArgs $target $Command
     $code = $LASTEXITCODE
     if (-not $AllowFailure -and $code -ne 0) {
         throw "Remote command failed with exit code $code."

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.1.3: file reviewed for this release (2026-10-19). -->
+<!-- MystTiq v1.1.2.0: file reviewed for this release (2026-10-19). -->
 # v1.0.5.0 Changed Files
 
 - `src/MystTiq.Core/Services/ModArchivePlanner.cs` (new): what a MOD archive holds and whether MystTiq installs it.

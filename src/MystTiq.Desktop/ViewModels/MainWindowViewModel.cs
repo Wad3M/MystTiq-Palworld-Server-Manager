@@ -1,4 +1,4 @@
-// MystTiq v1.1.1.3: file reviewed for this release (2026-10-19).
+// MystTiq v1.1.2.0: file reviewed for this release (2026-10-19).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1285,6 +1285,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string ListenerText { get => _listenerText; private set => SetField(ref _listenerText, value); }
     public string LastObservedText { get => _lastObservedText; private set => SetField(ref _lastObservedText, value); }
     public string LastTransitionText { get => _lastTransitionText; private set => SetField(ref _lastTransitionText, value); }
+    // v1.1.2.0 (roadmap F-19): "Last stop: <reason> · <time>" while the server is stopped on purpose, else empty.
+    private string _lastStopText = string.Empty;
+    public string LastStopText { get => _lastStopText; private set => SetField(ref _lastStopText, value); }
+
+    public static string LastStopLine(ServerStatusDto status) =>
+        !status.IsProcessLive && !status.CrashDetected && status.LastStopReason is { Length: > 0 } reason
+            ? string.Format(Localizer.Instance["dashboard.lastStop"], reason, FormatTime(status.LastStopAt))
+            : string.Empty;
     public string UptimeText { get => _uptimeText; private set => SetField(ref _uptimeText, value); }
     public string PlayersState { get => _playersState; private set => SetField(ref _playersState, value); }
     public string OnlinePlayerCountText { get => _onlinePlayerCountText; private set => SetField(ref _onlinePlayerCountText, value); }
@@ -2363,7 +2371,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             }
 
             NewServerImportPrepareStatusText = "Stopping the server so its world can be safely replaced…";
-            await StopServerAsync();
+            await RunLifecycleAsync("Stopping…", (p, t, c) => _api.StopServerAsync(p, t, c, StopReasons.NewServerImport));
 
             NewServerImportReady = available;
             NewServerImportPrepareStatusText = available
@@ -3071,7 +3079,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         try { profile = BuildProfileFromTab(tab); }
         catch { return; }
 
-        try { await _api.StopServerAsync(profile, tab.BearerToken, CancellationToken.None); }
+        try { await _api.StopServerAsync(profile, tab.BearerToken, CancellationToken.None, StopReasons.TabClosed); }
         catch { /* best-effort -- the confirmation dialog already told the user what this would do */ }
     }
 
@@ -5025,14 +5033,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         return ManagementApiConnected;
     }
 
+    // v1.1.2.0 (roadmap F-19): each stop says why (see StopReasons).
     private async Task StopServerAsync() =>
-        await RunLifecycleAsync("Stopping…", _api.StopServerAsync);
+        await RunLifecycleAsync("Stopping…", (p, t, c) => _api.StopServerAsync(p, t, c, StopReasons.StopButton));
 
     private async Task RestartServerAsync() =>
-        await RunLifecycleAsync("Restarting…", _api.RestartServerAsync);
+        await RunLifecycleAsync("Restarting…", (p, t, c) => _api.RestartServerAsync(p, t, c, StopReasons.RestartButton));
 
     private async Task ForceStopServerAsync() =>
-        await RunLifecycleAsync("Force stopping…", _api.ForceStopServerAsync);
+        await RunLifecycleAsync("Force stopping…", (p, t, c) => _api.ForceStopServerAsync(p, t, c, StopReasons.ForceStopButton));
 
     public async Task ShutdownForExitAsync(bool force)
     {
@@ -5042,8 +5051,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             var profile = BuildProfileFromEditor(SelectedProfile?.Id);
             LifecycleStatusText = force ? "Force-stopping PalServer before exit…" : "Stopping PalServer safely before exit…";
             var result = force
-                ? await _api.ForceStopServerAsync(profile, BearerToken, CancellationToken.None)
-                : await _api.StopServerAsync(profile, BearerToken, CancellationToken.None);
+                ? await _api.ForceStopServerAsync(profile, BearerToken, CancellationToken.None, StopReasons.Exit(force))
+                : await _api.StopServerAsync(profile, BearerToken, CancellationToken.None, StopReasons.Exit(force));
             LifecycleStatusText = result.Message ?? (result.Success ? "PalServer stopped for application exit." : "PalServer shutdown reported a failure.");
         }
         catch (Exception ex)
@@ -5175,6 +5184,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         LastObservedText = FormatTime(status.ObservedAt);
         LastTransitionText = FormatTime(status.LastTransitionAt);
+        LastStopText = LastStopLine(status);
         UptimeText = status.Ready && status.LastTransitionAt is { } lastTransitionAt
             ? FormatDuration(DateTimeOffset.UtcNow - lastTransitionAt)
             : "—";
@@ -5188,7 +5198,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // the difference. Now they surface the backend's actual explanation.
         Dashboard.HealthDetail = status.Ready
             ? $"PalServer healthy · {ListenerText}"
-            : status.CrashDetected ? "Crash evidence detected; open Doctor." : (status.Detail ?? "Stopped intentionally or awaiting start.");
+            : status.CrashDetected ? "Crash evidence detected; open Doctor."
+            : LastStopText.Length > 0 ? LastStopText : (status.Detail ?? "Stopped intentionally or awaiting start.");
         Dashboard.SessionText = status.Ready ? $"Session {UptimeText}" : (status.Detail ?? "No active PalServer session");
     }
 
