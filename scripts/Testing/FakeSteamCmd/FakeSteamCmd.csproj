@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- v1.0.7.5 (roadmap Q-10): a stand-in for steamcmd.exe in the long test set. Test use only. -->
   <PropertyGroup>

@@ -4102,5 +4102,15 @@
   "dashboard.serverUpdate.safety": "Zuerst wird eine Sicherheitssicherung erstellt. Das Update läuft neben dem Server und wird auch beendet, wenn MystTiq geschlossen wird.",
   "dashboard.serverUpdate.current": "Steam meldet diesen Build als aktuell, daher gibt es eventuell nichts herunterzuladen.",
   "dashboard.serverUpdate.started": "Das Server-Update wurde gestartet.",
-  "dashboard.serverUpdate.refused": "Das Server-Update konnte nicht starten:"
+  "dashboard.serverUpdate.refused": "Das Server-Update konnte nicht starten:",
+  "ui.mode.simple": "Einfach",
+  "ui.mode.advanced": "Erweitert",
+  "uiMode.tip": "Zwischen Einfach (die alltäglichen Seiten) und Erweitert (alles) wechseln. Ausgeblendete Seiten bleiben einen Klick entfernt.",
+  "uiMode.notRemembered": "Der Modus wurde geändert, konnte aber nicht gespeichert werden:",
+  "settings.uiMode.label": "Oberflächenmodus",
+  "settings.uiMode.note": "Einfach zeigt die alltäglichen Seiten: Übersicht, Server-Einrichtung, Spieler, Backups, MODs, Updates und Einstellungen. Erweitert ergänzt die Fachseiten und die erweiterte Einstellungsansicht. Deaktiviert wird in keinem Modus etwas.",
+  "automation.simpleHint": "Automatisierungsregeln erstellen und ändern geht im Modus Erweitert (der Schalter in der Titelleiste).",
+  "settings.portable.title": "Portable Kopie",
+  "settings.portable.where": "Alles, was MystTiq speichert, liegt in {0}.",
+  "settings.portable.registry": "Eine portable Kopie schreibt nichts in Windows: Sie startet nicht mit Windows, übernimmt keine Nexus-Links und installiert keinen Windows-Dienst."
 }

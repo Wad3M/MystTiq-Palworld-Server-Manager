@@ -1,0 +1,9 @@
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
+# v1.1.5.0 Changed Files
+
+- `src/MystTiq.Desktop/MainWindow.Placement.cs` (new), `Services/WindowPlacement.cs` (new), `MainWindow.axaml`, `MainWindow.axaml.cs`, `App.axaml.cs`: resize grips on every edge and corner; the window's placement remembered and fitted onto the screens (V-1).
+- `src/MystTiq.Desktop/Services/SimpleMode.cs` (new), `ViewModels/MainWindowViewModel.UiMode.cs` (new), `Services/LocalDisplayPreferencesStore.cs`, `MainWindowViewModel.cs`, `MainWindow.axaml`: the Simple / Advanced switch (V-2).
+- `src/MystTiq.Core/Services/PortableMode.cs` (new) and the folder lookups in `HeadlessConfiguration.cs`, `HeadlessConfigurationService.cs`, `LocalInstallationDiscoveryService.cs`, the desktop's stores, `LocalManagementBootstrapper.cs`, `CrashRecorder.cs`, `NxmLinkHandoff.cs`, `StartWithSystem.cs`, `ModsViewModel.cs`, `DiagnosticsViewModel.cs`, `WorkspaceViewModel.cs`, `MainWindowViewModel.StartWithSystem.cs`; `src/MystTiq.HeadlessHost/Program.cs` (service-install refused): the portable copy (W-2).
+- `installer/` (new: `MystTiq.Installer.wixproj`, `Product.wxs`, `License.rtf`, `installed.txt`), `scripts/Build-WindowsInstaller.ps1` (new), `scripts/Package-GitHubRelease.ps1` (portable ZIP and setup beside the Windows ZIP), `.github/workflows/release.yml` (the setup hashed and attached; once SignPath is set up, the `.msi` itself signed as a second request with `.signpath/artifact-configuration-setup.xml`), `src/MystTiq.Desktop/Services/MystTiqSelfUpdate.cs` (an installed copy updates with the setup, a portable one with the portable ZIP): the Windows setup (W-1).
+- `src/MystTiq.Desktop/Assets/i18n/*.json`: 10 new keys in 12 languages.
+- Tests: `scripts/Test-v1.1.5.0-Logic.ps1`; LogicHarness (1 scenario), ArtworkHarness (7 checks).

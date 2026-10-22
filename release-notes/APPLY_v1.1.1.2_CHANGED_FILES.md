@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
 # v1.1.1.2 Changed Files
 
 - `src/MystTiq.HeadlessHost/HeadlessWorldClockService.cs`: `DecodedWorld` (the newest decoded copy, beside `Level.sav` or

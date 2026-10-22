@@ -4102,5 +4102,15 @@
   "dashboard.serverUpdate.safety": "会先创建安全备份。更新在服务器端运行，即使关闭 MystTiq 也会完成。",
   "dashboard.serverUpdate.current": "Steam 显示此版本为当前版本，可能没有需要下载的内容。",
   "dashboard.serverUpdate.started": "服务器更新已开始。",
-  "dashboard.serverUpdate.refused": "无法开始服务器更新："
+  "dashboard.serverUpdate.refused": "无法开始服务器更新：",
+  "ui.mode.simple": "简单",
+  "ui.mode.advanced": "高级",
+  "uiMode.tip": "在简单（日常页面）和高级（全部内容）之间切换。隐藏的页面只需一次点击即可回来。",
+  "uiMode.notRemembered": "模式已更改，但无法记住：",
+  "settings.uiMode.label": "界面模式",
+  "settings.uiMode.note": "简单模式显示日常页面：仪表板、服务器设置、玩家、备份、MOD、更新和设置。高级模式再加上专业页面和高级设置视图。两种模式都不会禁用任何功能。",
+  "automation.simpleHint": "创建和更改自动化规则请使用高级模式（标题栏中的开关）。",
+  "settings.portable.title": "便携版",
+  "settings.portable.where": "MystTiq 保存的所有内容都保存在 {0}。",
+  "settings.portable.registry": "便携版不会向 Windows 写入任何内容：不随 Windows 启动、不接收 Nexus 链接，也不安装 Windows 服务。"
 }

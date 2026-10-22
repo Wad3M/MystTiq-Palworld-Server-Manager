@@ -4102,5 +4102,15 @@
   "dashboard.serverUpdate.safety": "Primero se hace una copia de seguridad. La actualización se ejecuta junto al servidor y termina aunque se cierre MystTiq.",
   "dashboard.serverUpdate.current": "Steam indica que esta compilación es la actual, así que quizá no haya nada que descargar.",
   "dashboard.serverUpdate.started": "La actualización del servidor ha comenzado.",
-  "dashboard.serverUpdate.refused": "No se pudo iniciar la actualización del servidor:"
+  "dashboard.serverUpdate.refused": "No se pudo iniciar la actualización del servidor:",
+  "ui.mode.simple": "Simple",
+  "ui.mode.advanced": "Avanzado",
+  "uiMode.tip": "Cambia entre Simple (las páginas del día a día) y Avanzado (todo). Las páginas ocultas siguen a un clic.",
+  "uiMode.notRemembered": "El modo cambió, pero no se pudo recordar:",
+  "settings.uiMode.label": "Modo de interfaz",
+  "settings.uiMode.note": "Simple muestra las páginas del día a día: panel, configuración del servidor, jugadores, copias de seguridad, MODs, actualizaciones y ajustes. Avanzado añade las páginas especializadas y la vista de ajustes avanzados. En ningún modo se desactiva nada.",
+  "automation.simpleHint": "Crear y cambiar reglas de automatización está en el modo Avanzado (el interruptor de la barra de título).",
+  "settings.portable.title": "Copia portable",
+  "settings.portable.where": "Todo lo que guarda MystTiq se conserva en {0}.",
+  "settings.portable.registry": "Una copia portable no escribe nada en Windows: no se inicia con Windows, no recibe enlaces de Nexus ni instala un servicio de Windows."
 }

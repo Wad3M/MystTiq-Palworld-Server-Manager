@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
@@ -7,6 +7,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using MystTiq.Core.Models;
 using MystTiq.Desktop.Models;
+using MystTiq.Core.Services;
 
 namespace MystTiq.Desktop.Services;
 
@@ -155,7 +156,7 @@ public sealed class LocalDiagnosticsService
 
         try
         {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var localAppData = PortableMode.LocalAppData;
             var root = Path.GetPathRoot(localAppData);
             var drive = new DriveInfo(string.IsNullOrWhiteSpace(root) ? "C:\\" : root);
             var freeGiB = drive.AvailableFreeSpace / 1024d / 1024d / 1024d;

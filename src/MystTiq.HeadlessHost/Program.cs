@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -653,6 +653,12 @@ switch (command.ToLowerInvariant())
     case "service-run":
     case "service-unit":
     {
+        // v1.1.5.0 (roadmap W-2): a portable copy installs nothing on the computer.
+        if (command.Equals("service-install", StringComparison.OrdinalIgnoreCase) && PortableMode.IsActive)
+        {
+            Console.Error.WriteLine(PortableMode.RegistryRefusal + " Install MystTiq with its installer, or extract the regular ZIP, to run it as a service.");
+            return (int)HeadlessExitCode.InvalidArguments;
+        }
         var supervisorOptions = new HeadlessSupervisorOptions(
             TimeSpan.FromSeconds(GetIntOption("--service-poll-seconds", headlessConfiguration.Lifecycle.ServicePollSeconds)),
             TimeSpan.FromSeconds(GetIntOption("--startup-timeout-seconds", headlessConfiguration.Lifecycle.StartupTimeoutSeconds)),

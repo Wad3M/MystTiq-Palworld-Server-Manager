@@ -1,0 +1,2 @@
+Installed by the MystTiq setup (.msi).
+The Update Center updates this copy with the next setup. Uninstall it from Apps & features; servers, backups and settings are kept.

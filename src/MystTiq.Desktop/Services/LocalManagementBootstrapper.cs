@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
@@ -71,7 +71,9 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
         ArgumentNullException.ThrowIfNull(snapshot);
         var requestedEndpoint = string.IsNullOrWhiteSpace(snapshot.ApiBaseAddress) ? "http://127.0.0.1:8213" : snapshot.ApiBaseAddress.TrimEnd('/');
         var existing = await ProbeAsync(requestedEndpoint, cancellationToken);
-        if (existing.Compatible && !existing.AuthenticationEnabled && !existing.TlsEnabled && HasExpectedProfile(existing, expectedServerProfileId) && VersionMatches(existing.Version))
+        // v1.1.5.0 (roadmap W-2): a portable copy uses only the helper it started itself (below); one already answering on
+        // the configured port belongs to an installed copy, whose settings it must not share.
+        if (!PortableMode.IsActive && existing.Compatible && !existing.AuthenticationEnabled && !existing.TlsEnabled && HasExpectedProfile(existing, expectedServerProfileId) && VersionMatches(existing.Version))
             return new(true, false, requestedEndpoint, $"Compatible MystTiq management API is already reachable ({existing.Version ?? "unknown version"}).", existing.Version);
 
         // A same-machine instance that IS reachable/compatible but reports a DIFFERENT version is a
@@ -89,7 +91,7 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
         try
         {
             existing = await ProbeAsync(requestedEndpoint, cancellationToken);
-            if (existing.Compatible && !existing.AuthenticationEnabled && !existing.TlsEnabled && HasExpectedProfile(existing, expectedServerProfileId) && VersionMatches(existing.Version))
+            if (!PortableMode.IsActive && existing.Compatible && !existing.AuthenticationEnabled && !existing.TlsEnabled && HasExpectedProfile(existing, expectedServerProfileId) && VersionMatches(existing.Version))
                 return new(true, false, requestedEndpoint, $"Compatible MystTiq management API became reachable while bootstrap was waiting ({existing.Version ?? "unknown version"}).", existing.Version);
             if (existing.Reachable && existing.Compatible && !VersionMatches(existing.Version))
             {
@@ -349,8 +351,8 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
     private string GetLocalRuntimeRoot()
     {
         if (!string.IsNullOrWhiteSpace(runtimeRootOverride)) return runtimeRootOverride;
-        if (OperatingSystem.IsWindows())
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MystTiq", "runtime");
+        if (OperatingSystem.IsWindows() || PortableMode.IsActive)
+            return Path.Combine(PortableMode.LocalAppData, "MystTiq", "runtime");
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(home, ".local", "state", "mysttiq", "runtime");
     }

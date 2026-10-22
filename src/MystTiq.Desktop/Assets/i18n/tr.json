@@ -4102,5 +4102,15 @@
   "dashboard.serverUpdate.safety": "Önce bir güvenlik yedeği alınır. Güncelleme sunucunun yanında çalışır ve MystTiq kapatılsa bile tamamlanır.",
   "dashboard.serverUpdate.current": "Steam bu derlemenin güncel olduğunu bildiriyor, bu yüzden indirilecek bir şey olmayabilir.",
   "dashboard.serverUpdate.started": "Sunucu güncellemesi başladı.",
-  "dashboard.serverUpdate.refused": "Sunucu güncellemesi başlatılamadı:"
+  "dashboard.serverUpdate.refused": "Sunucu güncellemesi başlatılamadı:",
+  "ui.mode.simple": "Basit",
+  "ui.mode.advanced": "Gelişmiş",
+  "uiMode.tip": "Basit (günlük sayfalar) ile Gelişmiş (her şey) arasında geçiş yapın. Gizlenen sayfalar bir tık uzakta kalır.",
+  "uiMode.notRemembered": "Mod değişti ancak hatırlanamadı:",
+  "settings.uiMode.label": "Arayüz modu",
+  "settings.uiMode.note": "Basit mod günlük sayfaları gösterir: pano, sunucu kurulumu, oyuncular, yedekler, MOD'lar, güncellemeler ve ayarlar. Gelişmiş mod uzman sayfalarını ve gelişmiş ayarlar görünümünü ekler. Hiçbir modda bir şey devre dışı bırakılmaz.",
+  "automation.simpleHint": "Otomasyon kuralları oluşturmak ve değiştirmek Gelişmiş moddadır (başlık çubuğundaki anahtar).",
+  "settings.portable.title": "Taşınabilir kopya",
+  "settings.portable.where": "MystTiq'in kaydettiği her şey {0} içinde tutulur.",
+  "settings.portable.registry": "Taşınabilir kopya Windows'a hiçbir şey yazmaz: Windows ile başlamaz, Nexus bağlantılarını almaz ve Windows hizmeti kurmaz."
 }

@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -100,7 +100,7 @@ public sealed class WorkspaceViewModel : PageViewModel
 
     public string WorkspaceExecutableRoot => AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-    public string WorkspaceApplicationData => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "MystTiqPalworldServer");
+    public string WorkspaceApplicationData => Path.Combine(PortableMode.CommonAppData, "MystTiqPalworldServer");
 
     public string WorkspaceRoot => Path.Combine(WorkspaceApplicationData, "Workspace");
 

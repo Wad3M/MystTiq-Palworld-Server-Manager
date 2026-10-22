@@ -1,4 +1,4 @@
-# MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+# MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 [CmdletBinding()]
 param(
     # Path to a single file, or a directory to sign every .exe/.dll in (non-recursive by default).

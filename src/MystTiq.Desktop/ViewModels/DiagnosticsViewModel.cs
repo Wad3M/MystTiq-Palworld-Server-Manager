@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -668,7 +668,7 @@ public sealed class DiagnosticsViewModel : PageViewModel
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("MystTiq-Palworld-Server-Manager");
-            var fallback = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MystTiq", "versions");
+            var fallback = Path.Combine(PortableMode.LocalAppData, "MystTiq", "versions");
             var progress = new Progress<string>(text => ComponentUpdateMessage = text);
             var result = await new MystTiqSelfUpdate(http).DownloadAsync(version, AppContext.BaseDirectory, fallback, progress, CancellationToken.None);
             ComponentUpdateMessage = result.Message;

@@ -1,5 +1,6 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Text.Json;
+using MystTiq.Core.Services;
 
 namespace MystTiq.Desktop.Services;
 
@@ -52,6 +53,8 @@ public sealed class LocalThemePreferencesStore
 
     private static string GetConfigRoot()
     {
+        // v1.1.5.0 (roadmap W-2): a portable copy keeps its settings beside it.
+        if (PortableMode.DataRoot is not null) return PortableMode.RoamingAppData;
         if (OperatingSystem.IsWindows())
             return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 

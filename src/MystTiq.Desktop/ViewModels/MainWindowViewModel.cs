@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -190,6 +190,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         };
         _displayPreferences = displayPreferencesStore ?? new LocalDisplayPreferencesStore();
         ThemeApplier.ApplyDensity(_displayPreferences.LoadDensity());
+        // v1.1.5.0 (roadmap V-2).
+        LoadUiMode();
         // v0.8.16.0: a tab set to follow the system changes with it (Windows' app mode, the Linux desktop's color scheme).
         if (Avalonia.Application.Current?.PlatformSettings is { } platformSettings)
             platformSettings.ColorValuesChanged += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(OnSystemThemeChanged);
@@ -1536,6 +1538,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(PageTitle));
         RaisePropertyChanged(nameof(PageSubtitle));
         RaisePropertyChanged(nameof(SelectedUiLanguage));
+        RaisePropertyChanged(nameof(UiModeLabel));
+        RaisePropertyChanged(nameof(UiModeLabels));
+        RaisePropertyChanged(nameof(SelectedUiModeIndex));
         // v0.9.2.0: item and Pal names come in the display language; a loaded picker is read again (the map refreshes itself).
         Players.OnLanguageChanged();
     }
@@ -4063,6 +4068,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(CanManageAdmin));
         RaisePropertyChanged(nameof(CanManagePrincipals));
         RaisePropertyChanged(nameof(CanUpdateServer));
+        RaisePropertyChanged(nameof(ShowAutomationRuleEditor));
+        RaisePropertyChanged(nameof(ShowAutomationSimpleHint));
         RaisePropertyChanged(nameof(RoleHiddenNotice));
         RaisePropertyChanged(nameof(HasRoleHiddenNotice));
         RaisePropertyChanged(nameof(SignedInText));

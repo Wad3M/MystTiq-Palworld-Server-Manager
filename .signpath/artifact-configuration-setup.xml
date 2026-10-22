@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
+<!-- v1.1.5.0 (roadmap W-1): SignPath artifact configuration for the Windows setup. Paste it into the SignPath project as a
+     second artifact configuration (slug: windows-setup). The release workflow builds the setup from the already-signed app
+     files, uploads the .msi alone as a GitHub artifact (a ZIP holding that one file), and this signs the .msi itself, the
+     file SmartScreen checks when the setup is run. Its product name and version match the app's. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <msi-file path="MystTiqPalworldServer_v${version}_Windows-x64.msi" product-name="MystTiq Palworld Server Manager" product-version="${version}">
+      <authenticode-sign />
+    </msi-file>
+  </zip-file>
+</artifact-configuration>

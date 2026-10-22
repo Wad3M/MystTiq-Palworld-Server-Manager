@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -90,7 +90,7 @@ internal sealed class CrossPlatformLocalInstallationDiscoveryService : ILocalIns
         var candidates = new List<string>();
         if (OperatingSystem.IsWindows())
         {
-            var common = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+            var common = PortableMode.CommonAppData;
             candidates.Add(Path.Combine(common, "MystTiqPalworldServer", "mysttiq.json"));
             candidates.Add(Path.Combine(common, "MystTiq", "mysttiq.json"));
             candidates.Add(Path.Combine(AppContext.BaseDirectory, "mysttiq.json"));
@@ -105,7 +105,7 @@ internal sealed class CrossPlatformLocalInstallationDiscoveryService : ILocalIns
 
     private static string? FindLegacySettingsPath()
     {
-        var common = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        var common = PortableMode.CommonAppData;
         var path = Path.Combine(common, "MystTiqPalworldServer", "settings-v2.1.json");
         return File.Exists(path) ? path : null;
     }

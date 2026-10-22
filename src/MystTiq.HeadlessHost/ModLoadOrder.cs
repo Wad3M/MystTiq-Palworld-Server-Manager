@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 namespace MystTiq.HeadlessHost;
 
 /// <summary>One UE4SS MOD line of <c>mods.txt</c>, in the order UE4SS loads it.</summary>

@@ -4102,5 +4102,15 @@
   "dashboard.serverUpdate.safety": "먼저 안전 백업을 만듭니다. 업데이트는 서버 쪽에서 실행되며 MystTiq를 닫아도 끝까지 진행됩니다.",
   "dashboard.serverUpdate.current": "Steam에 따르면 이 빌드가 최신이므로 다운로드할 것이 없을 수 있습니다.",
   "dashboard.serverUpdate.started": "서버 업데이트를 시작했습니다.",
-  "dashboard.serverUpdate.refused": "서버 업데이트를 시작할 수 없습니다:"
+  "dashboard.serverUpdate.refused": "서버 업데이트를 시작할 수 없습니다:",
+  "ui.mode.simple": "간단히",
+  "ui.mode.advanced": "고급",
+  "uiMode.tip": "간단히(일상적인 페이지)와 고급(모두) 사이를 전환합니다. 숨겨진 페이지도 한 번의 클릭으로 볼 수 있습니다.",
+  "uiMode.notRemembered": "모드는 바뀌었지만 저장할 수 없었습니다:",
+  "settings.uiMode.label": "인터페이스 모드",
+  "settings.uiMode.note": "간단히 모드는 일상적인 페이지(대시보드, 서버 설정, 플레이어, 백업, MOD, 업데이트, 설정)를 보여 줍니다. 고급 모드는 전문 페이지와 고급 설정 보기를 더합니다. 어느 모드에서도 꺼지는 기능은 없습니다.",
+  "automation.simpleHint": "자동화 규칙 만들기와 변경은 고급 모드(제목 표시줄의 스위치)에서 할 수 있습니다.",
+  "settings.portable.title": "휴대용 사본",
+  "settings.portable.where": "MystTiq가 저장하는 모든 것은 {0}에 보관됩니다.",
+  "settings.portable.registry": "휴대용 사본은 Windows에 아무것도 쓰지 않습니다. Windows와 함께 시작하지 않고, Nexus 링크를 받지 않으며, Windows 서비스를 설치하지 않습니다."
 }

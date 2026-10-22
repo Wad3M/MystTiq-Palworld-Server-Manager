@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -2286,6 +2286,144 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Check(whileRunning && after && lines.Count == 4 && lines[0] == "Installed build 25300000; Steam's public build 25300000." && lines[^1].StartsWith("Steam reports this build is current"),
         $"U-1: while an update runs the card shows its step and the button waits; afterwards the build and the result; the confirmation says what happens [{string.Join(" | ", lines)}]");
     connected.SetValue(vm, false);
+}
+
+// v1.1.5.0 (roadmap V-1): the window can be sized from every edge and corner (grips hidden while maximized), and its placement
+// is fitted back onto the screens there are.
+{
+    var grips = window.GetVisualDescendants().OfType<Grid>().FirstOrDefault(g => g.Name == "ResizeGrips");
+    var edges = grips?.Children.OfType<Border>().Select(b => b.Tag as string).Where(t => t is not null).OrderBy(t => t).ToArray() ?? [];
+    var allEdges = Enum.GetNames<WindowEdge>().OrderBy(n => n).ToArray();
+    window.WindowState = WindowState.Normal; Dispatcher.UIThread.RunJobs();
+    var shownNormal = grips?.IsVisible == true;
+    window.WindowState = WindowState.Maximized; Dispatcher.UIThread.RunJobs();
+    var hiddenMaximized = grips?.IsVisible == false;
+    window.WindowState = WindowState.Normal; Dispatcher.UIThread.RunJobs();
+    Check(edges.SequenceEqual(allEdges) && shownNormal && hiddenMaximized && window.CanResize,
+        $"V-1: the window has a resize grip on every edge and corner ({string.Join(", ", edges)}), shown when normal and hidden when maximized");
+
+    var screen = new ScreenArea(0, 0, 1920, 1040);
+    var second = new ScreenArea(1920, 0, 2560, 1400);
+    var kept = WindowPlacement.Fit(new WindowPlacementState(100, 80, 1300, 800, false), [screen], 950, 650);
+    var lostMonitor = WindowPlacement.Fit(new WindowPlacementState(4600, 200, 1300, 800, true), [screen], 950, 650);
+    var tooBig = WindowPlacement.Fit(new WindowPlacementState(0, 0, 5000, 3000, false), [screen], 950, 650);
+    var tooSmall = WindowPlacement.Fit(new WindowPlacementState(10, 10, 400, 300, false), [screen], 950, 650);
+    var aboveTop = WindowPlacement.Fit(new WindowPlacementState(200, -20, 1200, 800, false), [screen, second], 950, 650);
+    var onSecond = WindowPlacement.Fit(new WindowPlacementState(2100, 100, 1500, 900, false), [screen, second], 950, 650);
+    Check(kept == new WindowPlacementState(100, 80, 1300, 800, false)
+          && lostMonitor is { Maximized: true } && lostMonitor.X >= 0 && lostMonitor.X + lostMonitor.Width <= 1920 && lostMonitor.Y >= 0
+          && tooBig is { Width: 1920, Height: 1040 } && tooSmall is { Width: 950, Height: 650 } && aboveTop is { Y: 0 }
+          && onSecond == new WindowPlacementState(2100, 100, 1500, 900, false)
+          && WindowPlacement.Fit(null, [screen], 950, 650) is null && WindowPlacement.Fit(kept, [], 950, 650) is null,
+        $"V-1: a remembered placement is kept when on screen, moved onto a screen when its monitor is gone (staying maximized), cut to the screen, raised to the minimum, and never above the top [{lostMonitor}]");
+
+    var placementFile = Path.Combine(output, "window-placement.json");
+    var placementStore = new LocalWindowPlacementStore();
+    typeof(LocalWindowPlacementStore).GetField("<StoragePath>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(placementStore, placementFile);
+    placementStore.Save(new WindowPlacementState(120, 90, 1280, 820, true));
+    var reloaded = placementStore.Load();
+    File.WriteAllText(placementFile, "{ not json");
+    Check(reloaded == new WindowPlacementState(120, 90, 1280, 820, true) && placementStore.Load() is null,
+        "V-1: the placement is remembered (size, position, maximized), and an unreadable file is ignored");
+
+    // Every page lays out at a mid size and at 4K, as at the minimum (checked elsewhere).
+    var bigProblems = new List<string>();
+    foreach (var (w, h) in new[] { (1680.0, 1050.0), (2560.0, 1440.0), (3840.0, 2160.0) })
+    {
+        window.Width = w; window.Height = h;
+        foreach (var page in Enum.GetValues<NavigationPage>())
+        {
+            try
+            {
+                selectedPage.SetValue(vm, page);
+                Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+                var bigHeader = window.FindControl<Border>("PageArtHeader");
+                var right = bigHeader is null ? 0 : bigHeader.TranslatePoint(new Point(bigHeader.Bounds.Width, 0), window)!.Value.X;
+                if (bigHeader is null || right < w - 40 || right > w + 0.5) bigProblems.Add($"{page}@{w}: header to {right:0}");
+            }
+            catch (Exception ex) { bigProblems.Add($"{page}@{w}: {ex.GetType().Name}"); }
+        }
+    }
+    window.Width = 3840; window.Height = 2160;
+    selectedPage.SetValue(vm, NavigationPage.Dashboard);
+    Render("dashboard-3840x2160");
+    window.Width = 1440; window.Height = 880;
+    Dispatcher.UIThread.RunJobs();
+    Check(bigProblems.Count == 0, $"V-1: every page lays out at 1680x1050, 2560x1440 and 3840x2160, its header reaching the right edge [{string.Join("; ", bigProblems.Take(8))}]");
+}
+
+// v1.1.5.0 (roadmap V-2): Simple hides the specialist pages from the menus (and Configuration's Advanced view and the rule
+// editor), remembers the choice, and disables nothing; Advanced shows everything again.
+{
+    bool NavVisible(string page) => window.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>()
+        .Where(b => b.Classes.Contains("nav") && Equals(b.CommandParameter, page)).Any(b => b.IsVisible);
+    Avalonia.Controls.Primitives.ToggleButton? Category(string cls) => window.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>()
+        .FirstOrDefault(b => b.Classes.Contains("categoryTab") && b.Classes.Contains(cls));
+    var advancedFirst = vm.IsAdvancedMode && !vm.IsSimpleMode;
+    var allAdvanced = Enum.GetValues<NavigationPage>().Where(p => window.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>().Any(b => b.Classes.Contains("nav") && Equals(b.CommandParameter, p.ToString())))
+        .All(p => NavVisible(p.ToString()));
+    selectedPage.SetValue(vm, NavigationPage.Fleet);
+    vm.ToggleUiModeCommand.Execute(null);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var wrong = Enum.GetValues<NavigationPage>().Where(p => window.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>().Any(b => b.Classes.Contains("nav") && Equals(b.CommandParameter, p.ToString())))
+        .Where(p => NavVisible(p.ToString()) == SimpleMode.Hides(p)).Select(p => p.ToString()).ToList();
+    var leftHiddenPage = vm.SelectedPage == NavigationPage.Dashboard;
+    var host = Category("host"); var world = Category("world"); var mods = Category("mods");
+    var modeTabs = host is { IsVisible: false } && Equals(world?.CommandParameter, "Players") && Equals(mods?.CommandParameter, "ModLibrary");
+    selectedPage.SetValue(vm, NavigationPage.Configuration); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var advancedButton = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Command == vm.Configuration.ShowAdvancedConfigCommand);
+    var configSimple = advancedButton is { IsVisible: false } && vm.Configuration.IsConfigSimpleView;
+    selectedPage.SetValue(vm, NavigationPage.Automation); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    bool Named(string name) => window.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.Name == name)?.IsEffectivelyVisible == true;
+    var automation = !Named("AutomationRuleEditor") && Named("AutomationSimpleHint");
+    var remembered = new LocalDisplayPreferencesStore();
+    typeof(LocalDisplayPreferencesStore).GetField("<StoragePath>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(remembered, Path.Combine(output, nameof(LocalDisplayPreferencesStore) + ".json"));
+    var saved = remembered.LoadUiMode() == SimpleMode.Simple && vm.UiModeLabel == "Simple";
+    vm.NavigateCommand.Execute("Fleet"); Dispatcher.UIThread.RunJobs();
+    var stillReachable = vm.SelectedPage == NavigationPage.Fleet;
+    Localizer.Instance.SetLanguage("de"); Dispatcher.UIThread.RunJobs();
+    var relabelled = vm.UiModeLabel == "Einfach";
+    Localizer.Instance.SetLanguage("en");
+    var modeToggle = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "UiModeToggle");
+    vm.SelectedUiModeIndex = 1;
+    selectedPage.SetValue(vm, NavigationPage.Automation);
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var backToAdvanced = vm.IsAdvancedMode && Category("host")?.IsVisible == true && NavVisible("Fleet") && Named("AutomationRuleEditor") && remembered.LoadUiMode() == SimpleMode.Advanced;
+    selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs();
+    Check(advancedFirst && allAdvanced && wrong.Count == 0 && leftHiddenPage && modeTabs && configSimple && automation && saved && stillReachable && relabelled && modeToggle is { IsEffectivelyVisible: true } && backToAdvanced,
+        $"V-2: Simple hides exactly the specialist pages from the menus (and HOST), the World and MODs tabs open a shown page, Configuration has no Advanced view and Automation no rule editor, the choice is remembered and translated, a hidden page still opens, and Advanced brings everything back [wrong {string.Join(",", wrong)}; left {leftHiddenPage}, tabs {modeTabs}, config {configSimple}, automation {automation}, saved {saved}, reachable {stillReachable}, relabel {relabelled}, back {backToAdvanced}]");
+}
+
+// v1.1.5.0 (roadmap W-2, W-1): a portable copy keeps everything in its data folder and writes nothing to Windows; the Update
+// Center updates each kind of copy with its own download.
+{
+    var portableRoot = Path.Combine(output, "portable-copy", MystTiq.Core.Services.PortableMode.DataFolderName);
+    bool portableOk;
+    string portableDetail;
+    using (MystTiq.Core.Services.PortableMode.UseForTests(portableRoot))
+    {
+        var display = new LocalDisplayPreferencesStore();
+        var placement = new LocalWindowPlacementStore();
+        var credentials2 = new CredentialStore();
+        portableOk = display.StoragePath.StartsWith(Path.Combine(portableRoot, "config")) && placement.StoragePath.StartsWith(Path.Combine(portableRoot, "config"))
+                     && !StartWithSystem.IsSupported && !vm.StartWithSystemSupported && vm.IsPortableCopy && vm.PortableDataText.Contains(portableRoot)
+                     && MystTiq.Core.Services.HeadlessConfigurationService.WindowsDefaultPath.StartsWith(Path.Combine(portableRoot, "service"));
+        portableDetail = $"{display.StoragePath}; {MystTiq.Core.Services.HeadlessConfigurationService.WindowsDefaultPath}";
+    }
+    var normalAgain = !new LocalDisplayPreferencesStore().StoragePath.Contains("portable-copy") && !vm.IsPortableCopy;
+    var kinds = Path.Combine(output, "copy-kinds");
+    foreach (var d in new[] { "zip", "setup", "portable" }) Directory.CreateDirectory(Path.Combine(kinds, d));
+    File.WriteAllText(Path.Combine(kinds, "setup", "installed.txt"), "x");
+    File.WriteAllText(Path.Combine(kinds, "portable", "portable.txt"), "x");
+    var kindOk = MystTiqSelfUpdate.KindOf(Path.Combine(kinds, "zip")) == MystTiqSelfUpdate.CopyKind.Zip
+                 && MystTiqSelfUpdate.KindOf(Path.Combine(kinds, "setup")) == MystTiqSelfUpdate.CopyKind.Setup
+                 && MystTiqSelfUpdate.KindOf(Path.Combine(kinds, "portable")) == MystTiqSelfUpdate.CopyKind.Portable
+                 && MystTiqSelfUpdate.AssetName("1.1.5.0", true, MystTiqSelfUpdate.CopyKind.Setup) == "MystTiqPalworldServer_v1.1.5.0_Windows-x64.msi"
+                 && MystTiqSelfUpdate.AssetName("1.1.5.0", true, MystTiqSelfUpdate.CopyKind.Portable) == "MystTiqPalworldServer_v1.1.5.0_Windows-x64-Portable.zip"
+                 && MystTiqSelfUpdate.AssetName("1.1.5.0", true, MystTiqSelfUpdate.CopyKind.Zip) == "MystTiqPalworldServer_v1.1.5.0_Windows-x64.zip";
+    Directory.Delete(Path.Combine(output, "copy-kinds"), true);
+    Check(portableOk && normalAgain && kindOk,
+        $"W-2/W-1: a portable copy keeps its settings and the service's configuration in its data folder and offers no sign-in start; the Update Center picks the setup, the portable ZIP or the ZIP by how the copy was installed [{portableDetail}]");
 }
 
 Console.WriteLine($"PASS {checks} checks. Offline headless rendering only; no live server acceptance.");

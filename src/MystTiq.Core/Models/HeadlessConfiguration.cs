@@ -1,5 +1,6 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 namespace MystTiq.Core.Models;
+using MystTiq.Core.Services;
 
 public sealed record HeadlessApiAuthenticationConfiguration(
     bool Enabled,
@@ -78,7 +79,7 @@ public sealed record HeadlessConfiguration(
 
     public static HeadlessConfiguration CreateWindowsDefault()
     {
-        var common = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        var common = PortableMode.CommonAppData;
         var root = Path.Combine(common, "MystTiqPalworldServer");
         return new(
             CurrentSchemaVersion,

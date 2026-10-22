@@ -4102,5 +4102,15 @@
   "dashboard.serverUpdate.safety": "A safety backup is taken first. The update runs next to the server and finishes even if MystTiq is closed.",
   "dashboard.serverUpdate.current": "Steam reports this build is current, so there may be nothing to download.",
   "dashboard.serverUpdate.started": "The server update has started.",
-  "dashboard.serverUpdate.refused": "The server update could not start:"
+  "dashboard.serverUpdate.refused": "The server update could not start:",
+  "ui.mode.simple": "Simple",
+  "ui.mode.advanced": "Advanced",
+  "uiMode.tip": "Switch between Simple (the everyday pages) and Advanced (everything). Hidden pages stay one click away.",
+  "uiMode.notRemembered": "The mode changed, but it could not be remembered:",
+  "settings.uiMode.label": "Interface mode",
+  "settings.uiMode.note": "Simple shows the everyday pages: Dashboard, server setup, players, backups, MODs, updates and settings. Advanced adds the specialist pages and the Advanced settings view. Nothing is disabled either way.",
+  "automation.simpleHint": "Creating and changing automation rules is in Advanced mode (the switch in the title bar).",
+  "settings.portable.title": "Portable copy",
+  "settings.portable.where": "Everything MystTiq saves is kept in {0}.",
+  "settings.portable.registry": "A portable copy writes nothing to Windows: it does not start with Windows, take Nexus links or install a Windows service."
 }

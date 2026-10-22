@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
 # v1.0.3.0 Changed Files
 
 - `src/MystTiq.HeadlessHost/BrowserView.cs` (new): the read-only page (HTML, script, style), its content policy, and the

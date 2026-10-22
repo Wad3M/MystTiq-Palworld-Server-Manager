@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -232,6 +232,7 @@ public sealed partial class MainWindow : Window
     {
         if (MaximizeGlyph is not null)
             MaximizeGlyph.Data = WindowState == WindowState.Maximized ? RestoreIcon : MaximizeIcon;
+        UpdateResizeGrips();
     }
 
     // v0.7.11.0 and v0.7.73.0 exited when nothing ran and asked first (ConfirmMinimizeToTrayDialog) when a server ran.

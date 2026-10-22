@@ -1,10 +1,10 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Text.Json;
 
 namespace MystTiq.Desktop.Services;
 
-// v0.8.16.0: display preferences that apply to every tab (the theme mode is per tab, in ConnectionProfile). Today that
-// is density. A sibling file of the other Desktop-local preferences, in the same MystTiq config folder.
+// v0.8.16.0: display preferences that apply to every tab (the theme mode is per tab, in ConnectionProfile): density, and
+// since v1.1.5.0 the Simple or Advanced mode. A sibling file of the other Desktop-local preferences, in the same MystTiq config folder.
 public sealed class LocalDisplayPreferencesStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -35,13 +35,31 @@ public sealed class LocalDisplayPreferencesStore
         }
     }
 
-    public void SaveDensity(string density)
+    public void SaveDensity(string density) => Write(Read() with { Density = ThemeCatalog.NormalizeDensity(density) });
+
+    // v1.1.5.0 (roadmap V-2): Simple or Advanced, remembered per person on this computer; Advanced when never chosen.
+    public string LoadUiMode() => SimpleMode.Normalize(Read().UiMode);
+
+    public void SaveUiMode(string mode) => Write(Read() with { UiMode = SimpleMode.Normalize(mode) });
+
+    private DisplayPreferences Read()
+    {
+        try
+        {
+            return File.Exists(StoragePath)
+                ? JsonSerializer.Deserialize<DisplayPreferences>(File.ReadAllText(StoragePath), JsonOptions) ?? new DisplayPreferences(null)
+                : new DisplayPreferences(null);
+        }
+        catch { return new DisplayPreferences(null); }
+    }
+
+    private void Write(DisplayPreferences preferences)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(StoragePath)!);
         var temp = StoragePath + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(new DisplayPreferences(ThemeCatalog.NormalizeDensity(density)), JsonOptions));
+        File.WriteAllText(temp, JsonSerializer.Serialize(preferences, JsonOptions));
         File.Move(temp, StoragePath, overwrite: true);
     }
 
-    private sealed record DisplayPreferences(string? Density);
+    private sealed record DisplayPreferences(string? Density, string? UiMode = null);
 }

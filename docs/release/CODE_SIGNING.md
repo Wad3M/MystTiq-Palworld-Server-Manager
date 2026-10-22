@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
 # Code signing with SignPath (setup)
 
 Requested 2026-09-30: sign the Windows download through SignPath. The release workflow is ready; it signs as soon as the
@@ -29,7 +29,9 @@ In SignPath.io:
 1. Add the predefined trusted build system **GitHub.com** to the organization and install the SignPath GitHub App on the
    repository.
 2. Create the project (for example slug `mysttiq`) linked to that trusted build system.
-3. Add an artifact configuration (slug `windows-app`) with the contents of `.signpath/artifact-configuration.xml`.
+3. Add an artifact configuration (slug `windows-app`) with the contents of `.signpath/artifact-configuration.xml`, and
+   (v1.1.5.0) a second one (slug `windows-setup`) with `.signpath/artifact-configuration-setup.xml`, which signs the
+   Windows setup (`.msi`) itself.
 4. Add a signing policy (for example slug `release-signing`) with the Foundation's certificate and manual approval.
 5. Create an API token for a CI user with the submitter role on that project.
 
@@ -39,11 +41,14 @@ In GitHub, Settings → Secrets and variables → Actions:
 
 - secret `SIGNPATH_API_TOKEN`: the API token;
 - variables `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG`,
-  `SIGNPATH_ARTIFACT_CONFIGURATION_SLUG`.
+  `SIGNPATH_ARTIFACT_CONFIGURATION_SLUG`, and optionally `SIGNPATH_SETUP_ARTIFACT_CONFIGURATION_SLUG` (when the setup's
+  configuration is not named `windows-setup`).
 
 ## 4. Release
 
 Push the tag as usual. The workflow stages the Windows app, uploads it, and submits the signing request. Approve it in
 SignPath; the workflow waits up to 24 hours. It then checks that each MystTiq binary has a valid signature, makes the ZIP
-from the signed files, and creates the draft release. A tag pushed before step 3 gives an unsigned release. v1.0.0.0 was published unsigned
+from the signed files, and creates the draft release. Since v1.1.5.0 it then builds the setup from those signed files
+and submits the `.msi` as a second request (approve that one too); it checks the setup's signature and attaches the
+signed `.msi`. The portable ZIP is made from the signed files as well. A tag pushed before step 3 gives an unsigned release. v1.0.0.0 was published unsigned
 (2026-09-30); the first signed release is planned as v1.0.1, tagged once steps 1–3 are done.

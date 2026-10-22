@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using MystTiq.Desktop.Services;
 
 namespace MystTiq.Desktop.ViewModels;
@@ -35,6 +35,12 @@ public sealed partial class MainWindowViewModel
             RaisePropertyChanged(nameof(StartWithSystemPointsElsewhere));
         }
     }
+
+    // v1.1.5.0 (roadmap W-2): a portable copy says so, and where it keeps everything.
+    public bool IsPortableCopy => MystTiq.Core.Services.PortableMode.IsActive;
+    public string PortableDataText => MystTiq.Core.Services.PortableMode.DataRoot is { } root
+        ? string.Format(Localizer.Instance["settings.portable.where"], root)
+        : string.Empty;
 
     /// <summary>On, but for a different copy of MystTiq (an older install folder).</summary>
     public bool StartWithSystemPointsElsewhere => StartWithSystemSupported && StartWithSystemEntry.PointsElsewhere();

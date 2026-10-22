@@ -1,6 +1,7 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Globalization;
 using System.Reflection;
+using MystTiq.Core.Services;
 
 namespace MystTiq.Desktop.Services;
 
@@ -17,7 +18,7 @@ public static class CrashRecorder
     private static int installed;
 
     public static string Folder { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MystTiq", "crashes");
+        PortableMode.LocalAppData, "MystTiq", "crashes");
 
     /// <summary>Raised after an error is recorded: where it was caught, the error, and the record's path (null if it could not be written).</summary>
     public static event Action<string, Exception, string?>? Recorded;

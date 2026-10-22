@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Linq;
 using System.Threading.Tasks;
 using MystTiq.Core.Services;
@@ -45,6 +45,8 @@ public sealed partial class App : Application
             localBootstrapper = new LocalManagementBootstrapper();
             viewModel = new MainWindowViewModel(api, profileStore, localDiscovery, serviceDiscovery, localBootstrapper, themeStore, credentialStore);
             mainWindow = new MainWindow { DataContext = viewModel };
+            // v1.1.5.0 (roadmap V-1): the window comes back where and how big it was.
+            mainWindow.UsePlacementStore(new LocalWindowPlacementStore());
             // v1.0.7.0 (roadmap Q-2): an error on the UI thread is recorded and shown, and the app stays open.
             Dispatcher.UIThread.UnhandledException += (_, e) =>
             {
@@ -92,6 +94,7 @@ public sealed partial class App : Application
     public void HideMainWindowToTray()
     {
         if (mainWindow is null) return;
+        mainWindow.SavePlacementNow();
         mainWindow.ShowInTaskbar = false;
         mainWindow.Hide();
     }
@@ -172,11 +175,13 @@ public sealed partial class App : Application
     public void CloseForSystemShutdown()
     {
         try { viewModel?.SaveWorldsForSystemShutdown(TimeSpan.FromSeconds(4)); } catch { /* never hold up the shutdown */ }
+        mainWindow?.SavePlacementNow();
         explicitExitRequested = true;
     }
 
     private void RequestExplicitExit()
     {
+        mainWindow?.SavePlacementNow();
         explicitExitRequested = true;
         desktopLifetime?.Shutdown();
     }

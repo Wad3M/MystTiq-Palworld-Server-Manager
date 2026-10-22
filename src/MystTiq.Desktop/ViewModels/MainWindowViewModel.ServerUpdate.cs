@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 
@@ -61,10 +61,7 @@ public sealed partial class MainWindowViewModel
             ServerUpdateDetail = $"{job.Message}\n\n{card.Detail}".Trim();
     }
 
-    public static string ServerUpdateBuildLine(ServerUpdateCardDto card) =>
-        card.State == "Update available" && card.Latest is { Length: > 0 } latest && latest != card.Installed
-            ? string.Format(Localizer.Instance["dashboard.serverUpdate.newBuild"], card.Installed, latest)
-            : string.Format(Localizer.Instance["dashboard.serverUpdate.build"], card.Installed);
+    public static string ServerUpdateBuildLine(ServerUpdateCardDto card) => ServerUpdateText.BuildLine(card);
 
     /// <summary>
     /// From the connection and each status poll: while an update runs, its step (cheap); otherwise the build check when the
@@ -111,18 +108,7 @@ public sealed partial class MainWindowViewModel
     }
 
     /// <summary>The confirmation's lines: the builds, what happens to a running server and its players, the safety backup.</summary>
-    public IReadOnlyList<string> ServerUpdateConfirmationLines()
-    {
-        var lines = new List<string>();
-        if (_serverUpdateCard is { } card)
-            lines.Add(string.Format(Localizer.Instance["dashboard.serverUpdate.builds"], card.Installed, card.Latest));
-        lines.Add(ServerIsRunning
-            ? string.Format(Localizer.Instance["dashboard.serverUpdate.running"], OnlinePlayerCountText)
-            : Localizer.Instance["dashboard.serverUpdate.stopped"]);
-        lines.Add(Localizer.Instance["dashboard.serverUpdate.safety"]);
-        if (_serverUpdateCard?.State == "Up to date") lines.Add(Localizer.Instance["dashboard.serverUpdate.current"]);
-        return lines;
-    }
+    public IReadOnlyList<string> ServerUpdateConfirmationLines() => ServerUpdateText.ConfirmationLines(_serverUpdateCard, ServerIsRunning, OnlinePlayerCountText);
 
     /// <summary>Starts the update on the service (after the window's confirmation).</summary>
     public async Task StartServerUpdateAsync()

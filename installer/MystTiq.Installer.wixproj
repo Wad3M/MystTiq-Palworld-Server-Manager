@@ -1,0 +1,19 @@
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
+<!-- v1.1.5.0 (roadmap W-1): the Windows installer (an .msi), built by scripts/Build-WindowsInstaller.ps1 from a packaged app
+     folder (signed or not). WiX 5 comes from NuGet with the SDK; nothing is installed on the build machine. -->
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <OutputName>MystTiq</OutputName>
+    <Platform>x64</Platform>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <DefineConstants>AppFolder=$(AppFolder);ProductVersion=$(ProductVersion);IconFile=$(MSBuildThisFileDirectory)..\src\MystTiq.Desktop\Assets\PalworldServerManager.ico</DefineConstants>
+    <!-- ICE61: a same-version setup replaces the install on purpose (MajorUpgrade AllowSameVersionUpgrades). -->
+    <!-- ICE38/43/57 judge the Start-menu and desktop folders per-user; this package is per-machine (ALLUSERS=1), so Windows puts
+         the shortcuts in the shared folders and the HKLM key paths are right. -->
+    <SuppressIces>ICE61;ICE38;ICE43;ICE57</SuppressIces>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+</Project>

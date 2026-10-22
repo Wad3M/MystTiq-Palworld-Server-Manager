@@ -1,0 +1,85 @@
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
+<!--
+  v1.1.5.0 (roadmap W-1, owner 2026-10-22: "I would like a windows installer"). Installs MystTiq for every user of the PC to
+  Program Files\MystTiq, with a Start-menu shortcut and an optional desktop shortcut, and an entry in Apps & features.
+
+  Uninstalling removes the program files only. Servers, backups, the service configuration in ProgramData and each user's
+  settings in AppData are never touched. A newer setup replaces an older install in place (settings carry over).
+
+  The Windows service: MystTiq's service (MystTiqPalworld) is installed by `mysttiq-server service-install`, not by this
+  setup. The setup touches it only when that service runs from this setup's own folder: it stops it before replacing the
+  files and starts it again afterwards (an upgrade), and removes its registration when MystTiq is uninstalled (its program
+  would be gone). A service installed from any other folder is left alone.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package Name="MystTiq Palworld Server Manager" Manufacturer="MystTiq" Version="$(ProductVersion)"
+           UpgradeCode="DD39AFBB-68F0-4467-9131-0608221ACBD1" Scope="perMachine" Compressed="yes" Language="1033">
+    <!-- The fourth version field does not count for Windows Installer, so a same-version setup still replaces the install. -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of MystTiq is already installed. Uninstall it first to install this one." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="MystTiqIcon" SourceFile="$(IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="MystTiqIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager" />
+    <Property Id="ARPCOMMENTS" Value="Uninstalling removes the program only. Servers, backups and settings (ProgramData, AppData) are kept." />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <!-- The MystTiq Windows service's program, if one is installed. -->
+    <Property Id="MYSTTIQSERVICEIMAGE">
+      <RegistrySearch Id="MystTiqServiceImage" Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\MystTiqPalworld" Name="ImagePath" Type="raw" Bitness="always64" />
+    </Property>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="MystTiq" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(AppFolder)\**" />
+      <!-- Tells MystTiq it was installed by this setup, so the Update Center updates it with the next setup. -->
+      <Component Id="InstalledMarker" Guid="65359034-E095-41F3-B3CC-AF835B251D0E">
+        <File Id="InstalledTxt" Source="installed.txt" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder" Guid="E4831B54-BEEE-43F7-A805-56776E658B47">
+      <Shortcut Id="StartMenuMystTiq" Name="MystTiq" Description="MystTiq Palworld Server Manager"
+                Target="[INSTALLFOLDER]MystTiq.Desktop.exe" WorkingDirectory="INSTALLFOLDER" Icon="MystTiqIcon" />
+      <RegistryValue Root="HKLM" Key="Software\MystTiq\Setup" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="8900D5E0-1DB8-4C97-A4E3-D0F17D035037">
+      <Shortcut Id="DesktopMystTiq" Name="MystTiq" Description="MystTiq Palworld Server Manager"
+                Target="[INSTALLFOLDER]MystTiq.Desktop.exe" WorkingDirectory="INSTALLFOLDER" Icon="MystTiqIcon" />
+      <RegistryValue Root="HKLM" Key="Software\MystTiq\Setup" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Feature Id="MystTiq" Title="MystTiq" Description="The MystTiq desktop and its service." Level="1" AllowAbsent="no" ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <Feature Id="DesktopShortcutFeature" Title="Desktop shortcut" Description="A MystTiq shortcut on the desktop." Level="1">
+        <ComponentRef Id="DesktopShortcut" />
+      </Feature>
+    </Feature>
+
+    <!-- The service is stopped (before any file is replaced or removed), started again and removed with sc.exe, quietly, and only when it
+         runs from this setup's folder (the case-insensitive ~>< match on its program path). -->
+    <SetProperty Id="StopMystTiqService" Value="&quot;[System64Folder]sc.exe&quot; stop MystTiqPalworld" Before="StopMystTiqService" Sequence="execute" />
+    <CustomAction Id="StopMystTiqService" BinaryRef="Wix4UtilCA_X64" DllEntry="WixQuietExec64" Execute="deferred" Impersonate="no" Return="ignore" />
+    <SetProperty Id="StartMystTiqService" Value="&quot;[System64Folder]sc.exe&quot; start MystTiqPalworld" Before="StartMystTiqService" Sequence="execute" />
+    <CustomAction Id="StartMystTiqService" BinaryRef="Wix4UtilCA_X64" DllEntry="WixQuietExec64" Execute="deferred" Impersonate="no" Return="ignore" />
+    <SetProperty Id="DeleteMystTiqService" Value="&quot;[System64Folder]sc.exe&quot; delete MystTiqPalworld" Before="DeleteMystTiqService" Sequence="execute" />
+    <CustomAction Id="DeleteMystTiqService" BinaryRef="Wix4UtilCA_X64" DllEntry="WixQuietExec64" Execute="deferred" Impersonate="no" Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="StopMystTiqService" Before="StopServices" Condition="MYSTTIQSERVICEIMAGE ~&gt;&lt; &quot;\MystTiq\headless\mysttiq-server.exe&quot;" />
+      <Custom Action="StartMystTiqService" Before="InstallFinalize" Condition="MYSTTIQSERVICEIMAGE ~&gt;&lt; &quot;\MystTiq\headless\mysttiq-server.exe&quot; AND NOT (REMOVE~=&quot;ALL&quot;)" />
+      <Custom Action="DeleteMystTiqService" Before="InstallFinalize" Condition="MYSTTIQSERVICEIMAGE ~&gt;&lt; &quot;\MystTiq\headless\mysttiq-server.exe&quot; AND REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
+
+    <ui:WixUI Id="WixUI_FeatureTree" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+  </Package>
+</Wix>

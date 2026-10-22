@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -1538,6 +1538,8 @@ public sealed class ModsViewModel : PageViewModel
     private void RefreshNxmHandlerText()
     {
         if (!OperatingSystem.IsWindows()) { NxmHandlerText = "Taking Mod Manager Download links is available on Windows."; return; }
+        // v1.1.5.0 (roadmap W-2).
+        if (PortableMode.IsActive) { NxmHandlerText = PortableMode.RegistryRefusal; return; }
         var current = NxmProtocolRegistration.CurrentCommand();
         NxmHandlerText = current is null ? "No program takes Nexus Mod Manager Download links on this PC."
             : DesktopExecutable is { } exe && NxmProtocolRegistration.IsMine(exe) ? "MystTiq takes Nexus Mod Manager Download links on this PC."
@@ -1546,11 +1548,11 @@ public sealed class ModsViewModel : PageViewModel
 
     // The program that takes nxm:// links now when it is not this MystTiq (MainWindow asks before replacing it); null otherwise.
     public string? OtherNxmHandler =>
-        OperatingSystem.IsWindows() && NxmProtocolRegistration.CurrentCommand() is { } current && !(DesktopExecutable is { } exe && NxmProtocolRegistration.IsMine(exe)) ? current : null;
+        OperatingSystem.IsWindows() && !PortableMode.IsActive && NxmProtocolRegistration.CurrentCommand() is { } current && !(DesktopExecutable is { } exe && NxmProtocolRegistration.IsMine(exe)) ? current : null;
 
     public void UseMystTiqForNxmLinks()
     {
-        if (!OperatingSystem.IsWindows() || DesktopExecutable is not { } exe) { RefreshNxmHandlerText(); return; }
+        if (!OperatingSystem.IsWindows() || PortableMode.IsActive || DesktopExecutable is not { } exe) { RefreshNxmHandlerText(); return; }
         NxmProtocolRegistration.Register(exe);
         RefreshNxmHandlerText();
     }

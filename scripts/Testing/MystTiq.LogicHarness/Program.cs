@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -5154,6 +5154,31 @@ try
         Assert(!ForeignServerProcess.StartedByMystTiq(new ServerSessionProcessInfo(700, 0, "PalServer", "x", true), [], _ => "mysttiq-server")
                && !ForeignServerProcess.StartedByMystTiq(new ServerSessionProcessInfo(701, 702, "PalServer", "x", true), [], _ => null),
             "no parent, or a parent that has exited, is not MystTiq");
+    }, failures);
+
+    // v1.1.5.0 (roadmap W-2): a portable copy (portable.txt beside MystTiq.Desktop.exe, or one folder up from the helper)
+    // keeps the service's configuration, fleet and secrets in its data folder.
+    RunScenario("Portable copy (W-2): the marker beside the desktop, or one folder up from the helper, moves every MystTiq folder into data; without it nothing changes", () =>
+    {
+        var root = Path.Combine(tempRoot, "portable");
+        var helper = Path.Combine(root, "headless");
+        var other = Path.Combine(root, "other");
+        Directory.CreateDirectory(helper); Directory.CreateDirectory(other);
+        Assert(PortableMode.Detect(root) is null && PortableMode.Detect(helper) is null, "no marker: not portable");
+        File.WriteAllText(Path.Combine(root, PortableMode.MarkerFileName), "portable");
+        var data = Path.Combine(root, PortableMode.DataFolderName);
+        Assert(PortableMode.Detect(root) == data && PortableMode.Detect(helper) == data, "the desktop's folder and its headless folder both find the marker");
+        Assert(PortableMode.Detect(other) is null, "only the headless folder looks one level up");
+        using (PortableMode.UseForTests(data))
+        {
+            Assert(PortableMode.IsActive && PortableMode.CommonAppData == Path.Combine(data, "service") && PortableMode.LocalAppData == Path.Combine(data, "local") && PortableMode.RoamingAppData == Path.Combine(data, "config"),
+                "the three folders are under data");
+            var defaults = HeadlessConfiguration.CreateWindowsDefault();
+            Assert(defaults.FleetRoot.StartsWith(data) && defaults.Api.Authentication.TokenFile.StartsWith(data) && defaults.Servers.All(s => s.RuntimeRoot.StartsWith(data)),
+                $"the service's default fleet, secrets and runtime folders are in data [{defaults.FleetRoot}]");
+            Assert(HeadlessConfigurationService.WindowsDefaultPath == Path.Combine(data, "service", "MystTiqPalworldServer", "mysttiq.json"), "and so is its configuration file");
+        }
+        Assert(!PortableMode.IsActive && !HeadlessConfigurationService.WindowsDefaultPath.StartsWith(root), "outside the override nothing is portable");
     }, failures);
 }
 finally

@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Net;
 using System.Text.Json;
 using MystTiq.Core.Models;
@@ -8,7 +8,7 @@ namespace MystTiq.Core.Services;
 public sealed class HeadlessConfigurationService
 {
     public const string LinuxDefaultPath = "/etc/mysttiq/mysttiq.json";
-    public static string WindowsDefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "MystTiqPalworldServer", "mysttiq.json");
+    public static string WindowsDefaultPath => Path.Combine(PortableMode.CommonAppData, "MystTiqPalworldServer", "mysttiq.json");
     public static string DefaultPath => OperatingSystem.IsWindows() ? WindowsDefaultPath : LinuxDefaultPath;
 
     private static readonly JsonSerializerOptions JsonOptions = new()

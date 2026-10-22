@@ -1,4 +1,19 @@
-<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
+## v1.1.5.0 — Resizable Window, Simple Mode, Installer and Portable
+
+- Roadmap V-1: resize grips on every edge and corner (`BeginResizeDrag`, hidden while maximized); the window's size,
+  position and maximized state remembered and fitted onto the screens there are.
+- Roadmap V-2: a Simple / Advanced switch in the title bar and Settings. Simple hides the specialist pages from the menus
+  (and HOST), the Configuration page's Advanced view and the automation rule editor; nothing is disabled; remembered.
+- Roadmap W-2: a portable Windows ZIP. `portable.txt` beside the desktop keeps every MystTiq folder in `data`; no
+  registry writes (no sign-in start, no nxm:// handler, no service install); its own helper and port.
+- Roadmap W-1: a Windows setup (`.msi`, WiX 5): Program Files, Start-menu and optional desktop shortcuts, Apps &
+  features, upgrades in place, data kept on uninstall; MystTiq's service stopped, restarted and removed only when it
+  runs from the setup's folder. The Update Center updates an installed copy with the next setup and a portable copy with
+  the portable ZIP. The release workflow attaches the setup and, once SignPath is set up, signs the `.msi` itself
+  (`.signpath/artifact-configuration-setup.xml`, approved like the app's signing).
+- Version advanced to 1.1.5.0.
+
 ## v1.1.4.0 — Update the Server from the Dashboard
 
 - Roadmap U-1: the Dashboard's LIFECYCLE bar spans three card columns and a **Server update** card takes the fourth,

@@ -1,4 +1,4 @@
-# MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+# MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 name: Release
 
 on:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag (for example v1.1.4.0)
+        description: Existing release tag (for example v1.1.5.0)
         required: true
         type: string
 
@@ -111,6 +111,41 @@ jobs:
             if ($signature.Status -ne 'Valid') { throw "$file is not signed: $($signature.Status) $($signature.StatusMessage)" }
           }
           ./scripts/Package-GitHubRelease.ps1 -Runtime win-x64 -FromFolder $signed
+      # v1.1.5.0 (roadmap W-1): the setup is built from the signed app files above; the .msi itself is signed too (it is the
+      # file SmartScreen checks), as a second request with its own artifact configuration (.signpath/artifact-configuration-setup.xml).
+      - name: Upload the unsigned setup for signing
+        id: upload-unsigned-setup
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-windows-setup
+          path: artifacts/MystTiqPalworldServer_v${{ env.RELEASE_VERSION }}_Windows-x64.msi
+          if-no-files-found: error
+      - name: Sign the setup with SignPath (waits for the release approval)
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_SETUP_ARTIFACT_CONFIGURATION_SLUG || 'windows-setup' }}
+          github-artifact-id: ${{ steps.upload-unsigned-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 86400
+          output-artifact-directory: artifacts/signed-windows-setup
+          parameters: |
+            version: ${{ toJSON(env.RELEASE_VERSION) }}
+      - name: Check the setup's signature and use the signed setup
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        run: |
+          $name = "MystTiqPalworldServer_v$env:RELEASE_VERSION`_Windows-x64.msi"
+          $signed = Join-Path 'artifacts/signed-windows-setup' $name
+          $signature = Get-AuthenticodeSignature -LiteralPath $signed
+          if ($signature.Status -ne 'Valid') { throw "$name is not signed: $($signature.Status) $($signature.StatusMessage)" }
+          Move-Item -LiteralPath $signed -Destination (Join-Path 'artifacts' $name) -Force
+          Remove-Item -LiteralPath 'artifacts/signed-windows-setup' -Recurse -Force
       # v1.1.1.0: the Linux download (desktop and service), built from the same tag.
       - name: Package the Linux download
         shell: pwsh
@@ -126,7 +161,8 @@ jobs:
           $version = ./scripts/Get-ProjectVersion.ps1
           git archive --format=zip --output="artifacts/MystTiqPalworldServer_v${version}_FullSource.zip" $env:RELEASE_TAG
           if ($LASTEXITCODE -ne 0) { throw 'Source archive failed.' }
-          Get-ChildItem artifacts -File | Where-Object { $_.Name -like '*.zip' -or $_.Name -like '*.tar.gz' } | Sort-Object Name | ForEach-Object {
+          # v1.1.5.0: the Windows setup (.msi) and the portable ZIP are hashed and attached with the rest.
+          Get-ChildItem artifacts -File | Where-Object { $_.Name -like '*.zip' -or $_.Name -like '*.tar.gz' -or $_.Name -like '*.msi' } | Sort-Object Name | ForEach-Object {
             "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)"
           } | Set-Content artifacts/SHA256SUMS.txt -Encoding utf8
       - name: Prepare draft release
@@ -142,5 +178,6 @@ jobs:
           body_path: release-notes/${{ env.RELEASE_TAG }}.md
           files: |
             artifacts/MystTiqPalworldServer_*.zip
+            artifacts/MystTiqPalworldServer_*.msi
             artifacts/MystTiqPalworldServer_*.tar.gz
             artifacts/SHA256SUMS.txt

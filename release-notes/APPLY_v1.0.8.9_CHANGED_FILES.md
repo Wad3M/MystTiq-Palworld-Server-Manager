@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
 # v1.0.8.9 Changed Files
 
 - `src/MystTiq.Desktop/ViewModels/SecurityViewModel.cs` (new): the Security page (principals, user accounts, the browser

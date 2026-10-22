@@ -4102,5 +4102,15 @@
   "dashboard.serverUpdate.safety": "最初に安全バックアップを作成します。更新はサーバー側で実行され、MystTiq を閉じても完了します。",
   "dashboard.serverUpdate.current": "Steam ではこのビルドが最新とされているため、ダウンロードするものがない可能性があります。",
   "dashboard.serverUpdate.started": "サーバーの更新を開始しました。",
-  "dashboard.serverUpdate.refused": "サーバーの更新を開始できませんでした:"
+  "dashboard.serverUpdate.refused": "サーバーの更新を開始できませんでした:",
+  "ui.mode.simple": "シンプル",
+  "ui.mode.advanced": "詳細",
+  "uiMode.tip": "シンプル（日常のページ）と詳細（すべて）を切り替えます。非表示のページもワンクリックで戻せます。",
+  "uiMode.notRemembered": "モードは変更されましたが、保存できませんでした:",
+  "settings.uiMode.label": "表示モード",
+  "settings.uiMode.note": "シンプルでは日常のページ（ダッシュボード、サーバー設定、プレイヤー、バックアップ、MOD、更新、設定）を表示します。詳細では専門的なページと詳細設定ビューも表示します。どちらのモードでも無効になる機能はありません。",
+  "automation.simpleHint": "自動化ルールの作成と変更は詳細モード（タイトルバーのスイッチ）で行えます。",
+  "settings.portable.title": "ポータブル版",
+  "settings.portable.where": "MystTiq が保存するものはすべて {0} に保管されます。",
+  "settings.portable.registry": "ポータブル版は Windows に何も書き込みません。Windows と一緒に起動せず、Nexus のリンクを受け取らず、Windows サービスもインストールしません。"
 }

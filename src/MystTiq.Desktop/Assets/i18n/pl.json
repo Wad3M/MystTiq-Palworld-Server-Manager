@@ -4102,5 +4102,15 @@
   "dashboard.serverUpdate.safety": "Najpierw tworzona jest kopia bezpieczeństwa. Aktualizacja działa obok serwera i kończy się nawet po zamknięciu MystTiq.",
   "dashboard.serverUpdate.current": "Steam podaje, że ta kompilacja jest aktualna, więc może nie być nic do pobrania.",
   "dashboard.serverUpdate.started": "Aktualizacja serwera rozpoczęta.",
-  "dashboard.serverUpdate.refused": "Nie udało się rozpocząć aktualizacji serwera:"
+  "dashboard.serverUpdate.refused": "Nie udało się rozpocząć aktualizacji serwera:",
+  "ui.mode.simple": "Prosty",
+  "ui.mode.advanced": "Zaawansowany",
+  "uiMode.tip": "Przełącz między trybem Prostym (codzienne strony) a Zaawansowanym (wszystko). Ukryte strony są o jedno kliknięcie.",
+  "uiMode.notRemembered": "Tryb zmieniono, ale nie udało się go zapamiętać:",
+  "settings.uiMode.label": "Tryb interfejsu",
+  "settings.uiMode.note": "Tryb Prosty pokazuje codzienne strony: pulpit, konfigurację serwera, graczy, kopie zapasowe, MODy, aktualizacje i ustawienia. Zaawansowany dodaje strony specjalistyczne i widok zaawansowanych ustawień. W żadnym trybie nic nie jest wyłączane.",
+  "automation.simpleHint": "Tworzenie i zmienianie reguł automatyzacji jest w trybie Zaawansowanym (przełącznik na pasku tytułu).",
+  "settings.portable.title": "Kopia przenośna",
+  "settings.portable.where": "Wszystko, co zapisuje MystTiq, jest przechowywane w {0}.",
+  "settings.portable.registry": "Kopia przenośna niczego nie zapisuje w systemie Windows: nie uruchamia się z Windows, nie obsługuje linków Nexus i nie instaluje usługi Windows."
 }

@@ -1,4 +1,4 @@
-# MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+# MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 [CmdletBinding()]
 param(
     [ValidateSet('Build','Package','Checksums','Release','All','Clean','Version','Validate','LinuxHeadless','WindowsHeadless','DesktopWindows','DesktopLinux','DeployDesktopLinux','LogicTests')]
@@ -79,7 +79,8 @@ switch ($Action) {
         if (Test-Path $artifacts) {
             Remove-GeneratedDirectoryWithRetry -Path $artifacts
         }
-        $generatedDirectories = @(Get-ChildItem (Join-Path $root 'src') -Directory -Recurse -Force -ErrorAction SilentlyContinue |
+        # v1.1.5.0: the setup project's restore folder too (installer\obj).
+        $generatedDirectories = @(Get-ChildItem @((Join-Path $root 'src'), (Join-Path $root "installer")) -Directory -Recurse -Force -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -in @('bin','obj') } |
             Sort-Object { $_.FullName.Length } -Descending)
         foreach ($directory in $generatedDirectories) {

@@ -1,4 +1,4 @@
-// MystTiq v1.1.4.0: file reviewed for this release (2026-10-20).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 using MystTiq.Core.Services;
@@ -12,7 +12,7 @@ namespace MystTiq.Desktop.Services;
 // says so: the install still waits for the owner's click and confirmation.
 public sealed class NxmLinkHandoff(string? root = null)
 {
-    public string Inbox { get; } = root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MystTiq", "nxm-inbox");
+    public string Inbox { get; } = root ?? Path.Combine(PortableMode.LocalAppData, "MystTiq", "nxm-inbox");
     private static readonly TimeSpan MaximumAge = TimeSpan.FromMinutes(15);
 
     // The nxm:// link among a process's arguments, if any.

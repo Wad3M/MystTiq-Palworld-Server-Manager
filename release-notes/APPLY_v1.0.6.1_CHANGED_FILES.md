@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.4.0: file reviewed for this release (2026-10-20). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
 # v1.0.6.1 Changed Files
 
 - `src/MystTiq.Desktop/ViewModels/MainWindowViewModel.ServiceVersion.cs` (new): an older local service is noticed on connect;
