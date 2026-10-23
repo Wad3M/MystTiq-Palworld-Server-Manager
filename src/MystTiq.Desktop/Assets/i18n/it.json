@@ -4112,5 +4112,19 @@
   "automation.simpleHint": "Creare e modificare le regole di automazione si fa in modalità Avanzata (l’interruttore nella barra del titolo).",
   "settings.portable.title": "Copia portatile",
   "settings.portable.where": "Tutto ciò che MystTiq salva è conservato in {0}.",
-  "settings.portable.registry": "Una copia portatile non scrive nulla in Windows: non si avvia con Windows, non gestisce i link di Nexus e non installa un servizio di Windows."
+  "settings.portable.registry": "Una copia portatile non scrive nulla in Windows: non si avvia con Windows, non gestisce i link di Nexus e non installa un servizio di Windows.",
+  "dashboard.updates": "AGGIORNAMENTI",
+  "dashboard.updates.mysttiq": "MystTiq {0}",
+  "dashboard.updates.mysttiqNew": "MystTiq {0} → {1}",
+  "dashboard.updates.mysttiqCurrent": "MystTiq è aggiornato.",
+  "dashboard.updates.server": "Build del server {0}",
+  "dashboard.updates.serverNew": "Build del server {0} → {1}",
+  "dashboard.updateMysttiq": "Aggiorna MystTiq",
+  "dashboard.updates.mysttiqConfirmTitle": "Aggiornare MystTiq?",
+  "dashboard.updates.mysttiqConfirm": "Questo è MystTiq {0}; la versione più recente è {1}. Viene scaricata e verificata con i checksum pubblicati. Una copia installata con il setup apre quindi il nuovo setup; altrimenti la nuova versione viene estratta accanto a questa. Impostazioni e server vengono mantenuti.",
+  "simple.guide.title": "Modalità semplice: tre passi per un server avviato",
+  "simple.guide.text": "1. Configurazione server installa o trova il server di Palworld. 2. Configurazione imposta nome, password, porte e le principali impostazioni di gioco. 3. Avvia lo mette in funzione. Passa ad Avanzata nella barra del titolo per tutto il resto.",
+  "simple.guide.setup": "Apri configurazione server",
+  "simple.guide.config": "Apri configurazione",
+  "simple.guide.start": "Avvia il server"
 }

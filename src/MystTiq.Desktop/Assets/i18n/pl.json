@@ -4112,5 +4112,19 @@
   "automation.simpleHint": "Tworzenie i zmienianie reguł automatyzacji jest w trybie Zaawansowanym (przełącznik na pasku tytułu).",
   "settings.portable.title": "Kopia przenośna",
   "settings.portable.where": "Wszystko, co zapisuje MystTiq, jest przechowywane w {0}.",
-  "settings.portable.registry": "Kopia przenośna niczego nie zapisuje w systemie Windows: nie uruchamia się z Windows, nie obsługuje linków Nexus i nie instaluje usługi Windows."
+  "settings.portable.registry": "Kopia przenośna niczego nie zapisuje w systemie Windows: nie uruchamia się z Windows, nie obsługuje linków Nexus i nie instaluje usługi Windows.",
+  "dashboard.updates": "AKTUALIZACJE",
+  "dashboard.updates.mysttiq": "MystTiq {0}",
+  "dashboard.updates.mysttiqNew": "MystTiq {0} → {1}",
+  "dashboard.updates.mysttiqCurrent": "MystTiq jest aktualny.",
+  "dashboard.updates.server": "Kompilacja serwera {0}",
+  "dashboard.updates.serverNew": "Kompilacja serwera {0} → {1}",
+  "dashboard.updateMysttiq": "Aktualizuj MystTiq",
+  "dashboard.updates.mysttiqConfirmTitle": "Zaktualizować MystTiq?",
+  "dashboard.updates.mysttiqConfirm": "To MystTiq {0}; najnowsza wersja to {1}. Zostanie pobrana i sprawdzona z opublikowanymi sumami kontrolnymi. Kopia zainstalowana instalatorem otworzy nowy instalator; w przeciwnym razie nowa wersja zostanie rozpakowana obok tej. Ustawienia i serwery zostają.",
+  "simple.guide.title": "Tryb prosty: trzy kroki do działającego serwera",
+  "simple.guide.text": "1. Konfiguracja serwera instaluje lub znajduje serwer Palworld. 2. Konfiguracja ustawia nazwę, hasła, porty i główne ustawienia gry. 3. Start go uruchamia. Do wszystkiego innego przełącz na Zaawansowany na pasku tytułu.",
+  "simple.guide.setup": "Otwórz konfigurację serwera",
+  "simple.guide.config": "Otwórz konfigurację",
+  "simple.guide.start": "Uruchom serwer"
 }

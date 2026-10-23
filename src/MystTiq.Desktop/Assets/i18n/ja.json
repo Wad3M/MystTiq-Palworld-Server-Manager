@@ -4112,5 +4112,19 @@
   "automation.simpleHint": "自動化ルールの作成と変更は詳細モード（タイトルバーのスイッチ）で行えます。",
   "settings.portable.title": "ポータブル版",
   "settings.portable.where": "MystTiq が保存するものはすべて {0} に保管されます。",
-  "settings.portable.registry": "ポータブル版は Windows に何も書き込みません。Windows と一緒に起動せず、Nexus のリンクを受け取らず、Windows サービスもインストールしません。"
+  "settings.portable.registry": "ポータブル版は Windows に何も書き込みません。Windows と一緒に起動せず、Nexus のリンクを受け取らず、Windows サービスもインストールしません。",
+  "dashboard.updates": "更新",
+  "dashboard.updates.mysttiq": "MystTiq {0}",
+  "dashboard.updates.mysttiqNew": "MystTiq {0} → {1}",
+  "dashboard.updates.mysttiqCurrent": "MystTiq は最新です。",
+  "dashboard.updates.server": "サーバービルド {0}",
+  "dashboard.updates.serverNew": "サーバービルド {0} → {1}",
+  "dashboard.updateMysttiq": "MystTiq を更新",
+  "dashboard.updates.mysttiqConfirmTitle": "MystTiq を更新しますか？",
+  "dashboard.updates.mysttiqConfirm": "これは MystTiq {0} で、最新版は {1} です。ダウンロードして公開チェックサムで確認します。セットアップでインストールしたコピーでは新しいセットアップが開き、それ以外ではこのフォルダーの隣に新しい版が展開されます。設定とサーバーは引き継がれます。",
+  "simple.guide.title": "シンプルモード：サーバーを動かすまでの 3 ステップ",
+  "simple.guide.text": "1. サーバー設定で Palworld サーバーをインストールまたは検出します。2. 構成で名前、パスワード、ポート、主なゲーム設定を決めます。3. 起動で動かします。その他の機能はタイトルバーで詳細に切り替えてください。",
+  "simple.guide.setup": "サーバー設定を開く",
+  "simple.guide.config": "構成を開く",
+  "simple.guide.start": "サーバーを起動"
 }

@@ -4112,5 +4112,19 @@
   "automation.simpleHint": "创建和更改自动化规则请使用高级模式（标题栏中的开关）。",
   "settings.portable.title": "便携版",
   "settings.portable.where": "MystTiq 保存的所有内容都保存在 {0}。",
-  "settings.portable.registry": "便携版不会向 Windows 写入任何内容：不随 Windows 启动、不接收 Nexus 链接，也不安装 Windows 服务。"
+  "settings.portable.registry": "便携版不会向 Windows 写入任何内容：不随 Windows 启动、不接收 Nexus 链接，也不安装 Windows 服务。",
+  "dashboard.updates": "更新",
+  "dashboard.updates.mysttiq": "MystTiq {0}",
+  "dashboard.updates.mysttiqNew": "MystTiq {0} → {1}",
+  "dashboard.updates.mysttiqCurrent": "MystTiq 已是最新。",
+  "dashboard.updates.server": "服务器版本 {0}",
+  "dashboard.updates.serverNew": "服务器版本 {0} → {1}",
+  "dashboard.updateMysttiq": "更新 MystTiq",
+  "dashboard.updates.mysttiqConfirmTitle": "更新 MystTiq？",
+  "dashboard.updates.mysttiqConfirm": "当前为 MystTiq {0}，最新版本为 {1}。将下载并用发布的校验和核对。通过安装程序安装的副本会打开新的安装程序；否则会在此文件夹旁解压新版本。你的设置和服务器都会保留。",
+  "simple.guide.title": "简单模式：三步启动服务器",
+  "simple.guide.text": "1. 服务器设置会安装或找到 Palworld 服务器。2. 配置设定名称、密码、端口和主要游戏设置。3. 启动即可运行。其他功能请在标题栏切换到高级。",
+  "simple.guide.setup": "打开服务器设置",
+  "simple.guide.config": "打开配置",
+  "simple.guide.start": "启动服务器"
 }

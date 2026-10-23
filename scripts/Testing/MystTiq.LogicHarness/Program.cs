@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -5179,6 +5179,33 @@ try
             Assert(HeadlessConfigurationService.WindowsDefaultPath == Path.Combine(data, "service", "MystTiqPalworldServer", "mysttiq.json"), "and so is its configuration file");
         }
         Assert(!PortableMode.IsActive && !HeadlessConfigurationService.WindowsDefaultPath.StartsWith(root), "outside the override nothing is portable");
+    }, failures);
+
+    // v1.1.5.0 (owner 2026-10-23: "the server update button should be referring to the MystTiq version to update"): the card
+    // also carries MystTiq's latest release, asked of GitHub at most every 15 minutes; a failed check reads Unavailable.
+    RunScenarioAsync("Update card (v1.1.5.0): the card carries MystTiq's latest release beside the Palworld build, checked at most every 15 minutes; a failed check is Unavailable", async () =>
+    {
+        var asked = 0;
+        var flow = new HeadlessServerUpdateFlowService(
+            _ => Task.FromResult(new ComponentVersionInfo("Core Server", "Palworld Dedicated Server", "1", "1", "UpToDate", "SteamCMD", DateTimeOffset.UtcNow, "")),
+            new ScriptedLifecycle(), _ => Task.FromResult<ServerLifecycleOperationResult>(null!), _ => Task.FromResult((true, "")), _ => Task.FromResult((true, "")),
+            TimeSpan.FromSeconds(1),
+            checkMystTiq: _ => { asked++; return Task.FromResult(new ComponentVersionInfo("Core Server", "MystTiq Server Manager", "1.1.5.0", "1.1.6.0", "UpdateAvailable", "GitHub", DateTimeOffset.UtcNow, "Latest published release: v1.1.6.0.")); });
+        var first = await flow.GetCardAsync(CancellationToken.None);
+        var second = await flow.GetCardAsync(CancellationToken.None);
+        Assert(first is { MystTiqInstalled: "1.1.5.0", MystTiqLatest: "1.1.6.0", MystTiqState: "Update available" } && first.MystTiqDetail!.Contains("v1.1.6.0") && second.MystTiqLatest == "1.1.6.0" && asked == 1,
+            $"the MystTiq line comes with the card, and GitHub is asked once for both reads (asked {asked})");
+        var failing = new HeadlessServerUpdateFlowService(
+            _ => Task.FromResult(new ComponentVersionInfo("Core Server", "Palworld Dedicated Server", "1", "1", "UpToDate", "SteamCMD", DateTimeOffset.UtcNow, "")),
+            new ScriptedLifecycle(), _ => Task.FromResult<ServerLifecycleOperationResult>(null!), _ => Task.FromResult((true, "")), _ => Task.FromResult((true, "")),
+            TimeSpan.FromSeconds(1), checkMystTiq: _ => throw new HttpRequestException("offline"));
+        var offline = await failing.GetCardAsync(CancellationToken.None);
+        Assert(offline is { MystTiqState: "Unavailable", State: "Up to date" } && offline.MystTiqDetail!.Contains("offline"), "a failed MystTiq check reads Unavailable and does not hide the server's line");
+        var without = await new HeadlessServerUpdateFlowService(
+            _ => Task.FromResult(new ComponentVersionInfo("Core Server", "Palworld Dedicated Server", "1", "1", "UpToDate", "SteamCMD", DateTimeOffset.UtcNow, "")),
+            new ScriptedLifecycle(), _ => Task.FromResult<ServerLifecycleOperationResult>(null!), _ => Task.FromResult((true, "")), _ => Task.FromResult((true, "")), TimeSpan.FromSeconds(1))
+            .GetCardAsync(CancellationToken.None);
+        Assert(without.MystTiqLatest is null && without.MystTiqState is null, "without a MystTiq check the card has no MystTiq line (as before)");
     }, failures);
 }
 finally

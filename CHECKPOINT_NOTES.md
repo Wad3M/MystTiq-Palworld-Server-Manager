@@ -1,28 +1,37 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
 # MystTiq v1.1.5.0 Checkpoint: Resizable Window, Simple Mode, Installer and Portable
 
 ## What changed
 
 - **A window you can size (V-1).** Drag any edge or corner; it remembers its size, position and maximized state.
-- **Simple and Advanced (V-2).** A switch in the title bar (and Settings) hides the specialist pages for everyday use.
-  Advanced, the default, shows everything as before.
-- **Portable (W-2).** `..._Windows-x64-Portable.zip`: everything stays in its `data` folder, nothing goes to Windows.
-- **Windows setup (W-1).** `..._Windows-x64.msi`: Program Files, Start-menu shortcut, uninstaller that keeps your data.
-  It needs administrator rights, so I have not run it on your PC; I checked its tables and did an administrative
-  extract. It is not code-signed, so SmartScreen will ask. Please scan it on VirusTotal before you publish.
+- **Simple and Advanced (V-2).** Click the switch in the title bar. Simple is for setting a server up, choosing its
+  settings and starting it: Dashboard (with a three-step guide), Server Setup, Configuration, Backups and Settings, with
+  the other tabs, pages, specialist buttons and the Dashboard's monitoring panels hidden. Advanced shows everything.
+- **The Dashboard's top row (U-2, V-3).** LIFECYCLE, then the local and public addresses in their own card, then the
+  update card with MystTiq (Update MystTiq) and the Palworld server (Update Server). The row stays while the service is
+  not connected, and the desktop now connects by itself to a helper that was slow to start (45 s wait, then a quiet
+  retry every 10 s); after the first install it had stayed on "Service unreachable".
+- **Configuration (V-4).** Simple Settings is blue and Advanced Settings amber.
+- **Portable (W-2)** and **Windows setup (W-1)**, as in the first v1.1.5.0 checkpoint; the setup's `.msi` is signed by the
+  release workflow once SignPath is set up.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.1.5.0-Logic.ps1 -RunBuild -RunLong`: 449 / 449 passed, 6 skipped: the Linux VM
-  (192.168.1.122) answered ping but not SSH, so its checks did not run and v1.1.5.0 was not copied to it. The first run
-  was cut off when the session ended; a second failed 53 route smokes because the published app had been cleaned away
-  before the run (my sequencing); republished, the third passed. Desktop harness: 865 checks (resize grips and placement,
-  every page at 1680, 2560 and 3840 px, Simple and Advanced, portable folders, update kinds); logic harness all scenarios.
+- **Full gate** `scripts\Test-v1.1.5.0-Logic.ps1 -RunBuild -RunLong` (2026-10-23, after the Simple mode, update card,
+  addresses and reconnect rework): 451 / 451 passed, 6 skipped: the Linux VM (192.168.1.122) answered ping but not SSH,
+  so its checks did not run and v1.1.5.0 was not copied to it. Desktop harness: 871 checks (the update card's MystTiq and
+  server lines in 12 languages at 950, 1100 and 1440 px, the addresses card between LIFECYCLE and the update card, the
+  top row shown while the service is not connected, the quiet reconnect every other tick against a live and a closed
+  port, the Simple/Advanced toggle clicked with the mouse: 5 menu pages, the World, MODs, Tools and Host tabs hidden, the
+  Ribbon filtered, the Dashboard's detail panels hidden, the guide's three buttons, and back); logic harness all
+  scenarios.
+- **Seen on the owner's PC after the first install of this build:** the desktop stayed on "Service unreachable" (the
+  helper's first start with five servers took longer than the 8 s wait, and the disconnected tick never retried), so the
+  top row looked missing. Fixed in this build and installed again.
 - **Packages:** Windows ZIP, portable ZIP (with `portable.txt`), setup `.msi`, Linux ZIP and Docker image (`/healthz`
-  answered v1.1.5.0 with TLS and sign-in on); no `createdump`; all in `SHA256SUMS.txt`. **VirusTotal** (owner uploaded,
-  2026-10-22): the setup 0/60 with a clean sandbox run that installed to Program Files\MystTiq; the portable ZIP 0/63,
-  the generic HTTP-communication label (its own helper on 127.0.0.1) and the known SecureAge false positive on the stock
-  Avalonia.Dialogs.dll. **Setup:** tables read (shortcuts, the service actions and conditions) and an administrative
-  extract (577 files, installed.txt present, no portable.txt); not installed on the owner's PC (needs administrator
-  rights). **Portable:** its helper started on its own configuration in `data\service` and refused `service-install`.
-  **Validate-Release -Strict:** 0 errors, 0 warnings. **Distribution check:** passed. **Static gate:** 388 / 388.
+  answered over TLS on 18213); all in `SHA256SUMS.txt`. The console proxy is built between `Build.ps1 Clean` and
+  `Package` (an earlier packaging without it was caught by the distribution check); the Windows ZIP, the portable ZIP and
+  the setup each hold `MystTiqConsoleProxy.dll`. **Setup:** an administrative extract (577 files, installed.txt present,
+  no portable.txt); not installed on the owner's PC (needs administrator rights). **VirusTotal:** these rebuilt files are
+  new and still to be scanned (the first v1.1.5.0 build scanned 0/60 and 0/63). **Validate-Release -Strict:** 0 errors,
+  0 warnings. **Distribution check:** passed. **Static gate:** 390 / 390.

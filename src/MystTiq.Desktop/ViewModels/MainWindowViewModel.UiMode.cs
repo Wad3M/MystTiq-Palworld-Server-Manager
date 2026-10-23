@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using System.Windows.Input;
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
@@ -21,6 +21,7 @@ public sealed partial class MainWindowViewModel
             try { _displayPreferences.SaveUiMode(value ? SimpleMode.Simple : SimpleMode.Advanced); }
             catch (Exception ex) { DisplayPreferencesStatusText = Localizer.Instance["uiMode.notRemembered"] + " " + ex.Message; }
             RaiseUiModeDependents();
+            RebuildRibbonGroups();
             // Simple has no Advanced settings view, and a page Simple hides is left for the Dashboard.
             if (value)
             {
@@ -45,10 +46,6 @@ public sealed partial class MainWindowViewModel
         set { if (value is 0 or 1) IsSimpleMode = value == 0; }
     }
 
-    // The World and MODs category tabs open a page Simple shows.
-    public string WorldCategoryLandingPage => _isSimpleMode ? nameof(NavigationPage.Players) : nameof(NavigationPage.Inspector);
-    public string ModsCategoryLandingPage => _isSimpleMode ? nameof(NavigationPage.ModLibrary) : nameof(NavigationPage.ModDashboard);
-
     /// <summary>Automation's New Rule card: Admins, in Advanced.</summary>
     public bool ShowAutomationRuleEditor => CanManageAdmin && !_isSimpleMode;
     public bool ShowAutomationSimpleHint => CanManageAdmin && _isSimpleMode;
@@ -66,8 +63,6 @@ public sealed partial class MainWindowViewModel
         RaisePropertyChanged(nameof(UiModeLabel));
         RaisePropertyChanged(nameof(UiModeLabels));
         RaisePropertyChanged(nameof(SelectedUiModeIndex));
-        RaisePropertyChanged(nameof(WorldCategoryLandingPage));
-        RaisePropertyChanged(nameof(ModsCategoryLandingPage));
         RaisePropertyChanged(nameof(ShowAutomationRuleEditor));
         RaisePropertyChanged(nameof(ShowAutomationSimpleHint));
     }

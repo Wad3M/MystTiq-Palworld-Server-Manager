@@ -1,10 +1,18 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
 ## v1.1.5.0 — Resizable Window, Simple Mode, Installer and Portable
 
 - Roadmap V-1: resize grips on every edge and corner (`BeginResizeDrag`, hidden while maximized); the window's size,
   position and maximized state remembered and fitted onto the screens there are.
-- Roadmap V-2: a Simple / Advanced switch in the title bar and Settings. Simple hides the specialist pages from the menus
-  (and HOST), the Configuration page's Advanced view and the automation rule editor; nothing is disabled; remembered.
+- Roadmap V-2: a Simple / Advanced switch in the title bar and Settings. Simple (owner 2026-10-23: "just setup, easy
+  config of the server and start it") keeps Dashboard, Server Setup, Configuration's simple settings, Backups and
+  Settings; hides the World, MODs, Tools and HOST tabs, the other pages, the Console, Doctor and Force Stop buttons and
+  the Dashboard's monitoring panels; adds a three-step guide; nothing is disabled; remembered.
+- Roadmap U-2: the Dashboard's update card shows MystTiq beside the Palworld server, each with its own Update.
+- Roadmap V-3: the local and public addresses moved into their own card between LIFECYCLE and the update card; the row
+  stays while the service is not connected. A helper the desktop just started gets 45 s (was 8 s; the first start after
+  an install with five servers took longer), and a disconnected local tab asks `/healthz` every other tick and connects
+  once it answers (`LocalReconnect`), instead of waiting for Refresh.
+- Roadmap V-4: Simple Settings (blue) and Advanced Settings (amber) have different colours.
 - Roadmap W-2: a portable Windows ZIP. `portable.txt` beside the desktop keeps every MystTiq folder in `data`; no
   registry writes (no sign-in start, no nxm:// handler, no service install); its own helper and port.
 - Roadmap W-1: a Windows setup (`.msi`, WiX 5): Program Files, Start-menu and optional desktop shortcuts, Apps &

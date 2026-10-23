@@ -4112,5 +4112,19 @@
   "automation.simpleHint": "Criar e alterar regras de automação fica no modo Avançado (o botão na barra de título).",
   "settings.portable.title": "Cópia portátil",
   "settings.portable.where": "Tudo o que o MystTiq salva fica em {0}.",
-  "settings.portable.registry": "Uma cópia portátil não grava nada no Windows: não inicia com o Windows, não recebe links do Nexus e não instala um serviço do Windows."
+  "settings.portable.registry": "Uma cópia portátil não grava nada no Windows: não inicia com o Windows, não recebe links do Nexus e não instala um serviço do Windows.",
+  "dashboard.updates": "ATUALIZAÇÕES",
+  "dashboard.updates.mysttiq": "MystTiq {0}",
+  "dashboard.updates.mysttiqNew": "MystTiq {0} → {1}",
+  "dashboard.updates.mysttiqCurrent": "O MystTiq está atualizado.",
+  "dashboard.updates.server": "Build do servidor {0}",
+  "dashboard.updates.serverNew": "Build do servidor {0} → {1}",
+  "dashboard.updateMysttiq": "Atualizar MystTiq",
+  "dashboard.updates.mysttiqConfirmTitle": "Atualizar o MystTiq?",
+  "dashboard.updates.mysttiqConfirm": "Este é o MystTiq {0}; a versão mais recente é {1}. Ela é baixada e conferida com as somas publicadas. Uma cópia instalada pelo instalador abre o novo instalador; caso contrário, a nova versão é extraída ao lado desta. Suas configurações e servidores continuam.",
+  "simple.guide.title": "Modo simples: três passos até um servidor rodando",
+  "simple.guide.text": "1. Configuração do servidor instala ou encontra o servidor do Palworld. 2. Configuração define nome, senhas, portas e as principais opções do jogo. 3. Iniciar o coloca para rodar. Mude para Avançado na barra de título para todo o resto.",
+  "simple.guide.setup": "Abrir configuração do servidor",
+  "simple.guide.config": "Abrir configuração",
+  "simple.guide.start": "Iniciar o servidor"
 }

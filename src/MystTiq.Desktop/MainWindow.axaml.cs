@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -411,6 +411,17 @@ public sealed partial class MainWindow : Window
             if (await dialog.ShowDialog<bool>(this) != true) return;
         }
         vm.Mods.UseMystTiqForNxmLinks();
+    }
+
+    // v1.1.5.0: the update card's Update MystTiq, after a confirmation (the Update Center's own MystTiq update).
+    private async void UpdateMystTiq_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || !vm.MystTiqUpdate.CanUpdate) return;
+        var dialog = new Views.ConfirmOperationDialog(Localizer.Instance["dashboard.updates.mysttiqConfirmTitle"],
+            [string.Format(Localizer.Instance["dashboard.updates.mysttiqConfirm"], MystTiqUpdateViewModel.ThisVersion, vm.MystTiqUpdate.Latest)],
+            Localizer.Instance["dashboard.updateMysttiq"], danger: false);
+        if (await dialog.ShowDialog<bool>(this) != true) return;
+        await vm.UpdateMystTiqAsync();
     }
 
     // v1.1.4.0 (roadmap U-1): the Dashboard's Update Server, after a confirmation saying what happens to a running server.

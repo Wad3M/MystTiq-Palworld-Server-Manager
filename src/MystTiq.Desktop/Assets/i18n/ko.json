@@ -4112,5 +4112,19 @@
   "automation.simpleHint": "자동화 규칙 만들기와 변경은 고급 모드(제목 표시줄의 스위치)에서 할 수 있습니다.",
   "settings.portable.title": "휴대용 사본",
   "settings.portable.where": "MystTiq가 저장하는 모든 것은 {0}에 보관됩니다.",
-  "settings.portable.registry": "휴대용 사본은 Windows에 아무것도 쓰지 않습니다. Windows와 함께 시작하지 않고, Nexus 링크를 받지 않으며, Windows 서비스를 설치하지 않습니다."
+  "settings.portable.registry": "휴대용 사본은 Windows에 아무것도 쓰지 않습니다. Windows와 함께 시작하지 않고, Nexus 링크를 받지 않으며, Windows 서비스를 설치하지 않습니다.",
+  "dashboard.updates": "업데이트",
+  "dashboard.updates.mysttiq": "MystTiq {0}",
+  "dashboard.updates.mysttiqNew": "MystTiq {0} → {1}",
+  "dashboard.updates.mysttiqCurrent": "MystTiq가 최신입니다.",
+  "dashboard.updates.server": "서버 빌드 {0}",
+  "dashboard.updates.serverNew": "서버 빌드 {0} → {1}",
+  "dashboard.updateMysttiq": "MystTiq 업데이트",
+  "dashboard.updates.mysttiqConfirmTitle": "MystTiq를 업데이트할까요?",
+  "dashboard.updates.mysttiqConfirm": "현재 MystTiq {0}이며 최신 릴리스는 {1}입니다. 다운로드한 뒤 게시된 체크섬으로 확인합니다. 설치 프로그램으로 설치한 사본은 새 설치 프로그램을 열고, 그렇지 않으면 새 버전을 이 폴더 옆에 풉니다. 설정과 서버는 그대로 유지됩니다.",
+  "simple.guide.title": "간단 모드: 서버 실행까지 세 단계",
+  "simple.guide.text": "1. 서버 설정에서 Palworld 서버를 설치하거나 찾습니다. 2. 구성에서 이름, 비밀번호, 포트와 주요 게임 설정을 정합니다. 3. 시작으로 실행합니다. 그 밖의 기능은 제목 표시줄에서 고급으로 전환하세요.",
+  "simple.guide.setup": "서버 설정 열기",
+  "simple.guide.config": "구성 열기",
+  "simple.guide.start": "서버 시작"
 }

@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -2216,15 +2216,23 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     }
 }
 
-// v1.1.4.0 (roadmap U-1): the Server update card sits beside the shortened LIFECYCLE bar, above OVERALL HEALTH, and fits
-// at 950, 1100 and 1440 px in every language: its title, tag, build line and Update Server button stay inside the card.
+// v1.1.4.0 (roadmap U-1): the update card sits beside the shortened LIFECYCLE bar, above OVERALL HEALTH, and fits at 950,
+// 1100 and 1440 px in every language. v1.1.5.0 (owner 2026-10-23): it has a MystTiq line and a Palworld server line, each
+// with its own Update; every title, tag, line and button stays inside the card.
 {
     var connected = typeof(MainWindowViewModel).GetProperty(nameof(vm.ManagementApiConnected))!;
     connected.SetValue(vm, true);
-    vm.ApplyServerUpdateCard(new ServerUpdateCardDto { Installed = "25247047", Latest = "25300000", State = "Update available", Detail = "Steam's public build is 25300000." });
+    vm.ApplyServerUpdateCard(new ServerUpdateCardDto { Installed = "25247047", Latest = "25300000", State = "Update available", Detail = "Steam's public build is 25300000.",
+        MystTiqLatest = "99.0.0.0", MystTiqDetail = "Latest published release: v99.0.0.0." });
     selectedPage.SetValue(vm, NavigationPage.Dashboard);
     var problems = new List<string>();
     var trimmedTags = new List<string>();
+    double Natural(TextBlock source)
+    {
+        var probe = new TextBlock { Text = source.Text, FontSize = source.FontSize, FontWeight = source.FontWeight, FontFamily = source.FontFamily };
+        probe.Measure(Size.Infinity);
+        return probe.DesiredSize.Width;
+    }
     foreach (var language in Localizer.Languages)
     {
         Localizer.Instance.SetLanguage(language.Code);
@@ -2234,58 +2242,112 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
             var row = window.GetVisualDescendants().OfType<Grid>().FirstOrDefault(g => g.Name == "LifecycleRow");
             var card = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "ServerUpdateCard");
-            var button = card?.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "UpdateServerButton");
-            var tag = card?.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("tag"));
-            if (row is not { IsEffectivelyVisible: true } || card is null || button is not { IsEffectivelyVisible: true } || tag is null) { problems.Add($"{language.Code}@{width}: missing"); continue; }
+            if (row is not { IsEffectivelyVisible: true } || card is null) { problems.Add($"{language.Code}@{width}: missing"); continue; }
+            T? Named<T>(string name) where T : Control => card.GetVisualDescendants().OfType<T>().FirstOrDefault(x => x.Name == name);
             var cardLeft = card.TranslatePoint(default, window)!.Value.X;
             var cardRight = cardLeft + card.Bounds.Width;
-            var buttonRight = button.TranslatePoint(new Point(button.Bounds.Width, 0), window)!.Value.X;
-            var tagRight = tag.TranslatePoint(new Point(tag.Bounds.Width, 0), window)!.Value.X;
-            var health = window.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.IsEffectivelyVisible && t.Text == Localizer.Instance["dashboard.overallHealth"]);
+            var health = window.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(x => x.IsEffectivelyVisible && x.Text == Localizer.Instance["dashboard.overallHealth"]);
             var healthLeft = health?.TranslatePoint(default, window)!.Value.X ?? -1;
-            var buttonText = button.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault();
-            var title = card.GetVisualDescendants().OfType<TextBlock>().First(x => x.Name == "ServerUpdateTitle");
-            var buildLine = card.GetVisualDescendants().OfType<TextBlock>().First(x => x.Name == "ServerUpdateLine");
-            var lineRight = buildLine.TranslatePoint(new Point(buildLine.Bounds.Width, 0), window)!.Value.X;
+            var title = Named<TextBlock>("ServerUpdateTitle")!;
             var oneLine = title.FontSize * 1.8;
-            // A text cut short must end in an ellipsis (the tag's full state is its tooltip), never be clipped mid-word.
-            var tagText = tag.GetVisualDescendants().OfType<TextBlock>().First();
-            double Natural(TextBlock source)
+            if (Natural(title) > title.Bounds.Width + 0.5) trimmedTags.Add($"title {language.Code}@{width}");
+            var issues = new List<string>();
+            foreach (var (lineName, tagName, buttonName) in new[] { ("MystTiqUpdateLine", "MystTiqUpdateTag", "UpdateMystTiqButton"), ("ServerUpdateLine", "ServerUpdateTag", "UpdateServerButton") })
             {
-                var probe = new TextBlock { Text = source.Text, FontSize = source.FontSize, FontWeight = source.FontWeight, FontFamily = source.FontFamily };
-                probe.Measure(Size.Infinity);
-                return probe.DesiredSize.Width;
+                var line = Named<TextBlock>(lineName); var tag = Named<Border>(tagName); var button = Named<Button>(buttonName);
+                if (line is null || tag is null || button is not { IsEffectivelyVisible: true }) { issues.Add($"{lineName} missing"); continue; }
+                double Right(Control c) => c.TranslatePoint(new Point(c.Bounds.Width, 0), window)!.Value.X;
+                var tagText = tag.GetVisualDescendants().OfType<TextBlock>().First();
+                var tagShort = Natural(tagText) > tagText.Bounds.Width + 0.5;
+                if (tagShort && tagText.TextTrimming == TextTrimming.None) issues.Add($"{tagName} clipped");
+                else if (tagShort) trimmedTags.Add($"{tagName} {language.Code}@{width}");
+                var buttonText = button.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault();
+                // A version line may wrap onto a second line in a narrow column, never more, and is never cut.
+                var probe = new TextBlock { Text = line.Text, FontSize = line.FontSize, FontWeight = line.FontWeight, FontFamily = line.FontFamily, TextWrapping = TextWrapping.Wrap };
+                probe.Measure(new Size(line.Bounds.Width, double.PositiveInfinity));
+                if (probe.DesiredSize.Height > line.Bounds.Height + 0.5 || line.Bounds.Height > oneLine * 2) issues.Add($"{lineName} cut");
+                if (Right(line) > cardRight - 1 || Right(tag) > cardRight - 1 || Right(button) > cardRight - 1) issues.Add($"{lineName} outside");
+                if (buttonText is null || buttonText.DesiredSize.Width > button.Bounds.Width + 0.5) issues.Add($"{buttonName} text");
             }
-            var tagShort = Natural(tagText) > tagText.Bounds.Width + 0.5;
-            var tagClipped = tagShort && tagText.TextTrimming == TextTrimming.None;
-            if (tagShort && !tagClipped) trimmedTags.Add($"{language.Code}@{width}");
-            var lineShort = Natural(buildLine) > buildLine.Bounds.Width + 0.5;
-            var titleShort = Natural(title) > title.Bounds.Width + 0.5;
-            if (titleShort) trimmedTags.Add($"title {language.Code}@{width}");
-            // Everything inside the card: the title on one line (trimmed if it must be), the build number whole, the tag and
-            // the button inside its right edge, and the card no taller than four short rows.
-            if (tagClipped || lineShort || buttonRight > cardRight - 1 || tagRight > cardRight - 1 || lineRight > cardRight - 1 || buttonText is null || buttonText.DesiredSize.Width > button.Bounds.Width + 0.5
-                || title.Bounds.Height > oneLine || buildLine.Bounds.Height > oneLine || buildLine.Bounds.Width + 0.5 < buildLine.DesiredSize.Width
-                || card.Bounds.Height > 110 || Math.Abs(cardLeft - (healthLeft - 8)) > 12)
-                problems.Add($"{language.Code}@{width}: card {cardLeft:0}-{cardRight:0} h{card.Bounds.Height:0}, button to {buttonRight:0}, tag to {tagRight:0}, line to {lineRight:0} h{buildLine.Bounds.Height:0}, title h{title.Bounds.Height:0}, health at {healthLeft:0}");
+            if (title.Bounds.Height > oneLine) issues.Add("title wraps");
+            // v1.1.5.0 (owner 2026-10-23): the addresses card sits between LIFECYCLE and the update card.
+            var addresses = window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "DashboardAddresses");
+            if (addresses is not { IsEffectivelyVisible: true } || addresses.TranslatePoint(new Point(addresses.Bounds.Width, 0), window)!.Value.X > cardLeft - 4
+                || !ReferenceEquals(addresses.GetVisualAncestors().OfType<Grid>().FirstOrDefault(g => g.Name == "LifecycleRow"), row))
+                issues.Add("addresses card not between LIFECYCLE and the update card");
+            if (card.Bounds.Height > 210) issues.Add($"card h{card.Bounds.Height:0}");
+            if (Math.Abs(cardLeft - (healthLeft - 8)) > 12) issues.Add($"card at {cardLeft:0}, health at {healthLeft:0}");
+            if (issues.Count > 0) problems.Add($"{language.Code}@{width}: {string.Join(", ", issues)}");
         }
-        if (language.Code is "en" or "de" or "it" or "ja") { window.Width = 950; window.Height = 650; Render($"server-update-card-{language.Code}-950"); }
+        if (language.Code is "en" or "de" or "it" or "ja") { window.Width = 950; window.Height = 650; Render($"update-card-{language.Code}-950"); }
     }
+    // The card's lines follow the language (they are worded when the card arrives, and again on a language change).
+    Localizer.Instance.SetLanguage("de"); Dispatcher.UIThread.RunJobs();
+    var germanLine = vm.ServerUpdateLineText;
     Localizer.Instance.SetLanguage("en");
     window.Width = 1440; window.Height = 880;
-    var line = vm.ServerUpdateLineText;
-    Check(problems.Count == 0 && line == "25247047 → 25300000" && vm.ServerUpdateState == "Update available",
-        $"U-1: the Server update card is beside the LIFECYCLE bar above OVERALL HEALTH, and its title, tag, builds and Update Server button fit at 950, 1100 and 1440 px in all 12 languages [{string.Join("; ", problems)}] (tag ends in … at: {string.Join(", ", trimmedTags)})");
-    vm.ApplyServerUpdateCard(new ServerUpdateCardDto { Installed = "25300000", Latest = "25300000", State = "Up to date",
+    var me = MystTiqUpdateViewModel.ThisVersion;
+    Check(problems.Count == 0 && germanLine == "Server-Build 25247047 → 25300000" && vm.ServerUpdateLineText == "Server build 25247047 → 25300000" && vm.ServerUpdateState == "Update available"
+          && vm.MystTiqUpdate.State == "Update available" && vm.MystTiqUpdate.LineText == $"MystTiq {me} → 99.0.0.0" && vm.MystTiqUpdate.CanUpdate,
+        $"U-1: the update card (MystTiq and the Palworld server, each with its tag and Update) is beside the LIFECYCLE bar and the addresses card, above OVERALL HEALTH and fits at 950, 1100 and 1440 px in all 12 languages [{string.Join("; ", problems)}] (ends in … at: {string.Join(", ", trimmedTags)})");
+    vm.ApplyServerUpdateCard(new ServerUpdateCardDto { Installed = "25300000", Latest = "25300000", State = "Up to date", MystTiqLatest = me,
         Job = new ServerUpdateJobDto { Running = true, Phase = "Updating", Message = "Updating the server files with SteamCMD…" } });
     var whileRunning = vm.ServerUpdateState == "Updating" && vm.ServerUpdateLineText.StartsWith("Updating the server files") && vm.IsServerUpdateRunning && !vm.CanUpdateServer;
+    var mystTiqCurrent = vm.MystTiqUpdate.State == "Up to date" && !vm.MystTiqUpdate.CanUpdate && vm.MystTiqUpdate.LineText == $"MystTiq {me}";
     vm.ApplyServerUpdateCard(new ServerUpdateCardDto { Installed = "25300000", Latest = "25300000", State = "Up to date",
         Job = new ServerUpdateJobDto { Running = false, Success = true, Phase = "Done", Message = "SteamCMD update completed.", FinishedAt = DateTimeOffset.UtcNow } });
-    var after = vm.ServerUpdateState == "Up to date" && vm.ServerUpdateLineText == "Build 25300000" && vm.CanUpdateServer && vm.ServerUpdateDetail.StartsWith("SteamCMD update completed.");
+    var after = vm.ServerUpdateState == "Up to date" && vm.ServerUpdateLineText == "Server build 25300000" && vm.CanUpdateServer && vm.ServerUpdateDetail.StartsWith("SteamCMD update completed.");
+    var mystTiqUnknown = vm.MystTiqUpdate.State == "Unavailable" && !vm.MystTiqUpdate.CanUpdate
+                         && MystTiqUpdateViewModel.StateFor("1.1.5.0", "1.1.4.0") == "Up to date" && MystTiqUpdateViewModel.StateFor("1.1.5.0", "1.1.10.0") == "Update available";
     var lines = vm.ServerUpdateConfirmationLines();
-    Check(whileRunning && after && lines.Count == 4 && lines[0] == "Installed build 25300000; Steam's public build 25300000." && lines[^1].StartsWith("Steam reports this build is current"),
-        $"U-1: while an update runs the card shows its step and the button waits; afterwards the build and the result; the confirmation says what happens [{string.Join(" | ", lines)}]");
+    Check(whileRunning && after && mystTiqCurrent && mystTiqUnknown && lines.Count == 4 && lines[0] == "Installed build 25300000; Steam's public build 25300000." && lines[^1].StartsWith("Steam reports this build is current"),
+        $"U-1: while an update runs the card shows its step and the button waits; afterwards the build and the result; MystTiq's line is current, newer or unknown by version (1.1.10 is newer than 1.1.5); the confirmation says what happens [{string.Join(" | ", lines)}]");
     connected.SetValue(vm, false);
+    // v1.1.5.0 (owner 2026-10-23: "missing the top cards when the server is not started"): the row stays while the service
+    // is not connected; only Update Server waits for it.
+    Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
+    bool Shown(string name) => window.GetVisualDescendants().OfType<Control>().Any(c => c.Name == name && c.IsEffectivelyVisible && c.Bounds.Height > 0);
+    var updateServer = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "UpdateServerButton");
+    Render("dashboard-top-row-disconnected");
+    Check(Shown("LifecycleRow") && Shown("DashboardAddresses") && Shown("ServerUpdateCard") && Shown("MystTiqUpdateLine") && !vm.CanUpdateServer && updateServer?.IsEffectivelyEnabled != true,
+        "V-3: with the service not connected the Dashboard still shows LIFECYCLE, the addresses card and the update card; Update Server waits for the connection");
+}
+
+// v1.1.5.0 (seen 2026-10-23 after an install): the local tab asks /healthz quietly every other tick and connects once it
+// answers, instead of waiting for Refresh; the helper it just started gets 45 s, not 8 s.
+{
+    var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+    listener.Start();
+    var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+    var served = 0;
+    var serving = Task.Run(async () =>
+    {
+        try
+        {
+            while (true)
+            {
+                using var client = await listener.AcceptTcpClientAsync();
+                using var stream = client.GetStream();
+                var buffer = new byte[2048];
+                _ = await stream.ReadAsync(buffer);
+                var body = "{\"status\":\"ok\"}";
+                await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes($"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n{body}"));
+                Interlocked.Increment(ref served);
+            }
+        }
+        catch { /* the listener was stopped */ }
+    });
+    // Off the window's thread: waiting on it here would hold the continuation the call needs.
+    bool Ask(LocalReconnect r) => Task.Run(() => r.AnswersAsync($"http://127.0.0.1:{port}")).GetAwaiter().GetResult();
+    var reconnect = new LocalReconnect();
+    var answers = new List<bool>();
+    for (var tick = 0; tick < 4; tick++) answers.Add(Ask(reconnect));
+    listener.Stop();
+    var deadAnswer = new LocalReconnect();
+    _ = Ask(deadAnswer);
+    var dead = Ask(deadAnswer);
+    Check(string.Join(",", answers) == "False,True,False,True" && served == 2 && !dead && LocalManagementBootstrapper.StartedHelperTimeout == TimeSpan.FromSeconds(45),
+        $"V-3: a disconnected local tab asks /healthz every {LocalReconnect.EveryTicks} ticks and connects once it answers (ticks {string.Join(",", answers)}, asked {served} times; a closed port answers {dead}); a helper just started gets 45 s");
 }
 
 // v1.1.5.0 (roadmap V-1): the window can be sized from every edge and corner (grips hidden while maximized), and its placement
@@ -2352,30 +2414,51 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Check(bigProblems.Count == 0, $"V-1: every page lays out at 1680x1050, 2560x1440 and 3840x2160, its header reaching the right edge [{string.Join("; ", bigProblems.Take(8))}]");
 }
 
-// v1.1.5.0 (roadmap V-2): Simple hides the specialist pages from the menus (and Configuration's Advanced view and the rule
-// editor), remembers the choice, and disables nothing; Advanced shows everything again.
+// v1.1.5.0 (roadmap V-2; owner 2026-10-23: "the advanced thing doesnt do anything ... It should hide a bunch of the functions
+// and features to help the user just setup, easy config of the server and start it"). The title bar's switch is clicked the
+// way a mouse does; Simple keeps the Dashboard (with a three-step guide), Server Setup, Configuration's simple settings,
+// Backups and Settings; it hides every other page, the World, MODs, Tools and HOST tabs, the specialist Ribbon buttons and
+// the Dashboard's monitoring panels; it is remembered and translated, disables nothing, and Advanced brings it all back.
 {
-    bool NavVisible(string page) => window.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>()
-        .Where(b => b.Classes.Contains("nav") && Equals(b.CommandParameter, page)).Any(b => b.IsVisible);
+    var navButtons = window.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>().Where(b => b.Classes.Contains("nav")).ToList();
+    bool NavVisible(string page) => navButtons.Where(b => Equals(b.CommandParameter, page)).Any(b => b.IsVisible);
     Avalonia.Controls.Primitives.ToggleButton? Category(string cls) => window.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>()
         .FirstOrDefault(b => b.Classes.Contains("categoryTab") && b.Classes.Contains(cls));
-    var advancedFirst = vm.IsAdvancedMode && !vm.IsSimpleMode;
-    var allAdvanced = Enum.GetValues<NavigationPage>().Where(p => window.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>().Any(b => b.Classes.Contains("nav") && Equals(b.CommandParameter, p.ToString())))
-        .All(p => NavVisible(p.ToString()));
+    bool Named(string name) => window.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.Name == name)?.IsEffectivelyVisible == true;
+    var navPages = Enum.GetValues<NavigationPage>().Where(p => navButtons.Any(b => Equals(b.CommandParameter, p.ToString()))).ToList();
+    var advancedFirst = vm.IsAdvancedMode && navPages.All(p => NavVisible(p.ToString()));
     selectedPage.SetValue(vm, NavigationPage.Fleet);
-    vm.ToggleUiModeCommand.Execute(null);
     Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
-    var wrong = Enum.GetValues<NavigationPage>().Where(p => window.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>().Any(b => b.Classes.Contains("nav") && Equals(b.CommandParameter, p.ToString())))
-        .Where(p => NavVisible(p.ToString()) == SimpleMode.Hides(p)).Select(p => p.ToString()).ToList();
+    var toggle = window.GetVisualDescendants().OfType<Button>().First(b => b.Name == "UiModeToggle");
+    void ClickToggle()
+    {
+        var centre = toggle.TranslatePoint(new Point(toggle.Bounds.Width / 2, toggle.Bounds.Height / 2), window)!.Value;
+        window.MouseDown(centre, Avalonia.Input.MouseButton.Left);
+        window.MouseUp(centre, Avalonia.Input.MouseButton.Left);
+        Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
+    }
+    ClickToggle();
+    var clicked = vm.IsSimpleMode;
+    var wrong = navPages.Where(p => NavVisible(p.ToString()) == SimpleMode.Hides(p)).Select(p => p.ToString()).ToList();
+    var shownInMenus = navPages.Where(p => NavVisible(p.ToString())).Select(p => p.ToString()).OrderBy(p => p).ToList();
     var leftHiddenPage = vm.SelectedPage == NavigationPage.Dashboard;
-    var host = Category("host"); var world = Category("world"); var mods = Category("mods");
-    var modeTabs = host is { IsVisible: false } && Equals(world?.CommandParameter, "Players") && Equals(mods?.CommandParameter, "ModLibrary");
+    var simpleTabs = new[] { "world", "mods", "tools", "host" }.All(c => Category(c) is { IsVisible: false }) && new[] { "home", "server", "backups", "system" }.All(c => Category(c) is { IsVisible: true });
+    var ribbonLabels = vm.VisibleRibbonGroups.Concat(vm.OverflowRibbonGroups).SelectMany(g => g.Actions).Select(a => a.Label).ToList();
+    var simpleRibbon = !ribbonLabels.Intersect(SimpleMode.HiddenRibbonLabels).Any() && ribbonLabels.Contains("Start") && ribbonLabels.Contains("Stop") && ribbonLabels.Contains("Backup");
+    // The top row (LIFECYCLE, addresses, updates) shows while connected.
+    var connectedProperty = typeof(MainWindowViewModel).GetProperty(nameof(vm.ManagementApiConnected))!;
+    connectedProperty.SetValue(vm, true);
+    selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var monitoring = window.GetVisualDescendants().OfType<TextBlock>().Where(x => x.IsEffectivelyVisible).Select(x => x.Text).ToList();
+    var dashboard = Named("SimpleGuide") && Named("LifecycleRow") && Named("ServerUpdateCard") && Named("DashboardAddresses")
+                    && !monitoring.Contains(Localizer.Instance["dashboard.log"]) && !monitoring.Contains(Localizer.Instance["dashboard.worldPulse"]) && !monitoring.Contains(Localizer.Instance["dashboard.players"]);
+    var guideButtons = window.GetVisualDescendants().OfType<Control>().First(c => c.Name == "SimpleGuide").GetVisualDescendants().OfType<Button>().ToList();
+    var guide = guideButtons.Count == 3 && guideButtons.Any(b => b.Command == vm.StartCommand) && guideButtons.Count(b => b.Command == vm.NavigateCommand) == 2;
+    Render("simple-mode-dashboard-connected");
+    connectedProperty.SetValue(vm, false);
     selectedPage.SetValue(vm, NavigationPage.Configuration); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var advancedButton = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Command == vm.Configuration.ShowAdvancedConfigCommand);
     var configSimple = advancedButton is { IsVisible: false } && vm.Configuration.IsConfigSimpleView;
-    selectedPage.SetValue(vm, NavigationPage.Automation); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
-    bool Named(string name) => window.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.Name == name)?.IsEffectivelyVisible == true;
-    var automation = !Named("AutomationRuleEditor") && Named("AutomationSimpleHint");
     var remembered = new LocalDisplayPreferencesStore();
     typeof(LocalDisplayPreferencesStore).GetField("<StoragePath>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(remembered, Path.Combine(output, nameof(LocalDisplayPreferencesStore) + ".json"));
     var saved = remembered.LoadUiMode() == SimpleMode.Simple && vm.UiModeLabel == "Simple";
@@ -2383,15 +2466,19 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var stillReachable = vm.SelectedPage == NavigationPage.Fleet;
     Localizer.Instance.SetLanguage("de"); Dispatcher.UIThread.RunJobs();
     var relabelled = vm.UiModeLabel == "Einfach";
-    Localizer.Instance.SetLanguage("en");
-    var modeToggle = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "UiModeToggle");
-    vm.SelectedUiModeIndex = 1;
-    selectedPage.SetValue(vm, NavigationPage.Automation);
-    Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
-    var backToAdvanced = vm.IsAdvancedMode && Category("host")?.IsVisible == true && NavVisible("Fleet") && Named("AutomationRuleEditor") && remembered.LoadUiMode() == SimpleMode.Advanced;
-    selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs();
-    Check(advancedFirst && allAdvanced && wrong.Count == 0 && leftHiddenPage && modeTabs && configSimple && automation && saved && stillReachable && relabelled && modeToggle is { IsEffectivelyVisible: true } && backToAdvanced,
-        $"V-2: Simple hides exactly the specialist pages from the menus (and HOST), the World and MODs tabs open a shown page, Configuration has no Advanced view and Automation no rule editor, the choice is remembered and translated, a hidden page still opens, and Advanced brings everything back [wrong {string.Join(",", wrong)}; left {leftHiddenPage}, tabs {modeTabs}, config {configSimple}, automation {automation}, saved {saved}, reachable {stillReachable}, relabel {relabelled}, back {backToAdvanced}]");
+    Localizer.Instance.SetLanguage("en"); Dispatcher.UIThread.RunJobs();
+    selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    Render("simple-mode-dashboard");
+    ClickToggle();
+    selectedPage.SetValue(vm, NavigationPage.Automation); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var ribbonBack = vm.VisibleRibbonGroups.Concat(vm.OverflowRibbonGroups).SelectMany(g => g.Actions).Any(a => a.Label == "Force Stop");
+    var backToAdvanced = vm.IsAdvancedMode && Category("host")?.IsVisible == true && Category("world")?.IsVisible == true && NavVisible("Fleet") && NavVisible("Players")
+                         && Named("AutomationRuleEditor") && ribbonBack && remembered.LoadUiMode() == SimpleMode.Advanced;
+    selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var monitoringBack = window.GetVisualDescendants().OfType<TextBlock>().Any(x => x.IsEffectivelyVisible && x.Text == Localizer.Instance["dashboard.log"]) && !Named("SimpleGuide");
+    Check(advancedFirst && clicked && wrong.Count == 0 && leftHiddenPage && simpleTabs && simpleRibbon && dashboard && guide && configSimple && saved && stillReachable && relabelled && backToAdvanced && monitoringBack
+          && SimpleMode.ShownPages.Count == 5,
+        $"V-2: clicking the title bar's switch turns Simple on and off; Simple shows only Dashboard, Server Setup, Configuration, Backups and Settings in the menus ({string.Join(", ", shownInMenus)}), hides the World, MODs, Tools and HOST tabs, the Console, Doctor and Force Stop buttons and the Dashboard's monitoring panels, adds the three-step guide, keeps Configuration simple, is remembered and translated, never blocks a page, and Advanced brings everything back [clicked {clicked}, wrong {string.Join(",", wrong)}, tabs {simpleTabs}, ribbon {simpleRibbon}, dashboard {dashboard}, guide {guide}, config {configSimple}, saved {saved}, reachable {stillReachable}, back {backToAdvanced}, monitoring back {monitoringBack}]");
 }
 
 // v1.1.5.0 (roadmap W-2, W-1): a portable copy keeps everything in its data folder and writes nothing to Windows; the Update

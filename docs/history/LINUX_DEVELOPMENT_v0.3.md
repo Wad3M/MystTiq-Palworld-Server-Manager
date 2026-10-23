@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
 # MystTiq Linux development plan (v0.3, historical)
 
 > Kept as history. The current Linux page is [docs/linux/README.md](../linux/README.md).

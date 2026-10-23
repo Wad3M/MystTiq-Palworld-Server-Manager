@@ -4112,5 +4112,19 @@
   "automation.simpleHint": "Automatisierungsregeln erstellen und ändern geht im Modus Erweitert (der Schalter in der Titelleiste).",
   "settings.portable.title": "Portable Kopie",
   "settings.portable.where": "Alles, was MystTiq speichert, liegt in {0}.",
-  "settings.portable.registry": "Eine portable Kopie schreibt nichts in Windows: Sie startet nicht mit Windows, übernimmt keine Nexus-Links und installiert keinen Windows-Dienst."
+  "settings.portable.registry": "Eine portable Kopie schreibt nichts in Windows: Sie startet nicht mit Windows, übernimmt keine Nexus-Links und installiert keinen Windows-Dienst.",
+  "dashboard.updates": "UPDATES",
+  "dashboard.updates.mysttiq": "MystTiq {0}",
+  "dashboard.updates.mysttiqNew": "MystTiq {0} → {1}",
+  "dashboard.updates.mysttiqCurrent": "MystTiq ist aktuell.",
+  "dashboard.updates.server": "Server-Build {0}",
+  "dashboard.updates.serverNew": "Server-Build {0} → {1}",
+  "dashboard.updateMysttiq": "MystTiq aktualisieren",
+  "dashboard.updates.mysttiqConfirmTitle": "MystTiq aktualisieren?",
+  "dashboard.updates.mysttiqConfirm": "Dies ist MystTiq {0}; die neueste Version ist {1}. Sie wird heruntergeladen und mit den veröffentlichten Prüfsummen verglichen. Eine mit dem Setup installierte Kopie öffnet dann das neue Setup, sonst wird die neue Version neben dieser entpackt. Einstellungen und Server bleiben erhalten.",
+  "simple.guide.title": "Einfacher Modus: drei Schritte zum laufenden Server",
+  "simple.guide.text": "1. Die Server-Einrichtung installiert oder findet den Palworld-Server. 2. Die Konfiguration legt Name, Passwörter, Ports und die wichtigsten Spieleinstellungen fest. 3. Starten führt ihn aus. Für alles andere in der Titelleiste auf Erweitert wechseln.",
+  "simple.guide.setup": "Server-Einrichtung öffnen",
+  "simple.guide.config": "Konfiguration öffnen",
+  "simple.guide.start": "Server starten"
 }

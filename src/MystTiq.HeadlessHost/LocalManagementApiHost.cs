@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
@@ -330,7 +330,8 @@ public sealed class LocalManagementApiHost : IAsyncDisposable
                 TimeSpan.FromSeconds(configuration.Lifecycle.StopTimeoutSeconds),
                 operations, profileId,
                 (level, title, detail) => activity.Record(level, "Server update", title, detail),
-                (title, message) => notifications.Create("Warning", title, message, pinned: true));
+                (title, message) => notifications.Create("Warning", title, message, pinned: true),
+                componentUpdates.GetMystTiqVersionAsync);
 
             profiles[profileId] = new ServerProfileHost
             {

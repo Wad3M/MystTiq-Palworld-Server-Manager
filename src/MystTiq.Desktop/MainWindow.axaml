@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -141,10 +141,10 @@
       <StackPanel Orientation="Horizontal" Margin="16,0,0,0">
         <ToggleButton Classes="categoryTab home" IsChecked="{Binding IsV5HomeCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Dashboard"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.home}"/></Border></ToggleButton>
         <ToggleButton Classes="categoryTab server" IsChecked="{Binding IsV5ServerCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ServerSetup"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.server}"/></Border></ToggleButton>
-        <ToggleButton Classes="categoryTab world" IsChecked="{Binding IsV5WorldCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="{Binding WorldCategoryLandingPage}"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.world}"/></Border></ToggleButton>
+        <ToggleButton Classes="categoryTab world" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsV5WorldCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Inspector"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.world}"/></Border></ToggleButton>
         <ToggleButton Classes="categoryTab backups" IsChecked="{Binding IsV5BackupsCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Backups"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.backups}"/></Border></ToggleButton>
-        <ToggleButton Classes="categoryTab mods" IsChecked="{Binding IsV5ModsCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="{Binding ModsCategoryLandingPage}"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.mods}"/></Border></ToggleButton>
-        <ToggleButton Classes="categoryTab tools" IsChecked="{Binding IsV5ToolsCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="UpdateCenter"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.tools}"/></Border></ToggleButton>
+        <ToggleButton Classes="categoryTab mods" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsV5ModsCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModDashboard"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.mods}"/></Border></ToggleButton>
+        <ToggleButton Classes="categoryTab tools" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsV5ToolsCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="UpdateCenter"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.tools}"/></Border></ToggleButton>
         <!-- v0.8.17.0: the HOST tab (the machine a server runs on, and its priority and eco mode). -->
         <ToggleButton Classes="categoryTab host" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsV5HostCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Host"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.host}"/></Border></ToggleButton>
         <ToggleButton Classes="categoryTab system" IsChecked="{Binding IsV5SystemCategory, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Settings"><Border Classes="categoryTabGlow"><TextBlock Text="{services:Tr category.system}"/></Border></ToggleButton>
@@ -289,21 +289,21 @@
               </StackPanel>
               <StackPanel IsVisible="{Binding IsV5WorldCategory}" VerticalAlignment="Top" Spacing="3">
                 <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsWorldExplorerPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Inspector"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt inspector}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Inspector}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsPlayersPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Players"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt players}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Players}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsBasesPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Bases"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt bases}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Bases}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsGuildsPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Guilds"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt guilds}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Guilds}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsMapPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Map"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt map}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Map}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsPlayersPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Players"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt players}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Players}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsBasesPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Bases"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt bases}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Bases}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsGuildsPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Guilds"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt guilds}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Guilds}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsMapPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Map"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt map}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Map}"/></Grid></Border></ToggleButton>
               </StackPanel>
               <StackPanel IsVisible="{Binding IsV5BackupsCategory}" Spacing="3"><ToggleButton Classes="nav" IsChecked="{Binding IsBackupsPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Backups"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt backup-sphere}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Backups}"/></Grid></Border></ToggleButton></StackPanel>
               <StackPanel IsVisible="{Binding IsV5ModsCategory}" Spacing="3">
                 <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsModDashboardPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModDashboard"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_dashboard}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModDashboard}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsModLibraryPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModLibrary"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_library}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModLibrary}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsModSourcesPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModSources"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_sources}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModSources}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsModLibraryPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModLibrary"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_library}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModLibrary}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsModSourcesPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ModSources"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt mod_sources}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ModSources}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsUe4ssPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Ue4ss"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt ue4ss}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Ue4ss}"/></Grid></Border></ToggleButton>
               </StackPanel>
               <StackPanel IsVisible="{Binding IsV5ToolsCategory}" Spacing="3">
-                <ToggleButton Classes="nav" IsChecked="{Binding IsUpdateCenterPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="UpdateCenter"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt update_center}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.UpdateCenter}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsDoctorPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Doctor"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt server_doctor}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Doctor}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsUpdateCenterPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="UpdateCenter"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt update_center}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.UpdateCenter}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsDoctorPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Doctor"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt server_doctor}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Doctor}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsCrashAnalyzerPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="CrashAnalyzer"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt crash_analyzer}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.CrashAnalyzer}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsSaveToolsPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="SaveTools"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt save_tools}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.SaveTools}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsDiagnosticsPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="DiagnosticsCenter"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt diagnostics}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.DiagnosticsCenter}"/></Grid></Border></ToggleButton>
@@ -313,10 +313,10 @@
               </StackPanel>
               <StackPanel IsVisible="{Binding IsV5SystemCategory}" Spacing="3">
                 <ToggleButton Classes="nav" IsChecked="{Binding IsSettingsPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Settings"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt settings}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Settings}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsNotificationsPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Notifications"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt notifications}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Notifications}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsNotificationsPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Notifications"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt notifications}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Notifications}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsActivityAuditPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="ActivityAudit"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt activity_audit}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.ActivityAudit}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsAutomationPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Automation"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt automation}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Automation}"/></Grid></Border></ToggleButton>
-                <ToggleButton Classes="nav" IsChecked="{Binding IsAlertCenterPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="AlertCenter"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt alert_center}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.AlertCenter}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsAutomationPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Automation"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt automation}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Automation}"/></Grid></Border></ToggleButton>
+                <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsAlertCenterPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="AlertCenter"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt alert_center}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.AlertCenter}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsSecurityPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Security"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt security}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Security}"/></Grid></Border></ToggleButton>
                 <ToggleButton Classes="nav" IsVisible="{Binding IsAdvancedMode}" IsChecked="{Binding IsFleetPage, Mode=OneWay}" Command="{Binding NavigateCommand}" CommandParameter="Fleet"><Border Classes="navSurface"><Grid ColumnDefinitions="54,*" ColumnSpacing="12"><Image Source="{services:IconArt fleet}" Width="50" Height="50" Stretch="Uniform"/><TextBlock Grid.Column="1" Text="{services:Tr nav.Fleet}"/></Grid></Border></ToggleButton>
               </StackPanel>
@@ -378,21 +378,56 @@
             </Grid>
           </Border>
 
-          <!-- v1.1.4.0 (roadmap U-1, owner 2026-10-19): the LIFECYCLE bar spans the first three card columns and the Server update
-               card takes the fourth, above OVERALL HEALTH: the installed build against Steam's, and Update Server (Admin). -->
-          <Grid x:Name="LifecycleRow" ColumnDefinitions="1.15*,1.15*,1.15*,1.15*" ColumnSpacing="8" IsVisible="{Binding ManagementApiConnected}">
-            <Border Grid.ColumnSpan="3" Classes="card accentHome" Padding="7,5">
+          <!-- v1.1.5.0 (roadmap V-2): in Simple, three steps: set the server up, choose its settings, start it. -->
+          <Border x:Name="SimpleGuide" Classes="card accentHome" Padding="10,8" IsVisible="{Binding IsSimpleMode}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="{services:Tr simple.guide.title}" FontSize="15" FontWeight="SemiBold"/>
+              <TextBlock Text="{services:Tr simple.guide.text}" Classes="muted" TextWrapping="Wrap"/>
+              <WrapPanel Orientation="Horizontal">
+                <Button Classes="open" Margin="0,0,8,4" Content="{services:Tr simple.guide.setup}" Command="{Binding NavigateCommand}" CommandParameter="ServerSetup" AutomationProperties.Name="{services:Tr simple.guide.setup}"/>
+                <Button Classes="open" Margin="0,0,8,4" Content="{services:Tr simple.guide.config}" Command="{Binding NavigateCommand}" CommandParameter="Configuration" AutomationProperties.Name="{services:Tr simple.guide.config}"/>
+                <Button Classes="apply" Margin="0,0,8,4" Content="{services:Tr simple.guide.start}" Command="{Binding StartCommand}" AutomationProperties.Name="{services:Tr simple.guide.start}"/>
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- v1.1.4.0 (roadmap U-1, owner 2026-10-19): the LIFECYCLE bar and the update card (fourth column, above OVERALL
+               HEALTH). v1.1.5.0 (owner 2026-10-23): LIFECYCLE spans two columns and the addresses card takes the third. The
+               row stays while the service is not connected ("missing the top cards when the server is not started"). -->
+          <Grid x:Name="LifecycleRow" ColumnDefinitions="1.15*,1.15*,1.15*,1.15*" ColumnSpacing="8">
+            <Border Grid.ColumnSpan="2" Classes="card accentHome" Padding="7,5">
               <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                 <TextBlock Text="{services:Tr dashboard.lifecycle}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" FontSize="11"/>
                 <TextBlock Grid.Column="1" Text="{services:TrText LifecycleStatusText}" TextWrapping="Wrap" FontSize="11"/>
               </Grid>
             </Border>
+            <!-- v1.0.0.1 (requested 2026-09-30): the addresses players use. Local ones for the same network, the public one for the
+                 internet; selectable so they can be copied. v1.1.5.0 (owner 2026-10-23): moved up beside LIFECYCLE, in its own
+                 card before the update card. -->
+            <Border x:Name="DashboardAddresses" Grid.Column="2" Classes="card accentHome" Padding="7,5">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{services:Tr dashboard.localAddresses}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                <SelectableTextBlock x:Name="DashboardLocalAddresses" Text="{Binding Dashboard.LocalAddressesVerbatim}" FontFamily="Consolas, monospace" FontSize="11" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:Tr dashboard.publicAddress}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" FontSize="11" Margin="0,3,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                <SelectableTextBlock x:Name="DashboardPublicAddress" Text="{Binding Dashboard.PublicAddressVerbatim}" FontFamily="Consolas, monospace" FontSize="11" TextWrapping="Wrap"/>
+                <TextBlock Text="{services:TrText Dashboard.PublicAddressNote}" Classes="muted" FontSize="10" TextWrapping="Wrap"/>
+                <!-- v1.1.1.0 (seen 2026-10-13: joins from the server's own PC through 127.0.0.1 dropped): a player on this PC joins
+                     with a local address. Two lines here; the whole hint is the tooltip. -->
+                <TextBlock x:Name="SamePcJoinHint" Text="{services:Tr dashboard.samePcJoinHint}" ToolTip.Tip="{services:Tr dashboard.samePcJoinHint}" Classes="muted" FontSize="10" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+              </StackPanel>
+            </Border>
             <Border x:Name="ServerUpdateCard" Grid.Column="3" Classes="card accentHome" Padding="7,5" ToolTip.Tip="{services:TrText ServerUpdateDetail}">
+              <!-- v1.1.5.0 (owner 2026-10-23): MystTiq itself and the Palworld server, each with its own Update. -->
               <StackPanel Spacing="3">
-                <TextBlock x:Name="ServerUpdateTitle" Text="{services:Tr dashboard.serverUpdate}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                <WrapPanel Orientation="Horizontal">
-                  <Border x:Name="ServerUpdateTag" Classes="tag" Margin="0,0,6,2" services:StatusTag.Status="{Binding ServerUpdateState}" ToolTip.Tip="{services:TrText ServerUpdateState}"><TextBlock Text="{services:TrText ServerUpdateState}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/></Border>
-                  <TextBlock x:Name="ServerUpdateLine" Text="{services:TrText ServerUpdateLineText}" FontSize="11" VerticalAlignment="Center" TextWrapping="NoWrap" Margin="0,0,0,2"/>
+                <TextBlock x:Name="ServerUpdateTitle" Text="{services:Tr dashboard.updates}" FontWeight="SemiBold" Foreground="{DynamicResource BlueBrush}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                <WrapPanel Orientation="Horizontal" ToolTip.Tip="{services:TrText MystTiqUpdate.Detail}">
+                  <TextBlock x:Name="MystTiqUpdateLine" Text="{services:TrText MystTiqUpdate.LineText}" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" MaxLines="2" Margin="0,0,6,2"/>
+                  <Border x:Name="MystTiqUpdateTag" Classes="tag" Margin="0,0,0,2" services:StatusTag.Status="{Binding MystTiqUpdate.State}" ToolTip.Tip="{services:TrText MystTiqUpdate.State}"><TextBlock Text="{services:TrText MystTiqUpdate.State}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/></Border>
+                </WrapPanel>
+                <Button x:Name="UpdateMystTiqButton" Classes="apply" HorizontalAlignment="Left" Content="{services:Tr dashboard.updateMysttiq}" Padding="7,2" FontSize="11" Click="UpdateMystTiq_OnClick" IsEnabled="{Binding MystTiqUpdate.CanUpdate}" AutomationProperties.Name="{services:Tr dashboard.updateMysttiq}"/>
+                <WrapPanel Orientation="Horizontal" Margin="0,3,0,0">
+                  <TextBlock x:Name="ServerUpdateLine" Text="{services:TrText ServerUpdateLineText}" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" MaxLines="2" Margin="0,0,6,2"/>
+                  <Border x:Name="ServerUpdateTag" Classes="tag" Margin="0,0,0,2" services:StatusTag.Status="{Binding ServerUpdateState}" ToolTip.Tip="{services:TrText ServerUpdateState}"><TextBlock Text="{services:TrText ServerUpdateState}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/></Border>
                 </WrapPanel>
                 <!-- The role is on the button itself (the v0.8.23.0 rule); the wrapper also waits for a running update. -->
                 <Panel HorizontalAlignment="Left" IsEnabled="{Binding CanUpdateServer}" IsVisible="{Binding CanManageAdmin}">
@@ -460,7 +495,7 @@
             </Border>
           </Grid>
 
-          <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+          <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8" IsVisible="{Binding IsAdvancedMode}">
             <Border Classes="card glowPurple" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.players}" Classes="muted"/><TextBlock Text="{services:TrFormat dashboard.format.online, Path=OnlinePlayerCountText}" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.known, Path=Players.PlayerRecordCountText}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="Players"/></Grid></Border>
             <Border Grid.Column="1" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.guildsBases}" Classes="muted"/><TextBlock Text="{services:TrText Dashboard.GuildText}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{services:TrText SemanticStateText}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="Guilds"/></Grid></Border>
             <Border Grid.Column="2" Classes="card accentHome" Padding="8,6"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="2"><TextBlock Text="{services:Tr dashboard.modPlatform}" Classes="muted"/><TextBlock Text="{services:TrText Dashboard.ModText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrFormat dashboard.format.health, Path=Mods.ModHealth}" Classes="muted"/></StackPanel><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.open}" Padding="7,2" VerticalAlignment="Center" Command="{Binding NavigateCommand}" CommandParameter="ModDashboard"/></Grid></Border>
@@ -478,7 +513,7 @@
             </Border>
           </Grid>
 
-          <Border Background="{DynamicResource CardStrongBrush}" BorderBrush="{DynamicResource BlueAccentBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6">
+          <Border Background="{DynamicResource CardStrongBrush}" BorderBrush="{DynamicResource BlueAccentBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6" IsVisible="{Binding IsAdvancedMode}">
             <Grid ColumnDefinitions="1.25*,1*,1*,1.25*,1.4*" ColumnSpacing="12">
               <StackPanel><TextBlock Text="{services:Tr dashboard.worldPulse}" Foreground="{DynamicResource BlueBrush}" FontSize="9" FontWeight="Bold"/><TextBlock Text="{services:TrText Dashboard.WorldClockText}" FontSize="15" FontWeight="Bold"/><TextBlock Text="{services:TrText Dashboard.WorldClockDetailText}" Classes="muted" FontSize="9" TextTrimming="CharacterEllipsis"/></StackPanel>
               <StackPanel Grid.Column="1"><TextBlock Text="{services:Tr dashboard.serverSession}" Classes="muted" FontSize="9"/><TextBlock Text="{services:TrText UptimeText}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{services:TrText Dashboard.SessionText}" Classes="muted" FontSize="9"/></StackPanel>
@@ -488,7 +523,7 @@
             </Grid>
           </Border>
 
-          <Border Classes="card accentHome" Padding="8">
+          <Border Classes="card accentHome" Padding="8" IsVisible="{Binding IsAdvancedMode}">
             <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="12">
               <TextBlock Text="{services:Tr dashboard.health}" Classes="muted" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{services:TrText DashboardHealthText}" FontWeight="Bold" Foreground="{Binding HealthStateColorKey, Converter={x:Static converters:SemanticStatusColorConverter.Instance}}" VerticalAlignment="Center"/>
               <TextBlock Grid.Column="2" Text="{services:TrText Dashboard.RestText}" VerticalAlignment="Center"/>
@@ -503,7 +538,7 @@
             </Grid>
           </Border>
 
-          <Grid ColumnDefinitions="1.65*,*" ColumnSpacing="10" Height="100">
+          <Grid ColumnDefinitions="1.65*,*" ColumnSpacing="10" Height="100" IsVisible="{Binding IsAdvancedMode}">
             <Border Classes="card accentHome" Padding="10">
               <Grid RowDefinitions="Auto,*" RowSpacing="6">
                 <Grid ColumnDefinitions="*,Auto">
@@ -538,7 +573,7 @@
           <!-- v0.7.33.0: removed the duplicate ONLINE PLAYERS card that stood beside this log
                card; the top-row PLAYERS summary card (with its own OPEN button to the Players
                page) already covers that. Log card now spans the full width in its place. -->
-          <Border Classes="card accentHome" Padding="10">
+          <Border Classes="card accentHome" Padding="10" IsVisible="{Binding IsAdvancedMode}">
             <StackPanel Spacing="6">
               <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{services:Tr dashboard.log}" FontSize="15" FontWeight="SemiBold"/><Button Classes="open" Grid.Column="1" Content="{services:Tr dashboard.openConsole}" Command="{Binding NavigateCommand}" CommandParameter="Console"/></Grid>
               <TextBlock Text="{services:TrText LogFileText}" Classes="muted" FontSize="10"/>
@@ -562,24 +597,6 @@
             </Grid>
           </Border>
 
-          <!-- v1.0.0.1 (requested 2026-09-30): the addresses players use. Local ones for the same network, the public one for the
-               internet; selectable so they can be copied. -->
-          <Border x:Name="DashboardAddresses" Classes="card accentHome" Padding="8">
-            <StackPanel Spacing="4">
-            <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="10">
-              <TextBlock Text="{services:Tr dashboard.localAddresses}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
-              <SelectableTextBlock Grid.Column="1" Text="{Binding Dashboard.LocalAddressesVerbatim}" FontFamily="Consolas, monospace" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"/>
-              <TextBlock Grid.Column="2" Text="{services:Tr dashboard.publicAddress}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
-              <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <SelectableTextBlock Text="{Binding Dashboard.PublicAddressVerbatim}" FontFamily="Consolas, monospace" FontSize="12"/>
-                <TextBlock Text="{services:TrText Dashboard.PublicAddressNote}" Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
-              </StackPanel>
-            </Grid>
-            <!-- v1.1.1.0 (seen 2026-10-13: joins from the server's own PC through 127.0.0.1 dropped): a player on this PC joins
-                 with a local address. -->
-            <TextBlock x:Name="SamePcJoinHint" Text="{services:Tr dashboard.samePcJoinHint}" Classes="muted" FontSize="10" TextWrapping="Wrap"/>
-            </StackPanel>
-          </Border>
         </StackPanel>
 
         <!-- SERVER SETUP — parity-oriented environment checklist -->
@@ -1140,8 +1157,8 @@
                    BuildRibbonGroupsForActivePage. Only Simple/Advanced/QoL preset/Save As Preset
                    stay here, since they were not part of that relocation. -->
               <Grid ColumnDefinitions="Auto,Auto,Auto,200,Auto,150,Auto,*" ColumnSpacing="8">
-                <Button Classes="plain" Content="{services:Tr ui.simple_settings}" Command="{Binding Configuration.ShowSimpleConfigCommand}"/>
-                <Button Classes="plain" Grid.Column="1" Content="{services:Tr ui.advanced_settings}" Command="{Binding Configuration.ShowAdvancedConfigCommand}" IsVisible="{Binding IsAdvancedMode}"/>
+                <Button Classes="info" Content="{services:Tr ui.simple_settings}" Command="{Binding Configuration.ShowSimpleConfigCommand}"/>
+                <Button Classes="caution" Grid.Column="1" Content="{services:Tr ui.advanced_settings}" Command="{Binding Configuration.ShowAdvancedConfigCommand}" IsVisible="{Binding IsAdvancedMode}"/>
                 <TextBlock Grid.Column="2" Text="{services:Tr ui.qol_preset}" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Margin="12,0,0,0"/>
                 <ComboBox Grid.Column="3" ItemsSource="{Binding Configuration.PalworldConfigPresets}" SelectedItem="{Binding Configuration.SelectedConfigPreset, Mode=TwoWay}" ToolTip.Tip="{services:Tr ui.selecting_a_preset_applies_it_immediately}"/>
                 <TextBox Grid.Column="5" PlaceholderText="{services:Tr ui.new_preset_name}" Text="{Binding Configuration.NewConfigPresetName, Mode=TwoWay}"/>

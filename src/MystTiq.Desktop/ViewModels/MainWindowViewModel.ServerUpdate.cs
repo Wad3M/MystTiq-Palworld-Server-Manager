@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using MystTiq.Desktop.Models;
 using MystTiq.Desktop.Services;
 
@@ -27,6 +27,9 @@ public sealed partial class MainWindowViewModel
     public string ServerUpdateDetail { get => _serverUpdateDetail; private set => SetField(ref _serverUpdateDetail, value); }
 
     private ServerUpdateCardDto? _serverUpdateCard;
+    private MystTiqUpdateViewModel? _mystTiqUpdate;
+    public MystTiqUpdateViewModel MystTiqUpdate => _mystTiqUpdate ??= new(async v => { await Diagnostics.DownloadMystTiqReleaseAsync(v); return Diagnostics.ComponentUpdateMessage; });
+    public async Task UpdateMystTiqAsync() => LifecycleStatusText = await MystTiqUpdate.UpdateAsync();
     public ServerUpdateCardDto? ServerUpdateCard => _serverUpdateCard;
 
     private bool _isServerUpdateRunning;
@@ -38,6 +41,7 @@ public sealed partial class MainWindowViewModel
     /// <summary>Shows a card answer (also used by the ArtworkHarness).</summary>
     public void ApplyServerUpdateCard(ServerUpdateCardDto card)
     {
+        MystTiqUpdate.Apply(card);
         _serverUpdateCard = card;
         RaisePropertyChanged(nameof(ServerUpdateCard));
         ServerUpdateDetail = card.Detail;

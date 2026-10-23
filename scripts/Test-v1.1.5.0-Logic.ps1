@@ -1,4 +1,4 @@
-# MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+# MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -121,7 +121,7 @@ Add-MystTiqCheck $ctx 'Regression' 'German and Spanish still translate exactly t
 $ribbonModel = Get-MystTiqText $ctx 'src\MystTiq.Desktop\Models\RibbonActionViewModel.cs'
 Add-MystTiqCheck $ctx 'Regression' 'v0.8.6.0 Ribbon language remains: English identity for icons, translated DisplayLabel, text-based width estimate' `
     ($ribbonModel -match 'RibbonIcons\.KeyFor\(Label, Glyph\)' -and $ribbonModel -match 'public string DisplayLabel \{ get; init; \} = Label;' -and
-     $vm -match '_allRibbonGroups = (GateRibbonByRole\()?LocalizeRibbon\(BuildRibbonGroupsForActivePage\(\)\)\)?;' -and
+     $vm -match '_allRibbonGroups = (GateRibbonByRole\()?LocalizeRibbon\((SimpleMode\.FilterRibbon\()?BuildRibbonGroupsForActivePage\(\)(, _isSimpleMode\))?\)\)?;' -and
      $vm -match 'group\.Actions\.Sum\(a => Math\.Max\(68, a\.DisplayLabel\.Length \* 7\.2 \+ 16\)\)') `
     -Severity Critical
 
@@ -559,7 +559,7 @@ $ribbonModel = Get-MystTiqText $ctx 'src\MystTiq.Desktop\Models\RibbonActionView
 Add-MystTiqCheck $ctx 'Regression' 'v0.8.19.0: the Ribbon follows the signed-in role (disabled with the role in its tooltip), rebuilt when the role changes; kick, ban, teleport and RCON buttons need Admin' `
     ($ribbonRoles -match 'Need\("Operator", StartCommand' -and $ribbonRoles -match 'Need\("Admin", Configuration\.SavePalworldConfigurationCommand' -and
      $ribbonModel -match '\(needs the \{RequiredRole\} role\)' -and
-     $vm -match '_allRibbonGroups = GateRibbonByRole\(LocalizeRibbon\(BuildRibbonGroupsForActivePage\(\)\)\);' -and
+     $vm -match '_allRibbonGroups = GateRibbonByRole\(LocalizeRibbon\((SimpleMode\.FilterRibbon\()?BuildRibbonGroupsForActivePage\(\)(, _isSimpleMode\))?\)\);' -and
      $vm -match '// v0\.8\.19\.0: the Ribbon follows the role too\.\s*RebuildRibbonGroups\(\);' -and
      $xaml -match 'IsEnabled="\{Binding RoleAllowed\}" ToolTip\.Tip="\{Binding ToolTipText\}"' -and
      $xaml -match 'Content="Kick" Command="\{Binding Players\.KickSelectedPlayerCommand\}" IsEnabled="\{Binding CanManageAdmin\}"' -and
@@ -2681,7 +2681,7 @@ Add-MystTiqCheck $ctx 'Regression' 'v1.1.4.0: U-1: the server update runs on the
      $api1140 -match '(?s)routes\.MapPost\("/server/update", \(HttpContext context\).{0,400}?\.RequireRole\(MystTiqRole\.Admin, p\.Id\);' -and
      $api1140 -match 'BackupClass\.Safety' -and $api1140 -match 'serverDistribution\.UpdateAsync\(false, token\)') -Severity Critical
 Add-MystTiqCheck $ctx 'Regression' 'v1.1.4.0: U-1: the Dashboard''s LIFECYCLE bar spans three card columns and the Server update card the fourth (title, tag, build, Update Server for Admins), checked on connect and every 15 minutes, with a confirmation naming players online and the safety backup' `
-    ($xaml1140 -match '(?s)<Grid x:Name="LifecycleRow" ColumnDefinitions="1\.15\*,1\.15\*,1\.15\*,1\.15\*".{0,200}?<Border Grid\.ColumnSpan="3"' -and
+    ($xaml1140 -match '(?s)<Grid x:Name="LifecycleRow" ColumnDefinitions="1\.15\*,1\.15\*,1\.15\*,1\.15\*".{0,200}?<Border Grid\.ColumnSpan="(3|2)"' -and
      $xaml1140 -match '<Border x:Name="ServerUpdateCard" Grid\.Column="3"' -and $xaml1140 -match 'x:Name="UpdateServerButton" Classes="apply"' -and
      $xaml1140 -match '<Panel HorizontalAlignment="Left" IsEnabled="\{Binding CanUpdateServer\}" IsVisible="\{Binding CanManageAdmin\}">' -and $xaml1140 -match 'Click="UpdateServer_OnClick" IsEnabled="\{Binding CanManageAdmin\}"' -and $xaml1140 -match 'TextTrimming="CharacterEllipsis"/></Border>' -and
      $vmUpdate1140 -match 'ServerUpdateCheckEvery = TimeSpan\.FromMinutes\(15\)' -and $vmUpdate1140 -match 'public IReadOnlyList<string> ServerUpdateConfirmationLines\(\)' -and
@@ -2718,7 +2718,7 @@ Add-MystTiqCheck $ctx 'Regression' 'v1.1.4.0: Screenshots: all twelve docs/image
 Add-MystTiqCheck $ctx 'Regression' 'v1.1.4.0: U-1/F-21/F-22 tests: the logic harness checks the update flow (running and stopped server, failed backup, failed update, refused second update), the wrong-path rule and the interrupted stop; the desktop harness checks the card in 12 languages at 950, 1100 and 1440 px and its states' `
     ($logic1140 -match 'Server update \(U-1\): a running server is stopped' -and $logic1140 -match 'Server update \(U-1\): a failed backup or update ends it' -and
      $logic1140 -match 'Wrong-path warning \(F-21\)' -and $logic1140 -match 'Stop reasons: a stop that ends with an exception' -and
-     $art1140 -match 'U-1: the Server update card is beside the LIFECYCLE bar' -and $art1140 -match 'foreach \(var width in new\[\] \{ 950\.0, 1100\.0, 1440\.0 \}\)' -and
+     $art1140 -match 'U-1: the (Server )?update card .{0,80}?beside the LIFECYCLE bar' -and $art1140 -match 'foreach \(var width in new\[\] \{ 950\.0, 1100\.0, 1440\.0 \}\)' -and
      $art1140 -match 'U-1: while an update runs the card shows its step') -Severity High
 Test-MystTiqFile $ctx 'docs\architecture\v1.1.4.0-server-update-card.md' 'Regression' 'v1.1.4.0 architecture doc is present' -Severity High
 
@@ -2755,13 +2755,17 @@ Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-1: eight resize grips start the sy
      $placement1150 -match 'ResizeGrips\.IsVisible = WindowState == WindowState\.Normal' -and $placement1150 -match 'public void UsePlacementStore\(LocalWindowPlacementStore store\)' -and
      $app1150 -match 'mainWindow\.UsePlacementStore\(new LocalWindowPlacementStore\(\)\);' -and $art1150 -notmatch 'UsePlacementStore\(' -and
      $fit1150 -match 'public static WindowPlacementState\? Fit\(' -and $fit1150 -match '"window-placement\.json"') -Severity Critical
-Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-2: Simple hides exactly SimpleMode.HiddenPages from the side menu (13 buttons) and the HOST tab, sends the World and MODs tabs to shown pages, hides Configuration''s Advanced view and the rule editor, and is remembered beside the density' `
-    ($simple1150 -match 'NavigationPage\.Fleet,' -and $simple1150 -match 'NavigationPage\.WorldTransactions' -and
-     ([regex]::Matches($xaml1150, '<ToggleButton Classes="nav" IsVisible="\{Binding IsAdvancedMode\}"')).Count -eq 13 -and
-     $xaml1150 -match '<ToggleButton Classes="categoryTab host" IsVisible="\{Binding IsAdvancedMode\}"' -and
-     $xaml1150 -match 'CommandParameter="\{Binding WorldCategoryLandingPage\}"' -and $xaml1150 -match 'CommandParameter="\{Binding ModsCategoryLandingPage\}"' -and
+$navShown1150 = @([regex]::Matches($xaml1150, '<ToggleButton Classes="nav" IsChecked="[^"]*" Command="\{Binding NavigateCommand\}" CommandParameter="(\w+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object)
+Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-2: Simple (owner 2026-10-23: just set up, configure and start) keeps only Dashboard, Server Setup, Configuration, Backups and Settings in the side menu, hides the World, MODs, Tools and HOST tabs, the Console, Doctor and Force Stop buttons and the Dashboard''s monitoring panels, adds the three-step guide, hides Configuration''s Advanced view, and is remembered beside the density' `
+    ($simple1150 -match 'NavigationPage\.Dashboard, NavigationPage\.ServerSetup, NavigationPage\.Configuration, NavigationPage\.Backups, NavigationPage\.Settings,' -and
+     $simple1150 -match 'HiddenRibbonLabels = new HashSet<string> \{ "Console", "Doctor", "Force Stop" \}' -and $simple1150 -match 'public static List<RibbonGroupViewModel> FilterRibbon\(' -and
+     (Get-MystTiqText $ctx 'src\MystTiq.Desktop\ViewModels\MainWindowViewModel.cs') -match 'SimpleMode\.FilterRibbon\(BuildRibbonGroupsForActivePage\(\), _isSimpleMode\)' -and
+     ($navShown1150 -join ',') -eq 'Backups,Configuration,Dashboard,ServerSetup,Settings' -and
+     ([regex]::Matches($xaml1150, '<ToggleButton Classes="nav" IsVisible="\{Binding IsAdvancedMode\}"')).Count -ge 20 -and
+     @('world','mods','tools','host' | Where-Object { $xaml1150 -notmatch "<ToggleButton Classes=`"categoryTab $_`" IsVisible=`"\{Binding IsAdvancedMode\}`"" }).Count -eq 0 -and
+     $xaml1150 -match 'x:Name="SimpleGuide" Classes="card accentHome" Padding="10,8" IsVisible="\{Binding IsSimpleMode\}"' -and
+     ([regex]::Matches($xaml1150, 'Height="100" IsVisible="\{Binding IsAdvancedMode\}"|Padding="8" IsVisible="\{Binding IsAdvancedMode\}"|Padding="10" IsVisible="\{Binding IsAdvancedMode\}"|Padding="8,6" IsVisible="\{Binding IsAdvancedMode\}"|ColumnSpacing="8" IsVisible="\{Binding IsAdvancedMode\}"')).Count -ge 5 -and
      $xaml1150 -match 'Command="\{Binding Configuration\.ShowAdvancedConfigCommand\}" IsVisible="\{Binding IsAdvancedMode\}"' -and
-     $xaml1150 -match 'x:Name="AutomationRuleEditor" Classes="card accentSystem" IsVisible="\{Binding ShowAutomationRuleEditor\}"' -and
      $xaml1150 -match 'x:Name="UiModeToggle" Classes="ghost"' -and $xaml1150 -match 'x:Name="UiModePicker"' -and
      $uiMode1150 -match 'if \(SimpleMode\.Hides\(SelectedPage\)\) Navigate\(nameof\(NavigationPage\.Dashboard\)\);' -and
      $display1150 -match 'private sealed record DisplayPreferences\(string\? Density, string\? UiMode = null\);' -and $display1150 -match 'Write\(Read\(\) with \{ Density =') -Severity Critical
@@ -2781,18 +2785,41 @@ Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'W-1: a WiX 5 setup built from the pa
      $workflow1150 -match 'artifacts/MystTiqPalworldServer_\*\.msi' -and $workflow1150 -match "\`$_\.Name -like '\*\.msi'" -and
      $update1150 -match 'CopyKind\.Setup when windows => \$"MystTiqPalworldServer_v\{version\}_Windows-x64\.msi"' -and $update1150 -match 'info\.ArgumentList\.Add\("/i"\);' -and
      (Test-Path (Join-Path $ctx.ProjectRoot 'installer\License.rtf')) -and (Test-Path (Join-Path $ctx.ProjectRoot 'installer\installed.txt'))) -Severity Critical
+$mystUpdate1150 = Get-MystTiqText $ctx 'src\MystTiq.Desktop\ViewModels\MystTiqUpdateViewModel.cs'
+$flow1150 = Get-MystTiqText $ctx 'src\MystTiq.HeadlessHost\HeadlessServerUpdateFlowService.cs'
+$intents1150 = Get-MystTiqText $ctx 'src\MystTiq.Desktop\Services\ButtonIntents.cs'
+Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'U-2/V-3/V-4: the update card has a MystTiq line (the service''s release check, kept 15 minutes) with Update MystTiq and the Palworld server line with Update Server; the addresses card sits between LIFECYCLE and the update card; Simple Settings and Advanced Settings have different colours' `
+    ($flow1150 -match 'private readonly Func<CancellationToken, Task<ComponentVersionInfo>>\? checkMystTiq;' -and $flow1150 -match 'MystTiqCheckAge = TimeSpan\.FromMinutes\(15\)' -and
+     $flow1150 -match 'string\? MystTiqInstalled = null, string\? MystTiqLatest = null' -and (Get-MystTiqText $ctx 'src\MystTiq.HeadlessHost\LocalManagementApiHost.cs') -match 'componentUpdates\.GetMystTiqVersionAsync\);' -and
+     $mystUpdate1150 -match 'newest > mine \? "Update available" : "Up to date"' -and
+     $xaml1150 -match 'x:Name="UpdateMystTiqButton" Classes="apply"' -and $xaml1150 -match 'Click="UpdateMystTiq_OnClick" IsEnabled="\{Binding MystTiqUpdate\.CanUpdate\}"' -and
+     $xaml1150 -match '(?s)<Border Grid\.ColumnSpan="2" Classes="card accentHome" Padding="7,5">.{0,2000}?<Border x:Name="DashboardAddresses" Grid\.Column="2"' -and
+     $xaml1150 -match '<Button Classes="info" Content="\{services:Tr ui\.simple_settings\}"' -and $xaml1150 -match '<Button Classes="caution" Grid\.Column="1" Content="\{services:Tr ui\.advanced_settings\}"' -and
+     $intents1150 -match '\(R\(@"\^simple settings"\), Info\)' -and $intents1150 -match '\(R\(@"\^advanced settings"\), Caution\)') -Severity Critical
+$boot1150b = Get-MystTiqText $ctx 'src\MystTiq.Desktop\Services\LocalManagementBootstrapper.cs'
+$reconnect1150 = Get-MystTiqText $ctx 'src\MystTiq.Desktop\Services\LocalReconnect.cs'
+Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-3 (owner 2026-10-23: "missing the top cards when the server is not started"): the LIFECYCLE row stays while the service is not connected; a helper the desktop just started gets 45 s while it runs; a disconnected local tab asks /healthz every other tick and connects once it answers' `
+    ($xaml1150 -match '<Grid x:Name="LifecycleRow" ColumnDefinitions="1\.15\*,1\.15\*,1\.15\*,1\.15\*" ColumnSpacing="8">' -and
+     $boot1150b -match 'public static readonly TimeSpan StartedHelperTimeout = TimeSpan\.FromSeconds\(45\);' -and $boot1150b -match 'var deadline = DateTimeOffset\.UtcNow \+ StartedHelperTimeout;' -and
+     $boot1150b -match 'if \(ownedSidecarProcessId is \{ \} startedId && !ProcessIsRunning\(startedId\)\) break;' -and
+     $reconnect1150 -match 'public const int EveryTicks = 2;' -and $reconnect1150 -match 'if \(probing \|\| string\.IsNullOrWhiteSpace\(endpoint\) \|\| \+\+ticks % EveryTicks != 0\) return false;' -and
+     $vm -match 'if \(await _localReconnect\.AnswersAsync\(ServerUrl\)\) await RefreshAsync\(silent: false\);' -and
+     $art1150 -match 'V-3: with the service not connected the Dashboard still shows LIFECYCLE' -and $art1150 -match 'V-3: a disconnected local tab asks /healthz every') -Severity Critical
 $i18nOk1150 = $true
 foreach ($lang in 'en','de','es','fr','it','ja','ko','pl','pt-BR','ru','tr','zh-Hans') {
     $j = Get-MystTiqText $ctx "src\MystTiq.Desktop\Assets\i18n\$lang.json" | ConvertFrom-Json -AsHashtable
-    foreach ($k in 'ui.mode.simple','ui.mode.advanced','uiMode.tip','uiMode.notRemembered','settings.uiMode.label','settings.uiMode.note','automation.simpleHint','settings.portable.title','settings.portable.where','settings.portable.registry') {
+    foreach ($k in 'ui.mode.simple','ui.mode.advanced','uiMode.tip','uiMode.notRemembered','settings.uiMode.label','settings.uiMode.note','automation.simpleHint','settings.portable.title','settings.portable.where','settings.portable.registry',
+                 'dashboard.updates','dashboard.updates.mysttiq','dashboard.updates.mysttiqNew','dashboard.updates.mysttiqCurrent','dashboard.updates.server','dashboard.updates.serverNew',
+                 'dashboard.updateMysttiq','dashboard.updates.mysttiqConfirmTitle','dashboard.updates.mysttiqConfirm','simple.guide.title','simple.guide.text','simple.guide.setup','simple.guide.config','simple.guide.start') {
         if (-not $j.ContainsKey($k) -or [string]::IsNullOrWhiteSpace($j[$k])) { $i18nOk1150 = $false }
     }
     if ($j['settings.portable.where'] -notmatch '\{0\}') { $i18nOk1150 = $false }
 }
-Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-2/W-2: the 10 new strings are in all 12 languages' $i18nOk1150 -Severity High
+Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-2/W-2/U-2: the 24 new strings are in all 12 languages' $i18nOk1150 -Severity High
 Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'Tests: the desktop harness checks the grips, placement, every page at 1680/2560/3840 px, Simple and Advanced, the portable folders and the update kinds; the logic harness checks the portable marker and folders' `
     ($art1150 -match 'V-1: the window has a resize grip on every edge and corner' -and $art1150 -match 'V-1: every page lays out at 1680x1050, 2560x1440 and 3840x2160' -and
-     $art1150 -match 'V-2: Simple hides exactly the specialist pages' -and $art1150 -match 'W-2/W-1: a portable copy keeps its settings' -and
+     $art1150 -match 'V-2: clicking the title bar''s switch turns Simple on and off' -and $art1150 -match 'window\.MouseDown\(centre, Avalonia\.Input\.MouseButton\.Left\);' -and
+     $art1150 -match 'U-1: the update card \(MystTiq and the Palworld server' -and $logic1150 -match 'Update card \(v1\.1\.5\.0\): the card carries MystTiq''s latest release' -and $art1150 -match 'W-2/W-1: a portable copy keeps its settings' -and
      $logic1150 -match 'Portable copy \(W-2\): the marker beside the desktop') -Severity High
 Test-MystTiqFile $ctx 'docs\architecture\v1.1.5.0-window-modes-installer-portable.md' 'v1.1.5.0 Contracts' 'v1.1.5.0 architecture doc is present' -Severity High
 

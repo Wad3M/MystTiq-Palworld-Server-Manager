@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 namespace MystTiq.Desktop.Models;
 
 public sealed record RconStatusDto(bool Enabled, int Port, bool PasswordConfigured, string Endpoint, string Detail);

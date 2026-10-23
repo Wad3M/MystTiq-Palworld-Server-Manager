@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -660,7 +660,8 @@ public sealed class DiagnosticsViewModel : PageViewModel
         await RefreshComponentVersionsAsync();
     }
 
-    private async Task DownloadMystTiqReleaseAsync(string version)
+    // v1.1.5.0: also run by the Dashboard's update card (MystTiqUpdateViewModel).
+    public async Task DownloadMystTiqReleaseAsync(string version)
     {
         Session.IsBusy = true;
         ComponentUpdateMessage = $"Downloading MystTiq v{version}…";

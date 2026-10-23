@@ -4112,5 +4112,19 @@
   "automation.simpleHint": "Создание и изменение правил автоматизации — в расширенном режиме (переключатель в заголовке окна).",
   "settings.portable.title": "Портативная копия",
   "settings.portable.where": "Всё, что сохраняет MystTiq, хранится в {0}.",
-  "settings.portable.registry": "Портативная копия ничего не записывает в Windows: не запускается вместе с Windows, не принимает ссылки Nexus и не устанавливает службу Windows."
+  "settings.portable.registry": "Портативная копия ничего не записывает в Windows: не запускается вместе с Windows, не принимает ссылки Nexus и не устанавливает службу Windows.",
+  "dashboard.updates": "ОБНОВЛЕНИЯ",
+  "dashboard.updates.mysttiq": "MystTiq {0}",
+  "dashboard.updates.mysttiqNew": "MystTiq {0} → {1}",
+  "dashboard.updates.mysttiqCurrent": "MystTiq обновлён.",
+  "dashboard.updates.server": "Сборка сервера {0}",
+  "dashboard.updates.serverNew": "Сборка сервера {0} → {1}",
+  "dashboard.updateMysttiq": "Обновить MystTiq",
+  "dashboard.updates.mysttiqConfirmTitle": "Обновить MystTiq?",
+  "dashboard.updates.mysttiqConfirm": "Это MystTiq {0}; последняя версия — {1}. Она будет загружена и проверена по опубликованным контрольным суммам. Копия, установленная установщиком, откроет новый установщик; иначе новая версия будет распакована рядом с этой. Настройки и серверы сохранятся.",
+  "simple.guide.title": "Простой режим: три шага до работающего сервера",
+  "simple.guide.text": "1. Настройка сервера устанавливает или находит сервер Palworld. 2. Конфигурация задаёт имя, пароли, порты и основные настройки игры. 3. Запуск включает его. Для всего остального переключитесь на расширенный режим в заголовке окна.",
+  "simple.guide.setup": "Открыть настройку сервера",
+  "simple.guide.config": "Открыть конфигурацию",
+  "simple.guide.start": "Запустить сервер"
 }

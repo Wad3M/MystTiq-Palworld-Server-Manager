@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-22). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
 # v1.0.7.5 Changed Files
 
 - `src/MystTiq.Core/Services/ServerInstallIntegrity.cs` (new): the update marker and Steam's manifest state.

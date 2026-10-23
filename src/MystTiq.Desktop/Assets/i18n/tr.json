@@ -4112,5 +4112,19 @@
   "automation.simpleHint": "Otomasyon kuralları oluşturmak ve değiştirmek Gelişmiş moddadır (başlık çubuğundaki anahtar).",
   "settings.portable.title": "Taşınabilir kopya",
   "settings.portable.where": "MystTiq'in kaydettiği her şey {0} içinde tutulur.",
-  "settings.portable.registry": "Taşınabilir kopya Windows'a hiçbir şey yazmaz: Windows ile başlamaz, Nexus bağlantılarını almaz ve Windows hizmeti kurmaz."
+  "settings.portable.registry": "Taşınabilir kopya Windows'a hiçbir şey yazmaz: Windows ile başlamaz, Nexus bağlantılarını almaz ve Windows hizmeti kurmaz.",
+  "dashboard.updates": "GÜNCELLEMELER",
+  "dashboard.updates.mysttiq": "MystTiq {0}",
+  "dashboard.updates.mysttiqNew": "MystTiq {0} → {1}",
+  "dashboard.updates.mysttiqCurrent": "MystTiq güncel.",
+  "dashboard.updates.server": "Sunucu derlemesi {0}",
+  "dashboard.updates.serverNew": "Sunucu derlemesi {0} → {1}",
+  "dashboard.updateMysttiq": "MystTiq'i güncelle",
+  "dashboard.updates.mysttiqConfirmTitle": "MystTiq güncellensin mi?",
+  "dashboard.updates.mysttiqConfirm": "Bu MystTiq {0}; en yeni sürüm {1}. İndirilir ve yayımlanan sağlama toplamlarıyla denetlenir. Kurulumla yüklenen kopya yeni kurulumu açar; değilse yeni sürüm bunun yanına açılır. Ayarlarınız ve sunucularınız korunur.",
+  "simple.guide.title": "Basit mod: çalışan bir sunucuya üç adım",
+  "simple.guide.text": "1. Sunucu kurulumu Palworld sunucusunu kurar veya bulur. 2. Yapılandırma adını, parolalarını, portlarını ve temel oyun ayarlarını belirler. 3. Başlat onu çalıştırır. Diğer her şey için başlık çubuğunda Gelişmiş'e geçin.",
+  "simple.guide.setup": "Sunucu kurulumunu aç",
+  "simple.guide.config": "Yapılandırmayı aç",
+  "simple.guide.start": "Sunucuyu başlat"
 }

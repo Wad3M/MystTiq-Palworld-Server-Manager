@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using MystTiq.Desktop.Models;
 
 namespace MystTiq.Desktop.Services;
@@ -12,8 +12,8 @@ public static class ServerUpdateText
     /// <summary>"Build 25247047", or "25247047 → 25300000" when an update is out.</summary>
     public static string BuildLine(ServerUpdateCardDto card) =>
         card.State == "Update available" && card.Latest is { Length: > 0 } latest && latest != card.Installed
-            ? string.Format(Localizer.Instance["dashboard.serverUpdate.newBuild"], card.Installed, latest)
-            : string.Format(Localizer.Instance["dashboard.serverUpdate.build"], card.Installed);
+            ? string.Format(Localizer.Instance["dashboard.updates.serverNew"], card.Installed, latest)
+            : string.Format(Localizer.Instance["dashboard.updates.server"], card.Installed);
 
     /// <summary>The builds, what happens to a running server and its players, the safety backup, and a note when current.</summary>
     public static IReadOnlyList<string> ConfirmationLines(ServerUpdateCardDto? card, bool serverRunning, string playersOnline)

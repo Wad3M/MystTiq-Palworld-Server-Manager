@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -23,6 +23,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly ILocalInstallationDiscoveryService _localDiscovery;
     private readonly IMystTiqServiceDiscoveryService _serviceDiscovery;
     private readonly ILocalManagementBootstrapper _localBootstrapper;
+    private readonly LocalReconnect _localReconnect = new();
     // v0.8.16.0: density (every tab); the theme mode stays per tab, in ConnectionProfile.ThemeVariant.
     private readonly LocalDisplayPreferencesStore _displayPreferences;
     private string? _busyReason;
@@ -1541,6 +1542,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         RaisePropertyChanged(nameof(UiModeLabel));
         RaisePropertyChanged(nameof(UiModeLabels));
         RaisePropertyChanged(nameof(SelectedUiModeIndex));
+        if (_serverUpdateCard is { } card && !IsServerUpdateRunning) ApplyServerUpdateCard(card); // the card's lines in the new language
         // v0.9.2.0: item and Pal names come in the display language; a loaded picker is read again (the map refreshes itself).
         Players.OnLanguageChanged();
     }
@@ -2615,7 +2617,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     // SelectedPage as their own buttons get relocated into the ribbon.
     private void RebuildRibbonGroups()
     {
-        _allRibbonGroups = GateRibbonByRole(LocalizeRibbon(BuildRibbonGroupsForActivePage()));
+        _allRibbonGroups = GateRibbonByRole(LocalizeRibbon(SimpleMode.FilterRibbon(BuildRibbonGroupsForActivePage(), _isSimpleMode)));
         RecomputeRibbonLayout();
     }
 
@@ -2998,6 +3000,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id && ConnectionState != "Connected")
         {
             await RefreshLocalInstallationAsync();
+            if (await _localReconnect.AnswersAsync(ServerUrl)) await RefreshAsync(silent: false); // v1.1.5.0: see LocalReconnect
             return;
         }
 

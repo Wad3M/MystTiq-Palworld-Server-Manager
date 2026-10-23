@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
@@ -55,6 +55,7 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromMilliseconds(750);
     private static readonly TimeSpan StartupTimeout = TimeSpan.FromSeconds(8);
+    public static readonly TimeSpan StartedHelperTimeout = TimeSpan.FromSeconds(45);
     private readonly SemaphoreSlim gate = new(1, 1);
     private int? ownedSidecarProcessId;
     private string? ownedSidecarExecutable;
@@ -205,7 +206,9 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                 }
             }
 
-            var deadline = DateTimeOffset.UtcNow + StartupTimeout;
+            // v1.1.5.0 (seen 2026-10-23): the first start after an install, with five servers and large logs, took longer than
+            // 8 s, the desktop gave up and stayed disconnected. A helper that is still running now gets StartedHelperTimeout.
+            var deadline = DateTimeOffset.UtcNow + StartedHelperTimeout;
             while (DateTimeOffset.UtcNow < deadline)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -217,6 +220,7 @@ public sealed class LocalManagementBootstrapper : ILocalManagementBootstrapper
                         : $"Started the packaged MystTiq headless API for this machine ({probe.Version ?? "unknown version"}).";
                     return new(true, true, endpoint, detail, probe.Version, staleDetected, staleEndpoint, staleVersion);
                 }
+                if (ownedSidecarProcessId is { } startedId && !ProcessIsRunning(startedId)) break;
                 await Task.Delay(250, cancellationToken);
             }
 

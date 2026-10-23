@@ -4112,5 +4112,19 @@
   "automation.simpleHint": "Creating and changing automation rules is in Advanced mode (the switch in the title bar).",
   "settings.portable.title": "Portable copy",
   "settings.portable.where": "Everything MystTiq saves is kept in {0}.",
-  "settings.portable.registry": "A portable copy writes nothing to Windows: it does not start with Windows, take Nexus links or install a Windows service."
+  "settings.portable.registry": "A portable copy writes nothing to Windows: it does not start with Windows, take Nexus links or install a Windows service.",
+  "dashboard.updates": "UPDATES",
+  "dashboard.updates.mysttiq": "MystTiq {0}",
+  "dashboard.updates.mysttiqNew": "MystTiq {0} → {1}",
+  "dashboard.updates.mysttiqCurrent": "MystTiq is up to date.",
+  "dashboard.updates.server": "Server build {0}",
+  "dashboard.updates.serverNew": "Server build {0} → {1}",
+  "dashboard.updateMysttiq": "Update MystTiq",
+  "dashboard.updates.mysttiqConfirmTitle": "Update MystTiq?",
+  "dashboard.updates.mysttiqConfirm": "This is MystTiq {0}; the latest release is {1}. It is downloaded and checked against the release's published checksums. A copy installed with the setup then opens the new setup; otherwise the new version is unpacked beside this one. Your settings and servers carry over.",
+  "simple.guide.title": "Simple mode: three steps to a running server",
+  "simple.guide.text": "1. Server Setup installs or finds the Palworld server. 2. Configuration sets its name, passwords, ports and the main game settings. 3. Start runs it. Switch to Advanced in the title bar for everything else.",
+  "simple.guide.setup": "Open Server Setup",
+  "simple.guide.config": "Open Configuration",
+  "simple.guide.start": "Start the server"
 }

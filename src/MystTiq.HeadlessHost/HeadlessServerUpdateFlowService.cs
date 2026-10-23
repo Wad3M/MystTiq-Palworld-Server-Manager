@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using MystTiq.Core.Models;
 using MystTiq.Core.Operations;
 using MystTiq.Core.Services;
@@ -28,6 +28,11 @@ public sealed class HeadlessServerUpdateFlowService
     private readonly ServerProfileId? profileId;
     private readonly Action<string, string, string>? record;
     private readonly Action<string, string>? notifyFailure;
+    // v1.1.5.0 (owner 2026-10-23: "the server update button should be referring to the MystTiq version to update"): the
+    // card also shows MystTiq's latest release; GitHub's answer is kept 15 minutes.
+    private readonly Func<CancellationToken, Task<ComponentVersionInfo>>? checkMystTiq;
+    private static readonly TimeSpan MystTiqCheckAge = TimeSpan.FromMinutes(15);
+    private (DateTimeOffset At, ComponentVersionInfo Info)? mystTiqCheck;
     private readonly object gate = new();
     private ServerUpdateJob? job;
 
@@ -41,8 +46,10 @@ public sealed class HeadlessServerUpdateFlowService
         IOperationCoordinator? operations = null,
         ServerProfileId? profileId = null,
         Action<string, string, string>? record = null,
-        Action<string, string>? notifyFailure = null)
+        Action<string, string>? notifyFailure = null,
+        Func<CancellationToken, Task<ComponentVersionInfo>>? checkMystTiq = null)
     {
+        this.checkMystTiq = checkMystTiq;
         this.checkBuild = checkBuild;
         this.lifecycle = lifecycle;
         this.startServer = startServer;
@@ -68,8 +75,24 @@ public sealed class HeadlessServerUpdateFlowService
                 "SteamCMD app info (public branch)", DateTimeOffset.UtcNow, "The build check failed: " + ex.Message);
         }
         var current = CurrentJob;
+        var mystTiq = await GetMystTiqCheckAsync(cancellationToken);
         return new ServerUpdateCard(check.InstalledVersion, check.LatestVersion, current is { Running: true } ? "Updating" : StateFor(check.Status),
-            check.Detail, check.LastChecked, current);
+            check.Detail, check.LastChecked, current, mystTiq?.InstalledVersion, mystTiq?.LatestVersion, mystTiq is null ? null : StateFor(mystTiq.Status), mystTiq?.Detail);
+    }
+
+    private async Task<ComponentVersionInfo?> GetMystTiqCheckAsync(CancellationToken cancellationToken)
+    {
+        if (checkMystTiq is null) return null;
+        lock (gate)
+            if (mystTiqCheck is { } kept && DateTimeOffset.UtcNow - kept.At < MystTiqCheckAge) return kept.Info;
+        ComponentVersionInfo info;
+        try { info = await checkMystTiq(cancellationToken); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            info = new ComponentVersionInfo("Core Server", "MystTiq Server Manager", "Unknown", "Unknown", "Unavailable", "GitHub", DateTimeOffset.UtcNow, "The MystTiq release check failed: " + ex.Message);
+        }
+        lock (gate) mystTiqCheck = (DateTimeOffset.UtcNow, info);
+        return info;
     }
 
     /// <summary>The card's state in the English the desktop's tags read (StatusTags).</summary>
@@ -183,8 +206,9 @@ public sealed class HeadlessServerUpdateFlowService
     }
 }
 
-/// <summary>v1.1.4.0 (roadmap U-1): what the Dashboard's Server update card shows.</summary>
-public sealed record ServerUpdateCard(string Installed, string Latest, string State, string Detail, DateTimeOffset? CheckedAt, ServerUpdateJob? Job);
+/// <summary>v1.1.4.0 (roadmap U-1): what the Dashboard's update card shows; v1.1.5.0 adds MystTiq's own release.</summary>
+public sealed record ServerUpdateCard(string Installed, string Latest, string State, string Detail, DateTimeOffset? CheckedAt, ServerUpdateJob? Job,
+    string? MystTiqInstalled = null, string? MystTiqLatest = null, string? MystTiqState = null, string? MystTiqDetail = null);
 
 /// <summary>v1.1.4.0 (roadmap U-1): one run of the update. Phase: Checking, Stopping, Backing up, Updating, Starting, Done, Failed.</summary>
 public sealed record ServerUpdateJob(string Id, string Phase, bool Running, bool? Success, string Message, DateTimeOffset StartedAt,

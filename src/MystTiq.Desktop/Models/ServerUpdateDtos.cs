@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using System.Text.Json.Serialization;
 
 namespace MystTiq.Desktop.Models;
@@ -12,6 +12,11 @@ public sealed class ServerUpdateCardDto
     [JsonPropertyName("detail")] public string Detail { get; init; } = string.Empty;
     [JsonPropertyName("checkedAt")] public DateTimeOffset? CheckedAt { get; init; }
     [JsonPropertyName("job")] public ServerUpdateJobDto? Job { get; init; }
+    // v1.1.5.0: MystTiq's own release (the service's check), for the card's MystTiq line.
+    [JsonPropertyName("mystTiqInstalled")] public string? MystTiqInstalled { get; init; }
+    [JsonPropertyName("mystTiqLatest")] public string? MystTiqLatest { get; init; }
+    [JsonPropertyName("mystTiqState")] public string? MystTiqState { get; init; }
+    [JsonPropertyName("mystTiqDetail")] public string? MystTiqDetail { get; init; }
 }
 
 /// <summary>v1.1.4.0 (roadmap U-1): one run of the server update. Phase: Checking, Stopping, Backing up, Updating, Starting, Done, Failed.</summary>

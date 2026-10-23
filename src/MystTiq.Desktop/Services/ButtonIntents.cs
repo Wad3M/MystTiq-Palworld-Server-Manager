@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-22).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
 using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
@@ -37,6 +37,10 @@ public static class ButtonIntents
     // First match wins: specific phrases before single verbs.
     private static readonly (Regex Pattern, string Intent)[] Rules =
     [
+        // v1.1.5.0 (owner 2026-10-23: the Configuration page's two views "should have different colours"): the everyday view
+        // is Info (blue), the one showing every setting Caution (amber).
+        (R(@"^simple settings"), Info),
+        (R(@"^advanced settings"), Caution),
         (R(@"^(apply with fresh safety backup|apply migration|apply exact preview)"), Danger),
         (R(@"^(delete|remove|revoke|kick|ban|temp ban|force|discard|forget|wipe|clear persistent|stop|■ disconnect|disconnect|cleanup)"), Danger),
         (R(@"^(copy data|choose zip)"), Apply),
@@ -44,8 +48,8 @@ public static class ButtonIntents
         (R(@"^(verify|rescan|recheck|validate|validator|scan|↻ scan|test|check|diagnose|analyze|⚕|doctor|run reachability|run doctor|refresh capture|find the)"), Verify),
         (R(@"^(reset|restore|restart|repair|release|pause|mute|lift|leave running|clear background|enable / disable|toggle|pin / unpin)"), Caution),
         (R(@"^(refresh|↻|preview|load|export|copy id|copy |fetch|discover|auto-detect|latest|trending|🎲|set source|search)"), Info),
-        (R(@"^(save|apply|create|\+ create|add|install|📦|reserve|send|➤|give|import|use it|connect|● connect|sign in|allow|enable|new|download|bootstrap|capture|teleport|fix|clone|prepare|resume|unmute|unban|update|backup|run now|link)"), Apply),
-        (R(@"^(cancel|← back|back|next|continue|dismiss|advanced settings|simple settings|sign out)"), Plain),
+        (R(@"^(save|apply|create|\+ create|add|install|📦|reserve|send|➤|give|import|use it|connect|● connect|sign in|allow|enable|new|download|bootstrap|capture|teleport|fix|clone|prepare|resume|unmute|unban|update|backup|run now|link|start)"), Apply),
+        (R(@"^(cancel|← back|back|next|continue|dismiss|sign out)"), Plain),
     ];
 
     private static Regex R(string pattern) => new(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
