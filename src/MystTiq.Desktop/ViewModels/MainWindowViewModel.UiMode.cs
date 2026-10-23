@@ -61,7 +61,7 @@ public sealed partial class MainWindowViewModel
         RaisePropertyChanged(nameof(IsSimpleMode));
         RaisePropertyChanged(nameof(IsAdvancedMode));
         RaisePropertyChanged(nameof(UiModeLabel));
-        RaisePropertyChanged(nameof(UiModeLabels));
+        // Not UiModeLabels: Settings' picker reloaded and wrote Advanced back (the switch did nothing, 2026-10-23).
         RaisePropertyChanged(nameof(SelectedUiModeIndex));
         RaisePropertyChanged(nameof(ShowAutomationRuleEditor));
         RaisePropertyChanged(nameof(ShowAutomationSimpleHint));

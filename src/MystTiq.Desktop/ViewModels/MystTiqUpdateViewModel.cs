@@ -20,7 +20,8 @@ public sealed class MystTiqUpdateViewModel(Func<string, Task<string>> update) : 
 
     /// <summary>The tag (English, coloured by StatusTags).</summary>
     public string State { get => _state; private set { if (SetField(ref _state, value)) RaisePropertyChanged(nameof(CanUpdate)); } }
-    public string LineText { get => _lineText; private set => SetField(ref _lineText, value); }
+    // Before the service's first answer (or without one) the line still names this copy's version.
+    public string LineText { get => _lineText.Length > 0 ? _lineText : string.Format(Localizer.Instance["dashboard.updates.mysttiq"], ThisVersion); private set => SetField(ref _lineText, value); }
     public string Detail { get => _detail; private set => SetField(ref _detail, value); }
     public string? Latest => _latest;
     public bool CanUpdate => !_running && State == "Update available";

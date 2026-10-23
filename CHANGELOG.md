@@ -7,7 +7,11 @@
   config of the server and start it") keeps Dashboard, Server Setup, Configuration's simple settings, Backups and
   Settings; hides the World, MODs, Tools and HOST tabs, the other pages, the Console, Doctor and Force Stop buttons and
   the Dashboard's monitoring panels; adds a three-step guide; nothing is disabled; remembered.
-- Roadmap U-2: the Dashboard's update card shows MystTiq beside the Palworld server, each with its own Update.
+- Roadmap V-2 fix (owner 2026-10-23: "the advanced button doesnt do anything"): a mode change no longer reloads
+  Settings' Simple/Advanced list, which kept Advanced selected and wrote it back, so the switch turned Simple on and
+  straight off. Proven by clicking the switch in a real window; the desktop harness now clicks it with that list on screen.
+- Roadmap U-2: the Dashboard's update card shows MystTiq beside the Palworld server, each with its own Update; its
+  MystTiq line names this version before the service's first answer.
 - Roadmap V-3: the local and public addresses moved into their own card between LIFECYCLE and the update card; the row
   stays while the service is not connected. A helper the desktop just started gets 45 s (was 8 s; the first start after
   an install with five servers took longer), and a disconnected local tab asks `/healthz` every other tick and connects

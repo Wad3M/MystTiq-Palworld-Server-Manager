@@ -2805,6 +2805,12 @@ Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-3 (owner 2026-10-23: "missing the 
      $reconnect1150 -match 'public const int EveryTicks = 2;' -and $reconnect1150 -match 'if \(probing \|\| string\.IsNullOrWhiteSpace\(endpoint\) \|\| \+\+ticks % EveryTicks != 0\) return false;' -and
      $vm -match 'if \(await _localReconnect\.AnswersAsync\(ServerUrl\)\) await RefreshAsync\(silent: false\);' -and
      $art1150 -match 'V-3: with the service not connected the Dashboard still shows LIFECYCLE' -and $art1150 -match 'V-3: a disconnected local tab asks /healthz every') -Severity Critical
+$uiModeVm1150 = Get-MystTiqText $ctx 'src\MystTiq.Desktop\ViewModels\MainWindowViewModel.UiMode.cs'
+$raise1150 = [regex]::Match($uiModeVm1150, '(?s)private void RaiseUiModeDependents\(\)\s*\{.*?\n    \}').Value
+Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-2 (owner 2026-10-23: "the advanced button doesnt do anything"): a mode change does not reload Settings'' Simple/Advanced list (it wrote Advanced straight back); the desktop harness clicks the switch with that picker on screen; the MystTiq line names this version before the service answers' `
+    ($raise1150.Length -gt 0 -and $raise1150 -notmatch 'RaisePropertyChanged\(nameof\(UiModeLabels\)\)' -and $raise1150 -match 'RaisePropertyChanged\(nameof\(SelectedUiModeIndex\)\)' -and
+     $art1150 -match 'V-2: with Settings'' Simple/Advanced picker on screen, a click on the title bar''s switch sticks' -and
+     $mystUpdate1150 -match 'public string LineText \{ get => _lineText\.Length > 0 \? _lineText : string\.Format\(Localizer\.Instance\["dashboard\.updates\.mysttiq"\], ThisVersion\);') -Severity Critical
 $i18nOk1150 = $true
 foreach ($lang in 'en','de','es','fr','it','ja','ko','pl','pt-BR','ru','tr','zh-Hans') {
     $j = Get-MystTiqText $ctx "src\MystTiq.Desktop\Assets\i18n\$lang.json" | ConvertFrom-Json -AsHashtable

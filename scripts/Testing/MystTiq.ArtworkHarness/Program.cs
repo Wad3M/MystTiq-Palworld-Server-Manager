@@ -2476,6 +2476,18 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
                          && Named("AutomationRuleEditor") && ribbonBack && remembered.LoadUiMode() == SimpleMode.Advanced;
     selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     var monitoringBack = window.GetVisualDescendants().OfType<TextBlock>().Any(x => x.IsEffectivelyVisible && x.Text == Localizer.Instance["dashboard.log"]) && !Named("SimpleGuide");
+    // v1.1.5.0 (owner 2026-10-23: "the advanced button doesnt do anything"): with Settings' Simple/Advanced picker on screen,
+    // a click on the switch turned Simple on and the picker wrote Advanced straight back. The click must stick, both ways.
+    selectedPage.SetValue(vm, NavigationPage.Settings); Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
+    var modePicker = window.GetVisualDescendants().OfType<Control>().First(c => c.Name == "UiModePicker").GetVisualDescendants().OfType<ComboBox>().First();
+    var pickerShown = modePicker.IsEffectivelyVisible && modePicker.SelectedIndex == 1;
+    ClickToggle();
+    var sticksSimple = vm.IsSimpleMode && modePicker.SelectedIndex == 0 && remembered.LoadUiMode() == SimpleMode.Simple;
+    ClickToggle();
+    var sticksAdvanced = vm.IsAdvancedMode && modePicker.SelectedIndex == 1 && remembered.LoadUiMode() == SimpleMode.Advanced;
+    selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    Check(pickerShown && sticksSimple && sticksAdvanced,
+        $"V-2: with Settings' Simple/Advanced picker on screen, a click on the title bar's switch sticks (Simple, then Advanced) and the picker follows [picker {pickerShown}, simple {sticksSimple}, advanced {sticksAdvanced}]");
     Check(advancedFirst && clicked && wrong.Count == 0 && leftHiddenPage && simpleTabs && simpleRibbon && dashboard && guide && configSimple && saved && stillReachable && relabelled && backToAdvanced && monitoringBack
           && SimpleMode.ShownPages.Count == 5,
         $"V-2: clicking the title bar's switch turns Simple on and off; Simple shows only Dashboard, Server Setup, Configuration, Backups and Settings in the menus ({string.Join(", ", shownInMenus)}), hides the World, MODs, Tools and HOST tabs, the Console, Doctor and Force Stop buttons and the Dashboard's monitoring panels, adds the three-step guide, keeps Configuration simple, is remembered and translated, never blocks a page, and Advanced brings everything back [clicked {clicked}, wrong {string.Join(",", wrong)}, tabs {simpleTabs}, ribbon {simpleRibbon}, dashboard {dashboard}, guide {guide}, config {configSimple}, saved {saved}, reachable {stillReachable}, back {backToAdvanced}, monitoring back {monitoringBack}]");
