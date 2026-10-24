@@ -21,7 +21,7 @@ public sealed partial class MainWindowViewModel
 
     private string _serverUpdateLineText = string.Empty;
     /// <summary>The build ("Build 25247047", or "25247047 → 25300000" with an update), or the running update's step.</summary>
-    public string ServerUpdateLineText { get => _serverUpdateLineText; private set => SetField(ref _serverUpdateLineText, value); }
+    public string ServerUpdateLineText { get => _serverUpdateLineText.Length > 0 ? _serverUpdateLineText : ServerUpdateText.NoBuildLine; private set => SetField(ref _serverUpdateLineText, value); }
 
     private string _serverUpdateDetail = string.Empty;
     public string ServerUpdateDetail { get => _serverUpdateDetail; private set => SetField(ref _serverUpdateDetail, value); }
@@ -59,13 +59,11 @@ public sealed partial class MainWindowViewModel
             return;
         }
         ServerUpdateState = card?.State is { Length: > 0 } state && state != "Updating" ? state : "Unavailable";
-        ServerUpdateLineText = card is null ? string.Empty : ServerUpdateBuildLine(card);
+        ServerUpdateLineText = card is null ? string.Empty : ServerUpdateText.BuildLine(card);
         // The last update's result stays readable in the tooltip until the next check.
         if (job is { Running: false, FinishedAt: not null } && card is not null)
             ServerUpdateDetail = $"{job.Message}\n\n{card.Detail}".Trim();
     }
-
-    public static string ServerUpdateBuildLine(ServerUpdateCardDto card) => ServerUpdateText.BuildLine(card);
 
     /// <summary>
     /// From the connection and each status poll: while an update runs, its step (cheap); otherwise the build check when the

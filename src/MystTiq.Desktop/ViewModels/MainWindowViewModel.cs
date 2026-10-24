@@ -1899,7 +1899,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // v0.7.100.0: opening a page while the app was still busy (start-up work, another refresh)
             // used to skip its load silently, so the Map and Players pages stayed empty until Refresh
             // was pressed. These two show live data, so they wait for the busy state to clear (up to a
-            // minute) and load if the user is still on the page. Other pages keep the old behaviour (see PageLoad).
+            // minute) and load if the user is still on the page. Other pages keep the old behaviour.
             if (!PageLoad.WaitsWhileBusy(page)) return;
             // v1.0.7.2 (roadmap Q-13): a signal and a message instead of polling; leaving the page ends the wait.
             if (!await WaitUntilNotBusyAsync(page)) return;
@@ -3493,6 +3493,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ApplyLogs(poll.LogTail);
             ApplyDashboardSupport(poll);
             ManagementApiConnected = true;
+            NoteConnected(poll.Status, poll.Players);
             ConnectionState = "Connected";
             LocalApiStatus = SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id ? "Connected" : LocalApiStatus;
             Detail = $"Connected to MystTiq {health.Version} ({health.Platform}) at {profile.BaseAddress}.";

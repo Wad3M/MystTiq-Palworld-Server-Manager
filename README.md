@@ -70,9 +70,9 @@ Everything added since 1.0, in one place. Each version's own notes are in [relea
 
 ## 📸 See your server at a glance
 
-![MystTiq v1.1.4.0 dashboard with server controls, the server update card, health and world information](docs/images/01-dashboard.png)
+![MystTiq v1.1.5.0 dashboard with server controls, the addresses and update cards, health and world information](docs/images/01-dashboard.png)
 
-*Dashboard in v1.1.4.0. The screenshots featured here are included in the v1.1.4.0 FullSource archive and show the demo server; its status and data are illustrative.*
+*Dashboard in v1.1.5.0. The screenshots featured here are included in the v1.1.5.0 FullSource archive and show the demo server; its status and data are illustrative, and its addresses are documentation examples.*
 
 <a id="built-around-everyday-administration"></a>
 
@@ -91,25 +91,31 @@ Everything added since 1.0, in one place. Each version's own notes are in [relea
 Nexus download options depend on the account and provider. Game-level bandwidth settings are not OS-level traffic shaping.
 
 <details>
-<summary><strong>More of the interface: backups, players and mods</strong></summary>
+<summary><strong>More of the interface: Simple mode, backups, players and mods</strong></summary>
+
+### 🧭 Simple mode
+
+One switch in the title bar keeps just what you need to set up, configure and start a server, with a three-step guide.
+
+![MystTiq v1.1.5.0 Dashboard in Simple mode with the three-step guide and the trimmed menus](docs/images/13-simple-mode.png)
 
 ### 💾 Backups
 
 Browse verified backups by in-game day and preview retention cleanup.
 
-![MystTiq v1.1.4.0 Backup Center with verified archives, world days and retention controls](docs/images/06-backups.png)
+![MystTiq v1.1.5.0 Backup Center with verified archives, world days and retention controls](docs/images/06-backups.png)
 
 ### 👥 Players
 
 Find known players and inspect their saved characters, guild membership and operator notes.
 
-![MystTiq v1.1.4.0 Player Directory with player details and notes](docs/images/03-players.png)
+![MystTiq v1.1.5.0 Player Directory with player details and notes](docs/images/03-players.png)
 
 ### 🧩 MOD Library
 
 Inspect installed MODs, manage enabled state, and access load order and MOD profiles.
 
-![MystTiq v1.1.4.0 MOD Library with installed MODs, status and profile controls](docs/images/07-mods.png)
+![MystTiq v1.1.5.0 MOD Library with installed MODs, status and profile controls](docs/images/07-mods.png)
 
 </details>
 

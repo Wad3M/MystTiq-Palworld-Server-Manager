@@ -20,8 +20,8 @@
 ## Verification
 
 - **Full gate** `scripts\Test-v1.1.5.0-Logic.ps1 -RunBuild -RunLong` (2026-10-24, after the Simple mode, update card,
-  addresses, reconnect, Simple/Advanced switch, switch colour and Configuration-loading rework): 453 / 453 passed, 6 skipped: the Linux VM (192.168.1.122) answered ping but not SSH,
-  so its checks did not run and v1.1.5.0 was not copied to it. Desktop harness: 874 checks (the title bar's switch clicked with Settings' Simple/Advanced list on screen, sticking both ways, blue in Simple and amber in Advanced, Configuration opened while busy waiting and then loading, the update card's MystTiq and
+  addresses, reconnect, Simple/Advanced switch, switch colour, Configuration-loading and O-6/O-7 rework): 454 / 454 passed, 6 skipped: the Linux VM (192.168.1.122) answered ping but not SSH,
+  so its checks did not run and v1.1.5.0 was not copied to it. Desktop harness: 875 checks ("Server build —" with no answer and the old connection line cleared on connect, the title bar's switch clicked with Settings' Simple/Advanced list on screen, sticking both ways, blue in Simple and amber in Advanced, Configuration opened while busy waiting and then loading, the update card's MystTiq and
   server lines in 12 languages at 950, 1100 and 1440 px, the addresses card between LIFECYCLE and the update card, the
   top row shown while the service is not connected, the quiet reconnect every other tick against a live and a closed
   port, the Simple/Advanced toggle clicked with the mouse: 5 menu pages, the World, MODs, Tools and Host tabs hidden, the
@@ -38,10 +38,10 @@
   the setup each hold `MystTiqConsoleProxy.dll`. **Setup:** an administrative extract (577 files, installed.txt present,
   no portable.txt); not installed on the owner's PC (needs administrator rights). **VirusTotal:** these rebuilt files are
   new and still to be scanned (the first v1.1.5.0 build scanned 0/60 and 0/63). **Validate-Release -Strict:** 0 errors,
-  0 warnings. **Distribution check:** passed. **Static gate:** 392 / 392.
+  0 warnings. **Distribution check:** passed. **Static gate:** 393 / 393. **README screenshots** (O-6): retaken from an isolated demo service with this PC's addresses replaced by documentation addresses before each capture (0 leaks reported, every image looked at).
 
 ## Still owed
 
 See the roadmap's "Outstanding for v1.1.5.0" (O-1 to O-8): the VirusTotal scan of the rebuilt setup and portable ZIP,
-the Linux VM once SSH is back, the push and tag, SignPath for the setup, publishing v1.1.1.3 and v1.1.2.0, new README
-screenshots, two small status-line follow-ups, and the translation review.
+the Linux VM once SSH is back, the push and tag, SignPath for the setup, publishing v1.1.1.3 and v1.1.2.0, and the
+translation review. O-6 (README screenshots) and O-7 (two status-line follow-ups) are done in this build.

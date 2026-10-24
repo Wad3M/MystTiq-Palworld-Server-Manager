@@ -2311,6 +2311,22 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     Render("dashboard-top-row-disconnected");
     Check(Shown("LifecycleRow") && Shown("DashboardAddresses") && Shown("ServerUpdateCard") && Shown("MystTiqUpdateLine") && !vm.CanUpdateServer && updateServer?.IsEffectivelyEnabled != true,
         "V-3: with the service not connected the Dashboard still shows LIFECYCLE, the addresses card and the update card; Update Server waits for the connection");
+    // O-7 (2026-10-24): with no answer the server line says "Server build —" (it was empty beside a lone "Checking" tag), and
+    // a connection clears the old "Nothing answers…" line at once instead of at the next status poll.
+    var lineProperty = typeof(MainWindowViewModel).GetProperty(nameof(vm.ServerUpdateLineText))!;
+    lineProperty.SetValue(vm, string.Empty);
+    var noBuild = vm.ServerUpdateLineText == "Server build —";
+    // A language change re-applies the last card (which fills the line), so the German fallback is read from the text itself.
+    Localizer.Instance.SetLanguage("de"); Dispatcher.UIThread.RunJobs();
+    var noBuildGerman = ServerUpdateText.NoBuildLine == "Server-Build —";
+    Localizer.Instance.SetLanguage("en"); Dispatcher.UIThread.RunJobs();
+    var causeProperty = typeof(MainWindowViewModel).GetProperty(nameof(vm.ConnectionCauseText))!;
+    causeProperty.SetValue(vm, "Nothing answers at http://127.0.0.1:8213. Start the MystTiq service, or check the address and port.");
+    typeof(MainWindowViewModel).GetMethod("NoteConnected", BindingFlags.Instance | BindingFlags.NonPublic)!
+        .Invoke(vm, [new ServerStatusDto { Ready = false }, new PlayersSnapshotDto { Available = true }]);
+    var causeCleared = vm.ConnectionCauseText.Length == 0 && !vm.HasConnectionCause;
+    Check(noBuild && noBuildGerman && causeCleared,
+        $"O-7: with no answer the update card's server line reads \"Server build —\" (in the display language), and connecting clears the old \"Nothing answers\" line [{noBuild}, {noBuildGerman}, {causeCleared}]");
 }
 
 // v1.1.5.0 (owner 2026-10-24: "the world selected should populate these settings without having to run the server"):

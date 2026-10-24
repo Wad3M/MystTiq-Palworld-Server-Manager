@@ -15,6 +15,10 @@ public static class ServerUpdateText
             ? string.Format(Localizer.Instance["dashboard.updates.serverNew"], card.Installed, latest)
             : string.Format(Localizer.Instance["dashboard.updates.server"], card.Installed);
 
+    /// <summary>"Server build —": before the service's first answer, while not connected, or when it has none (O-7, 2026-10-24:
+    /// the line was empty and only the card's "Checking" tag showed).</summary>
+    public static string NoBuildLine => string.Format(Localizer.Instance["dashboard.updates.server"], "—");
+
     /// <summary>The builds, what happens to a running server and its players, the safety backup, and a note when current.</summary>
     public static IReadOnlyList<string> ConfirmationLines(ServerUpdateCardDto? card, bool serverRunning, string playersOnline)
     {

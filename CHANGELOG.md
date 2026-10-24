@@ -21,6 +21,10 @@
 - Roadmap V-5 (owner 2026-10-24: "the world selected should populate these settings without having to run the
   server"): Configuration opened while the app is busy waits and then loads (`PageLoad.WaitsWhileBusy`, as Map and
   Players), and a late connection loads the open page; the service already read `PalWorldSettings.ini` from disk.
+- Roadmap O-7: a connection clears the old connection-problem line at once (`NoteConnected` on connect, not only on the
+  next status poll); the update card's server line reads "Server build —" with no answer (`ServerUpdateText.NoBuildLine`).
+- Roadmap O-6: README screenshots retaken in v1.1.5.0 and `13-simple-mode.png` added; the demo's addresses are replaced
+  by documentation addresses before each capture.
 - Roadmap W-2: a portable Windows ZIP. `portable.txt` beside the desktop keeps every MystTiq folder in `data`; no
   registry writes (no sign-in start, no nxm:// handler, no service install); its own helper and port.
 - Roadmap W-1: a Windows setup (`.msi`, WiX 5): Program Files, Start-menu and optional desktop shortcuts, Apps &

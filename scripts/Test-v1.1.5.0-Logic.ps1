@@ -2712,8 +2712,8 @@ $shots1140 = @('01-dashboard','02-settings','03-players','04-guilds','05-world-e
     }
 }
 Add-MystTiqCheck $ctx 'Regression' 'v1.1.4.0: Screenshots: all twelve docs/images pages are 1920x1080 renders of this version, and the README''s captions and alt text name v1.1.4.0' `
-    (@($shots1140).Count -eq 0 -and $readme1140x -match '\*Dashboard in v1\.1\.4\.0\. The screenshots featured here are included in the v1\.1\.4\.0 FullSource archive' -and
-     $readme1140x -match '!\[MystTiq v1\.1\.4\.0 Backup Center' -and $readme1140x -match '!\[MystTiq v1\.1\.4\.0 Player Directory' -and $readme1140x -match '!\[MystTiq v1\.1\.4\.0 MOD Library' -and
+    (@($shots1140).Count -eq 0 -and $readme1140x -match '\*Dashboard in v1\.1\.[4-9]\.0\. The screenshots featured here are included in the v1\.1\.[4-9]\.0 FullSource archive' -and
+     $readme1140x -match '!\[MystTiq v1\.1\.[4-9]\.0 Backup Center' -and $readme1140x -match '!\[MystTiq v1\.1\.[4-9]\.0 Player Directory' -and $readme1140x -match '!\[MystTiq v1\.1\.[4-9]\.0 MOD Library' -and
      $readme1140x -notmatch 'MystTiq v1\.1\.1\.2 ') -Severity High
 Add-MystTiqCheck $ctx 'Regression' 'v1.1.4.0: U-1/F-21/F-22 tests: the logic harness checks the update flow (running and stopped server, failed backup, failed update, refused second update), the wrong-path rule and the interrupted stop; the desktop harness checks the card in 12 languages at 950, 1100 and 1440 px and its states' `
     ($logic1140 -match 'Server update \(U-1\): a running server is stopped' -and $logic1140 -match 'Server update \(U-1\): a failed backup or update ends it' -and
@@ -2817,6 +2817,14 @@ Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-2/V-5 (owner 2026-10-24): Configur
      $vm -match 'if \(!PageLoad\.WaitsWhileBusy\(page\)\) return;' -and
      $vm -match 'if \(SelectedPage != NavigationPage\.Dashboard\) await RefreshPageForNavigationAsync\(SelectedPage\); \}' -and
      $art1150 -match 'V-5: Configuration opened while the app is busy waits' -and $art1150 -match 'V-2: the title bar''s switch is blue \(info\) in Simple and amber \(caution\) in Advanced') -Severity Critical
+$readme1150 = Get-MystTiqText $ctx 'README.md'
+$updateText1150 = Get-MystTiqText $ctx 'src\MystTiq.Desktop\Services\ServerUpdateText.cs'
+Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'O-6/O-7 (owner 2026-10-24: "do O-6 and O-7"): README screenshots retaken in v1.1.5.0 with Simple mode added (the demo''s addresses replaced by documentation addresses); a connection clears the old "Nothing answers" line at once; with no answer the update card''s server line reads "Server build —"' `
+    ((Test-Path (Join-Path $ctx.ProjectRoot 'docs\images\13-simple-mode.png')) -and $readme1150 -match '\(docs/images/13-simple-mode\.png\)' -and
+     $readme1150 -match '\*Dashboard in v1\.1\.5\.0\.' -and $readme1150 -notmatch '!\[MystTiq v1\.1\.4\.0' -and
+     $vm -match 'ManagementApiConnected = true;\s+NoteConnected\(poll\.Status, poll\.Players\);' -and
+     $updateText1150 -match 'public static string NoBuildLine => string\.Format\(Localizer\.Instance\["dashboard\.updates\.server"\], "—"\);' -and
+     $art1150 -match 'O-7: with no answer the update card''s server line reads') -Severity High
 $i18nOk1150 = $true
 foreach ($lang in 'en','de','es','fr','it','ja','ko','pl','pt-BR','ru','tr','zh-Hans') {
     $j = Get-MystTiqText $ctx "src\MystTiq.Desktop\Assets\i18n\$lang.json" | ConvertFrom-Json -AsHashtable
