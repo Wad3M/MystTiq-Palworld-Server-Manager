@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -117,9 +117,11 @@
           <Button Classes="ghost" Width="42" Height="38" Padding="0" Command="{Binding NavigateCommand}" CommandParameter="Settings" ToolTip.Tip="{services:Tr ui.open_settings}" AutomationProperties.Name="{services:Tr ui.open_settings}"><PathIcon Width="16" Height="16" Data="M17.39,8.23 L19.91,8.67 19.91,11.33 17.39,11.77 17.02,12.91 16.48,13.97 17.95,16.07 16.07,17.95 13.97,16.48 12.91,17.02 11.77,17.39 11.33,19.91 8.67,19.91 8.23,17.39 7.09,17.02 6.03,16.48 3.93,17.95 2.05,16.07 3.52,13.97 2.98,12.91 2.61,11.77 0.09,11.33 0.09,8.67 2.61,8.23 2.98,7.09 3.52,6.03 2.05,3.93 3.93,2.05 6.03,3.52 7.09,2.98 8.23,2.61 8.67,0.09 11.33,0.09 11.77,2.61 12.91,2.98 13.97,3.52 16.07,2.05 17.95,3.93 16.48,6.03 17.02,7.09 Z M14.3,10 A4.3,4.3 0 1 0 5.7,10 A4.3,4.3 0 1 0 14.3,10 Z"/></Button>
           <!-- v0.9.0.0 (user, 2026-09-27): the display language, next to Settings, so it can be changed from any page (the
                same choice as Settings > Language). -->
-          <!-- v1.1.5.0 (roadmap V-2): Simple or Advanced, from any page (the same choice as Settings > Appearance). -->
-          <Button x:Name="UiModeToggle" Classes="ghost" Height="32" MinWidth="78" Padding="10,0" Margin="2,0,0,0" VerticalAlignment="Center" Command="{Binding ToggleUiModeCommand}" ToolTip.Tip="{services:Tr uiMode.tip}" AutomationProperties.Name="{services:Tr uiMode.tip}">
-            <TextBlock Text="{services:TrText UiModeLabel}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+          <!-- v1.1.5.0 (roadmap V-2): Simple or Advanced, from any page (the same choice as Settings > Appearance). Owner
+               2026-10-24 ("the advanced button needs to have more colour"): coloured like Configuration's Simple Settings
+               (blue) and Advanced Settings (amber) buttons, by the mode in use. -->
+          <Button x:Name="UiModeToggle" Classes.info="{Binding IsSimpleMode}" Classes.caution="{Binding IsAdvancedMode}" Height="32" MinWidth="78" Padding="10,0" Margin="2,0,0,0" VerticalAlignment="Center" Command="{Binding ToggleUiModeCommand}" ToolTip.Tip="{services:Tr uiMode.tip}" AutomationProperties.Name="{services:Tr uiMode.tip}">
+            <TextBlock Text="{services:TrText UiModeLabel}" FontSize="12" FontWeight="SemiBold"/>
           </Button>
           <ComboBox x:Name="TitleLanguagePicker" Width="150" Height="32" Margin="4,0,0,0" VerticalAlignment="Center" ItemsSource="{Binding UiLanguages}" SelectedItem="{Binding SelectedUiLanguage}" ToolTip.Tip="{services:Tr settings.language.label}" AutomationProperties.Name="{services:Tr settings.language.label}"/>
           <Border Width="1" Height="24" Background="{DynamicResource BorderBrush}" Margin="7,0"/>

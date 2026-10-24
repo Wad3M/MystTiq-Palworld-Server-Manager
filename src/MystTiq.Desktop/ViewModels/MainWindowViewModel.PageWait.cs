@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-24).
 namespace MystTiq.Desktop.ViewModels;
 
 // v1.0.7.2 (roadmap Q-13): Map and Players opened while the app was busy used to check the busy state every 500 ms for up

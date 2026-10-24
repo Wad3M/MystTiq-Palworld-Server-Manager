@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
 ## v1.1.5.0 — Resizable Window, Simple Mode, Installer and Portable
 
 - Roadmap V-1: resize grips on every edge and corner (`BeginResizeDrag`, hidden while maximized); the window's size,
@@ -16,7 +16,11 @@
   stays while the service is not connected. A helper the desktop just started gets 45 s (was 8 s; the first start after
   an install with five servers took longer), and a disconnected local tab asks `/healthz` every other tick and connects
   once it answers (`LocalReconnect`), instead of waiting for Refresh.
-- Roadmap V-4: Simple Settings (blue) and Advanced Settings (amber) have different colours.
+- Roadmap V-4: Simple Settings (blue) and Advanced Settings (amber) have different colours; the title bar's switch
+  follows them (blue in Simple, amber in Advanced; owner 2026-10-24: "the advanced button needs to have more colour").
+- Roadmap V-5 (owner 2026-10-24: "the world selected should populate these settings without having to run the
+  server"): Configuration opened while the app is busy waits and then loads (`PageLoad.WaitsWhileBusy`, as Map and
+  Players), and a late connection loads the open page; the service already read `PalWorldSettings.ini` from disk.
 - Roadmap W-2: a portable Windows ZIP. `portable.txt` beside the desktop keeps every MystTiq folder in `data`; no
   registry writes (no sign-in start, no nxm:// handler, no service install); its own helper and port.
 - Roadmap W-1: a Windows setup (`.msi`, WiX 5): Program Files, Start-menu and optional desktop shortcuts, Apps &

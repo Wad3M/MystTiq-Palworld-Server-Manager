@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-24).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1899,8 +1899,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             // v0.7.100.0: opening a page while the app was still busy (start-up work, another refresh)
             // used to skip its load silently, so the Map and Players pages stayed empty until Refresh
             // was pressed. These two show live data, so they wait for the busy state to clear (up to a
-            // minute) and load if the user is still on the page. Other pages keep the old behaviour.
-            if (page is not (NavigationPage.Map or NavigationPage.Players)) return;
+            // minute) and load if the user is still on the page. Other pages keep the old behaviour (see PageLoad).
+            if (!PageLoad.WaitsWhileBusy(page)) return;
             // v1.0.7.2 (roadmap Q-13): a signal and a message instead of polling; leaving the page ends the wait.
             if (!await WaitUntilNotBusyAsync(page)) return;
         }
@@ -3000,7 +3000,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         if (SelectedProfile?.Id == ConnectionProfile.LocalDefault.Id && ConnectionState != "Connected")
         {
             await RefreshLocalInstallationAsync();
-            if (await _localReconnect.AnswersAsync(ServerUrl)) await RefreshAsync(silent: false); // v1.1.5.0: see LocalReconnect
+            if (await _localReconnect.AnswersAsync(ServerUrl)) { await RefreshAsync(silent: false); if (SelectedPage != NavigationPage.Dashboard) await RefreshPageForNavigationAsync(SelectedPage); }
             return;
         }
 

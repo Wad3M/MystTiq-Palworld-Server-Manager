@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
 # v1.1.4.0 Changed Files
 
 - `src/MystTiq.HeadlessHost/HeadlessServerUpdateFlowService.cs` (new): the Server update card and its update (stop, safety backup, SteamCMD, start again).

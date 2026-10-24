@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
 # v1.1.5.0 Changed Files
 
 - `src/MystTiq.Desktop/MainWindow.Placement.cs` (new), `Services/WindowPlacement.cs` (new), `MainWindow.axaml`, `MainWindow.axaml.cs`, `App.axaml.cs`: resize grips on every edge and corner; the window's placement remembered and fitted onto the screens (V-1).

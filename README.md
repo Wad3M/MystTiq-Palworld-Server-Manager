@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -53,8 +53,9 @@ Everything added since 1.0, in one place. Each version's own notes are in [relea
 
 **Everyday administration**
 - **Install it your way on Windows**: a setup with shortcuts and an uninstaller, or a portable copy that keeps everything in its own folder (v1.1.5.0).
-- **Simple or Advanced**: one switch hides the specialist pages for everyday use, and the window can be sized from any edge and remembers where it was (v1.1.5.0).
-- **Update the server from the Dashboard.** A card shows your build against Steam's; one button stops the server, takes a safety backup, updates it and starts it again (v1.1.4.0).
+- **Simple or Advanced**: one switch in the title bar keeps just what you need to set up, configure and start a server, and the window can be sized from any edge and remembers where it was (v1.1.5.0).
+- **Update from the Dashboard.** A card shows your server build against Steam's and MystTiq's version against the latest release, each with its own Update button; the server update stops it, takes a safety backup, updates it and starts it again (v1.1.4.0; MystTiq added in v1.1.5.0). The players' addresses sit beside it.
+- **Settings without starting the server.** Configuration reads your server's settings file as soon as it opens (v1.1.5.0).
 - **Update, on every row** of the Update Center, including MystTiq's own update, checked against its published checksums.
 - **Discord commands that answer.** The bot's start, stop, restart and backup commands now show their result instead of "did not respond".
 - **Progress you can see.** A server start shows its steps, backup scans show "12 of 47" and can be cancelled, and the connection line says what is wrong.
@@ -150,7 +151,7 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v1.1.5.0 | Current release | A Windows setup and a portable version; a window you can size; Simple and Advanced modes |
+| v1.1.5.0 | Current release | A Windows setup and a portable version; a window you can size; Simple and Advanced modes; MystTiq's own update and the addresses on the Dashboard; Configuration read without starting the server |
 | v1.1.4.0 | Delivered | Update the server from the Dashboard (installed and Steam builds, one button); the wrong-path warning fixed for several servers; screenshots retaken |
 | v1.1.2.0 | Delivered | Why a server stopped (on the Dashboard and in the activity log); an option to start MystTiq with Windows |
 | v1.1.1.3 | Delivered | Library updates (the four Dependabot pull requests): Avalonia 12.1.4, Discord.Net 3.20.2, the Windows service host 10.0.13 |

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
 # v1.1.2.0 Changed Files
 
 - `src/MystTiq.Core/Services/ServerStopReason.cs` (new): the reason a stop is made for, carried with the call.

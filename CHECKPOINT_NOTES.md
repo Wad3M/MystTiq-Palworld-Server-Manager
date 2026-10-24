@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
 # MystTiq v1.1.5.0 Checkpoint: Resizable Window, Simple Mode, Installer and Portable
 
 ## What changed
@@ -12,15 +12,16 @@
   update card with MystTiq (Update MystTiq) and the Palworld server (Update Server). The row stays while the service is
   not connected, and the desktop now connects by itself to a helper that was slow to start (45 s wait, then a quiet
   retry every 10 s); after the first install it had stayed on "Service unreachable".
-- **Configuration (V-4).** Simple Settings is blue and Advanced Settings amber.
+- **Configuration (V-4, V-5).** Simple Settings is blue and Advanced Settings amber, and the title bar's switch matches
+  them. The page fills itself in from the server's settings file whether the server runs or not.
 - **Portable (W-2)** and **Windows setup (W-1)**, as in the first v1.1.5.0 checkpoint; the setup's `.msi` is signed by the
   release workflow once SignPath is set up.
 
 ## Verification
 
-- **Full gate** `scripts\Test-v1.1.5.0-Logic.ps1 -RunBuild -RunLong` (2026-10-23, after the Simple mode, update card,
-  addresses, reconnect and Simple/Advanced switch rework): 452 / 452 passed, 6 skipped: the Linux VM (192.168.1.122) answered ping but not SSH,
-  so its checks did not run and v1.1.5.0 was not copied to it. Desktop harness: 872 checks (the title bar's switch clicked with Settings' Simple/Advanced list on screen, sticking both ways, the update card's MystTiq and
+- **Full gate** `scripts\Test-v1.1.5.0-Logic.ps1 -RunBuild -RunLong` (2026-10-24, after the Simple mode, update card,
+  addresses, reconnect, Simple/Advanced switch, switch colour and Configuration-loading rework): 453 / 453 passed, 6 skipped: the Linux VM (192.168.1.122) answered ping but not SSH,
+  so its checks did not run and v1.1.5.0 was not copied to it. Desktop harness: 874 checks (the title bar's switch clicked with Settings' Simple/Advanced list on screen, sticking both ways, blue in Simple and amber in Advanced, Configuration opened while busy waiting and then loading, the update card's MystTiq and
   server lines in 12 languages at 950, 1100 and 1440 px, the addresses card between LIFECYCLE and the update card, the
   top row shown while the service is not connected, the quiet reconnect every other tick against a live and a closed
   port, the Simple/Advanced toggle clicked with the mouse: 5 menu pages, the World, MODs, Tools and Host tabs hidden, the
@@ -37,4 +38,10 @@
   the setup each hold `MystTiqConsoleProxy.dll`. **Setup:** an administrative extract (577 files, installed.txt present,
   no portable.txt); not installed on the owner's PC (needs administrator rights). **VirusTotal:** these rebuilt files are
   new and still to be scanned (the first v1.1.5.0 build scanned 0/60 and 0/63). **Validate-Release -Strict:** 0 errors,
-  0 warnings. **Distribution check:** passed. **Static gate:** 391 / 391.
+  0 warnings. **Distribution check:** passed. **Static gate:** 392 / 392.
+
+## Still owed
+
+See the roadmap's "Outstanding for v1.1.5.0" (O-1 to O-8): the VirusTotal scan of the rebuilt setup and portable ZIP,
+the Linux VM once SSH is back, the push and tag, SignPath for the setup, publishing v1.1.1.3 and v1.1.2.0, new README
+screenshots, two small status-line follow-ups, and the translation review.

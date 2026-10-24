@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-24).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -2313,6 +2313,28 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
         "V-3: with the service not connected the Dashboard still shows LIFECYCLE, the addresses card and the update card; Update Server waits for the connection");
 }
 
+// v1.1.5.0 (owner 2026-10-24: "the world selected should populate these settings without having to run the server"):
+// Configuration opened while the app is busy (MystTiq can start on it) waited for nothing and showed "Not loaded"; it now
+// waits for the busy work and then reads the settings (offline here, so the read fails with a message, not "Not loaded").
+{
+    var busy = typeof(MainWindowViewModel).GetProperty(nameof(vm.IsBusy))!;
+    var configState = typeof(ConfigurationViewModel).GetProperty(nameof(vm.Configuration.PalworldConfigState))!;
+    selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs();
+    configState.SetValue(vm.Configuration, "Not loaded");
+    busy.SetValue(vm, true);
+    vm.NavigateCommand.Execute("Configuration");
+    for (var i = 0; i < 20; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
+    var waiting = vm.HasPageWait && vm.Configuration.PalworldConfigState == "Not loaded";
+    busy.SetValue(vm, false);
+    var deadline = DateTime.UtcNow.AddSeconds(30);
+    while (DateTime.UtcNow < deadline && (vm.Configuration.PalworldConfigState == "Not loaded" || vm.Configuration.PalworldConfigState.StartsWith("Loading") || vm.IsBusy))
+    { Dispatcher.UIThread.RunJobs(); Thread.Sleep(50); }
+    var loadedAfter = vm.Configuration.PalworldConfigState != "Not loaded" && !vm.HasPageWait;
+    Check(PageLoad.WaitsWhileBusy(NavigationPage.Configuration) && waiting && loadedAfter,
+        $"V-5: Configuration opened while the app is busy waits for it, then reads the server's settings [waiting {waiting}, then: {vm.Configuration.PalworldConfigState}]");
+    selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs();
+}
+
 // v1.1.5.0 (seen 2026-10-23 after an install): the local tab asks /healthz quietly every other tick and connects once it
 // answers, instead of waiting for Refresh; the helper it just started gets 45 s, not 8 s.
 {
@@ -2485,6 +2507,12 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     var sticksSimple = vm.IsSimpleMode && modePicker.SelectedIndex == 0 && remembered.LoadUiMode() == SimpleMode.Simple;
     ClickToggle();
     var sticksAdvanced = vm.IsAdvancedMode && modePicker.SelectedIndex == 1 && remembered.LoadUiMode() == SimpleMode.Advanced;
+    // Owner 2026-10-24 ("the advanced button needs to have more colour"): blue in Simple, amber in Advanced.
+    ClickToggle();
+    var blueInSimple = vm.IsSimpleMode && toggle.Classes.Contains(ButtonIntents.Info) && !toggle.Classes.Contains(ButtonIntents.Caution);
+    ClickToggle();
+    var amberInAdvanced = vm.IsAdvancedMode && toggle.Classes.Contains(ButtonIntents.Caution) && !toggle.Classes.Contains(ButtonIntents.Info) && !toggle.Classes.Contains("ghost");
+    Check(blueInSimple && amberInAdvanced, $"V-2: the title bar's switch is blue (info) in Simple and amber (caution) in Advanced [{blueInSimple}, {amberInAdvanced}]");
     selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
     Check(pickerShown && sticksSimple && sticksAdvanced,
         $"V-2: with Settings' Simple/Advanced picker on screen, a click on the title bar's switch sticks (Simple, then Advanced) and the picker follows [picker {pickerShown}, simple {sticksSimple}, advanced {sticksAdvanced}]");

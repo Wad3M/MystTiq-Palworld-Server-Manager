@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-23). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
 # v1.0.8.8 Changed Files
 
 - `src/MystTiq.Desktop/ViewModels/DiagnosticsViewModel.cs` (new): the Update Center, Server Doctor, the Crash Analyzer and

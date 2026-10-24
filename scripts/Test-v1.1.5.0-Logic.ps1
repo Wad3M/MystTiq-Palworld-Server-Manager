@@ -1,4 +1,4 @@
-# MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
+# MystTiq v1.1.5.0: file reviewed for this release (2026-10-24).
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = '.',
@@ -1558,7 +1558,7 @@ foreach ($file in $xaml1006) {
 }
 $looks1006 = 'danger', 'open', 'verify', 'apply', 'info', 'caution', 'plain', 'ribbon', 'ghost', 'sectionToggle', 'palMarker', 'marker', 'listItem'
 $unclassed1006 = @($buttons1006 | Where-Object {
-    $classes = if ($_.Tag -match '\sClasses="([^"]*)"') { $Matches[1] -split '\s+' } else { @() }
+    $classes = @(if ($_.Tag -match '\sClasses="([^"]*)"') { $Matches[1] -split '\s+' }) + @([regex]::Matches($_.Tag, '\sClasses\.([a-z]+)="\{Binding ') | ForEach-Object { $_.Groups[1].Value })
     @($classes | Where-Object { $looks1006 -contains $_ }).Count -lt 1 })
 $coloured1006 = @($buttons1006 | Where-Object { $_.Tag -match '\s(Background|Foreground|BorderBrush)="' -or ($_.Tag -notmatch '\bribbon\b' -and $_.Tag -match 'Classes\.(inspectAction|targetAction|primary|success|warning)=') })
 $oldClass1006 = @($buttons1006 | Where-Object { $_.Tag -match '\sClasses="[^"]*\b(primary|success|warning|inspectAction|targetAction)\b' -and $_.Tag -notmatch '\bribbon\b' })
@@ -2766,7 +2766,7 @@ Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-2: Simple (owner 2026-10-23: just 
      $xaml1150 -match 'x:Name="SimpleGuide" Classes="card accentHome" Padding="10,8" IsVisible="\{Binding IsSimpleMode\}"' -and
      ([regex]::Matches($xaml1150, 'Height="100" IsVisible="\{Binding IsAdvancedMode\}"|Padding="8" IsVisible="\{Binding IsAdvancedMode\}"|Padding="10" IsVisible="\{Binding IsAdvancedMode\}"|Padding="8,6" IsVisible="\{Binding IsAdvancedMode\}"|ColumnSpacing="8" IsVisible="\{Binding IsAdvancedMode\}"')).Count -ge 5 -and
      $xaml1150 -match 'Command="\{Binding Configuration\.ShowAdvancedConfigCommand\}" IsVisible="\{Binding IsAdvancedMode\}"' -and
-     $xaml1150 -match 'x:Name="UiModeToggle" Classes="ghost"' -and $xaml1150 -match 'x:Name="UiModePicker"' -and
+     $xaml1150 -match 'x:Name="UiModeToggle" Classes\.info="\{Binding IsSimpleMode\}" Classes\.caution="\{Binding IsAdvancedMode\}"' -and $xaml1150 -match 'x:Name="UiModePicker"' -and
      $uiMode1150 -match 'if \(SimpleMode\.Hides\(SelectedPage\)\) Navigate\(nameof\(NavigationPage\.Dashboard\)\);' -and
      $display1150 -match 'private sealed record DisplayPreferences\(string\? Density, string\? UiMode = null\);' -and $display1150 -match 'Write\(Read\(\) with \{ Density =') -Severity Critical
 Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'W-2: portable.txt (beside the desktop or one up from the helper) moves every MystTiq folder into data; the service''s defaults follow; the desktop''s stores ask it first; a portable copy never reuses another copy''s helper and writes nothing to Windows; the portable ZIP is packaged' `
@@ -2803,7 +2803,7 @@ Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-3 (owner 2026-10-23: "missing the 
      $boot1150b -match 'public static readonly TimeSpan StartedHelperTimeout = TimeSpan\.FromSeconds\(45\);' -and $boot1150b -match 'var deadline = DateTimeOffset\.UtcNow \+ StartedHelperTimeout;' -and
      $boot1150b -match 'if \(ownedSidecarProcessId is \{ \} startedId && !ProcessIsRunning\(startedId\)\) break;' -and
      $reconnect1150 -match 'public const int EveryTicks = 2;' -and $reconnect1150 -match 'if \(probing \|\| string\.IsNullOrWhiteSpace\(endpoint\) \|\| \+\+ticks % EveryTicks != 0\) return false;' -and
-     $vm -match 'if \(await _localReconnect\.AnswersAsync\(ServerUrl\)\) await RefreshAsync\(silent: false\);' -and
+     $vm -match 'if \(await _localReconnect\.AnswersAsync\(ServerUrl\)\) \{ await RefreshAsync\(silent: false\);' -and
      $art1150 -match 'V-3: with the service not connected the Dashboard still shows LIFECYCLE' -and $art1150 -match 'V-3: a disconnected local tab asks /healthz every') -Severity Critical
 $uiModeVm1150 = Get-MystTiqText $ctx 'src\MystTiq.Desktop\ViewModels\MainWindowViewModel.UiMode.cs'
 $raise1150 = [regex]::Match($uiModeVm1150, '(?s)private void RaiseUiModeDependents\(\)\s*\{.*?\n    \}').Value
@@ -2811,6 +2811,12 @@ Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-2 (owner 2026-10-23: "the advanced
     ($raise1150.Length -gt 0 -and $raise1150 -notmatch 'RaisePropertyChanged\(nameof\(UiModeLabels\)\)' -and $raise1150 -match 'RaisePropertyChanged\(nameof\(SelectedUiModeIndex\)\)' -and
      $art1150 -match 'V-2: with Settings'' Simple/Advanced picker on screen, a click on the title bar''s switch sticks' -and
      $mystUpdate1150 -match 'public string LineText \{ get => _lineText\.Length > 0 \? _lineText : string\.Format\(Localizer\.Instance\["dashboard\.updates\.mysttiq"\], ThisVersion\);') -Severity Critical
+$pageLoad1150 = Get-MystTiqText $ctx 'src\MystTiq.Desktop\Services\PageLoad.cs'
+Add-MystTiqCheck $ctx 'v1.1.5.0 Contracts' 'V-2/V-5 (owner 2026-10-24): Configuration opened while the app is busy (MystTiq can start on it) waits and then reads the server''s settings, which the service reads whether the server runs or not; a late connection loads the open page; the title bar''s switch is blue in Simple and amber in Advanced' `
+    ($pageLoad1150 -match 'public static bool WaitsWhileBusy\(NavigationPage page\) => page is NavigationPage\.Map or NavigationPage\.Players or NavigationPage\.Configuration;' -and
+     $vm -match 'if \(!PageLoad\.WaitsWhileBusy\(page\)\) return;' -and
+     $vm -match 'if \(SelectedPage != NavigationPage\.Dashboard\) await RefreshPageForNavigationAsync\(SelectedPage\); \}' -and
+     $art1150 -match 'V-5: Configuration opened while the app is busy waits' -and $art1150 -match 'V-2: the title bar''s switch is blue \(info\) in Simple and amber \(caution\) in Advanced') -Severity Critical
 $i18nOk1150 = $true
 foreach ($lang in 'en','de','es','fr','it','ja','ko','pl','pt-BR','ru','tr','zh-Hans') {
     $j = Get-MystTiqText $ctx "src\MystTiq.Desktop\Assets\i18n\$lang.json" | ConvertFrom-Json -AsHashtable

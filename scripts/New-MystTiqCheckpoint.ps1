@@ -1,4 +1,4 @@
-# MystTiq v1.1.5.0: file reviewed for this release (2026-10-23).
+# MystTiq v1.1.5.0: file reviewed for this release (2026-10-24).
 # v1.1.1.0: the release checkpoint, kept with the project (it lived outside it before). For version X it writes
 # <BackupRoot>\vX\:
 #   MystTiqPalworldServer_vX_FullSource.zip   the source tree (no artifacts, bin, obj, .git, .vs, __pycache__, scratch)
