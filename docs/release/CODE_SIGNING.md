@@ -7,7 +7,10 @@ owner's accounts, so it is a checklist for you rather than something automation 
 
 ## 1. Apply to SignPath Foundation (free for open source)
 
-Apply at <https://signpath.org/apply> for `Wad3M/MystTiq-Palworld-Server-Manager`. What the Foundation checks:
+Apply at <https://signpath.org/apply> for `Wad3M/MystTiq-Palworld-Server-Manager`. **Applied 2026-10-25** (the owner
+submitted the form; download URL `https://github.com/Wad3M/MystTiq-Palworld-Server-Manager#get-started`, where the README
+says "free code signing provided by SignPath.io, certificate by SignPath Foundation"; homepage the GitHub Pages site,
+which says the same). Waiting for the Foundation's answer. What the Foundation checks:
 
 - an OSI license without commercial dual-licensing (MIT: yes);
 - the project is maintained and already released, and signs only binaries built from its own source by an automated
@@ -50,5 +53,5 @@ Push the tag as usual. The workflow stages the Windows app, uploads it, and subm
 SignPath; the workflow waits up to 24 hours. It then checks that each MystTiq binary has a valid signature, makes the ZIP
 from the signed files, and creates the draft release. Since v1.1.5.0 it then builds the setup from those signed files
 and submits the `.msi` as a second request (approve that one too); it checks the setup's signature and attaches the
-signed `.msi`. The portable ZIP is made from the signed files as well. A tag pushed before step 3 gives an unsigned release. v1.0.0.0 was published unsigned
-(2026-09-30); the first signed release is planned as v1.0.1, tagged once steps 1–3 are done.
+signed `.msi`. The portable ZIP is made from the signed files as well. A tag pushed before step 3 gives an unsigned release. v1.0.0.0 to v1.1.5.0 were released unsigned; the
+first release tagged after step 3 is the first signed one.

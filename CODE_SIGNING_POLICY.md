@@ -4,6 +4,8 @@
 Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
 [SignPath Foundation](https://signpath.org/).
 
+Status: applied to the SignPath Foundation on 2026-10-25. Until signing is approved and set up, releases are unsigned.
+
 ## What is signed
 
 The Windows download's own MystTiq binaries: `MystTiq.Desktop.exe`, `MystTiq.Desktop.dll`, `MystTiq.Core.dll`, and in

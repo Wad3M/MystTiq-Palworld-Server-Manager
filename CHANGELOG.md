@@ -25,6 +25,10 @@
   next status poll); the update card's server line reads "Server build —" with no answer (`ServerUpdateText.NoBuildLine`).
 - Roadmap O-6: README screenshots retaken in v1.1.5.0 and `13-simple-mode.png` added; the demo's addresses are replaced
   by documentation addresses before each capture.
+- After the tag (2026-10-25): the README's Get started section and the project site say "free code signing provided by
+  SignPath.io, certificate by SignPath Foundation" (applied for that day, O-4); the site's download text names the
+  setup, the portable ZIP and the ZIP. The release build failed installing .NET 10.0.403, released by Microsoft that day
+  (O-9); nothing in MystTiq changed.
 - Roadmap W-2: a portable Windows ZIP. `portable.txt` beside the desktop keeps every MystTiq folder in `data`; no
   registry writes (no sign-in start, no nxm:// handler, no service install); its own helper and port.
 - Roadmap W-1: a Windows setup (`.msi`, WiX 5): Program Files, Start-menu and optional desktop shortcuts, Apps &

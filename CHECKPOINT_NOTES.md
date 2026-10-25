@@ -43,6 +43,7 @@
 
 ## Still owed
 
-See the roadmap's "Outstanding for v1.1.5.0": SignPath for the setup (O-4) and the translation review (O-8). Done: the
+See the roadmap's "Outstanding for v1.1.5.0": SignPath (O-4, applied 2026-10-25, waiting for approval), the release
+build blocked by Microsoft's .NET 10.0.403 feed (O-9) and the translation review (O-8). Done: the
 VirusTotal scan (O-1), the push and tag (O-3), README screenshots (O-6) and two status-line follow-ups (O-7). The owner
 removed the Linux VM install (O-2) and publishing v1.1.1.3 and v1.1.2.0 (O-5) on 2026-10-25.
