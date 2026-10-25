@@ -137,6 +137,8 @@ Inspect installed MODs, manage enabled state, and access load order and MOD prof
 | `FullSource.zip` / GitHub source archives | Developers who want to build or inspect the source |
 | `SHA256SUMS.txt` | Checking that downloaded files match the release |
 
+**Code signing:** free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/). The project has applied; until signing is approved, the Windows downloads are unsigned and SmartScreen may ask before running them. What is signed, and who approves it, is in the [code signing policy](CODE_SIGNING_POLICY.md).
+
 Upgrading? Back up your server data, extract the new app into a fresh folder and follow that release's upgrade notes. Keep your existing configuration/data locations and verify the connection before resuming administration. If the Dashboard says the MystTiq service on your PC is older than the app, let it replace it.
 
 **Closing the desktop does not stop a managed server.** The headless service owns operations and persistent state; the desktop connects to it locally or remotely. **Exit** from the tray stops everything.
