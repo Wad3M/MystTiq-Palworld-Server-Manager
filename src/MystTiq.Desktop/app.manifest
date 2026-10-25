@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
 <!-- v0.8.26.0: the Desktop's Windows application manifest. It carries the release version (assemblyIdentity), which
      the version bump and the release checks read, since the legacy WPF app and its manifest were removed. The app runs
      as the signed-in user (no elevation) and declares Windows 10/11. -->

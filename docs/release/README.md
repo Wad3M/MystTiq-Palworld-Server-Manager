@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
 # Publishing a MystTiq release on GitHub
 
 This guide publishes **v1.1.5.0**; for a later version, replace the version everywhere below. The version always comes from `Directory.Build.props`, and the release workflow refuses a tag that does not match it. v1.1.0.0 is the accepted baseline (v1.0.0.0 before it).

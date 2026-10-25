@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-24).
+// MystTiq v1.1.5.0: file reviewed for this release (2026-10-25).
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 using MystTiq.Core.Services;

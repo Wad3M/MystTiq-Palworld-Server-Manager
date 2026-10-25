@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
 # Code signing policy
 
 Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by

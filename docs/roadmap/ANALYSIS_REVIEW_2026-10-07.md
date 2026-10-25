@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
 # Review of "MystTiq Palworld Server analyses" (2026-10-07)
 
 The owner supplied an outside static review (`MystTiq Palworld Server analyses.docx`, 12 findings A–L, a proposed

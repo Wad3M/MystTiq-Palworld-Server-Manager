@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
 # Product roadmap
 
 Updated 2026-10-22. **Current version: v1.1.5.0. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the owner rolled every request into v1.1.5.0 on 2026-10-22; ask before numbering the next). Reviewed with the owner 2026-10-19 (D-14).**
@@ -242,15 +242,13 @@ a portable version for Windows" (W-1, W-2).
 
 ### Outstanding for v1.1.5.0 (2026-10-24)
 
-Built and checked locally (committed, not pushed). What is still owed before and after it is published:
+Built and checked locally, pushed on 2026-10-25. What was owed before and after it is published (O-2, the Linux VM install, and O-5, publishing v1.1.1.3 and v1.1.2.0, removed by the owner on 2026-10-25):
 
 | ID | Item | Who | Status |
 | --- | --- | --- | --- |
-| O-1 | VirusTotal scan of the rebuilt setup (`.msi`) and portable ZIP (the first v1.1.5.0 build scanned 0/60 and 0/63; every rebuild changes the files). Uploading publishes the file, so the owner uploads them. | Owner | Open |
-| O-2 | The Linux VM (192.168.1.122): it answers ping but SSH (port 22) has been closed since 2026-10-22, so v1.1.5.0 is not installed in `~/MystTiq` and the six VM checks were skipped in every gate run. Once SSH is back: `Install-MystTiqDesktopLinux.ps1` and the VM checks (the production unit is never touched). | Owner (SSH), then Claude | Open |
-| O-3 | Push `main` and tag v1.1.5.0 (the local v1.1.5.0 commits on top of v1.1.4.0), then publish the release the workflow drafts (the setup is signed there once O-4 is done). | Owner approves | Open |
+| O-1 | VirusTotal scan of the rebuilt setup (`.msi`) and portable ZIP (the first v1.1.5.0 build scanned 0/60 and 0/63; every rebuild changes the files). Uploading publishes the file, so the owner uploads them. Done 2026-10-25 (owner uploaded): the setup `899b30e1…` 0/49 and the portable ZIP `4903af4a…` 0/62, no Sigma rules, no sandbox detections; the one medium MITRE signature on the portable ZIP is the desktop's own call to its helper on 127.0.0.1 (as in earlier releases). The release workflow builds its own files, so their hashes differ. | Owner | Done |
+| O-3 | Push `main` and tag v1.1.5.0 (the local v1.1.5.0 commits on top of v1.1.4.0), then publish the release the workflow drafts (the setup is signed there once O-4 is done). Done 2026-10-25 (owner: "go ahead and push"): `main` pushed and v1.1.5.0 tagged; the release workflow drafts the release. | Owner approves | Done |
 | O-4 | SignPath for the setup: `.signpath/artifact-configuration-setup.xml` and the workflow step are in place; the SignPath project and its approval are the owner's. Without it, SmartScreen warns on the unsigned setup. | Owner | Open |
-| O-5 | Releases v1.1.1.3 and v1.1.2.0 are tagged but not published on GitHub (only v1.1.4.0 of that run is public, 2026-10-20). Publish their drafts, or leave them as tags only. | Owner | Open |
 | O-6 | README screenshots still show v1.1.4.0: retake the Dashboard (the new top row and the update card) and add Simple mode, with the headless demo recipe. Done 2026-10-24: all twelve retaken in v1.1.5.0 and `13-simple-mode.png` added to the README; the demo service reads this PC's network, so its addresses are replaced on screen by documentation addresses (203.0.113.10, 192.168.1.20-22) before each capture, and each capture waits until the window is not busy. | Claude | Done |
 | O-7 | Small: after the desktop connects late, the status box keeps the old "Nothing answers at http://127.0.0.1:8213" line under "Connected"; and while not connected the update card's server line is empty (only its "Checking" tag shows). Done 2026-10-24: a connection clears the line at once (it waited for a status poll, which is skipped while the app is busy); the server line reads "Server build —" with no answer; desktop harness check. | Claude | Done |
 | O-8 | E-10 translation review (native review of the 11 non-English languages), carried from v1.0; the 24 strings added in v1.1.5.0 are checked for presence in all 12 languages only. | Owner (reviewers) | Open |

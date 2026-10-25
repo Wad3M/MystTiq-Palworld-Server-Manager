@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
 # MystTiq v1.1.5.0 Checkpoint: Resizable Window, Simple Mode, Installer and Portable
 
 ## What changed
@@ -36,12 +36,13 @@
   answered over TLS on 18213); all in `SHA256SUMS.txt`. The console proxy is built between `Build.ps1 Clean` and
   `Package` (an earlier packaging without it was caught by the distribution check); the Windows ZIP, the portable ZIP and
   the setup each hold `MystTiqConsoleProxy.dll`. **Setup:** an administrative extract (577 files, installed.txt present,
-  no portable.txt); not installed on the owner's PC (needs administrator rights). **VirusTotal:** these rebuilt files are
-  new and still to be scanned (the first v1.1.5.0 build scanned 0/60 and 0/63). **Validate-Release -Strict:** 0 errors,
+  no portable.txt); not installed on the owner's PC (needs administrator rights). **VirusTotal** (owner uploaded,
+  2026-10-25): the setup `899b30e1…` 0/49 and the portable ZIP `4903af4a…` 0/62, no Sigma rules or sandbox detections; one
+  medium MITRE signature on the portable ZIP (the desktop's call to its helper on 127.0.0.1). **Validate-Release -Strict:** 0 errors,
   0 warnings. **Distribution check:** passed. **Static gate:** 393 / 393. **README screenshots** (O-6): retaken from an isolated demo service with this PC's addresses replaced by documentation addresses before each capture (0 leaks reported, every image looked at).
 
 ## Still owed
 
-See the roadmap's "Outstanding for v1.1.5.0" (O-1 to O-8): the VirusTotal scan of the rebuilt setup and portable ZIP,
-the Linux VM once SSH is back, the push and tag, SignPath for the setup, publishing v1.1.1.3 and v1.1.2.0, and the
-translation review. O-6 (README screenshots) and O-7 (two status-line follow-ups) are done in this build.
+See the roadmap's "Outstanding for v1.1.5.0": SignPath for the setup (O-4) and the translation review (O-8). Done: the
+VirusTotal scan (O-1), the push and tag (O-3), README screenshots (O-6) and two status-line follow-ups (O-7). The owner
+removed the Linux VM install (O-2) and publishing v1.1.1.3 and v1.1.2.0 (O-5) on 2026-10-25.

@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-24). -->
+<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
 # v0.8.14.0 Changed Files
 
 - `Directory.Build.props`, `src/PalworldManager/app.manifest`: version bump to 0.8.14.0.
