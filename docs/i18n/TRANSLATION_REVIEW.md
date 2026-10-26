@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
+<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
 # Translation review
 
 MystTiq ships in 12 languages. English is the source. The other 11 are complete drafts, **awaiting native review**:

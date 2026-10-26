@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-25).
+// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
 namespace MystTiq.Desktop.Models;
 
 // v1.0.6.0 (roadmap S-3): a player's Pal box as the world save holds it, and the guarded add/remove's preview and result.

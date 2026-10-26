@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-25).
+// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
 namespace MystTiq.Core.Models;
 
 // v0.6.15.0: the read/edit shape for a single Pal instance decoded from Level.sav's

@@ -1,4 +1,16 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
+<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+## v1.1.5.1 — Safer File Paths
+
+- GitHub code scanning (CodeQL, owner 2026-10-26): a MOD's type is now one of PAK, UE4SS and NATIVE (Rollback, Get
+  description and Set description source refuse any other); the snapshot and description-cache paths, the PAK files and
+  the UE4SS folder are built with `SafePath.ChildOf`, which refuses a name that leaves its folder. Before, a type with
+  `..\` (decoded from `%5C` in the route) reached files outside those folders (alerts #1-#3, #9-#22).
+- The character move's disposition step (Keep, Archive, Delete) accepts only a 32-character player ID and keeps its
+  files in the world's Players folder (alerts #4-#8).
+- Alert #24 ("User-controlled bypass of sensitive method") is the bearer-token check itself: a false positive, left as
+  it is.
+- Logic harness: the "Safe paths" scenario. Version advanced to 1.1.5.1.
+
 ## v1.1.5.0 — Resizable Window, Simple Mode, Installer and Portable
 
 - Roadmap V-1: resize grips on every edge and corner (`BeginResizeDrag`, hidden while maximized); the window's size,

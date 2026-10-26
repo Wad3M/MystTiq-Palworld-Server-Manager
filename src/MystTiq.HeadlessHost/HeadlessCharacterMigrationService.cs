@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-25).
+// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -246,14 +246,19 @@ public sealed class HeadlessCharacterMigrationService
     {
         if (disposition == CharacterDisposition.Reset)
             return HeadlessCharacterDispositionResult.Failure("Reset is not yet supported -- it needs a fresh-character save encoder this build does not have. Use Keep, Archive, or Delete.");
+        // v1.1.5.1 (CodeQL path alerts #4-#8): the ID comes from the request's route and names the files that are moved or
+        // deleted below; "..\" in it reached .sav files outside Players. Only a player ID's 32 hex characters are accepted.
+        sourcePlayerId = (sourcePlayerId ?? string.Empty).Trim();
+        if (!SafePath.IsPlayerId(sourcePlayerId))
+            return HeadlessCharacterDispositionResult.Failure("The source player ID must be the player's 32-character ID.");
 
         var snapshot = await explorer.ExploreAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(snapshot.ActiveWorldPath))
             return HeadlessCharacterDispositionResult.Failure("No active world was discovered.");
 
         var playersDir = Path.Combine(snapshot.ActiveWorldPath, "Players");
-        var savePath = Path.Combine(playersDir, $"{sourcePlayerId}.sav");
-        var companionPath = Path.Combine(playersDir, $"{sourcePlayerId}_dps.sav");
+        var savePath = SafePath.ChildOf(playersDir, $"{sourcePlayerId}.sav");
+        var companionPath = SafePath.ChildOf(playersDir, $"{sourcePlayerId}_dps.sav");
 
         if (disposition == CharacterDisposition.Keep)
         {
@@ -269,9 +274,9 @@ public sealed class HeadlessCharacterMigrationService
             var archiveDir = Path.Combine(paths.ManagerRuntimeRoot, "character-migration", "archive");
             Directory.CreateDirectory(archiveDir);
             var stamped = $"{sourcePlayerId}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}";
-            File.Move(savePath, Path.Combine(archiveDir, $"{stamped}.sav"), true);
+            File.Move(savePath, SafePath.ChildOf(archiveDir, $"{stamped}.sav"), true);
             if (File.Exists(companionPath))
-                File.Move(companionPath, Path.Combine(archiveDir, $"{stamped}_dps.sav"), true);
+                File.Move(companionPath, SafePath.ChildOf(archiveDir, $"{stamped}_dps.sav"), true);
             activity.Record("Information", "Character Migration", "Source character archived", $"player={sourcePlayerId}; archiveDir={archiveDir}");
             return new HeadlessCharacterDispositionResult(true, "Archived", $"Source character save moved to {archiveDir}.");
         }

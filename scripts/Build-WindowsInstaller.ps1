@@ -1,4 +1,4 @@
-# MystTiq v1.1.5.0: file reviewed for this release (2026-10-25).
+# MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
 #requires -Version 7.0
 # v1.1.5.0 (roadmap W-1): builds the Windows setup (MystTiqPalworldServer_v<version>_Windows-x64.msi) from a packaged app
 # folder (Package-GitHubRelease.ps1's, signed or not). WiX 5 comes from NuGet through the .NET SDK.

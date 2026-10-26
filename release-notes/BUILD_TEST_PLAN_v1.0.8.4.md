@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
+<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
 # v1.0.8.4 Build and Test Plan
 
 1. `.\Build.ps1 Clean`, then `scripts/Validate-Release.ps1 -Strict`: 0 errors, 0 warnings.

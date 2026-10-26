@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-25).
+// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
@@ -5206,6 +5206,52 @@ try
             new ScriptedLifecycle(), _ => Task.FromResult<ServerLifecycleOperationResult>(null!), _ => Task.FromResult((true, "")), _ => Task.FromResult((true, "")), TimeSpan.FromSeconds(1))
             .GetCardAsync(CancellationToken.None);
         Assert(without.MystTiqLatest is null && without.MystTiqState is null, "without a MystTiq check the card has no MystTiq line (as before)");
+    }, failures);
+    // v1.1.5.1 (GitHub code scanning, CodeQL "Uncontrolled data used in path expression"): a MOD type or a player ID from a
+    // request carrying "..\" no longer reaches a file outside its folder.
+    RunScenarioAsync("Safe paths (v1.1.5.1, CodeQL): a MOD type or player ID carrying ..\\ is refused before any file is touched, and every built path stays inside its folder", async () =>
+    {
+        var paths = new FakePathProfile(Path.Combine(tempRoot, "safe-paths-" + Guid.NewGuid().ToString("N")));
+        var cacheRoot = Path.Combine(paths.ManagerRuntimeRoot, "mod-descriptions");
+        Assert(SafePath.ChildOf(cacheRoot, "PAK_Mod.json") == Path.Combine(Path.GetFullPath(cacheRoot), "PAK_Mod.json"), "a plain name stays inside its folder");
+        foreach (var bad in new[] { @"..\outside.json", "../outside.json", @"a\..\..\outside.json", Path.Combine(Path.GetFullPath(paths.ServerRoot), "outside.json"), "", "." })
+        {
+            var refused = false;
+            try { SafePath.ChildOf(cacheRoot, bad); } catch (InvalidDataException) { refused = true; }
+            Assert(refused, $"'{bad}' is refused");
+        }
+        Assert(SafePath.IsPlayerId("E290DA9A000000000000000000000000") && SafePath.IsPlayerId("e290da9a000000000000000000000000")
+               && !SafePath.IsPlayerId(@"..\..\x") && !SafePath.IsPlayerId("E290DA9A") && !SafePath.IsPlayerId("Z290DA9A000000000000000000000000") && !SafePath.IsPlayerId(null),
+            "only 32 hexadecimal characters are a player ID");
+
+        // MODs: a type with "..\" (ASP.NET decodes %5C in a route segment) is refused; a real type still works.
+        var activity = new HeadlessActivityLogService(paths);
+        var mods = new HeadlessModManagementService(paths, new ScriptedLifecycle(), activity, new HeadlessConsoleLogWriter(paths));
+        var set = await mods.SetModDescriptionSourceAsync(@"..\X", "pkg", "https://example.com/mod", CancellationToken.None);
+        var get = await mods.GetModDescriptionAsync("../X", "pkg", false, CancellationToken.None);
+        var rollback = await mods.RollbackAsync(@"..\..\X", "pkg", CancellationToken.None);
+        var strays = Directory.GetFiles(paths.ManagerRuntimeRoot, "*_pkg.json", SearchOption.AllDirectories).Concat(Directory.GetFiles(paths.ServerRoot, "*_pkg.json", SearchOption.TopDirectoryOnly)).Distinct().ToList();
+        Assert(!set.Success && set.Message.Contains("Invalid MOD type") && !get.Available && get.Detail.Contains("Invalid MOD type") && !rollback.Success && rollback.Message.Contains("Invalid MOD type"),
+            $"a MOD type carrying ..\\ is refused by Set source, Get description and Rollback [{set.Message} | {get.Detail} | {rollback.Message}]");
+        Assert(strays.Count == 0, $"nothing was written for the refused requests [{string.Join(", ", strays)}]");
+        var good = await mods.SetModDescriptionSourceAsync("ue4ss", "pkg", "https://example.com/mod", CancellationToken.None);
+        Assert(good.Success && File.Exists(Path.Combine(cacheRoot, "UE4SS_pkg.json")), "a real type still saves its description source, under its normal name");
+
+        // Character migration: a source ID that is not a player ID is refused before any save file is moved or deleted.
+        var world = Path.Combine(paths.SaveRoot, "SaveGames", "0", "World");
+        Directory.CreateDirectory(Path.Combine(world, "Players"));
+        var decoy = Path.Combine(world, "decoy.sav");
+        File.WriteAllText(decoy, "not a player");
+        var lifecycle = new ScriptedLifecycle { Running = false, Phase = ServerLifecyclePhase.Stopped };
+        var operations = new MystTiq.Core.Operations.OperationCoordinator(paths);
+        var profile = new MystTiq.Core.Operations.ServerProfileId("default");
+        var migration = new HeadlessCharacterMigrationService(paths, lifecycle, new HeadlessBackupService(paths, lifecycle, activity, operations, profile), activity,
+            new HeadlessPlayerGuildExplorerService(paths, new HeadlessMonitoringService(paths, lifecycle)),
+            new HeadlessSaveCodecService(new HeadlessCrashAndSaveToolsService(paths, activity)), operations, profile);
+        var deleted = await migration.DisposeSourceCharacterAsync(@"..\decoy", CharacterDisposition.Delete, CancellationToken.None);
+        var archived = await migration.DisposeSourceCharacterAsync("../decoy", CharacterDisposition.Archive, CancellationToken.None);
+        Assert(!deleted.Success && !archived.Success && deleted.Message.Contains("32-character") && File.Exists(decoy),
+            $"a source ID carrying ..\\ is refused and the file it pointed at is untouched [{deleted.Message}]");
     }, failures);
 }
 finally

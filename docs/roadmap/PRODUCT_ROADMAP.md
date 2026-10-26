@@ -1,7 +1,7 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
+<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
 # Product roadmap
 
-Updated 2026-10-22. **Current version: v1.1.5.0. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the owner rolled every request into v1.1.5.0 on 2026-10-22; ask before numbering the next). Reviewed with the owner 2026-10-19 (D-14).**
+Updated 2026-10-22. **Current version: v1.1.5.1. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the owner rolled every request into v1.1.5.0 on 2026-10-22; ask before numbering the next). Reviewed with the owner 2026-10-19 (D-14).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -255,6 +255,15 @@ Built and checked locally, pushed on 2026-10-25. What was owed before and after 
 | O-6 | README screenshots still show v1.1.4.0: retake the Dashboard (the new top row and the update card) and add Simple mode, with the headless demo recipe. Done 2026-10-24: all twelve retaken in v1.1.5.0 and `13-simple-mode.png` added to the README; the demo service reads this PC's network, so its addresses are replaced on screen by documentation addresses (203.0.113.10, 192.168.1.20-22) before each capture, and each capture waits until the window is not busy. | Claude | Done |
 | O-7 | Small: after the desktop connects late, the status box keeps the old "Nothing answers at http://127.0.0.1:8213" line under "Connected"; and while not connected the update card's server line is empty (only its "Checking" tag shows). Done 2026-10-24: a connection clears the line at once (it waited for a status poll, which is skipped while the app is busy); the server line reads "Server build —" with no answer; desktop harness check. | Claude | Done |
 | O-8 | E-10 translation review (native review of the 11 non-English languages), carried from v1.0; the 24 strings added in v1.1.5.0 are checked for presence in all 12 languages only. | Owner (reviewers) | Open |
+
+## v1.1.5.1 — Safe file paths
+
+Owner, 2026-10-26, about GitHub code scanning on `main`: "we need to look into these issues and adjust the code"; shipped
+as v1.1.5.1 (owner's choice over moving the v1.1.5.0 tag).
+
+| ID | Release | Item | Status |
+| --- | --- | --- | --- |
+| CS-1 | v1.1.5.1 | CodeQL "Uncontrolled data used in path expression" (23 alerts) and "User-controlled bypass of sensitive method" (1). Recorded (v1.1.5.1, 2026-10-26): the path alerts were real. A MOD's type (unchecked) named the snapshot and description-cache files, and `%5C` in the route reached outside those folders; the character move's disposition step took any text as the player ID for the files it moves or deletes. Fixed with `SafePath` (full-path containment, player ID = 32 hex characters) and a type check (PAK, UE4SS, NATIVE); logic-harness scenario "Safe paths". The bypass alert is the bearer-token check itself: a false positive, to dismiss on GitHub with the reason in `docs/architecture/v1.1.5.1-safe-file-paths.md`. | Done |
 
 ## Backlog (not scheduled)
 

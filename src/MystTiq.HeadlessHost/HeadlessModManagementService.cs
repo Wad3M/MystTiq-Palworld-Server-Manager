@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-25).
+// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -315,8 +315,10 @@ public sealed class HeadlessModManagementService
     // install or an accidental delete had no built-in undo. One snapshot per (type, package) is kept
     // (overwritten on the next mutation of that same package) -- "undo my last change to this MOD",
     // not a full history, matching the actual failure mode this protects against.
+    // v1.1.5.1 (CodeQL path alerts): the type is one of the three names, the package a bare file name, and the result must
+    // stay in mod-snapshots.
     private string SnapshotPath(string type, string package) =>
-        Path.Combine(paths.ManagerRuntimeRoot, "mod-snapshots", $"{type.ToUpperInvariant()}_{package}.zip");
+        SafePath.ChildOf(Path.Combine(paths.ManagerRuntimeRoot, "mod-snapshots"), $"{NormalizeType(type)}_{NormalizePackage(package)}.zip");
 
     private void CaptureSnapshot(string type, string package)
     {
@@ -333,7 +335,7 @@ public sealed class HeadlessModManagementService
                 var flatRoot = Path.Combine(paths.ServerRoot, "Pal", "Content", "Paks", "~mods");
                 var flatFiles = Directory.Exists(flatRoot)
                     ? PakExtensions.SelectMany(ext => new[] { ext, ext + ".disabled" })
-                        .Select(suffix => Path.Combine(flatRoot, package + suffix))
+                        .Select(suffix => SafePath.ChildOf(flatRoot, package + suffix))
                         .Where(File.Exists).ToList()
                     : [];
                 if (flatFiles.Count > 0)
@@ -354,7 +356,7 @@ public sealed class HeadlessModManagementService
             }
             else if (type.Equals("UE4SS", StringComparison.OrdinalIgnoreCase))
             {
-                var folder = Path.Combine(ResolveUe4ss().ActiveModsRoot, package);
+                var folder = SafePath.ChildOf(ResolveUe4ss().ActiveModsRoot, package);
                 if (Directory.Exists(folder))
                 {
                     ZipFile.CreateFromDirectory(folder, snapshotPath, CompressionLevel.Optimal, false);
@@ -376,6 +378,7 @@ public sealed class HeadlessModManagementService
 
     public async Task<HeadlessModMutationResult> RollbackAsync(string type, string package, CancellationToken cancellationToken)
     {
+        if (!IsKnownType(type)) return HeadlessModMutationResult.Failure(UnknownTypeMessage);
         if (!await mutationGate.WaitAsync(0, cancellationToken))
             return HeadlessModMutationResult.Failure("A MOD mutation is already in progress.");
         var (hold, holdRefusal) = await HoldServerAsync("mods-rollback", cancellationToken);
@@ -398,7 +401,7 @@ public sealed class HeadlessModManagementService
                 var flatRoot = Path.Combine(paths.ServerRoot, "Pal", "Content", "Paks", "~mods");
                 foreach (var suffix in PakExtensions.SelectMany(ext => new[] { ext, ext + ".disabled" }))
                 {
-                    var file = Path.Combine(flatRoot, package + suffix);
+                    var file = SafePath.ChildOf(flatRoot, package + suffix);
                     if (File.Exists(file)) File.Delete(file);
                 }
                 var nested = FindNestedPakModFolder(package);
@@ -406,7 +409,7 @@ public sealed class HeadlessModManagementService
             }
             else if (type.Equals("UE4SS", StringComparison.OrdinalIgnoreCase))
             {
-                var folder = Path.Combine(ResolveUe4ss().ActiveModsRoot, package);
+                var folder = SafePath.ChildOf(ResolveUe4ss().ActiveModsRoot, package);
                 if (Directory.Exists(folder)) Directory.Delete(folder, true);
             }
             else return HeadlessModMutationResult.Failure(NativeRefusal(type));
@@ -765,6 +768,13 @@ public sealed class HeadlessModManagementService
         if (string.IsNullOrWhiteSpace(package) || package.Contains("..") || package.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) throw new InvalidDataException("Invalid MOD package name.");
         return package;
     }
+
+    // v1.1.5.1 (CodeQL path alerts): a MOD's type names part of the snapshot and description-cache file names, and it came
+    // from the request unchecked ("..%5C" in the route reached outside those folders). Only the three types exist.
+    private const string UnknownTypeMessage = "Invalid MOD type: use PAK, UE4SS or NATIVE.";
+    private static bool IsKnownType(string? type) => (type ?? string.Empty).Trim().ToUpperInvariant() is "PAK" or "UE4SS" or "NATIVE";
+    private static string NormalizeType(string type) =>
+        IsKnownType(type) ? type.Trim().ToUpperInvariant() : throw new InvalidDataException(UnknownTypeMessage);
 
     private static async Task CopyBoundedAsync(Stream input, Stream output, long maximum, CancellationToken token)
     {
@@ -2043,6 +2053,7 @@ public sealed class HeadlessModManagementService
     // already established for HeadlessComponentUpdateService's outbound calls.
     public async Task<HeadlessModDescriptionResult> GetModDescriptionAsync(string type, string package, bool forceRefresh, CancellationToken cancellationToken)
     {
+        if (!IsKnownType(type)) return new HeadlessModDescriptionResult(false, "None", null, null, null, null, UnknownTypeMessage);
         package = NormalizePackage(package);
         var cache = ReadDescriptionCache(type, package);
 
@@ -2083,6 +2094,7 @@ public sealed class HeadlessModManagementService
 
     public Task<HeadlessModMutationResult> SetModDescriptionSourceAsync(string type, string package, string sourceUrl, CancellationToken cancellationToken)
     {
+        if (!IsKnownType(type)) return Task.FromResult(HeadlessModMutationResult.Failure(UnknownTypeMessage));
         package = NormalizePackage(package);
         sourceUrl = (sourceUrl ?? string.Empty).Trim();
         if (sourceUrl.Length == 0)
@@ -2175,7 +2187,7 @@ public sealed class HeadlessModManagementService
     }
 
     private string DescriptionCachePath(string type, string package) =>
-        Path.Combine(paths.ManagerRuntimeRoot, "mod-descriptions", $"{type.ToUpperInvariant()}_{package}.json");
+        SafePath.ChildOf(Path.Combine(paths.ManagerRuntimeRoot, "mod-descriptions"), $"{NormalizeType(type)}_{NormalizePackage(package)}.json");
 
     private ModDescriptionCacheEntry? ReadDescriptionCache(string type, string package)
     {
@@ -2237,7 +2249,7 @@ public sealed class HeadlessModManagementService
             var flatRoot = Path.Combine(paths.ServerRoot, "Pal", "Content", "Paks", "~mods");
             var flatFiles = Directory.Exists(flatRoot)
                 ? PakExtensions.SelectMany(ext => new[] { ext, ext + ".disabled" })
-                    .Select(suffix => Path.Combine(flatRoot, package + suffix)).Where(File.Exists).ToArray()
+                    .Select(suffix => SafePath.ChildOf(flatRoot, package + suffix)).Where(File.Exists).ToArray()
                 : [];
             if (flatFiles.Length > 0) return flatFiles.Max(File.GetLastWriteTimeUtc);
 
@@ -2248,7 +2260,7 @@ public sealed class HeadlessModManagementService
         }
         if (type.Equals("UE4SS", StringComparison.OrdinalIgnoreCase))
         {
-            var folder = Path.Combine(ResolveUe4ss().ActiveModsRoot, package);
+            var folder = SafePath.ChildOf(ResolveUe4ss().ActiveModsRoot, package);
             if (!Directory.Exists(folder)) return null;
             var files = SafeEnumerateFiles(folder);
             return files.Length > 0 ? files.Max(File.GetLastWriteTimeUtc) : null;

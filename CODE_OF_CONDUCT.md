@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.0: file reviewed for this release (2026-10-25). -->
+<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
 # Code of Conduct
 
 Be respectful, constructive, and patient. Harassment, threats, discrimination, publishing private information, and intentionally disruptive behavior are not accepted. Maintainers may remove content or participation that harms the project or its community.

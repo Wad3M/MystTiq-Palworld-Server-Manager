@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.0: file reviewed for this release (2026-10-25).
+// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
 namespace MystTiq.Core.Services;
 
 // v1.0.2.0 (roadmap R-1, frozen-server watchdog): what one look at the running server's REST API said.
