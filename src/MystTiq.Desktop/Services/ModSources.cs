@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
+// MystTiq v1.1.6.0: file reviewed for this release (2026-10-26).
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
@@ -362,9 +362,10 @@ public sealed class GitHubReleasesModSource(HttpClient http, Func<IReadOnlyList<
         Task.FromResult(Uri.TryCreate(file.DownloadUrl, UriKind.Absolute, out var uri) ? new ModSourceResult<Uri>(uri, null) : ModSourceResult<Uri>.Fail("GitHub gave no download link."));
 }
 
-// Nexus Mods through the existing client and key: its three lists searched here, or one MOD by id or page address.
+// Nexus Mods through the existing client: its three lists searched here, or one MOD by id or page address.
 // A free account gets files only through the site's Mod Manager Download button (the nxm:// link).
-public sealed class NexusModSource(INexusModsClient nexus, Func<string> key) : IModSource
+// v1.1.6.0: signed in with OAuth (the Nexus Mods card), not a personal API key; token() refreshes it when needed.
+public sealed class NexusModSource(INexusModsClient nexus, Func<CancellationToken, Task<string?>> token) : IModSource
 {
     public string Id => "nexus";
     public string Name => "Nexus Mods";
@@ -378,8 +379,8 @@ public sealed class NexusModSource(INexusModsClient nexus, Func<string> key) : I
 
     public async Task<ModSourceResult<IReadOnlyList<ModListing>>> SearchAsync(string query, CancellationToken cancellationToken = default)
     {
-        var apiKey = key();
-        if (string.IsNullOrWhiteSpace(apiKey)) return ModSourceResult<IReadOnlyList<ModListing>>.Fail("Connect your Nexus Mods key in the Nexus Mods card below first.");
+        var apiKey = await token(cancellationToken);
+        if (string.IsNullOrWhiteSpace(apiKey)) return ModSourceResult<IReadOnlyList<ModListing>>.Fail(Localizer.Instance["nexus.signInBelow"]);
         if (NexusModsLinks.TryParseModReference(query, out var modId))
         {
             var one = await nexus.GetModAsync(apiKey, modId, cancellationToken);
@@ -397,7 +398,7 @@ public sealed class NexusModSource(INexusModsClient nexus, Func<string> key) : I
 
     public async Task<ModSourceResult<IReadOnlyList<ModListingFile>>> GetFilesAsync(ModListing listing, CancellationToken cancellationToken = default)
     {
-        var files = await nexus.GetFilesAsync(key(), int.Parse(listing.Id), cancellationToken);
+        var files = await nexus.GetFilesAsync(await token(cancellationToken) ?? string.Empty, int.Parse(listing.Id), cancellationToken);
         if (!files.Ok) return ModSourceResult<IReadOnlyList<ModListingFile>>.Fail(files.Error!);
         return new((files.Value ?? []).Where(f => !string.Equals(f.CategoryName, "ARCHIVED", StringComparison.OrdinalIgnoreCase)).Select(f => new ModListingFile
         {
@@ -408,7 +409,7 @@ public sealed class NexusModSource(INexusModsClient nexus, Func<string> key) : I
 
     public async Task<ModSourceResult<Uri>> ResolveDownloadAsync(ModListing listing, ModListingFile file, CancellationToken cancellationToken = default)
     {
-        var link = await nexus.GetDownloadLinkAsync(key(), int.Parse(listing.Id), int.Parse(file.Id), null, null, cancellationToken);
+        var link = await nexus.GetDownloadLinkAsync(await token(cancellationToken) ?? string.Empty, int.Parse(listing.Id), int.Parse(file.Id), null, null, cancellationToken);
         return link.Ok && link.Value is not null ? new(link.Value, null)
             : ModSourceResult<Uri>.Fail("Nexus gives free accounts files only through Mod Manager Download. Use Open Page, then Mod Manager Download on the file; with MystTiq set to take those links, it arrives here.");
     }

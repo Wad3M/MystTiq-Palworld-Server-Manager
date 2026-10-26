@@ -1,4 +1,15 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
+## v1.1.6.0 — Sign In with Nexus Mods
+
+- Roadmap N-1 (Nexus Mods support, 2026-10-26: personal API keys are not allowed; "use OAUTH instead"): the Nexus Mods
+  card signs in with OAuth 2.0 and PKCE (`NexusOAuth`): Nexus's page in the browser, the code caught on
+  `127.0.0.1:47823/nexus/callback`, the access token's signature checked with Nexus's public key, the tokens kept
+  encrypted on this PC and refreshed, Sign out. `NexusModsClient` sends `Authorization: Bearer`; the `apikey` header,
+  the key box, Connect, Save Key and Forget Key are gone, and a key saved by an earlier version is deleted.
+- The Client ID Nexus issues goes in `Directory.Build.props` (`NexusOAuthClientId`); until then the card says sign-in
+  is not available yet.
+- 31 `nexus.*` strings in all 12 languages; the desktop harness's N-1 check. Version advanced to 1.1.6.0.
+
 ## v1.1.5.1 — Safer File Paths
 
 - GitHub code scanning (CodeQL, owner 2026-10-26): a MOD's type is now one of PAK, UE4SS and NATIVE (Rollback, Get

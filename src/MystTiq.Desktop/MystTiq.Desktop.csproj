@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -29,5 +29,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MystTiq.Core\MystTiq.Core.csproj" />
+  </ItemGroup>
+  <!-- v1.1.6.0: Directory.Build.props NexusOAuthClientId, read by NexusOAuth.BuiltInClientId. -->
+  <ItemGroup>
+    <AssemblyMetadata Include="NexusOAuthClientId" Value="$(NexusOAuthClientId)" />
   </ItemGroup>
 </Project>

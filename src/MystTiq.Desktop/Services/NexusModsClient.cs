@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
+// MystTiq v1.1.6.0: file reviewed for this release (2026-10-26).
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -8,9 +8,9 @@ using MystTiq.Desktop.Models;
 namespace MystTiq.Desktop.Services;
 
 // v0.7.93.0: talks to the Nexus Mods public API (v1) directly from the desktop app, never through the
-// MystTiq management server: the user's own API key is theirs to use from their own machine, and
-// Nexus's API policy says a key must not be stored or used server-side on a user's behalf. Requests
-// carry the Application-Name/Application-Version headers the policy requires.
+// MystTiq management server. Requests carry the Application-Name/Application-Version headers the policy requires.
+// v1.1.6.0 (Nexus Mods support, 2026-10-26: personal API keys are not allowed, "use OAUTH instead"): every call
+// carries the signed-in person's OAuth access token (Authorization: Bearer, from NexusOAuth), never a personal key.
 //
 // What the v1 API can and cannot do (verified against its published spec): it lists trending / latest
 // added / latest updated mods (10 each) and looks up a mod by id, but has no catalog search; and a
@@ -18,11 +18,11 @@ namespace MystTiq.Desktop.Services;
 // key and expiry from an nxm:// link. This client exposes exactly that and nothing more.
 public interface INexusModsClient
 {
-    Task<NexusCallResult<NexusUserDto>> ValidateAsync(string apiKey, CancellationToken cancellationToken = default);
-    Task<NexusCallResult<IReadOnlyList<NexusModDto>>> GetListAsync(string apiKey, string kind, CancellationToken cancellationToken = default);
-    Task<NexusCallResult<NexusModDto>> GetModAsync(string apiKey, int modId, CancellationToken cancellationToken = default);
-    Task<NexusCallResult<IReadOnlyList<NexusFileDto>>> GetFilesAsync(string apiKey, int modId, CancellationToken cancellationToken = default);
-    Task<NexusCallResult<Uri>> GetDownloadLinkAsync(string apiKey, int modId, int fileId, string? key, long? expires, CancellationToken cancellationToken = default);
+    Task<NexusCallResult<NexusUserDto>> ValidateAsync(string accessToken, CancellationToken cancellationToken = default);
+    Task<NexusCallResult<IReadOnlyList<NexusModDto>>> GetListAsync(string accessToken, string kind, CancellationToken cancellationToken = default);
+    Task<NexusCallResult<NexusModDto>> GetModAsync(string accessToken, int modId, CancellationToken cancellationToken = default);
+    Task<NexusCallResult<IReadOnlyList<NexusFileDto>>> GetFilesAsync(string accessToken, int modId, CancellationToken cancellationToken = default);
+    Task<NexusCallResult<Uri>> GetDownloadLinkAsync(string accessToken, int modId, int fileId, string? key, long? expires, CancellationToken cancellationToken = default);
     Task<string?> DownloadToFileAsync(Uri uri, string destinationPath, long maxBytes, IProgress<string>? progress, CancellationToken cancellationToken = default);
 }
 
@@ -30,11 +30,16 @@ public sealed class NexusModsClient : INexusModsClient
 {
     public const string ApplicationName = "MystTiq-Palworld-Server-Manager";
     private const string ApiBase = "https://api.nexusmods.com";
-    private static readonly HttpClient Http = CreateHttpClient();
+    private static readonly HttpClient SharedHttp = CreateHttpClient(null);
+    private readonly HttpClient _http;
 
-    private static HttpClient CreateHttpClient()
+    /// <summary>A handler is for tests (the desktop harness checks the Authorization header).</summary>
+    public NexusModsClient(HttpMessageHandler? handler = null) => _http = handler is null ? SharedHttp : CreateHttpClient(handler);
+
+    private static HttpClient CreateHttpClient(HttpMessageHandler? handler)
     {
-        var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+        var client = handler is null ? new HttpClient() : new HttpClient(handler);
+        client.Timeout = TimeSpan.FromMinutes(10);
         var version = typeof(NexusModsClient).Assembly.GetName().Version?.ToString(3) ?? "0";
         client.DefaultRequestHeaders.TryAddWithoutValidation("Application-Name", ApplicationName);
         client.DefaultRequestHeaders.TryAddWithoutValidation("Application-Version", version);
@@ -42,32 +47,32 @@ public sealed class NexusModsClient : INexusModsClient
         return client;
     }
 
-    public Task<NexusCallResult<NexusUserDto>> ValidateAsync(string apiKey, CancellationToken cancellationToken = default) =>
-        GetAsync<NexusUserDto>(apiKey, "/v1/users/validate.json", cancellationToken);
+    public Task<NexusCallResult<NexusUserDto>> ValidateAsync(string accessToken, CancellationToken cancellationToken = default) =>
+        GetAsync<NexusUserDto>(accessToken, "/v1/users/validate.json", cancellationToken);
 
-    public async Task<NexusCallResult<IReadOnlyList<NexusModDto>>> GetListAsync(string apiKey, string kind, CancellationToken cancellationToken = default)
+    public async Task<NexusCallResult<IReadOnlyList<NexusModDto>>> GetListAsync(string accessToken, string kind, CancellationToken cancellationToken = default)
     {
         if (kind is not ("trending" or "latest_added" or "latest_updated"))
             return new(null, "Unknown list.", null, null);
-        var result = await GetAsync<List<NexusModDto>>(apiKey, $"/v1/games/{NexusModsLinks.PalworldGameDomain}/mods/{kind}.json", cancellationToken);
+        var result = await GetAsync<List<NexusModDto>>(accessToken, $"/v1/games/{NexusModsLinks.PalworldGameDomain}/mods/{kind}.json", cancellationToken);
         return new(result.Value, result.Error, result.HourlyRemaining, result.DailyRemaining);
     }
 
-    public Task<NexusCallResult<NexusModDto>> GetModAsync(string apiKey, int modId, CancellationToken cancellationToken = default) =>
-        GetAsync<NexusModDto>(apiKey, $"/v1/games/{NexusModsLinks.PalworldGameDomain}/mods/{modId}.json", cancellationToken);
+    public Task<NexusCallResult<NexusModDto>> GetModAsync(string accessToken, int modId, CancellationToken cancellationToken = default) =>
+        GetAsync<NexusModDto>(accessToken, $"/v1/games/{NexusModsLinks.PalworldGameDomain}/mods/{modId}.json", cancellationToken);
 
-    public async Task<NexusCallResult<IReadOnlyList<NexusFileDto>>> GetFilesAsync(string apiKey, int modId, CancellationToken cancellationToken = default)
+    public async Task<NexusCallResult<IReadOnlyList<NexusFileDto>>> GetFilesAsync(string accessToken, int modId, CancellationToken cancellationToken = default)
     {
-        var result = await GetAsync<NexusFilesResponseDto>(apiKey, $"/v1/games/{NexusModsLinks.PalworldGameDomain}/mods/{modId}/files.json", cancellationToken);
+        var result = await GetAsync<NexusFilesResponseDto>(accessToken, $"/v1/games/{NexusModsLinks.PalworldGameDomain}/mods/{modId}/files.json", cancellationToken);
         return new(result.Value?.Files, result.Error, result.HourlyRemaining, result.DailyRemaining);
     }
 
-    public async Task<NexusCallResult<Uri>> GetDownloadLinkAsync(string apiKey, int modId, int fileId, string? key, long? expires, CancellationToken cancellationToken = default)
+    public async Task<NexusCallResult<Uri>> GetDownloadLinkAsync(string accessToken, int modId, int fileId, string? key, long? expires, CancellationToken cancellationToken = default)
     {
         var path = $"/v1/games/{NexusModsLinks.PalworldGameDomain}/mods/{modId}/files/{fileId}/download_link.json";
         if (!string.IsNullOrWhiteSpace(key) && expires is > 0)
             path += $"?key={Uri.EscapeDataString(key)}&expires={expires}";
-        var result = await GetAsync<List<NexusDownloadLinkDto>>(apiKey, path, cancellationToken);
+        var result = await GetAsync<List<NexusDownloadLinkDto>>(accessToken, path, cancellationToken);
         if (!result.Ok) return new(null, result.Error, result.HourlyRemaining, result.DailyRemaining);
         var first = result.Value?.FirstOrDefault(l => Uri.TryCreate(l.Uri, UriKind.Absolute, out var u) && NexusModsLinks.IsAllowedDownloadHost(u));
         return first is null
@@ -84,7 +89,7 @@ public sealed class NexusModsClient : INexusModsClient
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-            using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (!response.IsSuccessStatusCode) return $"The download server answered {(int)response.StatusCode}.";
             var length = response.Content.Headers.ContentLength;
             if (length > maxBytes) return $"The file is {length / 1024 / 1024} MB, over the {maxBytes / 1024 / 1024} MB limit.";
@@ -113,16 +118,16 @@ public sealed class NexusModsClient : INexusModsClient
         catch (Exception ex) { return $"Download failed: {ex.Message}"; }
     }
 
-    private static async Task<NexusCallResult<T>> GetAsync<T>(string apiKey, string path, CancellationToken cancellationToken)
+    private async Task<NexusCallResult<T>> GetAsync<T>(string accessToken, string path, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(apiKey))
-            return new(default, "Enter your Nexus Mods API key first.", null, null);
+        if (string.IsNullOrWhiteSpace(accessToken))
+            return new(default, Localizer.Instance["nexus.signInFirst"], null, null);
 
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, ApiBase + path);
-            request.Headers.TryAddWithoutValidation("apikey", apiKey.Trim());
-            using var response = await Http.SendAsync(request, cancellationToken);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.Trim());
+            using var response = await _http.SendAsync(request, cancellationToken);
             var hourly = ReadHeaderInt(response, "x-rl-hourly-remaining");
             var daily = ReadHeaderInt(response, "x-rl-daily-remaining");
             if (!response.IsSuccessStatusCode)
@@ -142,7 +147,7 @@ public sealed class NexusModsClient : INexusModsClient
 
     private static string DescribeFailure(HttpStatusCode status) => (int)status switch
     {
-        401 => "Nexus rejected the API key. Check it and try again.",
+        401 => Localizer.Instance["nexus.signInAgain"],
         403 => "Nexus only allows direct downloads for Premium accounts. Use Open on Nexus, or paste the nxm:// link from the Mod Manager Download button.",
         404 => "Nexus could not find that (wrong id, or not a Palworld mod).",
         410 => "That nxm:// link has expired. Click Mod Manager Download on Nexus again for a fresh one.",

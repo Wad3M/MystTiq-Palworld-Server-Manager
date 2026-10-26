@@ -1,8 +1,8 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 <Project>
   <PropertyGroup>
     <!-- Single authoritative application version. Update this value for each build. -->
-    <VersionPrefix>1.1.5.1</VersionPrefix>
+    <VersionPrefix>1.1.6.0</VersionPrefix>
     <Version>$(VersionPrefix)</Version>
     <FileVersion>$(VersionPrefix)</FileVersion>
     <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
@@ -13,5 +13,8 @@
     <Copyright>Copyright (c) 2026 MystTiq Contributors</Copyright>
     <!-- In a git checkout (the release workflow) the SDK would append "+<commit>" to the product version. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <!-- v1.1.6.0: the Client ID Nexus Mods issues to MystTiq for signing in with OAuth (NexusOAuth). Empty until Nexus
+         registers the app; until then the Nexus Mods card says sign-in is not available yet. Not a secret (a public app). -->
+    <NexusOAuthClientId></NexusOAuthClientId>
   </PropertyGroup>
 </Project>

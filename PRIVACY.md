@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 # Privacy policy
 
 MystTiq collects no telemetry or analytics and sends nothing to the project's authors. It keeps its settings, accounts,
@@ -13,7 +13,7 @@ MystTiq connects to other systems only to do what you run it for:
   Pocketpair's services as it always does.
 - **The Dashboard's public address:** while the Dashboard is open, the service asks your router (UPnP, on your network)
   for its internet address and, when the router gives none, api.ipify.org. The answer is kept for an hour.
-- **Only when you use or set them up:** Nexus Mods (with your own API key), Steam Workshop details, a public-address
+- **Only when you use or set them up:** Nexus Mods (after you sign in with your Nexus Mods account on Nexus's own page; the sign-in is kept on this PC and never sent to the MystTiq service), Steam Workshop details, a public-address
   check (api.ipify.org) and port check links, Discord, email and webhook notifications, and connections to other MystTiq
   services you add.
 - **On your own network:** the server search and router port mapping (UPnP) when you ask for them.

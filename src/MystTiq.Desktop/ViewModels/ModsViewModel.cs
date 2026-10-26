@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
+// MystTiq v1.1.6.0: file reviewed for this release (2026-10-26).
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -690,20 +690,17 @@ public sealed class ModsViewModel : PageViewModel
 
     // ---- v0.7.93.0: Nexus Mods catalog -----------------------------------------------------------
     // Browse trending / latest added / latest updated Palworld mods, look one up by id or page URL,
-    // list its files, and install one. The user's own API key stays on this machine (memory only
-    // unless they explicitly press Save, then DPAPI-encrypted via CredentialStore) and is never sent
-    // to the MystTiq management server. Direct download links are Premium-only on Nexus, so free
+    // list its files, and install one. Direct download links are Premium-only on Nexus, so free
     // accounts get Open on Nexus plus a paste-an-nxm://-link path. Every download still goes through
     // the existing validated ZIP install (InstallModZipAsync), never straight into the server folder.
-    private const string NexusKeyCredentialId = "nexusmods-api-key";
+    // v1.1.6.0 (Nexus Mods support, 2026-10-26: personal API keys are not allowed, "use OAUTH instead"): the person signs
+    // in on Nexus's own page (NexusOAuth); the tokens stay on this PC and are never sent to the MystTiq server. A key saved
+    // by an earlier version is deleted.
+    private NexusOAuth _nexusAuth = null!;
 
     private const long NexusMaxDownloadBytes = 750L * 1024 * 1024;
 
-    private string _nexusApiKey = string.Empty;
-
-    private string _nexusApiKeyInput = string.Empty;
-
-    private string _nexusAccountText = "Not connected.";
+    private string _nexusAccountText = string.Empty;
 
     private bool _nexusIsPremium;
 
@@ -726,8 +723,6 @@ public sealed class ModsViewModel : PageViewModel
     public ObservableCollection<NexusModDto> NexusMods { get; } = [];
 
     public ObservableCollection<NexusFileDto> NexusFiles { get; } = [];
-
-    public string NexusApiKeyInput { get => _nexusApiKeyInput; set => SetField(ref _nexusApiKeyInput, value); }
 
     public string NexusAccountText { get => _nexusAccountText; private set => SetField(ref _nexusAccountText, value); }
 
@@ -753,11 +748,12 @@ public sealed class ModsViewModel : PageViewModel
         set { if (SetField(ref _selectedNexusFile, value)) RaiseNexusCommandStates(); }
     }
 
-    public ICommand NexusConnectCommand { get; private set; } = null!;
+    public ICommand NexusSignInCommand { get; private set; } = null!;
 
-    public ICommand NexusSaveKeyCommand { get; private set; } = null!;
+    public ICommand NexusSignOutCommand { get; private set; } = null!;
 
-    public ICommand NexusForgetKeyCommand { get; private set; } = null!;
+    /// <summary>The sign-in service (the desktop harness gives it its own fake Nexus endpoints).</summary>
+    public NexusOAuth NexusAuth => _nexusAuth;
 
     public ICommand NexusLoadListCommand { get; private set; } = null!;
 
@@ -773,24 +769,22 @@ public sealed class ModsViewModel : PageViewModel
 
     private void InitializeNexusMods()
     {
-        _nexusApiKey = _credentialStore.TryLoad(NexusKeyCredentialId) ?? string.Empty;
-        if (_nexusApiKey.Length > 0) NexusAccountText = "A saved key was found. Press Connect to verify it.";
+        UseNexusAuth(new NexusOAuth(_credentialStore));
 
-        var connect = new AsyncCommand(NexusConnectAsync, () => !Session.IsBusy);
+        var connect = new AsyncCommand(NexusSignInAsync, () => !Session.IsBusy);
         var list = new RelayCommand<string>(kind => _ = NexusLoadListAsync(kind), _ => !Session.IsBusy);
         _nexusListCommand = list;
         var lookup = new AsyncCommand(NexusLookupAsync, () => !Session.IsBusy);
         var files = new AsyncCommand(NexusShowFilesAsync, () => !Session.IsBusy && SelectedNexusMod is not null);
         var install = new AsyncCommand(NexusInstallSelectedFileAsync, () => !Session.IsBusy && SelectedNexusMod is not null && SelectedNexusFile is not null);
         var nxm = new AsyncCommand(NexusInstallFromNxmAsync, () => !Session.IsBusy && !string.IsNullOrWhiteSpace(NexusNxmLinkText));
-        NexusConnectCommand = connect;
+        NexusSignInCommand = connect;
         NexusLoadListCommand = list;
         NexusLookupCommand = lookup;
         NexusShowFilesCommand = files;
         NexusInstallFileCommand = install;
         NexusInstallFromNxmCommand = nxm;
-        NexusSaveKeyCommand = new RelayCommand(NexusSaveKey);
-        NexusForgetKeyCommand = new RelayCommand(NexusForgetKey);
+        NexusSignOutCommand = new RelayCommand(NexusSignOut);
         NexusOpenPageCommand = new RelayCommand(NexusOpenPage);
         _nexusCommands = [connect, files, install, nxm, lookup];
     }
@@ -801,9 +795,36 @@ public sealed class ModsViewModel : PageViewModel
         _nexusListCommand?.RaiseCanExecuteChanged();
     }
 
-    // Uses the key typed into the box if there is one, otherwise the one already held in memory
-    // (loaded from the encrypted store, or verified earlier this session).
-    private string CurrentNexusKey() => string.IsNullOrWhiteSpace(NexusApiKeyInput) ? _nexusApiKey : NexusApiKeyInput.Trim();
+    /// <summary>Uses another sign-in service (the desktop harness's, with fake Nexus endpoints) and shows its account.</summary>
+    public void UseNexusAuth(NexusOAuth auth)
+    {
+        _nexusAuth = auth;
+        ShowNexusAccount();
+        if (auth.LegacyKeyRemoved) NexusStatusText = Localizer.Instance["nexus.legacyKeyRemoved"];
+    }
+
+    private void ShowNexusAccount()
+    {
+        var account = _nexusAuth.Account;
+        NexusIsPremium = account?.IsPremium == true;
+        NexusAccountText = account is null
+            ? Localizer.Instance[_nexusAuth.IsConfigured ? "nexus.account.none" : "nexus.notConfigured"]
+            : string.Format(Localizer.Instance["nexus.account.signedIn"], account.Name) + " "
+              + Localizer.Instance[account.IsPremium ? "nexus.account.premium" : "nexus.account.free"];
+    }
+
+    // A current access token (refreshed when it is about to run out); null, with the reason shown, when nobody is signed in.
+    private async Task<string?> NexusTokenAsync(CancellationToken cancellationToken = default)
+    {
+        var wasSignedIn = _nexusAuth.IsSignedIn;
+        var token = await _nexusAuth.GetAccessTokenAsync(cancellationToken);
+        if (token is null)
+        {
+            if (wasSignedIn) ShowNexusAccount();
+            NexusStatusText = Localizer.Instance[wasSignedIn ? "nexus.signInAgain" : "nexus.signInFirst"];
+        }
+        return token;
+    }
 
     private void ReportNexusRate<T>(NexusCallResult<T> result)
     {
@@ -811,51 +832,28 @@ public sealed class ModsViewModel : PageViewModel
         NexusRateText = $"Nexus requests left: {result.HourlyRemaining?.ToString() ?? "?"} this hour, {result.DailyRemaining?.ToString() ?? "?"} today.";
     }
 
-    private async Task NexusConnectAsync()
+    // Not a busy state: the person may take minutes in the browser, and the rest of the app stays usable meanwhile
+    // (NexusOAuth refuses a second sign-in while one waits).
+    private async Task NexusSignInAsync()
     {
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Paste your Nexus Mods API key first (nexusmods.com > your account > API keys)."; return; }
-        Session.IsBusy = true; NexusStatusText = "Checking the key with Nexus Mods…";
-        try
-        {
-            var result = await _nexus.ValidateAsync(key);
-            ReportNexusRate(result);
-            if (!result.Ok || result.Value is null) { NexusStatusText = result.Error ?? "Nexus did not confirm the key."; return; }
-            _nexusApiKey = key;
-            NexusApiKeyInput = string.Empty;
-            NexusIsPremium = result.Value.IsPremium;
-            NexusAccountText = $"Connected as {result.Value.Name}{(result.Value.IsPremium ? " (Premium: direct downloads available)" : " (free account: use Open on Nexus or an nxm:// link to download)")}.";
-            NexusStatusText = "Connected. Load a list below, or look up a mod by id or page URL.";
-        }
-        finally { Session.IsBusy = false; }
+        NexusStatusText = Localizer.Instance["nexus.signingIn"];
+        var result = await _nexusAuth.SignInAsync();
+        ShowNexusAccount();
+        NexusStatusText = result.Ok ? Localizer.Instance["nexus.signedIn"] : result.Error ?? Localizer.Instance["nexus.refused"];
     }
 
-    private void NexusSaveKey()
+    private void NexusSignOut()
     {
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "There is no key to save yet."; return; }
-        if (!OperatingSystem.IsWindows()) { NexusStatusText = "Saving the key is only supported on Windows; it stays in memory for this session."; _nexusApiKey = key; return; }
-        _credentialStore.Save(NexusKeyCredentialId, key);
-        _nexusApiKey = key;
-        NexusApiKeyInput = string.Empty;
-        NexusStatusText = "Key saved on this PC, encrypted for your Windows account only. It is never sent to the MystTiq server.";
-    }
-
-    private void NexusForgetKey()
-    {
-        _credentialStore.Delete(NexusKeyCredentialId);
-        _nexusApiKey = string.Empty;
-        NexusApiKeyInput = string.Empty;
-        NexusIsPremium = false;
-        NexusAccountText = "Not connected.";
+        _nexusAuth.SignOut();
+        ShowNexusAccount();
         NexusMods.Clear(); NexusFiles.Clear(); SelectedNexusMod = null;
-        NexusStatusText = "The saved key was removed and this session's copy cleared.";
+        NexusStatusText = Localizer.Instance["nexus.signedOut"];
     }
 
     private async Task NexusLoadListAsync(string? kind)
     {
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
+        var key = await NexusTokenAsync();
+        if (key is null) return;
         Session.IsBusy = true; NexusStatusText = "Loading from Nexus Mods…";
         try
         {
@@ -874,8 +872,8 @@ public sealed class ModsViewModel : PageViewModel
     {
         if (!NexusModsLinks.TryParseModReference(NexusLookupText, out var modId))
         { NexusStatusText = "Enter a mod id or a nexusmods.com/palworld/mods/... page URL."; return; }
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
+        var key = await NexusTokenAsync();
+        if (key is null) return;
         Session.IsBusy = true; NexusStatusText = $"Looking up mod {modId}…";
         try
         {
@@ -893,8 +891,8 @@ public sealed class ModsViewModel : PageViewModel
     private async Task NexusShowFilesAsync()
     {
         if (SelectedNexusMod is not { } mod) return;
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
+        var key = await NexusTokenAsync();
+        if (key is null) return;
         Session.IsBusy = true; NexusStatusText = $"Loading files for {mod.DisplayName}…";
         try
         {
@@ -924,8 +922,8 @@ public sealed class ModsViewModel : PageViewModel
 
     private async Task NexusDownloadAndInstallAsync(int modId, int fileId, string fileName, string? nxmKey, long? nxmExpires)
     {
-        var key = CurrentNexusKey();
-        if (string.IsNullOrWhiteSpace(key)) { NexusStatusText = "Connect with your API key first."; return; }
+        var key = await NexusTokenAsync();
+        if (key is null) return;
         var temp = Path.Combine(Path.GetTempPath(), "MystTiq-nexus-" + Guid.NewGuid().ToString("N") + ".download");
         Session.IsBusy = true; NexusStatusText = "Asking Nexus for a download link…";
         try
@@ -1349,7 +1347,7 @@ public sealed class ModsViewModel : PageViewModel
             new ThunderstoreModSource(ModBrowserHttp),
             new CurseForgeModSource(ModBrowserHttp, CurrentCurseForgeKey),
             new GitHubReleasesModSource(ModBrowserHttp, () => ModBrowserRepositories.ToList()),
-            new NexusModSource(_nexus, CurrentNexusKey),
+            new NexusModSource(_nexus, cancellationToken => _nexusAuth.GetAccessTokenAsync(cancellationToken)),
         ];
         foreach (var s in _modSources) ModSourceOptions.Add(new ModSourceOption { Id = s.Id, Name = s.Name });
         _selectedModSource = ModSourceOptions[0];

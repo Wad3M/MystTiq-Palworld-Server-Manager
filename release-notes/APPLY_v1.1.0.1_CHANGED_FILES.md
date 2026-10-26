@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 # v1.1.0.1 Changed Files
 
 - `src/MystTiq.Desktop/Services/LocalManagementBootstrapper.cs`: the start-up check for a port in use

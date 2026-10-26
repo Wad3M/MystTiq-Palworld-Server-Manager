@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
+// MystTiq v1.1.6.0: file reviewed for this release (2026-10-26).
 using Avalonia.LogicalTree;
 using System.Reflection;
 using Avalonia;
@@ -2351,6 +2351,136 @@ Check(unnamed.Count == 0, $"on every page every reachable control has an accessi
     selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs();
 }
 
+// v1.1.6.0 (Nexus Mods support, 2026-10-26: "your mod uses Personal API keys. Which is not allowed under our upload
+// guidelines. Please update your mod to use OAUTH instead"): signing in with OAuth 2.0 and PKCE, checked end to end against a
+// fake Nexus on this PC (a scripted token endpoint, a simulated browser that follows the real loopback redirect).
+{
+    // PKCE: RFC 7636's own example; the verifier is URL-safe and long enough.
+    var rfcChallenge = NexusOAuth.ChallengeFor("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk");
+    var verifier = NexusOAuth.NewVerifier();
+    var pkce = rfcChallenge == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" && verifier.Length >= 43 && verifier.All(c => char.IsLetterOrDigit(c) || c is '-' or '_');
+
+    // A test signing key stands in for Nexus's (the real public key would refuse these tokens, as it should).
+    using var signer = System.Security.Cryptography.RSA.Create(2048);
+    var testKeyPem = signer.ExportSubjectPublicKeyInfoPem();
+    string Jwt(string user, string[] roles, long exp, string alg = "RS256")
+    {
+        string B64(string json) => NexusOAuth.Base64Url(Encoding.UTF8.GetBytes(json));
+        var head = B64($"{{\"alg\":\"{alg}\",\"typ\":\"JWT\"}}");
+        var body = B64($"{{\"exp\":{exp},\"iat\":{exp - 21600},\"sub\":\"77\",\"iss\":\"nexus-user-service\",\"user\":{{\"id\":77,\"username\":\"{user}\",\"membership_roles\":[{string.Join(",", roles.Select(r => $"\"{r}\""))}]}}}}");
+        var sig = NexusOAuth.Base64Url(signer.SignData(Encoding.ASCII.GetBytes(head + "." + body), System.Security.Cryptography.HashAlgorithmName.SHA256, System.Security.Cryptography.RSASignaturePadding.Pkcs1));
+        return head + "." + body + "." + sig;
+    }
+    var later = DateTimeOffset.UtcNow.AddHours(6).ToUnixTimeSeconds();
+    var premiumJwt = Jwt("Tester", ["member", "premium"], later);
+    var account = NexusOAuth.ReadAccount(premiumJwt, testKeyPem);
+    var parts = premiumJwt.Split('.');
+    var tampered = parts[0] + "." + NexusOAuth.Base64Url(Encoding.UTF8.GetBytes($"{{\"exp\":{later},\"user\":{{\"id\":1,\"username\":\"Someone\",\"membership_roles\":[\"premium\"]}}}}")) + "." + parts[2];
+    var jwtChecks = account is { Name: "Tester", IsPremium: true, UserId: 77 }
+                    && NexusOAuth.ReadAccount(Jwt("Free", ["member"], later), testKeyPem) is { IsPremium: false }
+                    && NexusOAuth.ReadAccount(tampered, testKeyPem) is null
+                    && NexusOAuth.ReadAccount(Jwt("Tester", ["premium"], later, alg: "none"), testKeyPem) is null
+                    && NexusOAuth.ReadAccount(premiumJwt, NexusOAuth.NexusPublicKeyPem) is null
+                    && NexusOAuth.ReadAccount(Jwt("Old", ["member"], DateTimeOffset.UtcNow.AddHours(-2).ToUnixTimeSeconds()), testKeyPem) is null;
+
+    // The callback: the code only with this sign-in's state; a refusal and a stray request are told apart.
+    var good = NexusOAuth.ReadCallback("GET /nexus/callback?code=abc%2B1&state=s-1 HTTP/1.1", "s-1");
+    var wrongState = NexusOAuth.ReadCallback("GET /nexus/callback?code=abc&state=other HTTP/1.1", "s-1");
+    var denied = NexusOAuth.ReadCallback("GET /nexus/callback?error=access_denied&error_description=The+user+said+no&state=s-1 HTTP/1.1", "s-1");
+    var stray = NexusOAuth.ReadCallback("GET /favicon.ico HTTP/1.1", "s-1");
+    var callbacks = good.Code == "abc+1" && wrongState.Code is null && wrongState.Error is { Length: > 0 }
+                    && denied.Code is null && denied.Error!.Contains("The user said no") && stray.NotCallback;
+
+    // A scripted Nexus token endpoint: it checks what MystTiq sends (PKCE verifier against the challenge it was shown).
+    var store = new CredentialStore();
+    typeof(CredentialStore).GetField("<StoragePath>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(store, Path.Combine(output, "nexus-oauth-credentials.json"));
+    store.Save(NexusOAuth.LegacyKeyCredentialId, "an-old-personal-api-key");
+    string? shownChallenge = null, shownState = null, sentVerifier = null, sentRedirect = null, sentClient = null;
+    var refreshAnswer = 200;
+    var tokenCalls = new List<string>();
+    var probe = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0); probe.Start();
+    var port = ((System.Net.IPEndPoint)probe.LocalEndpoint).Port; probe.Stop();
+    var handler = new NexusFakeHandler(async request =>
+    {
+        var form = (await request.Content!.ReadAsStringAsync()).Split('&').Select(p => p.Split('=', 2)).ToDictionary(p => Uri.UnescapeDataString(p[0]), p => Uri.UnescapeDataString(p.Length > 1 ? p[1].Replace('+', ' ') : ""));
+        tokenCalls.Add(form["grant_type"]);
+        if (form["grant_type"] == "authorization_code")
+        {
+            sentVerifier = form["code_verifier"]; sentRedirect = form["redirect_uri"]; sentClient = form["client_id"];
+            var ok = form["code"] == "the-code" && NexusOAuth.ChallengeFor(sentVerifier) == shownChallenge;
+            return ok ? (200, $"{{\"access_token\":\"{premiumJwt}\",\"refresh_token\":\"r1\",\"expires_in\":30,\"token_type\":\"Bearer\"}}") : (400, "{\"error\":\"invalid_grant\"}");
+        }
+        return refreshAnswer == 200 && form["refresh_token"] == "r1"
+            ? (200, $"{{\"access_token\":\"{Jwt("Tester", ["member", "premium"], later + 60)}\",\"expires_in\":21600}}")
+            : (refreshAnswer, "{\"error\":\"invalid_grant\"}");
+    });
+    bool Browser(string url)
+    {
+        var query = new Uri(url).Query.TrimStart('?').Split('&').Select(p => p.Split('=', 2)).ToDictionary(p => p[0], p => Uri.UnescapeDataString(p[1]));
+        shownChallenge = query["code_challenge"]; shownState = query["state"];
+        var urlOk = url.StartsWith(NexusOAuth.AuthorizeUrl + "?") && query["client_id"] == "mysttiq-test" && query["response_type"] == "code"
+                    && query["code_challenge_method"] == "S256" && query["redirect_uri"] == $"http://127.0.0.1:{port}/nexus/callback";
+        if (!urlOk) return false;
+        // The browser follows Nexus's redirect back to MystTiq's listener (a stray request first, as browsers do).
+        _ = Task.Run(async () =>
+        {
+            using var browser = new HttpClient();
+            await Task.Delay(200);
+            try { await browser.GetAsync($"http://127.0.0.1:{port}/favicon.ico"); } catch { }
+            await browser.GetAsync($"http://127.0.0.1:{port}/nexus/callback?code=the-code&state={Uri.EscapeDataString(shownState)}");
+        });
+        return true;
+    }
+    var auth = new NexusOAuth(store, clientId: "mysttiq-test", handler: handler, publicKeyPem: testKeyPem, openBrowser: Browser, port: port);
+    var legacyGone = auth.LegacyKeyRemoved && store.TryLoad(NexusOAuth.LegacyKeyCredentialId) is null;
+    var signIn = Task.Run(() => auth.SignInAsync()).GetAwaiter().GetResult();
+    var signedIn = signIn.Ok && auth.Account is { Name: "Tester", IsPremium: true } && sentRedirect == $"http://127.0.0.1:{port}/nexus/callback"
+                   && sentClient == "mysttiq-test" && sentVerifier is { Length: >= 43 } && store.TryLoad(NexusOAuth.CredentialId) is { Length: > 0 };
+    var remembered = new NexusOAuth(store, clientId: "mysttiq-test", handler: handler, publicKeyPem: testKeyPem, port: port);
+    // The first token lasts 30 s, inside the one-minute margin, so the next use refreshes it (the refresh keeps "r1").
+    var refreshed = Task.Run(() => remembered.GetAccessTokenAsync()).GetAwaiter().GetResult();
+    var refreshOk = remembered.IsSignedIn && refreshed is not null && refreshed != premiumJwt && tokenCalls.Count(c => c == "refresh_token") == 1;
+    var again = Task.Run(() => remembered.GetAccessTokenAsync()).GetAwaiter().GetResult();
+    var cached = again == refreshed && tokenCalls.Count(c => c == "refresh_token") == 1;
+    // Nexus refuses a refresh (access withdrawn on the site): signed out here too.
+    var revoked = new NexusOAuth(store, clientId: "mysttiq-test", handler: handler, publicKeyPem: testKeyPem, port: port);
+    typeof(NexusOAuth).GetField("tokens", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(revoked, new NexusTokens("expired", "r1", DateTimeOffset.UtcNow.AddMinutes(-5)));
+    refreshAnswer = 401;
+    var afterRevoke = Task.Run(() => revoked.GetAccessTokenAsync()).GetAwaiter().GetResult();
+    var signedOut = afterRevoke is null && !revoked.IsSignedIn && store.TryLoad(NexusOAuth.CredentialId) is null;
+    // A wrong state never reaches the token endpoint; an unregistered build says so instead of opening a page.
+    var before = tokenCalls.Count;
+    var forged = new NexusOAuth(null, clientId: "mysttiq-test", handler: handler, publicKeyPem: testKeyPem, port: port, openBrowser: url =>
+    {
+        _ = Task.Run(async () => { await Task.Delay(200); using var b = new HttpClient(); await b.GetAsync($"http://127.0.0.1:{port}/nexus/callback?code=the-code&state=forged"); });
+        return true;
+    });
+    var forgedResult = Task.Run(() => forged.SignInAsync()).GetAwaiter().GetResult();
+    var unregistered = Task.Run(() => new NexusOAuth(null, clientId: "", openBrowser: _ => throw new Exception("must not open")).SignInAsync()).GetAwaiter().GetResult();
+    var refusals = !forgedResult.Ok && tokenCalls.Count == before && !unregistered.Ok && unregistered.Error == Localizer.Instance["nexus.notConfigured"];
+
+    // The Nexus client sends the access token as a bearer token, and never an apikey header.
+    HttpRequestMessage? seen = null;
+    var client = new NexusModsClient(new NexusFakeHandler(request => { seen = request; return Task.FromResult((200, "{\"mod_id\":5,\"name\":\"A\"}")); }));
+    var mod = Task.Run(() => client.GetModAsync("the-access-token", 5)).GetAwaiter().GetResult();
+    var bearer = mod.Ok && seen?.Headers.Authorization is { Scheme: "Bearer", Parameter: "the-access-token" } && !seen.Headers.Contains("apikey")
+                 && Task.Run(() => client.GetModAsync("", 5)).GetAwaiter().GetResult().Error == Localizer.Instance["nexus.signInFirst"];
+
+    // The card: Sign in and Sign out, no key box; without a registered Client ID it says sign-in is not available yet.
+    selectedPage.SetValue(vm, NavigationPage.ModSources); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+    var nexusCard = window.GetVisualDescendants().OfType<Expander>().FirstOrDefault(e => Equals(e.Header, Localizer.Instance["ui.nexus_mods_catalog"]));
+    if (nexusCard is not null) { nexusCard.IsExpanded = true; Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
+    bool CardShows(string name) => nexusCard?.GetVisualDescendants().OfType<Control>().Any(c => c.Name == name && c.IsEffectivelyVisible) == true;
+    var keyBoxes = nexusCard?.GetVisualDescendants().OfType<TextBox>().Count(b => b.PasswordChar != default) ?? -1;
+    var card = nexusCard is not null && CardShows("NexusSignInButton") && CardShows("NexusSignOutButton") && keyBoxes == 0
+               && (NexusOAuth.BuiltInClientId.Length > 0 || vm.Mods.NexusAccountText == Localizer.Instance["nexus.notConfigured"]);
+    Render("nexus-sign-in-card");
+    if (nexusCard is not null) nexusCard.IsExpanded = false;
+    selectedPage.SetValue(vm, NavigationPage.Dashboard); Dispatcher.UIThread.RunJobs();
+    Check(pkce && jwtChecks && callbacks && legacyGone && signedIn && refreshOk && cached && signedOut && refusals && bearer && card,
+        $"N-1: Nexus Mods sign-in with OAuth and PKCE: the RFC 7636 challenge, the authorize address, only this sign-in's state accepted, tokens signed with Nexus's key (tampered, alg none, expired and other-key tokens refused), the full sign-in through the loopback listener, kept encrypted and reloaded, refreshed once inside the minute, signed out when Nexus refuses the refresh, an old personal key removed, Bearer instead of apikey, and the card with Sign in and Sign out and no key box [pkce {pkce}, jwt {jwtChecks}, callback {callbacks}, legacy {legacyGone}, sign-in {signedIn} ({signIn.Error}), refresh {refreshOk}, cached {cached}, revoked {signedOut}, refusals {refusals}, bearer {bearer}, card {card}]");
+}
+
 // v1.1.5.0 (seen 2026-10-23 after an install): the local tab asks /healthz quietly every other tick and connects once it
 // answers, instead of waiting for Refresh; the helper it just started gets 45 s, not 8 s.
 {
@@ -2652,5 +2782,15 @@ public class TabProxy : DispatchProxy
         }
         return typeof(OfflineProxy).GetMethod("Invoke", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(DispatchProxy.Create<IMystTiqApiClient, OfflineProxy>(), [method, args]);
+    }
+}
+
+// v1.1.6.0: a scripted Nexus Mods endpoint for the OAuth sign-in check (status and JSON body per request).
+sealed class NexusFakeHandler(Func<HttpRequestMessage, Task<(int Status, string Body)>> answer) : HttpMessageHandler
+{
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var (status, body) = await answer(request);
+        return new HttpResponseMessage((System.Net.HttpStatusCode)status) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
     }
 }

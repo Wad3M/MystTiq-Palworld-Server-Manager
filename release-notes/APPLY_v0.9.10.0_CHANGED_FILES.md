@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 # v0.9.10.0 Changed Files
 
 - `src/MystTiq.Desktop/Services/LocalManagementBootstrapper.cs`: a recorded helper that is alive is waited for

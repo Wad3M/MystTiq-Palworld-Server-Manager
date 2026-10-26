@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MystTiq.Desktop.ViewModels"
@@ -2693,7 +2693,7 @@
                 </StackPanel>
 
                 <StackPanel x:Name="ModBrowserNexusSetup" Spacing="6" IsVisible="{Binding Mods.IsNexusModSource}">
-                  <TextBlock Text="{services:Tr ui.nexus_browser_hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{services:Tr nexus.browser.hint}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="11" TextWrapping="Wrap"/>
                   <TextBlock Text="{services:TrText Mods.NxmHandlerText}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
                   <WrapPanel>
                     <Button Classes="apply" Content="{services:Tr ui.allow_nxm_links}" Click="UseMystTiqForNxm_OnClick" Margin="0,0,8,6"/>
@@ -2737,21 +2737,20 @@
             </Expander>
           </Border>
 
-          <!-- v0.7.93.0: Nexus Mods catalog. Collapsed by default. Uses the person's own Nexus API key
-               from this PC (never sent to the MystTiq server). Nexus's public API lists only 10 mods
+          <!-- v0.7.93.0: Nexus Mods catalog. Collapsed by default. Nexus's public API lists only 10 mods
                per category and has no search, and only Premium accounts get direct download links, so
                the card offers lists, lookup by id or page URL, Open on Nexus, and an nxm link paste for
-               free accounts. Every download still goes through the validated ZIP install. -->
+               free accounts. Every download still goes through the validated ZIP install.
+               v1.1.6.0 (Nexus Mods support, 2026-10-26: personal API keys are not allowed): Sign in with Nexus Mods opens
+               Nexus's own sign-in page (OAuth); there is no key box any more. -->
           <Border Classes="card accentMods" IsVisible="{Binding IsModSourcesPage}">
             <Expander Header="{services:Tr ui.nexus_mods_catalog}" FontSize="17" FontWeight="SemiBold" IsExpanded="False">
               <StackPanel Spacing="10" Margin="0,8,0,0">
-                <TextBlock Text="{services:Tr ui.browse_palworld_mods_on_nexus_mods_and_install_a_851339}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
-                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                  <TextBox Text="{Binding Mods.NexusApiKeyInput, Mode=TwoWay}" PasswordChar="●" PlaceholderText="{services:Tr ui.nexus_mods_api_key}"/>
-                  <Button Grid.Column="1" Classes="apply" Content="{services:Tr ui.connect_1a2303}" Command="{Binding Mods.NexusConnectCommand}"/>
-                  <Button Classes="apply" Grid.Column="2" Content="{services:Tr ui.save_key}" Command="{Binding Mods.NexusSaveKeyCommand}" ToolTip.Tip="{services:Tr ui.stores_the_key_on_this_pc_only_encrypted_for_you_88097d}"/>
-                  <Button Classes="danger" Grid.Column="3" Content="{services:Tr ui.forget_key}" Command="{Binding Mods.NexusForgetKeyCommand}"/>
-                </Grid>
+                <TextBlock Text="{services:Tr nexus.card.text}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" FontSize="12" TextWrapping="Wrap"/>
+                <WrapPanel x:Name="NexusSignInRow">
+                  <Button x:Name="NexusSignInButton" Classes="apply" Content="{services:Tr nexus.signIn}" Command="{Binding Mods.NexusSignInCommand}" ToolTip.Tip="{services:Tr nexus.signIn.tip}" Margin="0,0,8,0"/>
+                  <Button x:Name="NexusSignOutButton" Classes="plain" Content="{services:Tr nexus.signOut}" Command="{Binding Mods.NexusSignOutCommand}" ToolTip.Tip="{services:Tr nexus.signOut.tip}"/>
+                </WrapPanel>
                 <TextBlock Text="{services:TrText Mods.NexusAccountText}" Foreground="{DynamicResource VioletBrush}" FontWeight="Normal" TextWrapping="Wrap"/>
                 <WrapPanel>
                   <Button Classes="info" Content="{services:Tr ui.trending}" Command="{Binding Mods.NexusLoadListCommand}" CommandParameter="trending" Margin="0,0,6,6"/>

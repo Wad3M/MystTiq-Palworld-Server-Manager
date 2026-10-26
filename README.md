@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 <p align="center">
   <img src="docs/images/github-banner-v0.8.25.0.png" alt="MystTiq — Palworld Server Manager" width="100%">
 </p>
@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-67e8d5" alt="Code license: MIT"></a>
-  <img src="https://img.shields.io/badge/release-1.1.5.1-b9a4ff" alt="Release: 1.1.5.1">
+  <img src="https://img.shields.io/badge/release-1.1.6.0-b9a4ff" alt="Release: 1.1.6.0">
   <img src="https://img.shields.io/badge/desktop-Windows%20%7C%20Linux-80caff" alt="Desktop targets: Windows and Linux">
   <img src="https://img.shields.io/badge/language%20options-12-67e8d5" alt="12 language options">
 </p>
@@ -21,9 +21,9 @@
   <a href="https://github.com/Wad3M/MystTiq-Palworld-Server-Manager/issues/new/choose">Get help / contribute</a>
 </p>
 
-**Current release: v1.1.5.1 · Accepted baseline: v1.1.0.0**
+**Current release: v1.1.6.0 · Accepted baseline: v1.1.0.0**
 
-MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind; v1.1.1.0 adds MOD Sources, runs the player checks without the desktop and adds the Linux and Docker downloads; v1.1.1.1 leaves .NET's unused crash-dump helper out of the downloads; v1.1.1.2 keeps the Players, Guilds and Map pages current; v1.1.1.3 updates four libraries; v1.1.2.0 records why a server stopped and can start MystTiq with Windows; v1.1.4.0 updates the server from the Dashboard; v1.1.5.0 adds a Windows setup, a portable version, a window you can size and a Simple mode; v1.1.5.1 checks the file names the service builds from requests ([release notes](release-notes/v1.1.5.1.md)). Downloads are on the Releases page: a Windows setup, a portable Windows version, ZIPs for Windows and Linux, and a Docker image of the service.
+MystTiq 1.1 is the new accepted baseline: everything since 1.0, checked as one release. v1.1.0.1 fixes an error notice at start-up, and v1.1.0.2 gives players sent to a new character their own back: MystTiq checks every join and moves the character to the player ID the game now gives the account; v1.1.0.3 makes a move leave nothing behind; v1.1.1.0 adds MOD Sources, runs the player checks without the desktop and adds the Linux and Docker downloads; v1.1.1.1 leaves .NET's unused crash-dump helper out of the downloads; v1.1.1.2 keeps the Players, Guilds and Map pages current; v1.1.1.3 updates four libraries; v1.1.2.0 records why a server stopped and can start MystTiq with Windows; v1.1.4.0 updates the server from the Dashboard; v1.1.5.0 adds a Windows setup, a portable version, a window you can size and a Simple mode; v1.1.5.1 checks the file names the service builds from requests; v1.1.6.0 signs in to Nexus Mods with your account instead of an API key ([release notes](release-notes/v1.1.6.0.md)). Downloads are on the Releases page: a Windows setup, a portable Windows version, ZIPs for Windows and Linux, and a Docker image of the service.
 
 <a id="whats-new-in-v1.1.0.0"></a>
 
@@ -159,7 +159,8 @@ English · 简体中文 · Español · Português (Brasil) · Русский · 
 
 | Release | Status | Focus |
 | --- | --- | --- |
-| v1.1.5.1 | Current release | Safer file paths: the MOD type and the character-move step checked (GitHub code scanning) |
+| v1.1.6.0 | Current release | Sign in to Nexus Mods with your account (OAuth) instead of a personal API key |
+| v1.1.5.1 | Delivered | Safer file paths: the MOD type and the character-move step checked (GitHub code scanning) |
 | v1.1.5.0 | Delivered | A Windows setup and a portable version; a window you can size; Simple and Advanced modes; MystTiq's own update and the addresses on the Dashboard; Configuration read without starting the server |
 | v1.1.4.0 | Delivered | Update the server from the Dashboard (installed and Steam builds, one button); the wrong-path warning fixed for several servers; screenshots retaken |
 | v1.1.2.0 | Delivered | Why a server stopped (on the Dashboard and in the activity log); an option to start MystTiq with Windows |

@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
+// MystTiq v1.1.6.0: file reviewed for this release (2026-10-26).
 namespace MystTiq.Desktop.Services;
 
 // Converts Palworld's raw world coordinates (the REST API's LocationX/LocationY, and the same

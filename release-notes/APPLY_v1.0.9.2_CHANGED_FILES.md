@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 # v1.0.9.2 Changed Files
 
 - `src/MystTiq.HeadlessHost/ModLoadOrder.cs` (new): reading and reordering `mods.txt` (only the MOD lines move).

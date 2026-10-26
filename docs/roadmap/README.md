@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 # Roadmaps
 
 - [Product roadmap](PRODUCT_ROADMAP.md) — the current version and the accepted baseline (v1.1.0.0), what each release delivered with its evidence, the evidence still owed, and the backlog; the authoritative forward plan.

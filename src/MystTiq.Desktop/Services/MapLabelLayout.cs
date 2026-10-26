@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
+// MystTiq v1.1.6.0: file reviewed for this release (2026-10-26).
 namespace MystTiq.Desktop.Services;
 
 // v0.7.106.0: markers standing close together on the Map page had their name labels draw directly on

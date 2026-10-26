@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 # v1.0.8.3 Changed Files
 
 - `src/MystTiq.Desktop/ViewModels/MapViewModel.cs` (new): the Map page, with teleport points and the teleport-to-player

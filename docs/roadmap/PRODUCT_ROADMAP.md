@@ -1,7 +1,7 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 # Product roadmap
 
-Updated 2026-10-22. **Current version: v1.1.5.1. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the owner rolled every request into v1.1.5.0 on 2026-10-22; ask before numbering the next). Reviewed with the owner 2026-10-19 (D-14).**
+Updated 2026-10-22. **Current version: v1.1.6.0. Accepted baseline: v1.1.0.0. Next milestone: none scheduled (the owner rolled every request into v1.1.5.0 on 2026-10-22; ask before numbering the next). Reviewed with the owner 2026-10-19 (D-14).**
 
 This is the active plan. Completed work and the per-version detail behind every item below are in
 [the history file](../history/PRODUCT_ROADMAP_through_v1.0.1.0.md), the [changelog](../../CHANGELOG.md) and the
@@ -264,6 +264,15 @@ as v1.1.5.1 (owner's choice over moving the v1.1.5.0 tag).
 | ID | Release | Item | Status |
 | --- | --- | --- | --- |
 | CS-1 | v1.1.5.1 | CodeQL "Uncontrolled data used in path expression" (23 alerts) and "User-controlled bypass of sensitive method" (1). Recorded (v1.1.5.1, 2026-10-26): the path alerts were real. A MOD's type (unchecked) named the snapshot and description-cache files, and `%5C` in the route reached outside those folders; the character move's disposition step took any text as the player ID for the files it moves or deletes. Fixed with `SafePath` (full-path containment, player ID = 32 hex characters) and a type check (PAK, UE4SS, NATIVE); logic-harness scenario "Safe paths". The bypass alert is the bearer-token check itself: a false positive, to dismiss on GitHub with the reason in `docs/architecture/v1.1.5.1-safe-file-paths.md`. | Done |
+
+## v1.1.6.0 — Nexus Mods sign-in
+
+Nexus Mods support, 2026-10-26, during the upload review: personal API keys are not allowed in apps; "update your mod to
+use OAUTH instead". The owner chose v1.1.6.0.
+
+| ID | Release | Item | Status |
+| --- | --- | --- | --- |
+| N-1 | v1.1.6.0 | Sign in to Nexus Mods with OAuth 2.0 and PKCE instead of a personal API key. Recorded (v1.1.6.0, 2026-10-26): `NexusOAuth` (Nexus's page in the browser, the loopback callback `127.0.0.1:47823/nexus/callback`, the token's signature checked with Nexus's public key, encrypted storage, refresh, Sign out); `Authorization: Bearer` instead of `apikey`; the key box gone and an old saved key deleted; 31 strings in 12 languages; desktop-harness check against a scripted Nexus. Owed: the Client ID (the owner emails support@nexusmods.com), then a real sign-in. | Done (Client ID owed) |
 
 ## Backlog (not scheduled)
 

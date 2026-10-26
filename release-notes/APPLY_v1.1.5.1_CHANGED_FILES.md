@@ -1,4 +1,4 @@
-<!-- MystTiq v1.1.5.1: file reviewed for this release (2026-10-26). -->
+<!-- MystTiq v1.1.6.0: file reviewed for this release (2026-10-26). -->
 # v1.1.5.1 Changed Files
 
 - `src/MystTiq.HeadlessHost/SafePath.cs` (new): `ChildOf` (a name's full path, refused when it leaves its folder) and

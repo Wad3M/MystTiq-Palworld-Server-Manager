@@ -1,4 +1,4 @@
-// MystTiq v1.1.5.1: file reviewed for this release (2026-10-26).
+// MystTiq v1.1.6.0: file reviewed for this release (2026-10-26).
 namespace MystTiq.Desktop.Models;
 
 // v0.7.94.0: starter kits, mirroring HeadlessKitService's wire shapes. The whole kit config is read and
